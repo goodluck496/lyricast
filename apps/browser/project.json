@@ -27,6 +27,9 @@
       },
       "configurations": {
         "production": {
+          "options": {
+            "baseHref": "./"
+          },
           "budgets": [
             {
               "type": "initial",
@@ -62,7 +65,10 @@
           "buildTarget": "browser:build:development"
         }
       },
-      "defaultConfiguration": "development"
+      "defaultConfiguration": "development",
+      "options": {
+        "proxyConfig": "apps/browser/proxy.conf.json"
+      }
     },
     "extract-i18n": {
       "executor": "@angular-devkit/build-angular:extract-i18n",

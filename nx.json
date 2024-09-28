@@ -51,5 +51,21 @@
       "unitTestRunner": "jest"
     }
   },
-  "defaultProject": "electron"
+  "defaultProject": "electron",
+  "plugins": [
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "eslint:lint"
+      }
+    },
+    {
+      "plugin": "@nx/webpack/plugin",
+      "options": {
+        "buildTargetName": "build",
+        "serveTargetName": "serve",
+        "previewTargetName": "preview"
+      }
+    }
+  ]
 }

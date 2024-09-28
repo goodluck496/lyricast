@@ -4,13 +4,22 @@
   "license": "MIT",
   "scripts": {
     "postinstall": "electron-builder install-app-deps",
-    "_build:browser": "nx run browser:build:productionv",
+    "_build:browser": "nx run browser:build:production",
     "_build:electron": "nx run electron:package",
-    "_start:browser": "nx run browser:serve",
-    "_wait-on-start:browser": "wait-on http://localhost:4200 && npm run _electron:serve",
+    "_build:backend": "nx run backend:build",
+
+    "_start:backend": "nx run backend:serve",
+
+    "_browser:serve": "nx run browser:serve",
+    "_start:browser": "npm-run-all -c _wait-on-start:backend _browser:serve",
+
+    "_wait-on-start:browser": "wait-on http://localhost:4200",
+    "_wait-on-start:backend": "wait-on http://localhost:3000/api/ok",
+
     "_electron:serve": "nx run electron:serve",
     "_start:electron": "npm-run-all -c _wait-on-start:browser _electron:serve",
-    "start": "npm-run-all -p _start:browser _start:electron",
+
+    "start": "npm-run-all -p _start:backend _start:browser _start:electron",
     "build": "npm-run-all -c _build:browser _build:electron"
   },
   "private": true,

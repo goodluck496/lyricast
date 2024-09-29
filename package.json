@@ -15,14 +15,15 @@
     "_browser:serve": "nx run browser:serve",
     "_start:browser": "npm-run-all -c _wait-on-start:backend _browser:serve",
 
-    "_wait-on-start:browser": "wait-on http://localhost:4200",
-    "_wait-on-start:backend": "wait-on http://localhost:3000/api/ok",
+    "_wait-on-start:browser": "wait-on -v  http://localhost:4200",
+    "_wait-on-start:backend": "wait-on -v http://localhost:3000/api/ok",
 
     "_electron:serve": "nx run electron:serve",
     "_start:electron": "npm-run-all -c _wait-on-start:browser _electron:serve",
 
     "start": "npm-run-all -p _start:backend _start:browser _start:electron",
-    "build": "npm-run-all -c _build:browser _build:electron _package:electron"
+    "build": "npm-run-all -c _build:browser _build:electron _package:electron",
+    "build-with-backend": "npm-run-all -c build _start:backend"
   },
   "private": true,
   "dependencies": {

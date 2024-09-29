@@ -11,10 +11,19 @@ pnpm install -g pnpm
 pnpm install -D nx-electron
 ````
 
-## Build frontend app
+## Dev mode
 
-`nx run browser:build:production`
+````shell
+npm run start
+````
 
-## Build electron app
+## Prod mode
 
-`nx run electron:package`
+````shell 
+npm run build
+````
+## Prod mode with server
+
+````shell 
+npm run build-with-backend
+````

@@ -10,7 +10,7 @@ export interface ILyric {
 }
 
 export interface ISong {
-  number: string;
+  number: number;
   title: string;
   key: string;
   /**

@@ -1,0 +1,43 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.page-wrapper {
+  height: 100%;
+  display: block;
+}
+
+.header {
+  display: flex;
+  height: 100px;
+
+  &__title {
+    font-size: 56px;
+  }
+}
+
+.content {
+  display: flex;
+  height: calc(100% - 100px);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+
+  overflow: auto;
+
+  height: 100%;
+  border-right: 1px solid gray;
+}
+
+.row {
+  cursor: pointer;
+}
+
+.selected {
+  background-color: lightgray;
+  color: black;
+}

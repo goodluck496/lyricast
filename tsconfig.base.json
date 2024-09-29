@@ -15,7 +15,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@lyri-cast/common": ["libs/common/src/index.ts"]
+      "@lyri-cast/common": ["libs/common/src/index.ts"],
+      "@lyri-cast/common-electron": ["libs/common-electron/src/index.ts"],
+      "@lyri-cast/entities": ["libs/entities/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

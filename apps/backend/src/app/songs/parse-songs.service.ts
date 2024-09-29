@@ -1,12 +1,9 @@
-import {
-  ISong,
-  ISongBook,
-  ISongBookHeader,
-  LyricTypeEnum,
-} from './songs.types';
+
+
 import { Injectable } from '@nestjs/common';
 import path from 'path';
 import fs from 'fs';
+import { ISong, ISongBook, ISongBookHeader, LyricTypeEnum } from '@lyri-cast/entities';
 
 @Injectable()
 export class ParseSongsService {
@@ -17,7 +14,7 @@ export class ParseSongsService {
 
   private parseSong(text: string) {
     const songObj: ISong = {
-      number: '',
+      number: 0,
       title: '',
       key: '',
       keySignature: '',
@@ -28,7 +25,7 @@ export class ParseSongsService {
     const parts = text.split('#$#');
 
     // Основные метаданные
-    songObj.number = parts[0].trim(); // номер
+    songObj.number = Number(parts[0].trim()); // номер
     songObj.title = parts[1]?.trim(); // название
     songObj.key = parts[2]?.trim(); // ключ
     songObj.keySignature = parts[3]?.trim(); // тональность
@@ -106,7 +103,7 @@ export class ParseSongsService {
 
         return acc;
       }, {} as ISongBookHeader),
-      songs: parsedSongs.sort((a, b) => Number(a.number) - Number(b.number)),
+      songs: parsedSongs.sort((a, b) => a.number - b.number),
     };
   }
 

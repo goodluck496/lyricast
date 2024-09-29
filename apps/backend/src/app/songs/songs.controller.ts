@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { SongsService } from './songs.service';
+import { IShortSong } from '@lyri-cast/entities';
 
 @Controller()
 export class SongsController {
@@ -19,11 +20,11 @@ export class SongsController {
 
   @Get('book/:book/:songId')
   getSong(@Param('book') bookName: string, @Param('songId') songId: string) {
-    return this.songsService.readSong(bookName, songId);
+    return this.songsService.readSong(bookName, Number(songId));
   }
 
   @Get('book-songs/:book')
-  getBookSongs(@Param('book') bookName: string) {
+  getBookSongs(@Param('book') bookName: string): IShortSong[] {
     return this.songsService.getBookSongNames(bookName);
   }
 

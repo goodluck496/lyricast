@@ -1,4 +1,6 @@
 export const ElectronActionEvents = {
   GET_APP_VERSION: 'GET_APP_VERSION',
+  OPEN_SECOND_WINDOW: 'OPEN_SECOND_WINDOW',
+  CLOSE_SECOND_WINDOW: 'CLOSE_SECOND_WINDOW',
   PING: 'PING',
 } as const;

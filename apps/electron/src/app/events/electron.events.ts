@@ -6,6 +6,12 @@
 import { app, ipcMain } from 'electron';
 import { environment } from '../../environments/environment';
 import { ElectronActionEvents } from './events.types';
+import {
+  AppWindowTypes,
+  CloseWindowArgs,
+  OpenWindowArgs,
+} from '@lyri-cast/common-electron';
+import App from '../app';
 
 export default class ElectronEvents {
   static bootstrapElectronEvents(): Electron.IpcMain {
@@ -14,15 +20,31 @@ export default class ElectronEvents {
 }
 
 // Retrieve app version
-ipcMain.handle(ElectronActionEvents.GET_APP_VERSION, (event) => {
+ipcMain.handle(ElectronActionEvents.GET_APP_VERSION, () => {
   console.log(`Fetching application version... [v${environment.version}]`);
 
   return environment.version;
 });
 
-ipcMain.handle(ElectronActionEvents.PING, (event) => {
-  event.sender.send('ping', 'pong');
-})
+ipcMain.handle(
+  ElectronActionEvents.OPEN_SECOND_WINDOW,
+  (event, args: OpenWindowArgs) => {
+    if (App.openedWindows[AppWindowTypes.SECOND]) {
+      return;
+    }
+
+    const newWindow = App.createWindow(AppWindowTypes.SECOND, args);
+
+    App.openedWindows[AppWindowTypes.SECOND] = newWindow;
+  }
+);
+
+ipcMain.handle(
+  ElectronActionEvents.CLOSE_SECOND_WINDOW,
+  (event, args: CloseWindowArgs) => {
+    console.log('close', event, args);
+  }
+);
 
 // Handle App termination
 ipcMain.on('quit', (event, code) => {

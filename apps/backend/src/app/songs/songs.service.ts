@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import path from 'path';
 import fs from 'fs';
-import { IShortSong, ISong, ISongBook, ISongBookName } from './songs.types';
+import {
+  IShortSong,
+  ISong,
+  ISongBook,
+  ISongBookName,
+} from '@lyri-cast/entities';
 
 @Injectable()
 export class SongsService {
@@ -65,7 +70,7 @@ export class SongsService {
     return book.songs.map(({ title, number }) => ({ title, number }));
   }
 
-  readSong(bookName: string, songId: string): ISong | undefined {
+  readSong(bookName: string, songId: number): ISong | undefined {
     const book = this.readBook(bookName);
     const keyInCache = `${book}__${songId}`;
 
@@ -89,7 +94,7 @@ export class SongsService {
 
     return book.songs.filter(
       (item) =>
-        item.number.includes(preparedText) ||
+        String(item.number).includes(preparedText) ||
         item.title.toLowerCase().includes(preparedText) ||
         !!item.lyrics.find((lyric) =>
           lyric.lines.find((el) =>

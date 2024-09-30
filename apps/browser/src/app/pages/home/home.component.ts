@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { AsyncPipe, JsonPipe } from '@angular/common';
 import { SongsService } from '../../songs.service';
 import { IShortSong, ISongBookName } from '@lyri-cast/entities';
@@ -7,6 +7,8 @@ import { CardModule } from 'primeng/card';
 import { ScrollPanelModule } from 'primeng/scrollpanel';
 import { ButtonDirective } from 'primeng/button';
 import { WindowService } from '../../../services/window.service';
+import { CastingService } from '../../../services/casting.service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'lyri-home',
@@ -21,9 +23,11 @@ import { WindowService } from '../../../services/window.service';
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit {
+  public windowSrv = inject(WindowService);
   public songsService = inject(SongsService);
-  public WINDOW = inject(WindowService);
+  public castingSrv = inject(CastingService);
+  private route = inject(ActivatedRoute);
 
   songBooks$ = this.songsService.getAllSongBooks();
 
@@ -51,6 +55,13 @@ export class HomeComponent {
     })
   );
 
+  ngOnInit() {
+    this.route.queryParams.subscribe((params) => {
+      console.log('params', params);
+    });
+
+  }
+
   onBookClick(item: ISongBookName) {
     this.selectedBook$.next(item);
     this.selectedSong$.next(null);
@@ -61,12 +72,6 @@ export class HomeComponent {
   }
 
   onOpenWindow() {
-    this.WINDOW.electronContext.openWindow({
-      title: 'new window title',
-      show: true,
-      opacity: 0.5,
-      center: true,
-      focusable: true,
-    })
+    this.castingSrv.openWindow();
   }
 }

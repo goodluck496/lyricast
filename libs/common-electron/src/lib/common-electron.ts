@@ -1,5 +1,5 @@
 
 export enum AppWindowTypes {
   MAIN = 'MAIN',
-  SECOND = 'SECOND',
+  SONG_CASTING = 'SONG_CASTING',
 }

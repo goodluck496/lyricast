@@ -11,7 +11,7 @@ import {
   CloseWindowArgs,
   OpenWindowArgs,
 } from '@lyri-cast/common-electron';
-import App from '../app';
+import App, { DEFAULT_WEB_PREF } from '../app';
 
 export default class ElectronEvents {
   static bootstrapElectronEvents(): Electron.IpcMain {
@@ -27,22 +27,38 @@ ipcMain.handle(ElectronActionEvents.GET_APP_VERSION, () => {
 });
 
 ipcMain.handle(
-  ElectronActionEvents.OPEN_SECOND_WINDOW,
+  ElectronActionEvents.OPEN_WINDOW,
   (event, args: OpenWindowArgs) => {
-    if (App.openedWindows[AppWindowTypes.SECOND]) {
+    if (App.openedWindows[args.type]) {
       return;
     }
 
-    const newWindow = App.createWindow(AppWindowTypes.SECOND, args);
+    /**
+     * todo можно оформить в отдельную функцию
+     */
+    if (args.type === AppWindowTypes.SONG_CASTING) {
+      App.createWindow(args.type, {
+        webPreferences: {
+          ...DEFAULT_WEB_PREF,
+        },
+        ...args,
+      });
+      App.loadWindow(
+        args.type
+      );
 
-    App.openedWindows[AppWindowTypes.SECOND] = newWindow;
+      return App.openedWindows[args.type].webContents.getProcessId();
+    }
   }
 );
 
 ipcMain.handle(
-  ElectronActionEvents.CLOSE_SECOND_WINDOW,
+  ElectronActionEvents.CLOSE_WINDOW,
   (event, args: CloseWindowArgs) => {
-    console.log('close', event, args);
+    if (!App.openedWindows[args.type]) {
+      return;
+    }
+    App.onClose(args.type);
   }
 );
 

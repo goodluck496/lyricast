@@ -1,14 +1,22 @@
 import {
   BrowserWindow,
   BrowserWindowConstructorOptions,
+  ipcMain,
   screen,
   shell,
 } from 'electron';
 import { rendererAppName, rendererAppPort } from './constants';
 import { environment } from '../environments/environment';
 import { join } from 'path';
-import { AppWindowTypes } from '@lyri-cast/common-electron';
-import {format} from 'url'
+import { AppWindowTypes, ElectronEvents } from '@lyri-cast/common-electron';
+import * as process from 'node:process';
+
+export const DEFAULT_WEB_PREF = {
+  contextIsolation: true,
+  nodeIntegration: true,
+  backgroundThrottling: false,
+  preload: join(__dirname, 'main.preload.js'),
+};
 
 export default class App {
   // Keep a global reference of the window object, if you don't, the window will
@@ -35,11 +43,13 @@ export default class App {
     }
   }
 
-  private static onClose() {
+  public static onClose(type: AppWindowTypes) {
     // Dereference the window object, usually you would store windows
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
-    App.openedWindows[AppWindowTypes.MAIN] = null;
+
+    App.openedWindows[type].close();
+    App.openedWindows[type] = null;
   }
 
   private static onRedirect(event: any, url: string) {
@@ -56,7 +66,7 @@ export default class App {
     // Some APIs can only be used after this event occurs.
     if (rendererAppName) {
       App.initMainWindow();
-      App.loadWindow();
+      App.loadWindow(AppWindowTypes.MAIN);
     }
   }
 
@@ -73,11 +83,29 @@ export default class App {
     options: BrowserWindowConstructorOptions
   ): BrowserWindow {
     const win = new BrowserWindow(options);
+    const processId = win.webContents.getProcessId();
+    App.openedWindows[type] = win;
+
+    win.on('close', () => {
+      // Dereference the window object, usually you would store windows
+      // in an array if your app supports multi windows, this is the time
+      // when you should delete the corresponding element.
+
+      if(type !== AppWindowTypes.MAIN) {
+        App.openedWindows[AppWindowTypes.MAIN].webContents.send('receive',
+          JSON.stringify({
+            event: ElectronEvents.CLOSE_WINDOW,
+            payload: { processId },
+          }));
+      }
+    });
+
 
     win.on('closed', () => {
       // Dereference the window object, usually you would store windows
       // in an array if your app supports multi windows, this is the time
       // when you should delete the corresponding element.
+
       App.openedWindows[type] = null;
     });
 
@@ -89,29 +117,36 @@ export default class App {
     const width = Math.min(1280, workAreaSize.width || 1280);
     const height = Math.min(720, workAreaSize.height || 720);
 
-    const createdWindow = App.createWindow(AppWindowTypes.MAIN, {
+    const windowType = AppWindowTypes.MAIN;
+    App.createWindow(windowType, {
       width: width,
       height: height,
       show: false,
 
       webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: true,
-        backgroundThrottling: false,
-        preload: join(__dirname, 'main.preload.js'),
+        ...DEFAULT_WEB_PREF,
       },
     });
 
-    // Create the browser window.
-    App.openedWindows = {
-      [AppWindowTypes.MAIN]: createdWindow,
-    };
     // App.mainWindow.setMenu(null);
-    App.openedWindows[AppWindowTypes.MAIN].center();
+    App.openedWindows[windowType].center();
 
     // if main window is ready to show, close the splash window and show the main window
-    App.openedWindows[AppWindowTypes.MAIN].once('ready-to-show', () => {
-      App.openedWindows[AppWindowTypes.MAIN].show();
+    App.openedWindows[windowType].once('ready-to-show', () => {
+      App.openedWindows[windowType].show();
+    });
+
+    ipcMain.on(`send`, (event, payload) => {
+      Object.keys(App.openedWindows).forEach((key) => {
+        const targetWindow = App.openedWindows[key];
+        if (!targetWindow) {
+          return;
+        }
+        if (targetWindow.webContents.id === event.sender.id) {
+          return; // Пропускаем, если это отправляющее окн
+        }
+        App.openedWindows[key].webContents.send('receive', payload);
+      });
     });
 
     // handle all external redirects in a new browser window
@@ -121,34 +156,20 @@ export default class App {
     // });
   }
 
-  private static loadWindow(queryParams?: URLSearchParams) {
+  public static loadWindow(windowType: AppWindowTypes) {
     // load the index.html of the app.
+    let urlObject: URL | null = null;
+
     if (!App.application.isPackaged) {
-      App.openedWindows[AppWindowTypes.MAIN].loadURL(
-        `http://localhost:${rendererAppPort}`
-      );
+      urlObject = new URL(`http://localhost:${rendererAppPort}`);
     } else {
-      // const pathname = join(__dirname, '..', rendererAppName, 'index.html');
-      // const protocol = 'file:';
-      // const urlObject = new URL(pathname, protocol);
-      //
-      // if (queryParams) {
-      //   queryParams.forEach((p) =>
-      //     urlObject.searchParams.append(p, queryParams.get(p))
-      //   );
-      // }
-      //
-      // // Получение полного URL
-      // const fullUrl = urlObject.href;
-      App.openedWindows[AppWindowTypes.MAIN].loadURL(
-        // fullUrl
-        format({
-          pathname: join(__dirname, '..', rendererAppName, 'index.html'),
-          protocol: 'file:',
-          slashes: true,
-        })
+      urlObject = new URL(
+        join(__dirname, '..', rendererAppName, 'index.html'),
+        'file:'
       );
     }
+
+    App.openedWindows[windowType].loadURL(urlObject.href);
   }
 
   static main(app: Electron.App, browserWindow: typeof BrowserWindow) {

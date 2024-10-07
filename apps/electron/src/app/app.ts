@@ -29,6 +29,8 @@ export default class App {
     Record<AppWindowTypes, Electron.BrowserWindow>
   > = {};
 
+  static openedWindowTypesByProcess: Record<number, AppWindowTypes> = {};
+
   public static isDevelopmentMode() {
     const isEnvironmentSet: boolean = 'ELECTRON_IS_DEV' in process.env;
     const getFromEnvironment: boolean =
@@ -85,6 +87,7 @@ export default class App {
     const win = new BrowserWindow(options);
     const processId = win.webContents.getProcessId();
     App.openedWindows[type] = win;
+    App.openedWindowTypesByProcess[processId] = type;
 
     win.on('close', () => {
       // Dereference the window object, usually you would store windows
@@ -93,6 +96,12 @@ export default class App {
 
       if(type !== AppWindowTypes.MAIN) {
         App.openedWindows[AppWindowTypes.MAIN].webContents.send('receive',
+          JSON.stringify({
+            event: ElectronEvents.CLOSE_WINDOW,
+            payload: { processId },
+          }));
+
+        App.openedWindows[AppWindowTypes.MAIN].webContents.send('receive2',
           JSON.stringify({
             event: ElectronEvents.CLOSE_WINDOW,
             payload: { processId },
@@ -140,12 +149,15 @@ export default class App {
       Object.keys(App.openedWindows).forEach((key) => {
         const targetWindow = App.openedWindows[key];
         if (!targetWindow) {
+          console.log('!targetWindow');
           return;
         }
         if (targetWindow.webContents.id === event.sender.id) {
-          return; // Пропускаем, если это отправляющее окн
+          console.log('targetWindow.webContents.id === event.sender.id', JSON.stringify(payload));
+          return; // Пропускаем, если это отправляющее окно
         }
         App.openedWindows[key].webContents.send('receive', payload);
+        App.openedWindows[key].webContents.send('receive2', payload);
       });
     });
 

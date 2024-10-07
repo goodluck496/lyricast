@@ -1,0 +1,32 @@
+
+.flex {
+  display: flex;
+  gap: 8px;
+
+  &-column {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+
+$flex-basis: 10 10%,
+20 20%,
+25 25%,
+40 40%,
+50 50%,
+60 60%,
+75 75%,
+80 80%,
+90 90%,
+100 100%;
+
+@each $size, $percentSize in $flex-basis {
+  .flex-#{$size} {
+    display: flex;
+    flex-basis: $percentSize;
+  }
+}
+
+
+

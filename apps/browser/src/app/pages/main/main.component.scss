@@ -1,0 +1,21 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  --tab-menu-h: 64px;
+}
+
+.page {
+
+  &__tab-menu {
+    display: flex;
+    width: 100%;
+    height: var(--tab-menu-h);
+  }
+
+  &__wrapper {
+    height: calc(100% - var(--tab-menu-h));
+    display: block;
+  }
+}

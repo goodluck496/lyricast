@@ -9,6 +9,7 @@ import {
 } from '@lyri-cast/common-electron';
 
 contextBridge.exposeInMainWorld('electron', {
+  getWindowType: () => ipcRenderer.invoke(ElectronActionEvents.GET_WINDOW_TYPE),
   getAppVersion: () => ipcRenderer.invoke(ElectronActionEvents.GET_APP_VERSION),
   platform: process.platform,
   openWindow: (arg: OpenWindowArgs) =>
@@ -18,14 +19,23 @@ contextBridge.exposeInMainWorld('electron', {
 
   send: (data: EventData<ElectronEvents>) =>
     ipcRenderer.send('send', JSON.stringify(data)),
-  receive: (resEvent, callback) =>
-    ipcRenderer.on('receive', (senderEvent, data) => {
-      const payload = JSON.parse(data);
+  receive: (resEvent, callback, once = false) => {
+    const typeListener = once ? 'once' : 'on';
 
+    ipcRenderer[typeListener]('receive', (senderEvent, data) => {
+      const payload = JSON.parse(data);
       if (payload && resEvent !== payload.event) {
         return;
       }
 
       callback(payload);
-    }),
+    });
+  },
+  receive2: (callback) => {
+    ipcRenderer.on('receive2', (senderEvent, data) => {
+      const payload = JSON.parse(data);
+      // console.log('receive2', senderEvent, payload);
+      callback(payload.event, payload);
+    });
+  }
 } satisfies Context);

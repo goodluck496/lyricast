@@ -4,9 +4,7 @@ import { IShortSong } from '@lyri-cast/entities';
 
 @Controller()
 export class SongsController {
-  constructor(
-    private readonly songsService: SongsService
-  ) {}
+  constructor(private readonly songsService: SongsService) {}
 
   @Get('book-names')
   getBookNames() {
@@ -29,7 +27,18 @@ export class SongsController {
   }
 
   @Get('find/:book')
-  findSong(@Param('book') bookName: string, @Query('query') queryText: string) {
-    return this.songsService.findSongByText(bookName, queryText);
+  findSong(
+    @Param('book') bookName: string,
+    @Query('search') queryText: string,
+    @Query('full-model') fullModel: string
+  ): IShortSong[] {
+    console.log('-----', bookName, queryText);
+    const result = this.songsService.findSongByText(bookName, queryText);
+
+    if (fullModel) {
+      return result;
+    }
+
+    return result.map(this.songsService.convertToShortSong);
   }
 }

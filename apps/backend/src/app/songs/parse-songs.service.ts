@@ -54,6 +54,7 @@ export class ParseSongsService {
         ? LyricTypeEnum.CHORUS
         : LyricTypeEnum.COUPLET;
       return {
+        uniqId: Math.random() / 1000 + lyricType,
         sectionTitle: title, // название секции
         lines: lines.slice(1), // остальная часть - строки
         type: lyricType,

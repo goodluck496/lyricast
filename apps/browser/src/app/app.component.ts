@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { BridgeService } from '../services/bridge.service';
+import { CastingService } from '../services/casting.service';
 
 @Component({
   standalone: true,
@@ -11,5 +12,6 @@ import { BridgeService } from '../services/bridge.service';
 })
 export class AppComponent {
   //не удалять
-  brige = inject(BridgeService)
+  brige = inject(BridgeService);
+  casting = inject(CastingService);
 }

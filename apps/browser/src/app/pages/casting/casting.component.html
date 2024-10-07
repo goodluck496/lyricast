@@ -1,1 +1,20 @@
-<h1>Casting page</h1>
+@if (showingContent()) {
+
+  <div class="flex-column casting__wrapper">
+    <div class="flex casting__header">
+      <div class="flex-50 casting__header-title">
+        {{ selectedLyric()?.sectionTitle }}
+      </div>
+      <div class="flex-50 casting__header-number">
+        [{{ selectedSong()?.number }}]
+      </div>
+    </div>
+    <div class="flex-column casting__content">
+      @for (line of lines(); track line) {
+        <p>{{ line }}</p>
+      }
+    </div>
+  </div>
+
+}
+

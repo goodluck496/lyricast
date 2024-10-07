@@ -1,7 +1,14 @@
 /* You can add global styles to this file, and also import other style files */
 
+//@import "bootstrap/dist/css/bootstrap.css";
+
 @import "primeng/resources/primeng.css";
 @import "primeng/resources/themes/arya-blue/theme.css";
+@import '@angular/material/prebuilt-themes/azure-blue.css';
+@import "material.rewrites";
+
+@import "libs/styles/base";
+
 
 
 body {

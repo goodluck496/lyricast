@@ -7,20 +7,14 @@
     "_build:browser": "nx run browser:build:production",
     "_build:electron": "nx run electron:build",
     "_package:electron": "nx run electron:package",
-
     "_build:backend": "nx run backend:build",
-
     "_start:backend": "nx run backend:serve",
-
     "_browser:serve": "nx run browser:serve",
     "_start:browser": "npm-run-all -c _wait-on-start:backend _browser:serve",
-
     "_wait-on-start:browser": "wait-on -v  http://localhost:4200",
-    "_wait-on-start:backend": "wait-on -v http://localhost:3000/api/ok",
-
+    "_wait-on-start:backend": "wait-on -v  http://localhost:3000/api/ok",
     "_electron:serve": "nx run electron:serve",
     "_start:electron": "npm-run-all -c _wait-on-start:browser _electron:serve",
-
     "start": "npm-run-all -p _start:backend _start:browser _start:electron",
     "build": "npm-run-all -c _build:browser _build:electron _package:electron",
     "build-with-backend": "npm-run-all -c build _start:backend"
@@ -28,10 +22,12 @@
   "private": true,
   "dependencies": {
     "@angular/animations": "~18.2.0",
+    "@angular/cdk": "~18.2.7",
     "@angular/common": "~18.2.0",
     "@angular/compiler": "~18.2.0",
     "@angular/core": "~18.2.0",
     "@angular/forms": "~18.2.0",
+    "@angular/material": "~18.2.7",
     "@angular/platform-browser": "~18.2.0",
     "@angular/platform-browser-dynamic": "~18.2.0",
     "@angular/router": "~18.2.0",
@@ -51,6 +47,7 @@
     "@angular/cli": "~18.2.0",
     "@angular/compiler-cli": "~18.2.0",
     "@angular/language-service": "~18.2.0",
+    "@angular/material": "^18.2.7",
     "@eslint/js": "^9.8.0",
     "@nestjs/schematics": "^10.0.1",
     "@nestjs/testing": "^10.0.2",

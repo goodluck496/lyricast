@@ -88,7 +88,7 @@ export class SongsService {
     return foundSong;
   }
 
-  findSongByText(bookName: string, text: string): ISong[] {
+  findSongByText(bookName: string, text: string, ): ISong[] {
     const book = this.readBook(bookName);
     const preparedText = text.trim().toLowerCase();
 
@@ -97,10 +97,17 @@ export class SongsService {
         String(item.number).includes(preparedText) ||
         item.title.toLowerCase().includes(preparedText) ||
         !!item.lyrics.find((lyric) =>
-          lyric.lines.find((el) =>
-            el.trim().toLowerCase().includes(preparedText)
-          )
+          lyric.lines.find((el) => {
+            return el.trim().toLowerCase().includes(preparedText);
+          })
         )
     );
+  }
+
+  convertToShortSong(song: ISong): IShortSong {
+    return {
+      number: song.number,
+      title: song.title
+    }
   }
 }

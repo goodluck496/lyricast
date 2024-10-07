@@ -4,9 +4,15 @@ export enum LyricTypeEnum {
 }
 
 export interface ILyric {
+  uniqId: string;
   sectionTitle: string;
   type: LyricTypeEnum;
   lines: string[];
+}
+
+export interface SelectedLyricChunk extends ILyric {
+  lyric: ILyric
+  blockIndex: number;
 }
 
 export interface ISong {

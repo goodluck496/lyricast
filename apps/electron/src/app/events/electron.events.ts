@@ -66,3 +66,7 @@ ipcMain.handle(
 ipcMain.on('quit', (event, code) => {
   app.exit(code);
 });
+
+ipcMain.handle(ElectronActionEvents.GET_WINDOW_TYPE, (event) => {
+  return App.openedWindowTypesByProcess[event.processId];
+})

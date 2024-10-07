@@ -1,0 +1,16 @@
+<p class="lyric-item__title">{{lyricItem().sectionTitle}}</p>
+
+  <div class="flex flex-column">
+    @for (block of linesChunks$ | async ; let index = $index; track block.length + '--' + index) {
+
+      <p class="flex flex-column lyric-item__block"
+         [class.lyric-item__block--selected]="(selectedBlock$ | async)?.lyric?.sectionTitle === lyricItem().sectionTitle && (selectedBlock$ | async)?.blockIndex === index"
+         (click)="onSelectBlock(index)">
+        @for (subBlock of block; track subBlock) {
+          <span>{{ subBlock }}</span>
+        }
+      </p>
+    }
+  </div>
+
+

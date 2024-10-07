@@ -1,0 +1,99 @@
+<div class="flex wrapper">
+  <div class="flex-column flex-50" [style.height.%]="100">
+    <div class="flex songs-block songs-block--up">
+      <div class="flex-40 flex-column">
+        <h4>Сборники</h4>
+
+        <mat-selection-list class="song__selection-list" [formControl]="songBooksControl" [multiple]="false"
+                            [hideSingleSelectionIndicator]="true">
+          <cdk-virtual-scroll-viewport [minBufferPx]="100" [itemSize]="32" class="song__selection-list">
+            <mat-list-option *cdkVirtualFor="let item of songBooks$ | async"
+                             [value]="item.humanName"
+                             [selected]="songBooksControl.value?.includes(item.humanName)"
+                             (click)="onBookClick(item)" #p>
+              <div class="song__list-item">{{ item.humanName }}</div>
+            </mat-list-option>
+          </cdk-virtual-scroll-viewport>
+        </mat-selection-list>
+
+      </div>
+      <div class="flex-60 flex-column">
+        @if (selectedBook$ |async) {
+          <div class="flex">
+            <h4 class="flex-25">Песни</h4>
+
+            <input class="flex-75"
+                   pInputText
+                   [formControl]="searchSongControl"
+                   placeholder="Ввидите название песни" />
+          </div>
+          <div style="height: 90%; overflow: auto">
+            <mat-selection-list class="song__selection-list"
+                                [multiple]="false"
+                                [formControl]="songsControl"
+                                [hideSingleSelectionIndicator]="true">
+              <cdk-virtual-scroll-viewport [minBufferPx]="100" [itemSize]="32" class="song__selection-list">
+                <mat-list-option *cdkVirtualFor="let item of songs$ | async"
+                                 [value]="item.number"
+                                 [selected]="songsControl.value?.includes(item.number)"
+                                 (click)="onSongClick(item)" #op>
+                  <div class="song__list-item"><b>{{ item.number }}</b> {{ item.title }}</div>
+                </mat-list-option>
+              </cdk-virtual-scroll-viewport>
+            </mat-selection-list>
+
+          </div>
+        }
+      </div>
+
+    </div>
+    @if (selectedFullSong$ | async; as selectedSong) {
+      <div class="flex flex-column songs-block songs-block--down">
+        <div class="songs-block__menu">
+          <button pButton (click)="onEdit()">Редактировать</button>
+          <button pButton (click)="op.show($event)">Разделить куплет на блоки по</button>
+
+          <p-overlayPanel appendTo="body" #op>
+            <p-listbox [ngModel]="(chooseLyricItemService.splitRowCount$ | async) || 1"
+                       [options]="[1,2,3,4,5,6,7,8,10,20]"
+                       (onChange)="onChangeSplitValue($event.value); op.hide()"
+            ></p-listbox>
+          </p-overlayPanel>
+
+        </div>
+        <div style="height: 90%; overflow: auto;">
+
+          @for (lyric of selectedSong.lyrics; let index = $index; track lyric.uniqId) {
+            <lyri-lyric-item [lyricItem]="lyric"></lyri-lyric-item>
+          }
+
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (selectedFullSong$ | async) {
+    <div class="flex-column flex-50">
+
+      @if (selectedLyricBlock$ | async; as selectedLyricBlock) {
+        <div style="background: gray; width: 500px; height: 500px; border: 1px solid white;">
+
+
+          <h3>{{ selectedLyricBlock.lyric?.sectionTitle }}</h3>
+
+          @for (line of selectedLyricBlock?.selectedChunk; track line) {
+            <p>{{ line }}</p>
+          }
+
+        </div>
+        <div>
+          <button pButton [disabled]="!selectedLyricBlock.lyric" (click)="onOpenWindow()">На экран</button>
+          <button pButton (click)="onHideCasting()">Скрыть</button>
+          <button pButton (click)="onCloseCasting()">Остановить</button>
+        </div>
+      }
+    </div>
+  }
+
+</div>
+

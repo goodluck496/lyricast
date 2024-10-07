@@ -1,0 +1,42 @@
+@import "libs/styles/mixins";
+
+:host {
+  display: block;
+  height: 100%;
+  width: 100%;
+
+}
+
+.wrapper {
+  @include rectangle();
+}
+
+.songs-block {
+  overflow: auto;
+
+  &--up {
+    height: 30%;
+  }
+  &--down {
+    height: 70%;
+  }
+
+  &__menu {
+    display: flex;
+    align-items: center;
+    gap: 12px
+  }
+
+}
+
+.song {
+  &__selection-list {
+   height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  &__number {
+    margin-right: 16px;
+  }
+}

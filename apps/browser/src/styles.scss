@@ -4,14 +4,21 @@
 
 @import "primeng/resources/primeng.css";
 @import "primeng/resources/themes/arya-blue/theme.css";
-@import '@angular/material/prebuilt-themes/azure-blue.css';
+@import '@angular/material/prebuilt-themes/cyan-orange.css';
 @import "material.rewrites";
 
 @import "libs/styles/base";
 
+@import "libs/styles/fonts";
 
 
 body {
   margin: 0;
+
+  font-family: "Cruinn", sans-serif !important;
+}
+
+* {
+  font-family: "Cruinn", sans-serif !important;
 }
 

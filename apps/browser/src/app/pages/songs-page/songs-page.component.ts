@@ -105,7 +105,7 @@ export class SongsPageComponent implements OnInit {
 
   searchSongControl = new FormControl<string>('');
 
-  songs$: Observable<ISong[]> = combineLatest([
+  songs$: Observable<IShortSong[]> = combineLatest([
     this.searchSongControl.valueChanges.pipe(startWith('')),
     this.selectedBook$,
   ]).pipe(
@@ -207,11 +207,8 @@ export class SongsPageComponent implements OnInit {
     this.castingSrv.closeCasting();
   }
 
-  // this.selectedLyricBlock$
-
   onChangeSplitValue(value: any) {
     this.chooseLyricItemService.splitRowCount$.next(value || 1);
-    console.log('onChangeSplitValue', value);
   }
 
   onEdit(): void {}

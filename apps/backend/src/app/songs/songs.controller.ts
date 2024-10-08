@@ -32,10 +32,9 @@ export class SongsController {
     @Query('search') queryText: string,
     @Query('full-model') fullModel: string
   ): IShortSong[] {
-    console.log('-----', bookName, queryText);
     const result = this.songsService.findSongByText(bookName, queryText);
 
-    if (fullModel) {
+    if (fullModel === ' true') {
       return result;
     }
 

@@ -1,12 +1,22 @@
 # LyriCast
 
-### Node v20.17.0
+1) скачать и установить Git
+ https://git-scm.com/downloads
+2) Скачать NVM https://github.com/coreybutler/nvm-windows/releases
+   3) выбрать нужный файл для своей ОС в блоке Assets
 
-- install pnpm
+## Установить Nodejs 20.17.0 (NVM)
+````shell
+nvm install 20.17
+nvm use 20.17
+````
+
+## Установить пакеты
 ````shell
 pnpm install -g pnpm
 ````
-- install electron
+
+## Установить electron
 ````shell
 pnpm install -D nx-electron
 ````
@@ -27,3 +37,6 @@ npm run build
 ````shell 
 npm run build-with-backend
 ````
+
+------ 
+"bible-xml": "https://github.com/Beblia/Holy-Bible-XML-Format"

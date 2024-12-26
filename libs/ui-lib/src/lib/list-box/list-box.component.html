@@ -1,0 +1,33 @@
+<div class="list-box__search">
+  <input pInputText placeholder="Введите" [(ngModel)]="searchStringSig" (ngModelChange)="onSearch($event)" />
+
+  @if (!showItems().length) {
+    <h3>Ничего не найдено</h3>
+  }
+</div>
+<div class="list-box__container">
+  <ng-scrollbar externalViewport cdkVirtualScrollViewport style="width: 100%">
+    <cdk-virtual-scroll-viewport itemSize="38" class="list-box__viewport">
+      <div cdkListbox>
+        <div *cdkVirtualFor="let item of showItems(); templateCacheSize: 5"
+             [cdkOption]="item"
+             class="list-box__item"
+             [class.list-box__item--selected]="selectedItems.has(item.searchKey)"
+             (click)="onItemClick(item)"
+        >
+          @if (listBoxTemplates[ListBoxTemplates.ITEM]; as template) {
+            <ng-container [ngTemplateOutlet]="$any(template)"
+                          [ngTemplateOutletContext]="{$implicit: item, search: searchStringSig()}"
+            ></ng-container>
+          } @else {
+            {{ item.title | highliter: searchStringSig() }}
+          }
+        </div>
+
+      </div>
+    </cdk-virtual-scroll-viewport>
+
+  </ng-scrollbar>
+
+</div>
+

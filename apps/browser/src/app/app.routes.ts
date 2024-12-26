@@ -16,6 +16,13 @@ export const appRoutes: Route[] = [
           ),
       },
       {
+        path: Pages.SONGS_NEW,
+        loadComponent: () =>
+          import('./pages/song-page-new/song-page-new.component').then(
+            (c) => c.SongPageNewComponent
+          ),
+      },
+      {
         path: Pages.BIBLE,
         loadComponent: () =>
           import('./pages/bible-page/bible-page.component').then(
@@ -29,6 +36,13 @@ export const appRoutes: Route[] = [
             (c) => c.ProgramsPageComponent
           ),
       },
+      {
+        path: Pages.TEST,
+        loadComponent: () =>
+          import('./pages/test-page/test-page.component').then(
+            (c) => c.TestPageComponent
+          ),
+      }
     ],
   },
   {
@@ -38,4 +52,5 @@ export const appRoutes: Route[] = [
         (c) => c.CastingComponent
       ),
   },
+
 ];

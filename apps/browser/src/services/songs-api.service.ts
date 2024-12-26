@@ -5,7 +5,7 @@ import { BASE_API_TOKEN } from '@lyri-cast/common';
 import { IShortSong, ISong, ISongBookName } from '@lyri-cast/entities';
 
 @Injectable({ providedIn: 'root' })
-export class SongsService {
+export class SongsApiService {
   BASE_API_TOKEN = inject(BASE_API_TOKEN);
 
   constructor(private http: HttpClient) {}

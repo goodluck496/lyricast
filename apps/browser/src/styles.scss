@@ -1,6 +1,6 @@
 /* You can add global styles to this file, and also import other style files */
 
-//@import "bootstrap/dist/css/bootstrap.css";
+@import "bootstrap/dist/css/bootstrap-grid.css";
 
 @import "primeng/resources/primeng.css";
 @import "primeng/resources/themes/arya-blue/theme.css";
@@ -15,10 +15,17 @@
 body {
   margin: 0;
 
-  font-family: "Cruinn", sans-serif !important;
+  //font-family: "Cruinn", sans-serif !important;
+  font-family: "sans-serif", sans-serif !important;
 }
 
 * {
-  font-family: "Cruinn", sans-serif !important;
+  //font-family: "Cruinn", sans-serif !important;
+  font-family: "sans-serif", sans-serif !important;
 }
 
+
+.highlighted-text {
+  background-color: yellow;
+  color: black;
+}

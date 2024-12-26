@@ -5,7 +5,7 @@ import { AppService } from './app.service';
 import { SongsModule } from './songs/songs.module';
 
 @Module({
-  imports: [SongsModule],
+  imports: [SongsModule /*BibleModule*/],
   controllers: [AppController],
   providers: [AppService],
 })

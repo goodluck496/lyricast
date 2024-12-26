@@ -1,9 +1,12 @@
-
-
 import { Injectable } from '@nestjs/common';
 import path from 'path';
 import fs from 'fs';
-import { ISong, ISongBook, ISongBookHeader, LyricTypeEnum } from '@lyri-cast/entities';
+import {
+  ISong,
+  ISongBook,
+  ISongBookHeader,
+  LyricTypeEnum,
+} from '@lyri-cast/entities';
 
 @Injectable()
 export class ParseSongsService {
@@ -12,7 +15,7 @@ export class ParseSongsService {
   assetsPath = path.resolve(__dirname, 'assets');
   assetsJsonsPath = path.resolve(__dirname, 'assets', 'complete-jsons');
 
-  private parseSong(text: string) {
+  private parseSong(text: string, bookKey: string): ISong {
     const songObj: ISong = {
       number: 0,
       title: '',
@@ -21,6 +24,7 @@ export class ParseSongsService {
       author: '',
       meta: [],
       lyrics: [],
+      bookName: { fileKey: bookKey, humanName: '' },
     };
     const parts = text.split('#$#');
 
@@ -64,7 +68,7 @@ export class ParseSongsService {
     return songObj;
   }
 
-  private parseSongs(text: string): ISongBook {
+  private parseSongs(text: string, bookKey: string): ISongBook {
     // Разделяем текст на блоки песен
     const header = text.match(/##[^$].*/gi);
     header.forEach((item) => {
@@ -76,34 +80,39 @@ export class ParseSongsService {
       .filter((block) => block.trim() !== '');
 
     const parsedSongs = songBlocks.map((block) => {
-      return this.parseSong(block);
+      return this.parseSong(block, bookKey);
     });
 
     return {
-      header: header.reduce((acc, curr, index) => {
-        const headerTextRow = curr.replace('##', '');
-        if (index === 0) {
-          acc['number'] = headerTextRow;
-        }
-        if (index === 1) {
-          acc['title'] = headerTextRow;
-        }
-        if (index === 2) {
-          const hasDelim = headerTextRow.match('@%');
-          if (hasDelim) {
-            const chunks = headerTextRow.split('@%');
-            acc['author'] = chunks[0];
-            acc['updatedAt'] = chunks
-              .slice(1)
-              .filter((el) => !!el)
-              .toString();
-          } else {
-            acc['author'] = headerTextRow;
+      header: header.reduce(
+        (acc, curr, index) => {
+          const headerTextRow = curr.replace('##', '');
+          if (index === 0) {
+            acc['number'] = headerTextRow;
           }
-        }
+          if (index === 1) {
+            acc['title'] = headerTextRow;
+          }
+          if (index === 2) {
+            const hasDelim = headerTextRow.match('@%');
+            if (hasDelim) {
+              const chunks = headerTextRow.split('@%');
+              acc['author'] = chunks[0];
+              acc['updatedAt'] = chunks
+                .slice(1)
+                .filter((el) => !!el)
+                .toString();
+            } else {
+              acc['author'] = headerTextRow;
+            }
+          }
 
-        return acc;
-      }, {} as ISongBookHeader),
+          return acc;
+        },
+        {
+          bookKey,
+        } as ISongBookHeader
+      ),
       songs: parsedSongs.sort((a, b) => a.number - b.number),
     };
   }
@@ -141,7 +150,7 @@ export class ParseSongsService {
 
     try {
       const data = fs.readFileSync(filePath);
-      const parsedData = this.parseSongs(data.toString());
+      const parsedData = this.parseSongs(data.toString(), fileName);
 
       const newFilePath = path.resolve(
         this.assetsJsonsPath,

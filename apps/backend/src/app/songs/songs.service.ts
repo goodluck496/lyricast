@@ -67,7 +67,11 @@ export class SongsService {
   getBookSongNames(bookName: string): IShortSong[] {
     const book = this.readBook(bookName);
 
-    return book.songs.map(({ title, number }) => ({ title, number }));
+    return book.songs.map(({ title, number }) => ({
+      title,
+      number,
+      bookName: this.convertBookToShortBook(book),
+    }));
   }
 
   readSong(bookName: string, songId: number): ISong | undefined {
@@ -88,7 +92,7 @@ export class SongsService {
     return foundSong;
   }
 
-  findSongByText(bookName: string, text: string, ): ISong[] {
+  findSongByText(bookName: string, text: string): ISong[] {
     const book = this.readBook(bookName);
     const preparedText = text.trim().toLowerCase();
 
@@ -107,7 +111,15 @@ export class SongsService {
   convertToShortSong(song: ISong): IShortSong {
     return {
       number: song.number,
-      title: song.title
-    }
+      title: song.title,
+      bookName: song.bookName
+    };
+  }
+
+  convertBookToShortBook(book: ISongBook): ISongBookName {
+    return {
+      humanName: book.header.title,
+      fileKey: book.header.bookKey,
+    };
   }
 }

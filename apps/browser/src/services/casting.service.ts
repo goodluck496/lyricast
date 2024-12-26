@@ -43,7 +43,6 @@ export class CastingService {
             type: AppWindowTypes.SONG_CASTING,
             title: 'Casting',
             show: true,
-            opacity: 0.5,
             center: true,
             // fullscreen: true,
             focusable: true,
@@ -64,6 +63,49 @@ export class CastingService {
       })
     );
   }
+
+  openWindowNew({
+               song,
+               lyric,
+             }: {
+    song: ISong;
+    lyric: ILyric;
+  }): Observable<EventData<ElectronEvents> | null> {
+    return of(this.openedCastingWindowId).pipe(
+      switchMap((windowId) => {
+        if (windowId) {
+          console.warn(
+            `Window is opened - [procId]${this.openedCastingWindowId}`
+          );
+          return of(windowId);
+        }
+        return fromPromise(
+          this.windowSrv.electronContext.openWindow({
+            type: AppWindowTypes.SONG_CASTING,
+            title: 'Casting',
+            show: true,
+            center: true,
+            // fullscreen: true,
+            focusable: true,
+          })
+        );
+      }),
+      switchMap((procId) => {
+        this.openedCastingWindowId = procId;
+        this.windowSrv.electronContext.send({
+          event: ElectronEvents.OPEN_PAGE,
+          payload: { name: Pages.CASTING },
+        });
+
+        return this.bridgeService.queueEvents.asObservable();
+      }),
+      tap(() => {
+        // this.showLyricBlock(song, lyric);
+      })
+    );
+  }
+
+
 
   initWindowsSubs() {
     this.bridgeService.queueEvents.pipe(filterEmpty()).subscribe((data) => {
@@ -122,6 +164,21 @@ export class CastingService {
         song,
         lyric: lyricBlock.lyric,
         showedBlock: lyricBlock.selectedChunk,
+      },
+    });
+  }
+
+  showLyricBlockNew(
+    song: ISong,
+    lyric: ILyric,
+    selectedChunk: string[]
+  ) {
+    this.windowSrv.electronContext.send({
+      event: ElectronEvents.SONG__SHOW_LYRIC_BLOCK,
+      payload: {
+        song,
+        lyric,
+        showedBlock: selectedChunk,
       },
     });
   }

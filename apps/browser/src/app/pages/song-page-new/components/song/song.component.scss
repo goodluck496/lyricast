@@ -1,0 +1,62 @@
+
+:host {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+  width: 100%;
+
+
+  --list-box-item-selected-bg: #0D99FF;
+  --list-box-item-selected-text-color: white;
+}
+
+.song {
+  &-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+.lyric-item {
+  width: 100%;
+  border-radius: 8px;
+  background: #191919;
+
+  $self: &;
+
+  &__header {
+    font-weight: bold;
+    border-bottom: 1px solid #414141;
+    padding: 10px 15px;
+  }
+
+  &__content {
+    padding: 10px 15px;
+
+    cursor: pointer;
+    transition: background-color .3s;
+
+    //&:hover {
+    //  background-color: var(--list-box-item-selected-bg);
+    //  color: var(--list-box-item-selected-text-color);
+    //  text-shadow: 1px 1px 10px black;
+    //}
+  }
+
+  &__line {
+    padding: 10px 15px;
+
+    &:hover {
+      background-color: var(--list-box-item-selected-bg);
+      color: var(--list-box-item-selected-text-color);
+      text-shadow: 1px 1px 10px black;
+    }
+
+    &:not(:last-child) {
+      border-bottom: 1px solid #414141;
+    }
+  }
+
+}

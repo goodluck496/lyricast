@@ -15,6 +15,7 @@ export const appConfig: ApplicationConfig = {
     { provide: RouteReuseStrategy, useClass: CustomReuseStrategy },
     provideHttpClient(withInterceptorsFromDi()),
     { provide: BASE_API_TOKEN, useValue: 'http://localhost:3000/api' },
+    //для оптимизации, чтобы вспылтие события не взызывало двойного обнаржуния изменений
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes),
   ],

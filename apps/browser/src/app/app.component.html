@@ -1,2 +1,27 @@
+<!--@if((isNotCastingPage$ | async); as castingPage) {-->
+<!--  {{castingPage}}-->
+<!--  <p-tabMenu class="page__tab-menu" [model]="pages" [activeItem]="activePage" (activeItemChange)="activePage = $event">-->
 
-<router-outlet></router-outlet>
+<!--    <ng-template pTemplate="item" let-item>-->
+<!--      @if (item.routerLink) {-->
+<!--        <a [routerLink]="item.routerLink" class="p-menuitem-link">-->
+<!--          <span [class]="item.icon"></span>-->
+<!--          <span class="ml-2">-->
+<!--                    {{ item.label }}-->
+<!--                </span>-->
+<!--        </a>-->
+<!--      } @else {-->
+<!--        {{item.label}}-->
+<!--      }-->
+
+<!--    </ng-template>-->
+<!--  </p-tabMenu>-->
+
+<!--}-->
+
+<!--<div class="page__wrapper">-->
+  <router-outlet></router-outlet>
+<!--</div>-->
+
+
+

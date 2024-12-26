@@ -34,9 +34,13 @@
     "@nestjs/common": "^10.0.2",
     "@nestjs/core": "^10.0.2",
     "@nestjs/platform-express": "^10.0.2",
+    "@pikselin/ngx-fittext": "^2.0.0",
     "axios": "^1.6.0",
-    "primeng": "^17.18.11",
+    "bootstrap": "5.3.3",
+    "ng2-fittext": "^2.0.0",
+    "primeng": "^17.18.12",
     "reflect-metadata": "^0.1.13",
+    "reveal.js": "^5.1.0",
     "rxjs": "~7.8.0",
     "zone.js": "~0.14.3"
   },
@@ -69,6 +73,7 @@
     "@types/node": "18.16.9",
     "@typescript-eslint/utils": "^7.16.0",
     "angular-eslint": "^18.3.0",
+    "cheerio": "^1.0.0",
     "electron": "^31.0.1",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^9.0.0",
@@ -76,9 +81,10 @@
     "jest-environment-jsdom": "^29.7.0",
     "jest-environment-node": "^29.7.0",
     "jest-preset-angular": "~14.1.0",
+    "ngx-scrollbar": "^16.1.1",
     "npm-run-all": "^4.1.5",
     "nx": "19.8.2",
-    "nx-electron": "^19.0.0-alpha.0",
+    "nx-electron": "18.0.1",
     "prettier": "^2.6.2",
     "ts-jest": "^29.1.0",
     "ts-node": "10.9.1",
@@ -86,7 +92,8 @@
     "typescript": "~5.5.2",
     "typescript-eslint": "^8.0.0",
     "wait-on": "^8.0.1",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "xml2js": "^0.6.2"
   },
   "pnpm": {
     "overrides": {
@@ -96,6 +103,6 @@
   },
   "engines": {
     "node": "20.17.0",
-    "pnpm": "9.11.0"
+    "pnpm": "9.12.1"
   }
 }

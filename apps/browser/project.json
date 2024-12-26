@@ -29,7 +29,9 @@
         "styles": [
           "apps/browser/src/styles.scss"
         ],
-        "scripts": []
+        "scripts": [],
+        "allowedCommonJsDependencies": [
+        ]
       },
       "configurations": {
         "production": {

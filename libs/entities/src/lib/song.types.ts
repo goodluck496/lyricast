@@ -10,8 +10,12 @@ export interface ILyric {
   lines: string[];
 }
 
+export interface ILyricChunk extends ILyric {
+  chunkSize: number;
+}
+
 export interface SelectedLyricChunk extends ILyric {
-  lyric: ILyric
+  lyric: ILyric;
   blockIndex: number;
 }
 
@@ -32,15 +36,20 @@ export interface ISong {
    * Текст песни
    */
   lyrics: ILyric[];
+
+  bookName: ISongBookName;
 }
 
-export type IShortSong = Pick<ISong, 'number' | 'title'>
+export type IShortSong = Pick<ISong, 'number' | 'title'> & {
+  bookName: ISongBookName;
+};
 
 export interface ISongBookHeader {
   number: string;
   title: string;
   author: string;
   updatedAt: string;
+  bookKey: string;
 }
 
 export interface ISongBook {

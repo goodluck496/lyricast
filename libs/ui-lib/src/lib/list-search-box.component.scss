@@ -1,0 +1,27 @@
+:host {
+  display: flex;
+  flex-direction: column;
+}
+
+.list-search {
+
+  &__header {
+
+  }
+
+  &__content {
+    display: flex;
+  }
+
+  &__item {
+    display: flex;
+
+    border-bottom: 1px solid white;
+
+    &:hover {
+      background-color: blue;
+    }
+  }
+
+
+}

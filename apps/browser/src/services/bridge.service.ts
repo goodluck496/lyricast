@@ -39,6 +39,7 @@ export class BridgeService {
       ) {
         const payload =
           data.payload as EventPayloadItem<ElectronEvents.OPEN_PAGE>;
+        console.log('payload', payload);
         this.router.navigate([payload.name]);
       }
     });

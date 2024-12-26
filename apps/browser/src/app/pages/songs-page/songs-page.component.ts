@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { WindowService } from '../../../services/common/window.service';
-import { SongsService } from '../../songs.service';
+import { SongsApiService } from '../../../services/songs-api.service';
 import { CastingService } from '../../../services/casting.service';
 import { ActivatedRoute } from '@angular/router';
 import {
@@ -15,7 +15,7 @@ import {
   take,
   tap,
 } from 'rxjs';
-import { IShortSong, ISong, ISongBookName } from '@lyri-cast/entities';
+import { IShortSong, ISongBookName } from '@lyri-cast/entities';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AsyncPipe, CommonModule, JsonPipe } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
@@ -79,7 +79,7 @@ import { OverlayPanelModule } from 'primeng/overlaypanel';
 })
 export class SongsPageComponent implements OnInit {
   public windowSrv = inject(WindowService);
-  public songsService = inject(SongsService);
+  public songsService = inject(SongsApiService);
   public castingSrv = inject(CastingService);
   private route = inject(ActivatedRoute);
   public chooseLyricItemService = inject(ChooseLyricItemService);

@@ -78,11 +78,11 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
         this.elRef.nativeElement
       );
       this.deck = await this.deckRef?.initialize({
-        width: 300,
+        width: 400,
         height: 300,
-        margin: 0.25,
+        margin: 0.35,
         // overview: true,
-        center: true,
+        // center: true,
         embedded: true,
       });
     }, 100);

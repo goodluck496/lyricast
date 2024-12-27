@@ -1,15 +1,15 @@
 import { Injectable } from '@angular/core';
-import { ILyric } from '@lyri-cast/entities';
+import { Lyric } from '@lyri-cast/entities';
 import { BehaviorSubject, combineLatest, debounceTime } from 'rxjs';
 
 @Injectable()
 export class ChooseLyricItemService {
-  selectedLyric$ = new BehaviorSubject<ILyric | null>(null);
+  selectedLyric$ = new BehaviorSubject<Lyric | null>(null);
   selectedLinesBlockIndex$ = new BehaviorSubject<number | null>(null);
 
   public splitRowCount$ = new BehaviorSubject(4);
 
-  selectItem(lyric: ILyric, blockIndex: number) {
+  selectItem(lyric: Lyric, blockIndex: number) {
     this.selectedLyric$.next(lyric);
     this.selectedLinesBlockIndex$.next(blockIndex);
   }

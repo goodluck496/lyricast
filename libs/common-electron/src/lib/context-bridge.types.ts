@@ -1,7 +1,7 @@
 import { AppWindowTypes } from './common-electron';
 
 import { BrowserWindowConstructorOptions } from 'electron';
-import { ILyric, ISong } from '@lyri-cast/entities';
+import { Lyric, ISong } from '@lyri-cast/entities';
 
 export type OpenWindowArgs = BrowserWindowConstructorOptions & {
   type: AppWindowTypes;
@@ -26,7 +26,7 @@ export type EventPayloadsMap = {
   [ElectronEvents.CLOSE_WINDOW]: { processId: number };
   [ElectronEvents.SONG__SHOW_LYRIC_BLOCK]: {
     song: ISong;
-    lyric: ILyric,
+    lyric: Lyric,
     showedBlock: string[];
   };
   [ElectronEvents.SONG__HIDE_LYRIC_BLOCK]: void;

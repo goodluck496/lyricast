@@ -19,7 +19,7 @@ import {
 } from '@lyri-cast/ui-lib';
 import { AsyncPipe } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ILyric, IShortSong, ISongBookName } from '@lyri-cast/entities';
+import { IShortSong, ISongBookName, LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { filterEmpty } from '@lyri-cast/common';
 import { DropdownModule } from 'primeng/dropdown';
 import { ListboxModule } from 'primeng/listbox';
@@ -32,12 +32,13 @@ import {
   SPLIT_PARTS_COUNT,
   SplitPartsCount,
 } from './song-page-select.service';
+import { CastingPreviewComponent } from './components/casting-preview/casting-preview.component';
 
 export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
   [SPLIT_PARTS_COUNT.NONE]: 'Нет',
-  [SPLIT_PARTS_COUNT.FOUR]: '4',
   [SPLIT_PARTS_COUNT.TWO]: '2',
   [SPLIT_PARTS_COUNT.THREE]: '3',
+  [SPLIT_PARTS_COUNT.FOUR]: '4',
 };
 
 @Component({
@@ -55,6 +56,7 @@ export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
     HighlighterPipe,
     InputTextModule,
     FormsModule,
+    CastingPreviewComponent,
   ],
   templateUrl: './song-page-new.component.html',
   styleUrl: './song-page-new.component.scss',
@@ -110,17 +112,20 @@ export class SongPageNewComponent implements OnInit, AfterViewInit {
   selectedSong$ = this.songControl.valueChanges.pipe(
     filterEmpty(),
     switchMap((data) => {
-      const selelctedBook = this.selectedBook.value;
-      if (!selelctedBook) {
+      const selectedBook = this.selectedBook.value;
+      if (!selectedBook) {
         throw new Error('Не быран справочник');
       }
       return this.songsService.getSong(
-        selelctedBook.baseEntity,
+        selectedBook.baseEntity,
         data.baseEntity.number
       );
     }),
     tap((data) => {
       this.songPageSelectSrv.selectSong(data);
+      const splitCount = data.lyrics[0]?.splitLinesCount || SPLIT_PARTS_COUNT.NONE;
+      this.splitCount.set(splitCount);
+      this.songPageSelectSrv.setSplitCountValue(splitCount)
     })
   );
 
@@ -167,8 +172,10 @@ export class SongPageNewComponent implements OnInit, AfterViewInit {
     // })
   }
 
-  onSelectLyric(lyric: ILyric): void {
+  onSelectLyricLine([lyric, line]: [LyricForCasting, LyricLine]): void {
     console.log('-------lyric', lyric);
+
+    this.songPageSelectSrv.showPreview(true, lyric, line);
   }
 
   onSelectSplitValue(value: SplitPartsCount) {
@@ -180,7 +187,10 @@ export class SongPageNewComponent implements OnInit, AfterViewInit {
     Object.keys(SPLIT_PARTS_COUNT) as Array<keyof typeof SPLIT_PARTS_COUNT>
   ).map((key) => {
     const value = SPLIT_PARTS_COUNT[key];
-    const label = value === SPLIT_PARTS_COUNT.NONE ? 'Не делить' : SplitPartsCountMapVm[value] ;
-    return { label , value };
+    const label =
+      value === SPLIT_PARTS_COUNT.NONE
+        ? 'Не делить'
+        : SplitPartsCountMapVm[value];
+    return { label, value };
   });
 }

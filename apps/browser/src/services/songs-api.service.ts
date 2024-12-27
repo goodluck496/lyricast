@@ -27,8 +27,13 @@ export class SongsApiService {
     );
   }
 
-  findSongsByBook(book: ISongBookName, search: string): Observable<IShortSong[]> {
-    const params = new HttpParams({ fromObject: { search, 'full-model': false } });
+  findSongsByBook(
+    book: ISongBookName,
+    search: string
+  ): Observable<IShortSong[]> {
+    const params = new HttpParams({
+      fromObject: { search, 'full-model': false },
+    });
 
     return this.http
       .get<ISong[]>(`${this.BASE_API_TOKEN}/find/${book.fileKey}`, { params })

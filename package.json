@@ -71,6 +71,7 @@
     "@swc/helpers": "~0.5.11",
     "@types/jest": "^29.5.12",
     "@types/node": "18.16.9",
+    "@types/reveal.js": "^5.0.4",
     "@typescript-eslint/utils": "^7.16.0",
     "angular-eslint": "^18.3.0",
     "cheerio": "^1.0.0",

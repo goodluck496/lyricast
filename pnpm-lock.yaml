@@ -154,6 +154,9 @@ importers:
       '@types/node':
         specifier: 18.16.9
         version: 18.16.9
+      '@types/reveal.js':
+        specifier: ^5.0.4
+        version: 5.0.4
       '@typescript-eslint/utils':
         specifier: ^7.16.0
         version: 7.18.0(eslint@9.11.1(jiti@1.21.6))(typescript@5.5.4)
@@ -2829,6 +2832,9 @@ packages:
 
   '@types/retry@0.12.2':
     resolution: {integrity: sha512-XISRgDJ2Tc5q4TRqvgJtzsRkFYNJzZrhTdtMoGVBttwzzQJkPnS3WWTFc7kuDRoPtPakl+T+OfdEUjYJj7Jbow==}
+
+  '@types/reveal.js@5.0.4':
+    resolution: {integrity: sha512-70Qua903NRU736r8Z94okthf6hXKm+brta/KdHFrK6GD16eTmGhPrDYGCUP7eNifEA2mvJGlNq1IR41ycIX0Yw==}
 
   '@types/semver@7.5.8':
     resolution: {integrity: sha512-I8EUhyrgfLrcTkzV3TSsGyl1tSuPrEDzr0yd5m90UgNxQkyDXULk3b6MlQqTCpZpNtWe1K0hzclnZkTcLBe2UQ==}
@@ -11744,6 +11750,8 @@ snapshots:
       '@types/node': 18.16.9
 
   '@types/retry@0.12.2': {}
+
+  '@types/reveal.js@5.0.4': {}
 
   '@types/semver@7.5.8': {}
 

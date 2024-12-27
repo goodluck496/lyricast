@@ -7,7 +7,7 @@ import {
   OnInit,
   SimpleChanges,
 } from '@angular/core';
-import { ILyric, SelectedLyricChunk } from '@lyri-cast/entities';
+import { Lyric, SelectedLyricChunk } from '@lyri-cast/entities';
 import { ChooseLyricItemService } from '../../choose-lyric-item.service';
 import { filter, map, Observable } from 'rxjs';
 import { AsyncPipe, JsonPipe } from '@angular/common';
@@ -24,7 +24,7 @@ import { CardModule } from 'primeng/card';
 export class LyricItemComponent implements OnInit, OnChanges {
   private chooseLyricItemSrv = inject(ChooseLyricItemService);
 
-  lyricItem = input.required<ILyric>();
+  lyricItem = input.required<Lyric>();
 
   linesChunks$!: Observable<string[][]>;
 
@@ -33,7 +33,7 @@ export class LyricItemComponent implements OnInit, OnChanges {
     .pipe(
       filter(([lyric]) => !!lyric),
       map(([lyric, blockIndex]) => {
-        const data = lyric as ILyric;
+        const data = lyric as Lyric;
         return {
           lyric: data,
           blockIndex: blockIndex as number,

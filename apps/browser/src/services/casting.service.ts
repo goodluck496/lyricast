@@ -5,7 +5,7 @@ import {
   ElectronEvents,
   EventData,
 } from '@lyri-cast/common-electron';
-import { ILyric, ISong } from '@lyri-cast/entities';
+import { Lyric, ISong } from '@lyri-cast/entities';
 import { BridgeService } from './bridge.service';
 import { Pages } from '../app/pages/page.types';
 import { filterEmpty } from '@lyri-cast/common';
@@ -28,7 +28,7 @@ export class CastingService {
     lyricBlock,
   }: {
     song: ISong;
-    lyricBlock: { lyric: ILyric; selectedChunk: string[] };
+    lyricBlock: { lyric: Lyric; selectedChunk: string[] };
   }): Observable<EventData<ElectronEvents> | null> {
     return of(this.openedCastingWindowId).pipe(
       switchMap((windowId) => {
@@ -69,7 +69,7 @@ export class CastingService {
                lyric,
              }: {
     song: ISong;
-    lyric: ILyric;
+    lyric: Lyric;
   }): Observable<EventData<ElectronEvents> | null> {
     return of(this.openedCastingWindowId).pipe(
       switchMap((windowId) => {
@@ -156,7 +156,7 @@ export class CastingService {
 
   showLyricBlock(
     song: ISong,
-    lyricBlock: { lyric: ILyric; selectedChunk: string[] }
+    lyricBlock: { lyric: Lyric; selectedChunk: string[] }
   ) {
     this.windowSrv.electronContext.send({
       event: ElectronEvents.SONG__SHOW_LYRIC_BLOCK,
@@ -170,7 +170,7 @@ export class CastingService {
 
   showLyricBlockNew(
     song: ISong,
-    lyric: ILyric,
+    lyric: Lyric,
     selectedChunk: string[]
   ) {
     this.windowSrv.electronContext.send({

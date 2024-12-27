@@ -11,7 +11,7 @@ import {
 import { BridgeService } from '../../../services/bridge.service';
 import { filterEmpty } from '@lyri-cast/common';
 import { ElectronEvents, EventPayloadItem } from '@lyri-cast/common-electron';
-import { ILyric, ISong } from '@lyri-cast/entities';
+import { Lyric, ISong } from '@lyri-cast/entities';
 
 // import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import { NgxFitTextModule } from '@pikselin/ngx-fittext';
@@ -33,7 +33,7 @@ export class CastingComponent implements OnInit {
   // fitTextDirective = viewChild(Ng2FittextDirective);
 
   selectedSong = signal<ISong | null>(null);
-  selectedLyric = signal<ILyric | null>(null);
+  selectedLyric = signal<Lyric | null>(null);
 
   showingContent = signal(false);
 

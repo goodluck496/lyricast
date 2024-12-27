@@ -1,0 +1,23 @@
+
+<div style="width: 100%; height: 40px;  top: 0; display: flex; justify-content: space-between; align-items: center; position: absolute;     z-index: 4;
+    padding: 0 12px;">
+  <div>{{selectedLyric?.sectionTitle}}</div>
+  <div>{{selectedLyric?.songId}}</div>
+</div>
+<!--@if(selectedLyric; as lyric) {-->
+<!--  @if(selectedLine;as line) {-->
+    <div style="width: 100%; height: 250px">
+      <div class="reveal">
+        <div class="slides">
+          <section style="width: 160% !important; display: block" >
+            <div [innerHTML]="slideText" style="width: 100% !important; height: 100%" ></div>
+          </section>
+        </div>
+      </div>
+    </div>
+<!--  }-->
+
+<!--}-->
+<!--@if(songPageSelectSrv.isShowPreview) {-->
+
+<!--}-->

@@ -2,12 +2,15 @@
 <ng-scrollbar>
   <div class="song-container">
     @for (lyric of lyrics(); track lyric.uniqId) {
-      <div class="lyric-item" (click)="onLyricSelect(lyric)">
-        <div class="lyric-item__header" #headerRef>{{ lyric.sectionTitle }}</div>
+      <div class="lyric-item">
+        <div class="lyric-item__header">{{ lyric.sectionTitle }}</div>
         <div class="lyric-item__content">
           @for (line of lyric.lines; track line) {
-            <div class="lyric-item__line" [innerHTML]="line">
-            </div>
+            <div class="lyric-item__line"
+                 [class.lyric-item__line--selected]="selectedLyricLine()?.rangeIndex === line.rangeIndex && lyric.uniqId === selectedLyric()?.uniqId"
+                 [innerHTML]="line.text"
+                 (click)="onLineClick(lyric, line)"
+            ></div>
           }
 
         </div>

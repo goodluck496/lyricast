@@ -1,6 +1,13 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ILyric, ISong } from '@lyri-cast/entities';
+import { ISong, LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { NgScrollbar } from 'ngx-scrollbar';
 import { SongPageSelectService } from '../../song-page-select.service';
 
@@ -15,26 +22,26 @@ export class SongComponent {
   songPageSelectSrv = inject(SongPageSelectService);
 
   song = input.required<ISong>();
-  lyrics = computed(() => {
+  lyrics = computed<LyricForCasting[]>(() => {
     const lyrics = this.song().lyrics;
-    console.log(this.songPageSelectSrv.splitPartsCount());
     return lyrics.map((el) => {
-      // el.lines = el.lines.map(line => line)
-
-      const lines = this.songPageSelectSrv
-        .splitArrayIntoParts(el.lines)
-        .map((lines) => lines.join('<br />'));
+      const lines = this.songPageSelectSrv.splitArrayIntoParts(el.lines);
 
       return {
         ...el,
         lines,
-      } satisfies ILyric;
+      } satisfies LyricForCasting;
     });
   });
 
-  selectedLyric = output<ILyric>();
+  selectedLyricLine = signal<LyricLine | undefined>(undefined);
+  selectedLyric = signal<LyricForCasting | undefined>(undefined);
 
-  onLyricSelect(lyric: ILyric) {
-    this.selectedLyric.emit(lyric);
+  selectLyricLine = output<[LyricForCasting, LyricLine]>();
+
+  onLineClick(lyric: LyricForCasting, line: LyricLine): void {
+    this.selectedLyric.set(lyric);
+    this.selectedLyricLine.set(line);
+    this.selectLyricLine.emit([lyric, line]);
   }
 }

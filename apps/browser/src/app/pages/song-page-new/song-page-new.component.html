@@ -5,8 +5,8 @@
         <input pInputText placeholder="Поиск" [(ngModel)]="searchSig" (ngModelChange)="onSearch($event)" />
       </div>
       <div class="page-header__lyric-count">
-        <label for="lyric-count">Разделить припев и<br /> куплет на блоки:</label>
-        <p-dropdown id="lyric-count" inputId="lyric-count" (onChange)="onSelectSplitValue($event.value)"
+        <label for="lyric-count">Разделить припев<br />и куплет на блоки:</label>
+        <p-dropdown id="lyric-count" inputId="lyric-count" [(ngModel)]="splitCount" (onChange)="onSelectSplitValue($event.value)"
                     [options]="SplitPartsCountOptions"></p-dropdown>
       </div>
     </div>
@@ -36,12 +36,16 @@
       </div>
 
       @if (selectedSong$ | async; as song) {
-        <lyri-song [song]="song" (selectedLyric)="onSelectLyric($event)"></lyri-song>
+        <lyri-song [song]="song" (selectLyricLine)="onSelectLyricLine($event)"></lyri-song>
       }
 
     </div>
   </div>
   <div class="page-sidebar">
+    <div class="page-sidebar__preview">
+      <lyri-casting-preview></lyri-casting-preview>
+    </div>
+
     <button pButton (click)="onStartTranslate()">транслировать</button>
   </div>
 </div>

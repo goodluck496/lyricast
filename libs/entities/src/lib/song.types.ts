@@ -3,19 +3,36 @@ export enum LyricTypeEnum {
   CHORUS = 'CHORUS',
 }
 
-export interface ILyric {
+export type LyricLine = {
+  /**
+   * Номер строки в куплете, здесь может быть как индекс в массиве,
+   * так и диапазон индексов, типо 0-4 или 0-2
+   */
+  rangeIndex: string;
+  index: number;
+  text: string;
+}
+
+export type Lyric = {
+  songId: string;
   uniqId: string;
   sectionTitle: string;
   type: LyricTypeEnum;
+  splitLinesCount: number;
   lines: string[];
 }
 
-export interface ILyricChunk extends ILyric {
-  chunkSize: number;
+export type LyricForCasting = Omit<Lyric, 'lines'> & {
+  lines: LyricLine[];
 }
 
-export interface SelectedLyricChunk extends ILyric {
-  lyric: ILyric;
+export type LyricSelectedForCasting = LyricLine & {
+  lyric: LyricForCasting;
+}
+
+
+export interface SelectedLyricChunk extends Lyric {
+  lyric: Lyric;
   blockIndex: number;
 }
 
@@ -35,7 +52,7 @@ export interface ISong {
   /**
    * Текст песни
    */
-  lyrics: ILyric[];
+  lyrics: Lyric[];
 
   bookName: ISongBookName;
 }

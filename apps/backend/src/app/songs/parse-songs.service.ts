@@ -57,11 +57,14 @@ export class ParseSongsService {
       const lyricType = title.toLowerCase().includes('припев')
         ? LyricTypeEnum.CHORUS
         : LyricTypeEnum.COUPLET;
+
       return {
+        songId: String(songObj.number),
         uniqId: Math.random() / 1000 + lyricType,
         sectionTitle: title, // название секции
         lines: lines.slice(1), // остальная часть - строки
         type: lyricType,
+        splitLinesCount: lines.slice(1).length <= 6 ? 0 : 2,
       };
     });
 

@@ -8,6 +8,7 @@
 
 
   --list-box-item-selected-bg: #0D99FF;
+  --list-box-item-hover-bg: #92cdff;
   --list-box-item-selected-text-color: white;
 }
 
@@ -48,8 +49,16 @@
   &__line {
     padding: 10px 15px;
 
-    &:hover {
+    transition: background-color .3s;
+
+    &--selected {
       background-color: var(--list-box-item-selected-bg);
+      color: var(--list-box-item-selected-text-color);
+      text-shadow: 1px 1px 10px black;
+    }
+
+    &:hover:not(#{$self}__line--selected) {
+      background-color: var(--list-box-item-hover-bg);
       color: var(--list-box-item-selected-text-color);
       text-shadow: 1px 1px 10px black;
     }

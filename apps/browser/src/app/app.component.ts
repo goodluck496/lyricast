@@ -62,7 +62,7 @@ export class AppComponent implements OnInit {
   isNotCastingPage$ = this.router.events.pipe(
     // tap((v) => console.log('route', this.route, v)),
     filter((route) => route instanceof NavigationEnd),
-    map((data) => !data.url.includes(Pages.CASTING))
+    map((data) => !data.url.includes(Pages.CASTING) || !data.url.includes(Pages.CASTING_NEW))
   );
 
   ngOnInit() {

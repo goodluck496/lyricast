@@ -58,17 +58,76 @@ export class ParseSongsService {
         ? LyricTypeEnum.CHORUS
         : LyricTypeEnum.COUPLET;
 
+      const onlyLines = lines.slice(1); // остальная часть - строки
+      const splitedVerses = this.splitVerses(onlyLines, 4);
+
+      const splitLinesCount = splitedVerses.length > 1 ?  2 : onlyLines.length <= 6 ? 0 : 2;
+
       return {
         songId: String(songObj.number),
         uniqId: Math.random() / 1000 + lyricType,
         sectionTitle: title, // название секции
-        lines: lines.slice(1), // остальная часть - строки
+        lines: onlyLines,
         type: lyricType,
-        splitLinesCount: lines.slice(1).length <= 6 ? 0 : 2,
+        splitLinesCount,
       };
     });
 
     return songObj;
+  }
+
+  private splitVerses(verses: string[], rowCount: number): string[][] {
+    const MAX_LENGTH = 35;
+
+    // Функция для разбиения строки на строки до MAX_LENGTH
+    function splitLine(line: string): string[] {
+      const result: string[] = [];
+      let currentLine = "";
+
+      for (let i = 0; i < line.length; i++) {
+        currentLine += line[i];
+
+        if (currentLine.length > MAX_LENGTH) {
+          const lastSpace = currentLine.lastIndexOf(" ");
+          const lastPunctuation = Math.max(
+            currentLine.lastIndexOf(","),
+            currentLine.lastIndexOf("-"),
+            currentLine.lastIndexOf("."),
+            currentLine.lastIndexOf(";"),
+            currentLine.lastIndexOf(":")
+          );
+
+          const cutIndex = lastPunctuation >= 0 && lastPunctuation >= lastSpace
+            ? lastPunctuation + 1
+            : lastSpace;
+
+          if (cutIndex > 0) {
+            result.push(currentLine.slice(0, cutIndex).trim());
+            currentLine = currentLine.slice(cutIndex).trim();
+          } else {
+            result.push(currentLine.trim());
+            currentLine = "";
+          }
+        }
+      }
+
+      if (currentLine) {
+        result.push(currentLine.trim());
+      }
+
+      return result;
+    }
+
+    // Разбиение всех строк и их объединение в один массив
+    const allLines = verses.flatMap(splitLine);
+
+    // Формирование двумерного массива
+    const result: string[][] = [];
+    for (let i = 0; i < allLines.length; i += rowCount) {
+      result.push(allLines.slice(i, i + rowCount));
+    }
+
+    return result;
   }
 
   private parseSongs(text: string, bookKey: string): ISongBook {

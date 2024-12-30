@@ -1,6 +1,7 @@
 import {
   Component,
   computed,
+  effect,
   inject,
   input,
   output,
@@ -10,11 +11,12 @@ import { CommonModule } from '@angular/common';
 import { ISong, LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { NgScrollbar } from 'ngx-scrollbar';
 import { SongPageSelectService } from '../../song-page-select.service';
+import { DblClickDirective } from '@lyri-cast/ui-lib';
 
 @Component({
   selector: 'lyri-song',
   standalone: true,
-  imports: [CommonModule, NgScrollbar],
+  imports: [CommonModule, NgScrollbar, DblClickDirective],
   templateUrl: './song.component.html',
   styleUrl: './song.component.scss',
 })
@@ -22,26 +24,39 @@ export class SongComponent {
   songPageSelectSrv = inject(SongPageSelectService);
 
   song = input.required<ISong>();
-  lyrics = computed<LyricForCasting[]>(() => {
-    const lyrics = this.song().lyrics;
-    return lyrics.map((el) => {
-      const lines = this.songPageSelectSrv.splitArrayIntoParts(el.lines);
+  lyrics = computed<LyricForCasting[]>(() =>
+    this.songPageSelectSrv.selectedLyricsForCasting()
+  );
 
-      return {
-        ...el,
-        lines,
-      } satisfies LyricForCasting;
-    });
-  });
-
-  selectedLyricLine = signal<LyricLine | undefined>(undefined);
+  selectedLyricLine = signal<LyricLine | null>(null);
   selectedLyric = signal<LyricForCasting | undefined>(undefined);
 
-  selectLyricLine = output<[LyricForCasting, LyricLine]>();
+  selectLyricLine = output<[LyricForCasting, LyricLine, boolean]>();
 
-  onLineClick(lyric: LyricForCasting, line: LyricLine): void {
+  constructor() {
+    effect(
+      () => {
+        const selectedLyricLine = this.songPageSelectSrv.selectedLyricLine();
+        if (selectedLyricLine) {
+          this.selectedLyricLine.set(selectedLyricLine);
+        }
+        const selectedLyric = this.songPageSelectSrv.selectedLyric();
+        if (selectedLyric) {
+          this.selectedLyric.set(selectedLyric);
+        }
+      },
+      { allowSignalWrites: true }
+    );
+  }
+
+  onLineClick(
+    lyric: LyricForCasting,
+    line: LyricLine,
+    startPresentation = false
+  ): void {
     this.selectedLyric.set(lyric);
     this.selectedLyricLine.set(line);
-    this.selectLyricLine.emit([lyric, line]);
+
+    this.selectLyricLine.emit([lyric, line, startPresentation]);
   }
 }

@@ -52,5 +52,12 @@ export const appRoutes: Route[] = [
         (c) => c.CastingComponent
       ),
   },
+  {
+    path: Pages.CASTING_NEW,
+    loadComponent: () =>
+      import('./pages/casting-new/casting-new.component').then(
+        (c) => c.CastingNewComponent
+      ),
+  },
 
 ];

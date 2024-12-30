@@ -5,7 +5,7 @@ import {
   ElectronEvents,
   EventData,
 } from '@lyri-cast/common-electron';
-import { Lyric, ISong } from '@lyri-cast/entities';
+import { ISong, Lyric, LyricForCasting } from '@lyri-cast/entities';
 import { BridgeService } from './bridge.service';
 import { Pages } from '../app/pages/page.types';
 import { filterEmpty } from '@lyri-cast/common';
@@ -64,13 +64,8 @@ export class CastingService {
     );
   }
 
-  openWindowNew({
-               song,
-               lyric,
-             }: {
-    song: ISong;
-    lyric: Lyric;
-  }): Observable<EventData<ElectronEvents> | null> {
+  openWindowNew(): Observable<EventData<ElectronEvents> | null> {
+    console.log('open window', this.openedCastingWindowId);
     return of(this.openedCastingWindowId).pipe(
       switchMap((windowId) => {
         if (windowId) {
@@ -79,10 +74,11 @@ export class CastingService {
           );
           return of(windowId);
         }
+
         return fromPromise(
           this.windowSrv.electronContext.openWindow({
-            type: AppWindowTypes.SONG_CASTING,
-            title: 'Casting',
+            type: AppWindowTypes.SONG_CASTING_NEW,
+            title: 'Casting new',
             show: true,
             center: true,
             // fullscreen: true,
@@ -94,18 +90,13 @@ export class CastingService {
         this.openedCastingWindowId = procId;
         this.windowSrv.electronContext.send({
           event: ElectronEvents.OPEN_PAGE,
-          payload: { name: Pages.CASTING },
+          payload: { name: Pages.CASTING_NEW },
         });
 
         return this.bridgeService.queueEvents.asObservable();
-      }),
-      tap(() => {
-        // this.showLyricBlock(song, lyric);
       })
     );
   }
-
-
 
   initWindowsSubs() {
     this.bridgeService.queueEvents.pipe(filterEmpty()).subscribe((data) => {
@@ -115,6 +106,7 @@ export class CastingService {
 
       if (data.event === ElectronEvents.INIT_NEW_WINDOW) {
         this.openCastingPageHandler();
+        this.openCastingPageHandlerNew();
       }
     });
   }
@@ -137,10 +129,43 @@ export class CastingService {
     });
   }
 
+  openCastingPageHandlerNew(): void {
+    this.windowSrv.electronContext.send({
+      event: ElectronEvents.OPEN_PAGE,
+      payload: { name: Pages.CASTING_NEW },
+    });
+  }
+
   hideCasting() {
     this.windowSrv.electronContext.send({
       event: ElectronEvents.SONG__HIDE_LYRIC_BLOCK,
       payload: void 0,
+    });
+  }
+
+  hideCastingNew() {
+    this.windowSrv.electronContext.send({
+      event: ElectronEvents.SONG__STOP_CASTING,
+      payload: void 0,
+    });
+  }
+
+  navigateSlide({
+    dir,
+    index,
+    currentLyric,
+  }: {
+    currentLyric: LyricForCasting;
+    dir?: 'next' | 'prev';
+    index?: number;
+  }): void {
+    this.windowSrv.electronContext.send({
+      event: ElectronEvents.SONG__SLIDE_NAVIGATE,
+      payload: {
+        currentLyric,
+        direction: (dir && (dir === 'prev' ? 'prev' : 'next')) || undefined,
+        index,
+      },
     });
   }
 
@@ -168,17 +193,24 @@ export class CastingService {
     });
   }
 
-  showLyricBlockNew(
-    song: ISong,
-    lyric: Lyric,
-    selectedChunk: string[]
-  ) {
+  showLyricBlockNew({
+    song,
+    lyrics,
+    currentLyric,
+    fromIndex,
+  }: {
+    song: ISong;
+    currentLyric: LyricForCasting;
+    lyrics: LyricForCasting[];
+    fromIndex?: number;
+  }): void {
     this.windowSrv.electronContext.send({
-      event: ElectronEvents.SONG__SHOW_LYRIC_BLOCK,
+      event: ElectronEvents.SONG__START_CASTING,
       payload: {
         song,
-        lyric,
-        showedBlock: selectedChunk,
+        lyrics,
+        fromIndex,
+        currentLyric,
       },
     });
   }

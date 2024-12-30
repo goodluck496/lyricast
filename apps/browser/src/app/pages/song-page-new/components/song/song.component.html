@@ -7,8 +7,11 @@
         <div class="lyric-item__content">
           @for (line of lyric.lines; track line) {
             <div class="lyric-item__line"
-                 [class.lyric-item__line--selected]="selectedLyricLine()?.rangeIndex === line.rangeIndex && lyric.uniqId === selectedLyric()?.uniqId"
+                 [class.lyric-item__line--selected]="selectedLyricLine()?.rangeIndex === line.rangeIndex
+                 && lyric.uniqId === selectedLyric()?.uniqId"
                  [innerHTML]="line.text"
+                 lyriDblClick
+                 (dblClick)="onLineClick(lyric, line, true)"
                  (click)="onLineClick(lyric, line)"
             ></div>
           }

@@ -2,14 +2,22 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
-  effect,
+  ElementRef,
   inject,
   OnInit,
   signal,
 } from '@angular/core';
 import { PrimeTemplate } from 'primeng/api';
 import { SongsApiService } from '../../../services/songs-api.service';
-import { map, Observable, switchMap, tap } from 'rxjs';
+import {
+  debounceTime,
+  fromEvent,
+  map,
+  Observable,
+  switchMap,
+  take,
+  tap,
+} from 'rxjs';
 import {
   HighlighterPipe,
   IUiLyriItemInList,
@@ -19,7 +27,12 @@ import {
 } from '@lyri-cast/ui-lib';
 import { AsyncPipe } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { IShortSong, ISongBookName, LyricForCasting, LyricLine } from '@lyri-cast/entities';
+import {
+  IShortSong,
+  ISongBookName,
+  LyricForCasting,
+  LyricLine,
+} from '@lyri-cast/entities';
 import { filterEmpty } from '@lyri-cast/common';
 import { DropdownModule } from 'primeng/dropdown';
 import { ListboxModule } from 'primeng/listbox';
@@ -67,6 +80,7 @@ export class SongPageNewComponent implements OnInit, AfterViewInit {
   public songsService = inject(SongsApiService);
   public castingSrv = inject(CastingService);
   cdr = inject(ChangeDetectorRef);
+  elRef = inject(ElementRef);
 
   searchSig = signal<string>('');
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
@@ -114,7 +128,7 @@ export class SongPageNewComponent implements OnInit, AfterViewInit {
     switchMap((data) => {
       const selectedBook = this.selectedBook.value;
       if (!selectedBook) {
-        throw new Error('Не быран справочник');
+        throw new Error('Не выбран справочник');
       }
       return this.songsService.getSong(
         selectedBook.baseEntity,
@@ -123,22 +137,32 @@ export class SongPageNewComponent implements OnInit, AfterViewInit {
     }),
     tap((data) => {
       this.songPageSelectSrv.selectSong(data);
-      const splitCount = data.lyrics[0]?.splitLinesCount || SPLIT_PARTS_COUNT.NONE;
+      const splitCount =
+        data.lyrics[0]?.splitLinesCount || SPLIT_PARTS_COUNT.NONE;
       this.splitCount.set(splitCount);
-      this.songPageSelectSrv.setSplitCountValue(splitCount)
+      this.songPageSelectSrv.setSplitCountValue(splitCount);
     })
   );
-
-  constructor() {
-    effect(() => {
-      // this.selectedBookRef().op
-    });
-  }
 
   ngOnInit() {
     this.songControl.valueChanges.subscribe((v) => {
       console.log('value change', v);
     });
+
+    fromEvent<KeyboardEvent>(this.elRef.nativeElement, 'keydown')
+      .pipe(debounceTime(100))
+      .subscribe((event: KeyboardEvent) => {
+        const selectedLyric = this.songPageSelectSrv.selectedLyric();
+        if (selectedLyric) {
+          if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
+            this.onNavigateSlide(event.key === 'ArrowDown' ? 'next' : 'prev');
+          }
+
+          if (event.key === 'Enter') {
+            this.onStartTranslate(true);
+          }
+        }
+      });
   }
 
   ngAfterViewInit() {
@@ -156,30 +180,94 @@ export class SongPageNewComponent implements OnInit, AfterViewInit {
     console.log('search', value);
   }
 
-  onSelectBook(data: any): void {
-    console.log('onselect', data);
-    // setTimeout(() => {
-    //   this.selectedBook.setValue(data, { emitEvent: true });
-    // }, 1000);
+  onStartTranslate(fromSelectedBlock = false): void {
+    const song = this.songPageSelectSrv.selectedSong();
+    if (!song) {
+      return;
+    }
+
+    const lyrics = song.lyrics.map((lyric, index) => {
+      return {
+        ...lyric,
+        lines: this.songPageSelectSrv.splitArrayIntoParts(lyric.lines, index),
+      };
+    });
+
+    this.castingSrv
+      .openWindowNew()
+      .pipe(
+        take(1),
+        tap(() => {
+          const fromIndex = fromSelectedBlock
+            ? this.songPageSelectSrv.selectedLyricLine()?.globalSongIndex
+            : undefined;
+          const selectedLyric = this.songPageSelectSrv.selectedLyric();
+          this.castingSrv.showLyricBlockNew({
+            song,
+            lyrics,
+            fromIndex,
+            currentLyric: selectedLyric ? selectedLyric : lyrics[0],
+          });
+        })
+      )
+      .subscribe();
   }
 
-  onStartTranslate(): void {
-    // this.selectedSong$.subscribe(song => {
-    //   this.castingSrv.openWindowNew({
-    //     song,
-    //     lyric
-    //   })
-    // })
+  onStopTranslate(): void {
+    this.castingSrv.hideCastingNew();
   }
 
-  onSelectLyricLine([lyric, line]: [LyricForCasting, LyricLine]): void {
-    console.log('-------lyric', lyric);
-
+  onSelectLyricLine([lyric, line, startPresentation]: [
+    LyricForCasting,
+    LyricLine,
+    boolean
+  ]): void {
     this.songPageSelectSrv.showPreview(true, lyric, line);
+
+    if (startPresentation) {
+      this.onStartTranslate(true);
+    }
   }
 
   onSelectSplitValue(value: SplitPartsCount) {
     this.songPageSelectSrv.setSplitCountValue(value);
+  }
+
+  onNavigateSlide(dir: 'prev' | 'next') {
+    const lyric = this.songPageSelectSrv.selectedLyric;
+    const song = this.songPageSelectSrv.selectedSong();
+    if (!lyric || !song) {
+      return;
+    }
+
+    const currentLyricLine = this.songPageSelectSrv.selectedLyricLine();
+    if (!currentLyricLine) {
+      return;
+    }
+    const nextGlobalIndex =
+      dir === 'next'
+        ? currentLyricLine.globalSongIndex + 1
+        : currentLyricLine.globalSongIndex - 1;
+    const lyrics = this.songPageSelectSrv.selectedLyricsForCasting();
+    const lyricsLines = lyrics.map((el) => el.lines).flat();
+    const nextLine = lyricsLines.find(
+      (el) => el.globalSongIndex === nextGlobalIndex
+    );
+
+    if (!nextLine) {
+      return;
+    }
+    const nextLyric = lyrics.find(
+      (el) =>
+        el.lines.findIndex((el1) => el1.globalSongIndex === nextGlobalIndex) >=
+        0
+    );
+    if (!nextLyric) {
+      return;
+    }
+
+    this.songPageSelectSrv.showPreview(true, nextLyric, nextLine);
+    this.castingSrv.navigateSlide({ dir, currentLyric: nextLyric });
   }
 
   protected readonly ListBoxTemplates = ListBoxTemplates;

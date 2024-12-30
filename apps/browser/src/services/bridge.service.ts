@@ -37,6 +37,7 @@ export class BridgeService {
         this.windowType !== AppWindowTypes.MAIN &&
         data.event === ElectronEvents.OPEN_PAGE
       ) {
+        console.log('-1-1-1-1',data);
         const payload =
           data.payload as EventPayloadItem<ElectronEvents.OPEN_PAGE>;
         console.log('payload', payload);

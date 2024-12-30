@@ -1,4 +1,4 @@
-<div class="page-wrapper">
+<div class="page-wrapper" tabindex="0">
   <div class="page-content">
     <div class="page-header">
       <div class="page-header__input">
@@ -47,5 +47,10 @@
     </div>
 
     <button pButton (click)="onStartTranslate()">транслировать</button>
+    <button pButton (click)="onStartTranslate(true)">Начать с выбранного слайда</button>
+    <button pButton severity="danger" (click)="onStopTranslate()">остановить</button>
+    <div style="display: flex;">
+      <button pButton severity="help" (click)="onNavigateSlide('prev')">Назад</button>
+      <button pButton severity="help" (click)="onNavigateSlide('next')">В перед</button></div>
   </div>
 </div>

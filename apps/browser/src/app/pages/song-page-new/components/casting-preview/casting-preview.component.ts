@@ -1,21 +1,24 @@
 import {
   AfterViewInit,
-  ChangeDetectionStrategy, ChangeDetectorRef,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   inject,
-  OnDestroy
+  OnDestroy,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-import Reveal  from 'reveal.js';
+import Reveal from 'reveal.js';
 import { SongPageSelectService } from '../../song-page-select.service';
 import { LyricForCasting, LyricLine } from '@lyri-cast/entities';
+import { Ng2FittextModule } from 'ng2-fittext';
 
 @Component({
   selector: 'lyri-casting-preview',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, Ng2FittextModule],
   templateUrl: './casting-preview.component.html',
   styleUrl: './casting-preview.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,16 +35,16 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
 
   slideText = '';
 
-  selectedLyric?: LyricForCasting;
-  selectedLine?: LyricLine;
+  public selectedLyricLine = signal<LyricLine | null>(null);
+  public selectedLyric = signal<LyricForCasting | null>(null);
 
   constructor() {
     this.songPageSelectSrv.isShowPreview.subscribe((isShowPreview) => {
-      console.log('this.songPageSelectSrv', this.songPageSelectSrv.selectedLyricLine?.text);
-      this.selectedLine = this.songPageSelectSrv.selectedLyricLine;
+      this.selectedLyricLine = this.songPageSelectSrv.selectedLyricLine;
       this.selectedLyric = this.songPageSelectSrv.selectedLyric;
-      this.slideText = this.songPageSelectSrv.selectedLyricLine?.text || '';
+      this.slideText = this.songPageSelectSrv.selectedLyricLine()?.text || '';
       this.deckRef?.sync();
+
       if (isShowPreview) {
         this.initReveal();
       } else {
@@ -51,21 +54,11 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
   }
 
   async initReveal(): Promise<void> {
-    console.log('inmit reveal');
-
-    // if (this.deck && 'destroy' in this.deck) {
-    //   this.deck.destroy();
-    //   console.log('deck', this.deckRef);
-    // }
-
-    this.slideText = this.songPageSelectSrv.selectedLyricLine?.text || '';
-    console.log('tmpSlide', this.tmpSlide);
+    this.slideText = this.songPageSelectSrv.selectedLyricLine()?.text || '';
 
     this.cdr.detectChanges();
     this.deckRef?.layout();
     this.deckRef?.sync();
-
-    console.log('deckRef', this.deckRef);
   }
 
   closePreview(): void {
@@ -74,15 +67,12 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     setTimeout(async () => {
-      this.deckRef = new Reveal(
-        this.elRef.nativeElement
-      );
+      this.deckRef = new Reveal(this.elRef.nativeElement);
       this.deck = await this.deckRef?.initialize({
         width: 400,
         height: 300,
-        margin: 0.35,
-        // overview: true,
-        // center: true,
+        margin: -1,
+        disableLayout: true,
         embedded: true,
       });
     }, 100);

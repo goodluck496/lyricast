@@ -34,7 +34,7 @@ contextBridge.exposeInMainWorld('electron', {
   receive2: (callback) => {
     ipcRenderer.on('receive2', (senderEvent, data) => {
       const payload = JSON.parse(data);
-      // console.log('receive2', senderEvent, payload);
+      console.log('receive2', senderEvent, payload);
       callback(payload.event, payload);
     });
   }

@@ -29,14 +29,16 @@ ipcMain.handle(ElectronActionEvents.GET_APP_VERSION, () => {
 ipcMain.handle(
   ElectronActionEvents.OPEN_WINDOW,
   (event, args: OpenWindowArgs) => {
+    console.log(`OpenWindow event: ${event}`, args);
     if (App.openedWindows[args.type]) {
       return;
     }
 
+    console.log(`Opened Window [${args.type}]`);
     /**
      * todo можно оформить в отдельную функцию
      */
-    if (args.type === AppWindowTypes.SONG_CASTING) {
+    if (args.type === AppWindowTypes.SONG_CASTING || args.type === AppWindowTypes.SONG_CASTING_NEW) {
       App.createWindow(args.type, {
         webPreferences: {
           ...DEFAULT_WEB_PREF,

@@ -5,6 +5,7 @@ export enum Pages {
   BIBLE = 'bible',
   PROGRAMS = 'programs',
   CASTING = 'casting',
+  CASTING_NEW = 'casting-new',
   TEST = 'test',
 }
 
@@ -15,6 +16,7 @@ export const PageTitlesMap: Map<Pages, string> = new Map([
   [Pages.BIBLE, 'Библия'],
   [Pages.PROGRAMS, 'Программы'],
   [Pages.CASTING, ''],
+  [Pages.CASTING_NEW, ''],
   [Pages.TEST, 'TEST'],
 ]);
 

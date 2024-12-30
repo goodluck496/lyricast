@@ -7,6 +7,10 @@
   &-wrapper {
     display: flex;
     height: 100%;
+
+    &:focus-visible {
+      outline: none;
+    }
   }
 
   &-content {
@@ -118,13 +122,23 @@
     display: flex;
     align-items: center;
     justify-content: start;
-    min-width: 32px;
+    min-width: 20px;
     font-size: 14px;
   }
 
   &__number {
     font-weight: bold;
     font-size: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 32px;
+    height: 20px;
+    padding: 2px;
+
+    border: 1px solid white;
+    border-radius: 4px;
   }
 
 }

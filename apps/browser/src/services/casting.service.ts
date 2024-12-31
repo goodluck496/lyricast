@@ -65,7 +65,6 @@ export class CastingService {
   }
 
   openWindowNew(): Observable<EventData<ElectronEvents> | null> {
-    console.log('open window', this.openedCastingWindowId);
     return of(this.openedCastingWindowId).pipe(
       switchMap((windowId) => {
         if (windowId) {

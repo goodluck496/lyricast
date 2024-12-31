@@ -9,15 +9,7 @@ import {
 } from '@angular/core';
 import { PrimeTemplate } from 'primeng/api';
 import { SongsApiService } from '../../../services/songs-api.service';
-import {
-  debounceTime,
-  fromEvent,
-  map,
-  Observable,
-  switchMap,
-  take,
-  tap,
-} from 'rxjs';
+import { debounceTime, fromEvent, map, Observable, of, switchMap, tap } from 'rxjs';
 import {
   HighlighterPipe,
   IUiLyriItemInList,
@@ -28,10 +20,10 @@ import {
 import { AsyncPipe } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {
-  IShortSong,
+  IShortSong, ISong,
   ISongBookName,
   LyricForCasting,
-  LyricLine,
+  LyricLine
 } from '@lyri-cast/entities';
 import { filterEmpty } from '@lyri-cast/common';
 import { DropdownModule } from 'primeng/dropdown';
@@ -46,6 +38,8 @@ import {
   SplitPartsCount,
 } from './song-page-select.service';
 import { CastingPreviewComponent } from './components/casting-preview/casting-preview.component';
+import { ElectronEvents, EventPayloadItem } from '@lyri-cast/common-electron';
+import { Pages } from '../page.types';
 
 export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
   [SPLIT_PARTS_COUNT.NONE]: 'Нет',
@@ -107,7 +101,6 @@ export class SongPageNewComponent implements OnInit, AfterViewInit {
 
   songsList$: Observable<IUiLyriItemInList<IShortSong>[]> =
     this.selectedBook.valueChanges.pipe(
-      tap((v) => console.log('vvv', v)),
       filterEmpty(),
       switchMap((value) => {
         return this.songsService.getAllSongsByBook(value.baseEntity);
@@ -120,22 +113,35 @@ export class SongPageNewComponent implements OnInit, AfterViewInit {
             baseEntity: el,
           };
         });
+      }),
+      tap(() => {
+        this.songControl.setValue(null);
       })
     );
 
-  selectedSong$ = this.songControl.valueChanges.pipe(
-    filterEmpty(),
+  selectedSong$: Observable<ISong | null> = this.songControl.valueChanges.pipe(
     switchMap((data) => {
       const selectedBook = this.selectedBook.value;
       if (!selectedBook) {
         throw new Error('Не выбран справочник');
+      }
+
+      if (!data) {
+        this.songPageSelectSrv.selectSong(null);
+        return of(null);
       }
       return this.songsService.getSong(
         selectedBook.baseEntity,
         data.baseEntity.number
       );
     }),
+    // filterEmpty(), //почему-то даже в случае возвращения switchMapом null,
+    // в data лежит предыдущий объект, можно пофиксить в рамках рефакторинга
     tap((data) => {
+      if(!data) {
+        return;
+      }
+
       this.songPageSelectSrv.selectSong(data);
       const splitCount =
         data.lyrics[0]?.splitLinesCount || SPLIT_PARTS_COUNT.NONE;
@@ -145,10 +151,6 @@ export class SongPageNewComponent implements OnInit, AfterViewInit {
   );
 
   ngOnInit() {
-    this.songControl.valueChanges.subscribe((v) => {
-      console.log('value change', v);
-    });
-
     fromEvent<KeyboardEvent>(this.elRef.nativeElement, 'keydown')
       .pipe(debounceTime(100))
       .subscribe((event: KeyboardEvent) => {
@@ -193,21 +195,30 @@ export class SongPageNewComponent implements OnInit, AfterViewInit {
       };
     });
 
-    this.castingSrv
+    const subs = this.castingSrv
       .openWindowNew()
       .pipe(
-        take(1),
-        tap(() => {
-          const fromIndex = fromSelectedBlock
-            ? this.songPageSelectSrv.selectedLyricLine()?.globalSongIndex
-            : undefined;
-          const selectedLyric = this.songPageSelectSrv.selectedLyric();
-          this.castingSrv.showLyricBlockNew({
-            song,
-            lyrics,
-            fromIndex,
-            currentLyric: selectedLyric ? selectedLyric : lyrics[0],
-          });
+        switchMap((data) => {
+          if (data && data.event === ElectronEvents.PAGE_OPENED) {
+            const payload =
+              data.payload as EventPayloadItem<ElectronEvents.PAGE_OPENED>;
+
+            if (payload.page === Pages.CASTING_NEW) {
+              const fromIndex = fromSelectedBlock
+                ? this.songPageSelectSrv.selectedLyricLine()?.globalSongIndex
+                : undefined;
+              const selectedLyric = this.songPageSelectSrv.selectedLyric();
+              this.castingSrv.showLyricBlockNew({
+                song,
+                lyrics,
+                fromIndex,
+                currentLyric: selectedLyric ? selectedLyric : lyrics[0],
+              });
+              subs.unsubscribe();
+            }
+          }
+
+          return this.castingSrv.bridgeService.queueEvents;
         })
       )
       .subscribe();

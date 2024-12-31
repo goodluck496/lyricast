@@ -43,7 +43,7 @@ export class SongPageSelectService {
     this.splitPartsCount.set(value);
   }
 
-  public selectSong(song: ISong) {
+  public selectSong(song: ISong | null) {
     this.selectedSong.set(song);
   }
 

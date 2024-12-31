@@ -36,7 +36,10 @@
       </div>
 
       @if (selectedSong$ | async; as song) {
-        <lyri-song [song]="song" (selectLyricLine)="onSelectLyricLine($event)"></lyri-song>
+        @if(song) {
+          <lyri-song [song]="song" (selectLyricLine)="onSelectLyricLine($event)"></lyri-song>
+        }
+
       }
 
     </div>

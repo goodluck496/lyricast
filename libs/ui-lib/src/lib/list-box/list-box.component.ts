@@ -7,7 +7,9 @@ import {
   forwardRef,
   inject,
   input,
+  OnChanges,
   signal,
+  SimpleChanges,
   TemplateRef,
   viewChild,
 } from '@angular/core';
@@ -67,10 +69,12 @@ export enum ListBoxTemplates {
   ],
 })
 export class ListBoxComponent
-  implements AfterContentInit, ControlValueAccessor
+  implements AfterContentInit, ControlValueAccessor, OnChanges
 {
   private cdr = inject(ChangeDetectorRef);
   private virtualScroll = viewChild(NgScrollbarExt);
+
+  // private ngControl = inject(FormControlDirective, {skipSelf: false});
 
   items = input<IUiLyriListItem[]>([]);
   multi = input(false);
@@ -101,6 +105,8 @@ export class ListBoxComponent
   ) => void 0;
   onTouched: () => void = () => void 0;
 
+  value?: IUiLyriListItem | IUiLyriListItem[];
+
   public onItemClick(item: IUiLyriListItem) {
     if (!this.selectedItems.has(item.searchKey)) {
       if (this.multi()) {
@@ -124,6 +130,12 @@ export class ListBoxComponent
     this.templates().forEach((item) => {
       this.listBoxTemplates[item.name as ListBoxTemplates] = item.template;
     });
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if('items' in changes) {
+      this.selectedItems = new Map();
+    }
   }
 
   protected readonly ListBoxTemplates = ListBoxTemplates;

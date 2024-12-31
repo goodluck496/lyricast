@@ -1,12 +1,11 @@
-<div class="info-block">
-  <!--  <div>{{selectedSong()?.number}}</div>-->
+<div class="info-block" [class.hide]="!showingContent()">
   <div class="info-block__type" [class.hide]="!selectedSong()">{{ selectedLyric()?.sectionTitle }}</div>
   <div class="info-block__number" [class.hide]="!selectedSong()">{{ selectedSong()?.number }}</div>
 </div>
 
-<div style="width: 100%; height: 100%" [class.hide]="!showingContent()">
+<div class="slides__container" [class.hide]="!showingContent()">
   <div class="reveal">
-    <div class="slides" #slidesContainerRef>
+    <div class="slides">
       <section class="stack">
         @for (lyric of selectedLyrics(); track lyric.uniqId) {
 
@@ -15,10 +14,13 @@
               <section
                 class="slides__section">
                 <div [fittext]="true"
-                     [maxFontSize]="110"
-                     [activateOnResize]="true"
-                     [innerHTML]="line.text"
-                     class="slides__content"></div>
+                     [maxFontSize]="120"
+                     [activateOnResize]="true">
+                  <div
+                    [innerHTML]="line.text"
+                    class="slides__content"></div>
+                </div>
+
               </section>
             }
           }

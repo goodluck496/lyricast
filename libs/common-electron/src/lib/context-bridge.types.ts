@@ -14,6 +14,7 @@ export type CloseWindowArgs = {
 
 export enum ElectronEvents {
   OPEN_PAGE = 'OPEN_PAGE',
+  PAGE_OPENED = 'PAGE_OPENED',
   INIT_NEW_WINDOW = 'INIT_NEW_WINDOW',
   CLOSE_WINDOW = 'CLOSE_WINDOW',
   // todo создать отдельный enum песен
@@ -32,6 +33,7 @@ export type AllEvents = ElectronEvents //todo когда бьудет отдел
 
 export type EventPayloadsMap = {
   [ElectronEvents.OPEN_PAGE]: { name: string };
+  [ElectronEvents.PAGE_OPENED]: { state: string, page: string };
   [ElectronEvents.INIT_NEW_WINDOW]: void;
   [ElectronEvents.CLOSE_WINDOW]: { processId: number };
   [ElectronEvents.SONG__SHOW_LYRIC_BLOCK]: {

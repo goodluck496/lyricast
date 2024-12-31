@@ -3,7 +3,6 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  effect,
   ElementRef,
   HostListener,
   inject,
@@ -15,12 +14,12 @@ import {
 import { BridgeService } from '../../../services/bridge.service';
 import { filterEmpty } from '@lyri-cast/common';
 import { ElectronEvents, EventPayloadItem } from '@lyri-cast/common-electron';
-import { ISong, LyricForCasting, LyricLine } from '@lyri-cast/entities';
+import { ISong, LyricForCasting } from '@lyri-cast/entities';
 
-// import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import { NgxFitTextModule } from '@pikselin/ngx-fittext';
 import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import Reveal, { Api } from 'reveal.js';
+import { Pages } from '../page.types';
 
 @Component({
   selector: 'lyri-casting-new-page',
@@ -37,14 +36,6 @@ export class CastingNewComponent implements OnInit, AfterViewInit {
   public elRef = inject(ElementRef<HTMLElement>);
 
   deckRef?: Reveal.Api;
-  deck?: Reveal.Api;
-
-  tmpSlide = '';
-
-  slideText = '';
-  selectedLine?: LyricLine;
-
-  // fitTextDirective = viewChild(Ng2FittextDirective);
 
   selectedSong = signal<ISong | null>(null);
   selectedLyric = signal<LyricForCasting | null>(null);
@@ -67,25 +58,6 @@ export class CastingNewComponent implements OnInit, AfterViewInit {
     this.fitTexts().forEach((el) => el.onResize(event));
   }
 
-  constructor() {
-    effect(() => {
-      // const fit = this.fitTextDirective()!;
-      // fit.setFontSize(fit.getStartFontSizeFromHeight())
-      // fit.ngAfterViewInit();
-      // const slides = this.slides();
-      const fitTexts = this.fitTexts();
-      if (fitTexts) {
-        fitTexts.forEach((el) => {
-          console.log('fitTexts', el);
-          setTimeout(() => {
-            // el.setFontSize(100);
-            window.dispatchEvent(new Event('resize'));
-          }, 500);
-        });
-      }
-    });
-  }
-
   ngOnInit() {
     this.bridge.queueEvents.pipe(filterEmpty()).subscribe(async (data) => {
       if (data.event === ElectronEvents.SONG__START_CASTING) {
@@ -101,15 +73,11 @@ export class CastingNewComponent implements OnInit, AfterViewInit {
         this.cdr.detectChanges();
 
         await this.initReveal();
-        console.log('init reveal', payload, this.deckRef);
         this.deckRef?.layout();
         this.deckRef?.sync();
 
         if (payload.fromIndex) {
-          // this.showingContent.set(false);
-          // this.deckRef?.slide(undefined, payload.fromIndex);
-          this.deckRef?.slide(payload.fromIndex, payload.fromIndex);
-          // this.showingContent.set(true);
+          this.deckRef?.slide(undefined, payload.fromIndex);
         } else {
           this.deckRef?.slide(0, 0);
         }
@@ -140,69 +108,39 @@ export class CastingNewComponent implements OnInit, AfterViewInit {
         this.selectedLyric.set(payload.currentLyric);
         this.cdr.detectChanges();
       }
+
       this.fitTexts().forEach((el) => {
         el.onResize(new Event('resize'));
       });
-
-      // todo для срабатывания директивы подсройки текста, нужно вызывать событие window.resize
-      window.dispatchEvent(new Event('resize'));
     });
   }
 
-  ngAfterViewInit() {
-    this.initReveal();
+  async ngAfterViewInit() {
+    await this.initReveal();
+
+    this.bridge.windowSrv.electronContext.send({
+      event: ElectronEvents.PAGE_OPENED,
+      payload: { state: 'after-view-init', page: Pages.CASTING_NEW },
+    });
   }
 
   async initReveal(): Promise<Api> {
-    // setTimeout(async () => {
     this.deckRef = new Reveal(this.elRef.nativeElement);
 
     const deck = await this.deckRef?.initialize({
-      // width: 400,
-      // height: 300,
       margin: -1,
-      // view: 'scroll',
-      // hash: true,
-      // overview: true,
       disableLayout: true,
+      transition: 'fade', //todo можно сделать событие, которое будет изменять тип переходов между слайдами
       center: true,
       embedded: true,
     });
 
     return deck;
-
-    return new Promise(async (resolve, reject) => {
-      // setTimeout(async () => {
-      try {
-        const deck = await this.deckRef?.initialize({
-          // width: 400,
-          // height: 300,
-          margin: -1,
-          // view: 'scroll',
-          // hash: true,
-          // overview: true,
-          disableLayout: true,
-          center: true,
-          embedded: true,
-        });
-        if (deck) {
-          console.log('this.deckRef', this.deckRef);
-          resolve(deck);
-        }
-      } catch (e) {
-        console.log('error', e);
-      }
-      // }, 100);
-    });
-    // }, 100);
   }
 
   clearSlides(): void {
     this.deckRef?.destroy();
-    // const children = this.slides().children || [];
-    // for (const child of Array.from(children)) {
-    //   this.slides().removeChild(child);
-    // }
+
     this.showingContent.set(false);
   }
 }

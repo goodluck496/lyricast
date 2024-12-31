@@ -72,6 +72,7 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
         width: 400,
         height: 300,
         margin: -1,
+        transition: 'fade',
         disableLayout: true,
         embedded: true,
       });

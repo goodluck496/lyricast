@@ -76,7 +76,7 @@ export class SongsService {
 
   readSong(bookName: string, songId: number): ISong | undefined {
     const book = this.readBook(bookName);
-    const keyInCache = `${book}__${songId}`;
+    const keyInCache = `${book.header.bookKey}__${songId}`;
 
     if (keyInCache in this.songCache) {
       return this.songCache[keyInCache];

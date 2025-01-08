@@ -4,8 +4,6 @@ import { Component } from '@angular/core';
   selector: 'lyri-programs-page',
   standalone: true,
   imports: [],
-  templateUrl: './programs-page.component.html'
+  templateUrl: './programs-page.component.html',
 })
-export class ProgramsPageComponent {
-
-}
+export class ProgramsPageComponent {}

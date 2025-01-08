@@ -1,4 +1,8 @@
-import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
+import {
+  ApplicationConfig,
+  importProvidersFrom,
+  provideZoneChangeDetection,
+} from '@angular/core';
 import { provideRouter, RouteReuseStrategy } from '@angular/router';
 import { appRoutes } from './app.routes';
 import { BASE_API_TOKEN } from '@lyri-cast/common';
@@ -8,6 +12,10 @@ import {
 } from '@angular/common/http';
 import { CustomReuseStrategy } from '../services/common/router-reuse.strategy';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { provideStore } from '@ngrx/store';
+import { provideStoreDevtools } from '@ngrx/store-devtools';
+import { provideEffects } from '@ngrx/effects';
+import { AppEffects, AppReducer } from '@lyri-cast/common-browser';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,5 +26,12 @@ export const appConfig: ApplicationConfig = {
     //для оптимизации, чтобы вспылтие события не взызывало двойного обнаржуния изменений
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes),
+
+    /**
+     * NGRX
+     */
+    provideStore({ ApplicationFeature: AppReducer }),
+    provideEffects(AppEffects),
+    provideStoreDevtools(),
   ],
 };

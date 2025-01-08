@@ -3,8 +3,11 @@ import { Injectable } from '@nestjs/common';
 import fs from 'fs';
 import * as cheerio from 'cheerio';
 import path from 'path';
-import { BibleBook, BibleChapter, BibleChapterSection } from '@lyri-cast/entities';
-
+import {
+  BibleBook,
+  BibleChapter,
+  BibleChapterSection,
+} from '@lyri-cast/entities';
 
 @Injectable()
 export class BibleHtmlParserService {
@@ -43,12 +46,13 @@ export class BibleHtmlParserService {
         // Начало новой главы
         const chapterNumberDelimIndex = text.indexOf('-');
         const chapterNumber = +text.slice(
-            0,
-            chapterNumberDelimIndex >= 0 ? chapterNumberDelimIndex : 0
-          );
+          0,
+          chapterNumberDelimIndex >= 0 ? chapterNumberDelimIndex : 0
+        );
         currentChapter = {
           number: chapterNumber,
-          title: text.slice(chapterNumberDelimIndex + 1) + ` - ${chapterNumber}`,
+          title:
+            text.slice(chapterNumberDelimIndex + 1) + ` - ${chapterNumber}`,
           subsections: [],
         };
         book.chapters.push(currentChapter);

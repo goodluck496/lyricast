@@ -1,9 +1,0 @@
-<p-dropdown [options]="(songsList$ | async) || []" optionValue="number" optionLabel="title"
-            [virtualScroll]="true" [virtualScrollOptions]="{}" [virtualScrollItemSize]="40"
-            placeholder="songs"
-            [style]="{width: '400px'}"
->
-  <ng-template pTemplate="item" let-data>
-    {{data.number}} - {{data.title }}
-  </ng-template>
-</p-dropdown>

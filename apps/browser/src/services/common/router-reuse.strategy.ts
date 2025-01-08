@@ -1,7 +1,10 @@
-import { ActivatedRouteSnapshot, DetachedRouteHandle, RouteReuseStrategy } from '@angular/router';
+import {
+  ActivatedRouteSnapshot,
+  DetachedRouteHandle,
+  RouteReuseStrategy,
+} from '@angular/router';
 
 export class CustomReuseStrategy implements RouteReuseStrategy {
-
   storedRoutes: { [key: string]: DetachedRouteHandle } = {};
 
   shouldDetach(route: ActivatedRouteSnapshot): boolean {
@@ -21,13 +24,19 @@ export class CustomReuseStrategy implements RouteReuseStrategy {
 
   retrieve(route: ActivatedRouteSnapshot): DetachedRouteHandle | null {
     // Восстанавливаем сохранённую страницу
-    if (!route.routeConfig || !this.storedRoutes[route.routeConfig.path || '']) {
+    if (
+      !route.routeConfig ||
+      !this.storedRoutes[route.routeConfig.path || '']
+    ) {
       return null;
     }
     return this.storedRoutes[route.routeConfig.path || ''];
   }
 
-  shouldReuseRoute(future: ActivatedRouteSnapshot, curr: ActivatedRouteSnapshot): boolean {
+  shouldReuseRoute(
+    future: ActivatedRouteSnapshot,
+    curr: ActivatedRouteSnapshot
+  ): boolean {
     // Определяем, нужно ли использовать существующий маршрут
     return future.routeConfig === curr.routeConfig;
   }

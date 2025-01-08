@@ -1,9 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { ElectronActionEvents } from '../events/events.types';
+import {
+  ElectronActionEvents,
+  ElectronCommonEvents,
+} from '../events/events.types';
 import {
   CloseWindowArgs,
   Context,
-  ElectronEvents,
   EventData,
   OpenWindowArgs,
 } from '@lyri-cast/common-electron';
@@ -16,26 +18,13 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke(ElectronActionEvents.OPEN_WINDOW, arg),
   closeWindow: (arg: CloseWindowArgs) =>
     ipcRenderer.invoke(ElectronActionEvents.CLOSE_WINDOW, arg),
-
-  send: (data: EventData<ElectronEvents>) =>
-    ipcRenderer.send('send', JSON.stringify(data)),
-  receive: (resEvent, callback, once = false) => {
-    const typeListener = once ? 'once' : 'on';
-
-    ipcRenderer[typeListener]('receive', (senderEvent, data) => {
-      const payload = JSON.parse(data);
-      if (payload && resEvent !== payload.event) {
-        return;
-      }
-
-      callback(payload);
-    });
+  send: (data: EventData) => {
+    return ipcRenderer.invoke(ElectronCommonEvents.SEND, JSON.stringify(data));
   },
-  receive2: (callback) => {
-    ipcRenderer.on('receive2', (senderEvent, data) => {
+  receive: (callback) => {
+    ipcRenderer.on(ElectronCommonEvents.RECEIVE, (senderEvent, data) => {
       const payload = JSON.parse(data);
-      console.log('receive2', senderEvent, payload);
       callback(payload.event, payload);
     });
-  }
+  },
 } satisfies Context);

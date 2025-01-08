@@ -1,6 +1,6 @@
 import { Route } from '@angular/router';
-import { Pages } from './pages/page.types';
 import { MainComponent } from './pages/main/main.component';
+import { Pages } from '@lyri-cast/common-browser';
 
 export const appRoutes: Route[] = [
   { path: '', redirectTo: Pages.MAIN, pathMatch: 'full' },
@@ -9,18 +9,14 @@ export const appRoutes: Route[] = [
     component: MainComponent,
     children: [
       {
-        path: Pages.SONGS,
-        loadComponent: () =>
-          import('./pages/songs-page/songs-page.component').then(
-            (c) => c.SongsPageComponent
-          ),
+        path: Pages.SONGS_FEATURE,
+        loadChildren: () =>
+          import('@lyri-cast/song-feature').then((c) => c.SongFeatureRoutes),
       },
       {
         path: Pages.SONGS_NEW,
-        loadComponent: () =>
-          import('./pages/song-page-new/song-page-new.component').then(
-            (c) => c.SongPageNewComponent
-          ),
+        pathMatch: 'full',
+        redirectTo: `${Pages.SONGS_FEATURE}/${Pages.SONGS_NEW}`,
       },
       {
         path: Pages.BIBLE,
@@ -42,22 +38,17 @@ export const appRoutes: Route[] = [
           import('./pages/test-page/test-page.component').then(
             (c) => c.TestPageComponent
           ),
-      }
+      },
     ],
   },
   {
-    path: Pages.CASTING,
-    loadComponent: () =>
-      import('./pages/casting/casting.component').then(
-        (c) => c.CastingComponent
-      ),
+    path: Pages.SONGS_FEATURE,
+    loadChildren: () =>
+      import('@lyri-cast/song-feature').then((c) => c.SongFeatureRoutes),
   },
   {
     path: Pages.CASTING_NEW,
-    loadComponent: () =>
-      import('./pages/casting-new/casting-new.component').then(
-        (c) => c.CastingNewComponent
-      ),
+    pathMatch: 'full',
+    redirectTo: `${Pages.SONGS_FEATURE}/${Pages.CASTING_NEW}`,
   },
-
 ];

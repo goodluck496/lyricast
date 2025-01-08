@@ -1,0 +1,63 @@
+<div class="page-wrapper" tabindex="0">
+  <div class="page-content">
+    <div class="page-header">
+      <div class="page-header__input">
+        <input pInputText placeholder="Поиск" [(ngModel)]="searchSig" (ngModelChange)="onSearch($event)" />
+      </div>
+      <div class="page-header__lyric-count">
+        <label for="lyric-count">Разделить припев<br />и куплет на блоки:</label>
+        <p-dropdown id="lyric-count" inputId="lyric-count" [(ngModel)]="splitCount" (onChange)="onSelectSplitValue($event.value)"
+                    [options]="SplitPartsCountOptions"></p-dropdown>
+      </div>
+    </div>
+    <div class="page-entity-block">
+
+      <div class="list-search-wrapper">
+
+        <div class="list-search-block">
+          <p-dropdown
+            [formControl]="selectedBook"
+            [options]="songBooksDict"
+            optionLabel="title"
+            styleClass="list-search-dropdown"
+          >
+            <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
+          </p-dropdown>
+
+          <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl">
+            <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
+              <div class="song-item__wrapper">
+                <div class="song-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
+                <div class="song-item__title" [innerHTML]="data.title | highliter: search"></div>
+              </div>
+            </ng-template>
+          </lyri-list-box>
+        </div>
+      </div>
+
+      @if (selectedSong$ | async; as song) {
+        @if(song) {
+          <lyri-song [song]="song" (selectLyricLine)="onSelectLyricLine($event)"></lyri-song>
+        }
+
+      }
+
+    </div>
+  </div>
+  <div class="page-sidebar">
+    <div class="page-sidebar__preview">
+      <lyri-casting-preview></lyri-casting-preview>
+    </div>
+
+    <button pButton (click)="onStartCasting()">транслировать</button>
+    <button pButton (click)="onStartCasting(true)">Начать с выбранного слайда</button>
+    <div class="flex">
+      <button pButton severity="danger" (click)="onPauseCasting()">Остановить</button>
+      <button pButton severity="danger" (click)="onCloseCasting()">Закрыть</button>
+    </div>
+
+    <div class="flex">
+      <button pButton severity="help" (click)="onNavigateSlide('prev')">Назад</button>
+      <button pButton severity="help" (click)="onNavigateSlide('next')">В перед</button></div>
+  </div>
+</div>

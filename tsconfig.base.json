@@ -13,11 +13,14 @@
     "lib": ["es2020", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
       "@lyri-cast/common": ["libs/common/src/index.ts"],
+      "@lyri-cast/common-browser": ["libs/common-browser/src/index.ts"],
       "@lyri-cast/common-electron": ["libs/common-electron/src/index.ts"],
       "@lyri-cast/entities": ["libs/entities/src/index.ts"],
+      "@lyri-cast/song-feature": ["libs/features/song-feature/src/index.ts"],
       "@lyri-cast/styles": ["libs/styles/src/index.ts"],
       "@lyri-cast/ui-lib": ["libs/ui-lib/src/index.ts"]
     }

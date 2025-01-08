@@ -61,7 +61,8 @@ export class ParseSongsService {
       const onlyLines = lines.slice(1); // остальная часть - строки
       const splitedVerses = this.splitVerses(onlyLines, 4);
 
-      const splitLinesCount = splitedVerses.length > 1 ?  2 : onlyLines.length <= 6 ? 0 : 2;
+      const splitLinesCount =
+        splitedVerses.length > 1 ? 2 : onlyLines.length <= 6 ? 0 : 2;
 
       return {
         songId: String(songObj.number),
@@ -82,31 +83,32 @@ export class ParseSongsService {
     // Функция для разбиения строки на строки до MAX_LENGTH
     function splitLine(line: string): string[] {
       const result: string[] = [];
-      let currentLine = "";
+      let currentLine = '';
 
       for (let i = 0; i < line.length; i++) {
         currentLine += line[i];
 
         if (currentLine.length > MAX_LENGTH) {
-          const lastSpace = currentLine.lastIndexOf(" ");
+          const lastSpace = currentLine.lastIndexOf(' ');
           const lastPunctuation = Math.max(
-            currentLine.lastIndexOf(","),
-            currentLine.lastIndexOf("-"),
-            currentLine.lastIndexOf("."),
-            currentLine.lastIndexOf(";"),
-            currentLine.lastIndexOf(":")
+            currentLine.lastIndexOf(','),
+            currentLine.lastIndexOf('-'),
+            currentLine.lastIndexOf('.'),
+            currentLine.lastIndexOf(';'),
+            currentLine.lastIndexOf(':')
           );
 
-          const cutIndex = lastPunctuation >= 0 && lastPunctuation >= lastSpace
-            ? lastPunctuation + 1
-            : lastSpace;
+          const cutIndex =
+            lastPunctuation >= 0 && lastPunctuation >= lastSpace
+              ? lastPunctuation + 1
+              : lastSpace;
 
           if (cutIndex > 0) {
             result.push(currentLine.slice(0, cutIndex).trim());
             currentLine = currentLine.slice(cutIndex).trim();
           } else {
             result.push(currentLine.trim());
-            currentLine = "";
+            currentLine = '';
           }
         }
       }

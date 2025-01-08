@@ -5,25 +5,22 @@ import {
   Router,
   RouterModule,
 } from '@angular/router';
-import { BridgeService } from '../services/bridge.service';
-import { CastingService } from '../services/casting.service';
-import { MenuItem, PrimeTemplate } from 'primeng/api';
-import { Pages, PageTitlesMap } from './pages/page.types';
+import { MenuItem } from 'primeng/api';
 import { TabMenuModule } from 'primeng/tabmenu';
 import { TabViewModule } from 'primeng/tabview';
-import { filter, map, tap } from 'rxjs';
-import { AsyncPipe } from '@angular/common';
-import { SongsApiService } from '../services/songs-api.service';
+import { filter, map } from 'rxjs';
+import { Store } from '@ngrx/store';
+import {
+  AppActions,
+  BridgeService,
+  Pages,
+  PageTitlesMap,
+  selectAppInit,
+} from '@lyri-cast/common-browser';
 
 @Component({
   standalone: true,
-  imports: [
-    RouterModule,
-    PrimeTemplate,
-    TabMenuModule,
-    TabViewModule,
-    AsyncPipe,
-  ],
+  imports: [RouterModule, TabMenuModule, TabViewModule],
   selector: 'lyri-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
@@ -31,7 +28,7 @@ import { SongsApiService } from '../services/songs-api.service';
 export class AppComponent implements OnInit {
   //не удалять
   bridge = inject(BridgeService);
-  casting = inject(CastingService);
+  store = inject(Store);
   // songApiService =  inject(SongsApiService);
 
   cdr = inject(ChangeDetectorRef);
@@ -62,10 +59,45 @@ export class AppComponent implements OnInit {
   isNotCastingPage$ = this.router.events.pipe(
     // tap((v) => console.log('route', this.route, v)),
     filter((route) => route instanceof NavigationEnd),
-    map((data) => !data.url.includes(Pages.CASTING) || !data.url.includes(Pages.CASTING_NEW))
+    map(
+      (data) =>
+        !data.url.includes(Pages.CASTING) ||
+        !data.url.includes(Pages.CASTING_NEW)
+    )
   );
 
   ngOnInit() {
     this.isNotCastingPage$.subscribe();
+
+    this.store
+      .select(selectAppInit)
+      .subscribe(() => console.log('selectAppInit'));
+
+    this.store.dispatch(AppActions.appInit());
+
+    /**
+     * todo переделать на ngrx action + effect
+     */
+    // this.bridge.queueEvents.pipe().subscribe(async (data) => {
+    //   if (!this.bridge.windowType) {
+    //     this.bridge.windowType =
+    //       await this.bridge.windowSrv.electronContext.getWindowType();
+    //   }
+    //
+    //   console.log('events', data);
+    //   if (!data) {
+    //     return;
+    //   }
+    //   if (
+    //     this.bridge.windowType !== AppWindowTypes.MAIN &&
+    //     data.event === SONG_ACTIONS.openPage
+    //   ) {
+    //     console.log('route', data);
+    //     const payload = data.payload as { name: string };
+    //     this.router
+    //       .navigate([Pages.SONGS_FEATURE, payload?.name])
+    //       .then((d) => console.log('1111111111', d));
+    //   }
+    // });
   }
 }

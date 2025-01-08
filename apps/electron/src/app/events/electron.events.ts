@@ -5,7 +5,7 @@
 
 import { app, ipcMain } from 'electron';
 import { environment } from '../../environments/environment';
-import { ElectronActionEvents } from './events.types';
+import { ElectronActionEvents, ElectronCommonEvents } from './events.types';
 import {
   AppWindowTypes,
   CloseWindowArgs,
@@ -34,7 +34,6 @@ ipcMain.handle(
       return;
     }
 
-    console.log(`Opened Window [${args.type}]`);
     /**
      * todo можно оформить в отдельную функцию
      */
@@ -72,3 +71,21 @@ ipcMain.on('quit', (event, code) => {
 ipcMain.handle(ElectronActionEvents.GET_WINDOW_TYPE, (event) => {
   return App.openedWindowTypesByProcess[event.processId];
 })
+
+ipcMain.handle(ElectronCommonEvents.SEND, (event, payload) => {
+  Object.keys(App.openedWindows).forEach((key) => {
+    const targetWindow = App.openedWindows[key];
+    if (!targetWindow) {
+      console.log('!targetWindow');
+      return;
+    }
+    if (targetWindow.webContents.id === event.sender.id) {
+      console.log(
+        '[CONTINUE] targetWindow.webContents.id === event.sender.id',
+        JSON.stringify(payload)
+      );
+      return; // Пропускаем, если это отправляющее окно
+    }
+    App.openedWindows[key].webContents.send(ElectronCommonEvents.RECEIVE, payload);
+  });
+});

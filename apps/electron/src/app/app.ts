@@ -1,15 +1,15 @@
 import {
   BrowserWindow,
   BrowserWindowConstructorOptions,
-  ipcMain,
   screen,
   shell,
 } from 'electron';
 import { rendererAppName, rendererAppPort } from './constants';
 import { environment } from '../environments/environment';
 import { join } from 'path';
-import { AppWindowTypes, ElectronEvents } from '@lyri-cast/common-electron';
+import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
 import * as process from 'node:process';
+import { ElectronAppEvents, ElectronCommonEvents } from './events/events.types';
 
 export const DEFAULT_WEB_PREF = {
   contextIsolation: true,
@@ -89,28 +89,23 @@ export default class App {
     App.openedWindows[type] = win;
     App.openedWindowTypesByProcess[processId] = type;
 
-    win.on('close', () => {
+    win.on(ElectronAppEvents.CLOSE, () => {
       // Dereference the window object, usually you would store windows
       // in an array if your app supports multi windows, this is the time
       // when you should delete the corresponding element.
 
-      if(type !== AppWindowTypes.MAIN) {
-        App.openedWindows[AppWindowTypes.MAIN].webContents.send('receive',
+      if (type !== AppWindowTypes.MAIN) {
+        App.openedWindows[AppWindowTypes.MAIN].webContents.send(
+          ElectronCommonEvents.RECEIVE,
           JSON.stringify({
-            event: ElectronEvents.CLOSE_WINDOW,
+            event: APP_COMMON_ACTIONS.closeWindow,
             payload: { processId },
-          }));
-
-        App.openedWindows[AppWindowTypes.MAIN].webContents.send('receive2',
-          JSON.stringify({
-            event: ElectronEvents.CLOSE_WINDOW,
-            payload: { processId },
-          }));
+          })
+        );
       }
     });
 
-
-    win.on('closed', () => {
+    win.on(ElectronAppEvents.CLOSED, () => {
       // Dereference the window object, usually you would store windows
       // in an array if your app supports multi windows, this is the time
       // when you should delete the corresponding element.
@@ -141,24 +136,8 @@ export default class App {
     App.openedWindows[windowType].center();
 
     // if main window is ready to show, close the splash window and show the main window
-    App.openedWindows[windowType].once('ready-to-show', () => {
+    App.openedWindows[windowType].once(ElectronAppEvents.READY_TO_SHOW, () => {
       App.openedWindows[windowType].show();
-    });
-
-    ipcMain.on(`send`, (event, payload) => {
-      Object.keys(App.openedWindows).forEach((key) => {
-        const targetWindow = App.openedWindows[key];
-        if (!targetWindow) {
-          console.log('!targetWindow');
-          return;
-        }
-        if (targetWindow.webContents.id === event.sender.id) {
-          console.log('targetWindow.webContents.id === event.sender.id', JSON.stringify(payload));
-          return; // Пропускаем, если это отправляющее окно
-        }
-        App.openedWindows[key].webContents.send('receive', payload);
-        App.openedWindows[key].webContents.send('receive2', payload);
-      });
     });
 
     // handle all external redirects in a new browser window
@@ -181,7 +160,11 @@ export default class App {
       );
     }
 
-    App.openedWindows[windowType].loadURL(urlObject.href);
+    App.openedWindows[windowType].loadURL(urlObject.href).then(() => {
+      if (windowType === AppWindowTypes.MAIN) {
+        App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+      }
+    });
   }
 
   static main(app: Electron.App, browserWindow: typeof BrowserWindow) {
@@ -193,8 +176,8 @@ export default class App {
     App.BrowserWindow = browserWindow;
     App.application = app;
 
-    App.application.on('window-all-closed', App.onWindowAllClosed); // Quit when all windows are closed.
-    App.application.on('ready', App.onReady); // App is ready to load data
-    App.application.on('activate', App.onActivate); // App is activated
+    App.application.on(ElectronAppEvents.WINDOW_ALL_CLOSED, App.onWindowAllClosed); // Quit when all windows are closed.
+    App.application.on(ElectronAppEvents.READY, App.onReady); // App is ready to load data
+    App.application.on(ElectronAppEvents.ACTIVATE, App.onActivate); // App is activated
   }
 }

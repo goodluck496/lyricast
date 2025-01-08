@@ -11,5 +11,4 @@ export class SongsModule {
   constructor(parseSongsService: ParseSongsService) {
     parseSongsService.convertSourceToJson();
   }
-
 }

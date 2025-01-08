@@ -4,7 +4,7 @@
 
 import { app } from 'electron';
 import { spawn } from 'child_process';
-import { resolve, join, basename } from 'path';
+import { basename, join, resolve } from 'path';
 import { environment } from '../../environments/environment';
 
 export default class SquirrelEvents {

@@ -112,7 +112,7 @@ export class SongsService {
     return {
       number: song.number,
       title: song.title,
-      bookName: song.bookName
+      bookName: song.bookName,
     };
   }
 

@@ -5,8 +5,6 @@ import { Component } from '@angular/core';
   standalone: true,
   imports: [],
   templateUrl: './bible-page.component.html',
-  styleUrl: './bible-page.component.scss'
+  styleUrl: './bible-page.component.scss',
 })
-export class BiblePageComponent {
-
-}
+export class BiblePageComponent {}

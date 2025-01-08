@@ -7,9 +7,10 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { TabViewModule } from 'primeng/tabview';
-import { Pages, PageTitlesMap } from '../page.types';
+
 import { MenuItem, PrimeTemplate } from 'primeng/api';
 import { TabMenuModule } from 'primeng/tabmenu';
+import { Pages, PageTitlesMap } from '@lyri-cast/common-browser';
 
 @Component({
   selector: 'lyri-main-page',
@@ -29,10 +30,6 @@ export class MainComponent implements OnInit {
     {
       routerLink: ['./', Pages.BIBLE],
       label: PageTitlesMap.get(Pages.BIBLE) || Pages.BIBLE,
-    },
-    {
-      routerLink: ['./', Pages.SONGS],
-      label: PageTitlesMap.get(Pages.SONGS) || Pages.SONGS,
     },
     {
       routerLink: ['./', Pages.SONGS_NEW],

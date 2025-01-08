@@ -1,0 +1,17 @@
+<div style="width: 100%; height: 40px;  top: 0; display: flex; justify-content: space-between; align-items: center; position: absolute;     z-index: 4;
+    padding: 0 12px;">
+  <div>{{ selectedLyric()?.sectionTitle }}</div>
+  <div>{{ selectedLyric()?.songId }}</div>
+</div>
+<div style="width: 100%; height: 300px">
+  <div class="reveal">
+    <div class="slides">
+      <section>
+        <div fittext [maxFontSize]="26">
+          <div [innerHTML]="slideText" class="slide-content"></div>
+        </div>
+
+      </section>
+    </div>
+  </div>
+</div>

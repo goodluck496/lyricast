@@ -11,12 +11,20 @@ import {
   BOOK_NAMES,
 } from '@lyri-cast/entities';
 import fs from 'fs';
+import { InjectRepository } from '@nestjs/typeorm';
+import { BibleTranslateEntity } from '../database/entities/bible/bible-translate.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
-export class BibleService {
+export class BibleByFilesService {
   assetsPath = path.resolve(__dirname, 'assets', 'complete-jsons', 'bibles');
 
   biblesCache: Record<string, BibleTranslate> = {};
+
+  constructor(
+    @InjectRepository(BibleTranslateEntity)
+    private readonly bibleTranslateRepo: Repository<BibleTranslateEntity>
+  ) {}
 
   getAllBibles(): BibleTranslate[] {
     const allBibles = this.getAllShortBibles();
@@ -47,6 +55,7 @@ export class BibleService {
           lang: translate.lang,
           version: translate.version,
           isDefault: false,
+          isClassicBookOrder: translate.isClassicBookOrder,
         });
         this.biblesCache[translate.keyForSearch] = translate;
       }

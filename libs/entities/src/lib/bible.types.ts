@@ -49,4 +49,5 @@ export type BibleTranslate = {
   version: string;
   books: BibleBook[];
   isDefault: boolean;
+  isClassicBookOrder: boolean
 };

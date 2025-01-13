@@ -125,7 +125,7 @@ export class BibleHtmlParserService {
   //   });
   // }
 
-  convertToJson() {
+  async convertToJson(): Promise<void> {
     try {
       const translate: BibleTranslate = {
         title: '',
@@ -134,7 +134,8 @@ export class BibleHtmlParserService {
         version: '',
         books: [],
         keyForSearch: '',
-        isDefault: false
+        isDefault: false,
+        isClassicBookOrder: false,
       };
 
       const langVersions = fs.readdirSync(this.assetsPath);

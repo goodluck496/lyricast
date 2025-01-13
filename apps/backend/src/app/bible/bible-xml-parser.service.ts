@@ -89,6 +89,7 @@ export class BibleXmlParserService {
           keyForSearch: '',
           books: [],
           isDefault: false,
+          isClassicBookOrder: false,
         };
         if (err) {
           reject(err);
@@ -165,7 +166,8 @@ export class BibleXmlParserService {
         lang: '',
         books: [],
         keyForSearch: '',
-        isDefault: false
+        isClassicBookOrder: false,
+        isDefault: false,
       };
 
       for (const langVersion of langVersions) {
@@ -229,6 +231,7 @@ export class BibleXmlParserService {
 
             if (isClassicBookOrder) {
               translate.books = [...parseResult.books];
+              translate.isClassicBookOrder = true;
             } else {
               translate.books = [
                 // ...this.reassignBibleBookNumbers(parseResult.books),

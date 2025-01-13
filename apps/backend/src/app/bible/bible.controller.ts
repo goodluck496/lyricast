@@ -1,10 +1,10 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { BibleService } from './bible.service';
+import { BibleByFilesService } from './bible-by-files.service';
 import { BibleChapter, BibleSearchDto } from '@lyri-cast/entities';
 
 @Controller('bible')
 export class BibleController {
-  constructor(private readonly bibleService: BibleService) {}
+  constructor(private readonly bibleService: BibleByFilesService) {}
 
   @Get('translates')
   getTranslates(@Query('short') short: number) {

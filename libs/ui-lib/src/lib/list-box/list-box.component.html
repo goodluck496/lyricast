@@ -1,15 +1,19 @@
-<div class="list-box__search">
-  <input pInputText placeholder="Введите" [(ngModel)]="searchStringSig" (ngModelChange)="onSearch($event)" />
-
-  @if (!showItems().length) {
-    <h3>Ничего не найдено</h3>
-  }
-</div>
+@if (withSearch()) {
+  <div class="list-box__search">
+    <p-iconField iconPosition="right">
+      <input pInputText placeholder="Введите" [(ngModel)]="searchStringSig" (ngModelChange)="onSearch($event)" />
+      <p-inputIcon styleClass="pi pi-times-circle" class="list-box__clear-btn" (click)="onClear()"></p-inputIcon>
+    </p-iconField>
+    @if (!showItems().length) {
+      <h3>Ничего не найдено</h3>
+    }
+  </div>
+}
 <div class="list-box__container">
   <ng-scrollbar externalViewport cdkVirtualScrollViewport style="width: 100%">
-    <cdk-virtual-scroll-viewport itemSize="38" class="list-box__viewport">
-      <div cdkListbox>
-        <div *cdkVirtualFor="let item of showItems(); templateCacheSize: 5"
+    <cdk-virtual-scroll-viewport [appendOnly]="false" orientation="vertical" itemSize="41" class="list-box__viewport" minBufferPx="100" maxBufferPx="200">
+      <span cdkListbox>
+        <div *cdkVirtualFor="let item of showItems(); templateCacheSize: 10"
              [cdkOption]="item"
              class="list-box__item"
              [class.list-box__item--selected]="selectedItems.has(item.searchKey)"
@@ -24,7 +28,7 @@
           }
         </div>
 
-      </div>
+      </span>
     </cdk-virtual-scroll-viewport>
 
   </ng-scrollbar>

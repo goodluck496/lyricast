@@ -5,8 +5,10 @@ import * as cheerio from 'cheerio';
 import path from 'path';
 import {
   BibleBook,
+  BibleBookType,
   BibleChapter,
   BibleChapterSection,
+  BibleTranslate,
 } from '@lyri-cast/entities';
 
 @Injectable()
@@ -20,11 +22,13 @@ export class BibleHtmlParserService {
   );
 
   // Функция для парсинга HTML-контента
-  parseHTMLContent(html: string) {
+  parseHTMLContent(html: string, bookIndex: number) {
     // Создаем объект для хранения книги
     const book: BibleBook = {
-      title: '',
+      number: bookIndex,
+      title: { short: '', full: '' },
       chapters: [],
+      type: BibleBookType.Law,
     };
 
     // Вспомогательные переменные
@@ -41,7 +45,7 @@ export class BibleHtmlParserService {
 
       if (tagName === 'h2') {
         // Название книги
-        book.title = text;
+        book.title = { short: text, full: text };
       } else if (tagName === 'h4') {
         // Начало новой главы
         const chapterNumberDelimIndex = text.indexOf('-');
@@ -51,6 +55,7 @@ export class BibleHtmlParserService {
         );
         currentChapter = {
           number: chapterNumber,
+          bookId: book.number,
           title:
             text.slice(chapterNumberDelimIndex + 1) + ` - ${chapterNumber}`,
           subsections: [],
@@ -61,6 +66,8 @@ export class BibleHtmlParserService {
         if (currentChapter) {
           currentSubsection = {
             heading: text,
+            bookId: book.number,
+            chapterId: currentChapter.number,
             content: [],
           };
           currentChapter.subsections.push(currentSubsection);
@@ -76,16 +83,22 @@ export class BibleHtmlParserService {
             type: 'line',
             number: +lineNumber,
             text: lineText,
+            bookId: book.number,
+            chapterId: currentChapter.number,
           });
         } else if (currentChapter) {
           // Если нет подраздела, добавляем контент в главу
           currentChapter.subsections.push({
             heading: null,
+            bookId: book.number,
+            chapterId: currentChapter.number,
             content: [
               {
                 type: 'line',
                 number: +lineNumber,
                 text: lineText,
+                bookId: book.number,
+                chapterId: currentChapter.number,
               },
             ],
           });
@@ -114,7 +127,15 @@ export class BibleHtmlParserService {
 
   convertToJson() {
     try {
-      const bible: BibleBook[] = [];
+      const translate: BibleTranslate = {
+        title: '',
+        sourceTitle: '',
+        lang: '',
+        version: '',
+        books: [],
+        keyForSearch: '',
+        isDefault: false
+      };
 
       const langVersions = fs.readdirSync(this.assetsPath);
 
@@ -123,11 +144,31 @@ export class BibleHtmlParserService {
           path.resolve(this.assetsPath, langVersion)
         );
 
+        translate.lang = langVersion;
+
         for (const subVersion of subVersions) {
           const books = fs.readdirSync(
             path.resolve(this.assetsPath, langVersion, subVersion)
           );
 
+          translate.version = subVersion;
+
+          if (books.includes('meta.json')) {
+            const metaFilePath = path.resolve(
+              this.assetsPath,
+              langVersion,
+              subVersion,
+              'meta.json'
+            );
+            const metaString = fs.readFileSync(metaFilePath, {
+              encoding: 'utf-8',
+            });
+            const { title, lang } = JSON.parse(metaString);
+            translate.title = title;
+            translate.lang = lang;
+          }
+
+          let bookIndex = 1;
           for (const book of books) {
             const isBook = book.match(/\d{2}/g)?.length;
 
@@ -135,24 +176,31 @@ export class BibleHtmlParserService {
               continue;
             }
 
-            const bookContent = fs.readFileSync(
-              path.resolve(this.assetsPath, langVersion, subVersion, book),
-              {
-                encoding: 'utf-8',
-              }
+            const bookFilePath = path.resolve(
+              this.assetsPath,
+              langVersion,
+              subVersion,
+              book
             );
 
-            const parsedBook = this.parseHTMLContent(bookContent);
+            const bookContent = fs.readFileSync(bookFilePath, {
+              encoding: 'utf-8',
+            });
 
-            bible.push(parsedBook);
+            const parsedBook = this.parseHTMLContent(bookContent, bookIndex);
+
+            translate.books.push(parsedBook);
+            bookIndex++;
           }
 
-          const fileName =
-            path.resolve(this.assetsJsonsPath) +
-            `/${langVersion}__${subVersion}.bible.json`;
+          const fileName = `${langVersion}__${subVersion}`;
+          const extension = `.bible.json`;
+          translate.keyForSearch = `${fileName}${extension}`;
+          const filePath =
+            path.resolve(this.assetsJsonsPath) + `/${fileName}${extension}`;
 
           fs.mkdirSync(this.assetsJsonsPath, { recursive: true });
-          fs.writeFileSync(fileName, JSON.stringify(bible, null, 2));
+          fs.writeFileSync(filePath, JSON.stringify(translate, null, 2));
         }
       }
     } catch (error) {

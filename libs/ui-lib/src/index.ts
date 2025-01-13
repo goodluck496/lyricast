@@ -5,5 +5,6 @@ export * from './lib/list-box/list-box.component'
 
 export * from './lib/pipes';
 
-
 export * from './lib/directives'
+
+export * from './lib/components'

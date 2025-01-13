@@ -72,6 +72,9 @@ importers:
       ng2-fittext:
         specifier: ^2.0.0
         version: 2.0.0(@angular/common@18.2.6(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))(rxjs@7.8.1))(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))
+      primeicons:
+        specifier: ^6.0.1
+        version: 6.0.1
       primeng:
         specifier: ^17.18.12
         version: 17.18.12(@angular/common@18.2.6(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))(rxjs@7.8.1))(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))(@angular/forms@18.2.6(@angular/common@18.2.6(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))(rxjs@7.8.1))(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))(@angular/platform-browser@18.2.6(@angular/animations@18.2.6(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10)))(@angular/common@18.2.6(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))(rxjs@7.8.1))(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10)))(rxjs@7.8.1))(rxjs@7.8.1)(zone.js@0.14.10)
@@ -6750,6 +6753,9 @@ packages:
   pretty-format@29.7.0:
     resolution: {integrity: sha512-Pdlw/oPxN+aXdmM9R00JVC9WVFoCLTKJvDVLgmJ+qAffBMxsV85l/Lu7sNx4zSzPyoL2euImuEwHhOXdEgNFZQ==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
+
+  primeicons@6.0.1:
+    resolution: {integrity: sha512-KDeO94CbWI4pKsPnYpA1FPjo79EsY9I+M8ywoPBSf9XMXoe/0crjbUK7jcQEDHuc0ZMRIZsxH3TYLv4TUtHmAA==}
 
   primeng@17.18.12:
     resolution: {integrity: sha512-zElkv9c3209e1j2yNXalfv71gGJeo8c7bUuW3nsvtQZcYsXjdsJvBEhTThVghBdpCUoFYD3cNmTzg3t807cL6A==}
@@ -16652,6 +16658,8 @@ snapshots:
       '@jest/schemas': 29.6.3
       ansi-styles: 5.2.0
       react-is: 18.3.1
+
+  primeicons@6.0.1: {}
 
   primeng@17.18.12(@angular/common@18.2.6(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))(rxjs@7.8.1))(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))(@angular/forms@18.2.6(@angular/common@18.2.6(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))(rxjs@7.8.1))(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))(@angular/platform-browser@18.2.6(@angular/animations@18.2.6(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10)))(@angular/common@18.2.6(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10))(rxjs@7.8.1))(@angular/core@18.2.6(rxjs@7.8.1)(zone.js@0.14.10)))(rxjs@7.8.1))(rxjs@7.8.1)(zone.js@0.14.10):
     dependencies:

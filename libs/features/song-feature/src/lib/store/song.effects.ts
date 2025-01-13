@@ -138,7 +138,7 @@ export class SongsPageEffects {
         if (windowData) {
           return of(
             SongActions.openPage({
-              path: [Pages.SONGS_FEATURE, Pages.CASTING_NEW],
+              path: [Pages.SONGS_FEATURE, Pages.CASTING],
             })
           );
         }
@@ -167,7 +167,7 @@ export class SongsPageEffects {
           ),
           map(() =>
             SongActions.openPage({
-              path: [Pages.SONGS_FEATURE, Pages.CASTING_NEW],
+              path: [Pages.SONGS_FEATURE, Pages.CASTING],
             })
           )
         );

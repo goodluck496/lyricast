@@ -1,0 +1,89 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.page {
+
+  &-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    height: 36px;
+
+    padding: 12px;
+
+    &__input {
+      display: flex;
+      width: 60%;
+
+      input {
+        width: 100%;
+      }
+    }
+
+  }
+
+}
+
+.list-search-wrapper {
+  &__chapters {
+    width: 100px;
+  }
+}
+
+.list-item {
+  &__number {
+    &--law {
+      background-color: #1a6e6e; // Более яркий и насыщенный teal для Law
+      color: #ffffff; // Белый текст
+    }
+    &--history {
+      background-color: #31517b; // Более глубокий синий для History
+      color: #ffffff; // Белый текст
+    }
+    &--poetry {
+      background-color: #704cb5; // Purple для Poetry (увеличена насыщенность)
+      color: #ffffff; // Белый текст
+    }
+    &--major-prophet {
+      background-color: #d56a2c; // Orange для Major Prophets (увеличена насыщенность)
+      color: #ffffff; // Белый текст
+    }
+    &--minor-prophet {
+      background-color: #a17e39; // Yellow для Minor Prophets (увеличена насыщенность)
+      color: #ffffff; // Белый текст
+    }
+    &--gospel {
+      background-color: #d63a3a; // Red для Gospels (увеличена насыщенность)
+      color: #ffffff; // Белый текст
+    }
+    &--acts {
+      background-color: #00ffb5;
+      color: black;
+    }
+    &--church-history {
+      background-color: #3b6b96; // Light Blue для Church History (увеличена насыщенность)
+      color: #ffffff; // Белый текст
+    }
+    &--pauline-epistle {
+      background-color: #5c8a5e; // Green для Pauline Epistles (увеличена насыщенность)
+      color: #ffffff; // Белый текст
+    }
+    &--pastoral-epistle {
+      background-color: #9f5353; // Maroon для Pastoral Epistles (увеличена насыщенность)
+      color: #ffffff; // Белый текст
+    }
+    &--general-epistle {
+      background-color: #74888f; // Gray для General Epistles (увеличена насыщенность)
+      color: #ffffff; // Белый текст
+    }
+
+    &--apocalyptic {
+      background-color: #d63a3a; // Red для apocalyptic (увеличена насыщенность)
+      color: #ffffff; // Белый текст
+    }
+  }
+}

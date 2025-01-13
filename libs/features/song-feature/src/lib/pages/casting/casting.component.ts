@@ -86,7 +86,7 @@ export class CastingComponent implements OnInit, AfterViewInit {
 
     this.bridge.windowSrv.electronContext.send({
       event: SONG_ACTIONS.openedPage,
-      payload: { state: 'after-view-init', page: Pages.CASTING_NEW },
+      payload: { state: 'after-view-init', page: Pages.CASTING },
     });
   }
 

@@ -6,7 +6,7 @@
   width: 100%;
   height: 100%;
 
-  --list-box-item-h: 38px;
+  --list-box-item-h: 42px;
 
   --list-box-item-selected-bg: #0D99FF;
   --list-box-item-hover-bg: #92cdff;
@@ -24,9 +24,19 @@
     width: 100%;
     height: calc(var(--list-box-item-h));
 
-    input {
-      width: 100%
+    p-iconField {
+      width: 100%;
+      input {
+        width: 100%
+      }
+
     }
+
+
+  }
+
+  &__clear-btn {
+    cursor: pointer;
   }
 
   &__container {
@@ -44,8 +54,10 @@
   &__item {
     display: flex;
     align-items: center;
-    width: 100%;
+    height: var(--list-box-item-h);
+    max-height: var(--list-box-item-h);
     min-height: var(--list-box-item-h);
+    width: 100%;
     cursor: pointer;
     border-bottom: 1px solid #414141;
     transition: .3s;

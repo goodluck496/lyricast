@@ -126,7 +126,6 @@ export default class App {
       width: width,
       height: height,
       show: false,
-
       webPreferences: {
         ...DEFAULT_WEB_PREF,
       },

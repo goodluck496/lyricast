@@ -30,6 +30,8 @@ import { NgScrollbarExt } from 'ngx-scrollbar';
 import { NgScrollbarCdkVirtualScroll } from 'ngx-scrollbar/cdk';
 import { InputTextModule } from 'primeng/inputtext';
 import { HighlighterPipe } from '../pipes/index';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 
 export interface IUiLyriListItem<Entity = object> {
   title: string;
@@ -57,6 +59,8 @@ export enum ListBoxTemplates {
     InputTextModule,
     FormsModule,
     HighlighterPipe,
+    IconFieldModule,
+    InputIconModule,
   ],
   templateUrl: './list-box.component.html',
   styleUrl: './list-box.component.scss',
@@ -78,18 +82,21 @@ export class ListBoxComponent
 
   items = input<IUiLyriListItem[]>([]);
   multi = input(false);
+  withSearch = input(true)
 
-  showItems = computed(() =>
-    this.items().filter(
-      (item) =>
-        item.title
-          .trim()
-          .toLowerCase()
-          .includes(this.searchStringSig().toLowerCase()) ||
-        item.searchKey
-          .toLowerCase()
-          .includes(this.searchStringSig().toLowerCase() || '')
-    )
+  showItems = computed(() => {
+    console.log('this.items()', this.items());
+    return this.items().filter(
+        (item) =>
+          item.title
+            .trim()
+            .toLowerCase()
+            .includes(this.searchStringSig().toLowerCase()) ||
+          item.searchKey
+            .toLowerCase()
+            .includes(this.searchStringSig().toLowerCase() || '')
+      )
+    }
   );
   searchStringSig = signal<string>('');
 
@@ -100,14 +107,15 @@ export class ListBoxComponent
 
   selectedItems: Map<string, IUiLyriListItem> = new Map();
 
-  onChanges: (data: IUiLyriListItem | IUiLyriListItem[]) => void = (
-    data: IUiLyriListItem | IUiLyriListItem[]
+  onChanges: (data: IUiLyriListItem | IUiLyriListItem[] | null) => void = (
+    data: IUiLyriListItem | IUiLyriListItem[] | null
   ) => void 0;
   onTouched: () => void = () => void 0;
 
-  value?: IUiLyriListItem | IUiLyriListItem[];
+  value?: IUiLyriListItem | IUiLyriListItem[] | null;
 
   public onItemClick(item: IUiLyriListItem) {
+    console.log('click item');
     if (!this.selectedItems.has(item.searchKey)) {
       if (this.multi()) {
         this.selectedItems.set(item.searchKey, item);
@@ -126,6 +134,12 @@ export class ListBoxComponent
     this.searchStringSig.set(search);
   }
 
+  onClear() {
+    this.value = null;
+    this.onChanges(null);
+    this.searchStringSig.set('');
+  }
+
   ngAfterContentInit() {
     this.templates().forEach((item) => {
       this.listBoxTemplates[item.name as ListBoxTemplates] = item.template;
@@ -133,7 +147,7 @@ export class ListBoxComponent
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if('items' in changes) {
+    if ('items' in changes) {
       this.selectedItems = new Map();
     }
   }
@@ -141,7 +155,7 @@ export class ListBoxComponent
   protected readonly ListBoxTemplates = ListBoxTemplates;
 
   registerOnChange(
-    fn: (data: IUiLyriListItem | IUiLyriListItem[]) => void
+    fn: (data: IUiLyriListItem | IUiLyriListItem[] | null) => void
   ): void {
     this.onChanges = fn;
   }
@@ -153,6 +167,7 @@ export class ListBoxComponent
   writeValue(): void {
     const result = Array.from(this.selectedItems).map(([_, data]) => data);
 
+    console.log('write', result);
     this.onChanges(this.multi() ? result : result[0]);
   }
 }

@@ -1,0 +1,68 @@
+<lyri-page-container>
+  <ng-container page-header>
+    <div class="page-header__input">
+      <input pInputText placeholder="Поиск" [(ngModel)]="searchSig" (ngModelChange)="onSearch($event)" />
+    </div>
+  </ng-container>
+  <ng-container page-content>
+    <div class="list-search-wrapper">
+      <div class="list-search-block">
+        <p-dropdown
+          [formControl]="bibleTranslateControl"
+          [options]="bibleTranslates"
+          optionLabel="title"
+          styleClass="list-search-dropdown"
+        >
+          <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
+        </p-dropdown>
+
+        <lyri-list-box [items]="(bookList$ | async) || []"
+                       [formControl]="bibleBookControl"
+        >
+          <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
+            <div class="list-item__wrapper">
+              <div class="list-item__number"
+                   [ngClass]="{
+                    'list-item__number--law': data.baseEntity.type === BibleBookType.Law,
+                    'list-item__number--history': data.baseEntity.type === BibleBookType.History,
+                    'list-item__number--poetry': data.baseEntity.type === BibleBookType.Poetry,
+                    'list-item__number--major-prophet': data.baseEntity.type === BibleBookType.MajorProphet,
+                    'list-item__number--minor-prophet': data.baseEntity.type === BibleBookType.MinorProphet,
+                    'list-item__number--gospel': data.baseEntity.type === BibleBookType.Gospel,
+                    'list-item__number--acts': data.baseEntity.type === BibleBookType.Acts,
+                    'list-item__number--pauline-epistle': data.baseEntity.type === BibleBookType.PaulineEpistle,
+                    'list-item__number--general-epistle': data.baseEntity.type === BibleBookType.GeneralEpistle,
+                    'list-item__number--pastoral-epistle': data.baseEntity.type === BibleBookType.PastoralEpistle,
+                    'list-item__number--apocalyptic': data.baseEntity.type === BibleBookType.Apocalyptic
+                   }"
+                   [innerHTML]="data.searchKey  | highliter: search"></div>
+              <div class="list-item__title" [innerHTML]="data.title | highliter: search"></div>
+            </div>
+          </ng-template>
+        </lyri-list-box>
+      </div>
+    </div>
+
+    @if (bibleBookControl.valueChanges | async) {
+      <div class="list-search-wrapper list-search-wrapper__chapters">
+        <div class="list-search-block">
+          <div class="list-search-block__header">
+            Главы
+          </div>
+
+          <lyri-list-box [items]="(chapterList$ | async) || []" [formControl]="chapterControl" [withSearch]="false">
+            <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
+              <div class="list-item__wrapper">
+                <div class="list-item__title" [innerHTML]="data.title | highliter: search"></div>
+              </div>
+            </ng-template>
+          </lyri-list-box>
+        </div>
+      </div>
+
+    }
+
+  </ng-container>
+  <ng-container page-sideibar-preview></ng-container>
+  <ng-container page-sideibar-content></ng-container>
+</lyri-page-container>

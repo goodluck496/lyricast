@@ -13,10 +13,10 @@ export const SongFeatureRoutes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: Pages.SONGS_NEW,
+    redirectTo: Pages.SONGS,
   },
   {
-    path: Pages.SONGS_NEW,
+    path: Pages.SONGS,
     loadComponent: () =>
       import('./lib/pages/song-page/song-page.component').then(
         (p) => p.SongPageComponent
@@ -27,7 +27,7 @@ export const SongFeatureRoutes: Routes = [
     ],
   },
   {
-    path: Pages.CASTING_NEW,
+    path: Pages.CASTING,
     loadComponent: () =>
       import('./lib/pages/casting/casting.component').then(
         (p) => p.CastingComponent

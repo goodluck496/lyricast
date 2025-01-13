@@ -14,16 +14,9 @@ export const appRoutes: Route[] = [
           import('@lyri-cast/song-feature').then((c) => c.SongFeatureRoutes),
       },
       {
-        path: Pages.SONGS_NEW,
-        pathMatch: 'full',
-        redirectTo: `${Pages.SONGS_FEATURE}/${Pages.SONGS_NEW}`,
-      },
-      {
-        path: Pages.BIBLE,
-        loadComponent: () =>
-          import('./pages/bible-page/bible-page.component').then(
-            (c) => c.BiblePageComponent
-          ),
+        path: Pages.BIBLE_FEATURE,
+        loadChildren: () =>
+          import('@lyri-cast/bible-feature').then((c) => c.bibleFeatureRoutes),
       },
       {
         path: Pages.PROGRAMS,
@@ -45,10 +38,5 @@ export const appRoutes: Route[] = [
     path: Pages.SONGS_FEATURE,
     loadChildren: () =>
       import('@lyri-cast/song-feature').then((c) => c.SongFeatureRoutes),
-  },
-  {
-    path: Pages.CASTING_NEW,
-    pathMatch: 'full',
-    redirectTo: `${Pages.SONGS_FEATURE}/${Pages.CASTING_NEW}`,
   },
 ];

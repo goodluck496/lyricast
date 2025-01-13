@@ -24,6 +24,7 @@ import {
   IUiLyriListItem,
   ListBoxComponent,
   ListBoxTemplates,
+  PageContainerComponent,
 } from '@lyri-cast/ui-lib';
 import { AsyncPipe } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -73,6 +74,7 @@ export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
     InputTextModule,
     FormsModule,
     CastingPreviewComponent,
+    PageContainerComponent,
   ],
   templateUrl: './song-page.component.html',
   styleUrl: './song-page.component.scss',
@@ -80,7 +82,7 @@ export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
 })
 export class SongPageComponent implements OnInit, AfterViewInit {
   private songPageSelectSrv = inject(SongPageSelectService);
-  private songsService = inject(SongsApiService);
+  private songsApiService = inject(SongsApiService);
   private castingSrv = inject(CastingService);
   private cdr = inject(ChangeDetectorRef);
   private elRef = inject(ElementRef);
@@ -91,7 +93,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
   songBooksDict: IUiLyriListItem<ISongBookName>[] = [];
 
-  songBooks$ = this.songsService.getAllSongBooks();
+  songBooks$ = this.songsApiService.getAllSongBooks();
 
   songBooksDict$: Observable<IUiLyriListItem<ISongBookName>[]> =
     this.songBooks$.pipe(
@@ -113,7 +115,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     this.selectedBook.valueChanges.pipe(
       filterEmpty(),
       switchMap((value) => {
-        return this.songsService.getAllSongsByBook(value.baseEntity);
+        return this.songsApiService.getAllSongsByBook(value.baseEntity);
       }),
       map((data) => {
         return data.map((el) => {
@@ -140,7 +142,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         this.songPageSelectSrv.selectSong(null);
         return of(null);
       }
-      return this.songsService.getSong(
+      return this.songsApiService.getSong(
         selectedBook.baseEntity,
         data.baseEntity.number
       );

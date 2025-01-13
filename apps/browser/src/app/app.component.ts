@@ -61,8 +61,7 @@ export class AppComponent implements OnInit {
     filter((route) => route instanceof NavigationEnd),
     map(
       (data) =>
-        !data.url.includes(Pages.CASTING) ||
-        !data.url.includes(Pages.CASTING_NEW)
+        !data.url.includes(Pages.CASTING)
     )
   );
 
@@ -74,30 +73,5 @@ export class AppComponent implements OnInit {
       .subscribe(() => console.log('selectAppInit'));
 
     this.store.dispatch(AppActions.appInit());
-
-    /**
-     * todo переделать на ngrx action + effect
-     */
-    // this.bridge.queueEvents.pipe().subscribe(async (data) => {
-    //   if (!this.bridge.windowType) {
-    //     this.bridge.windowType =
-    //       await this.bridge.windowSrv.electronContext.getWindowType();
-    //   }
-    //
-    //   console.log('events', data);
-    //   if (!data) {
-    //     return;
-    //   }
-    //   if (
-    //     this.bridge.windowType !== AppWindowTypes.MAIN &&
-    //     data.event === SONG_ACTIONS.openPage
-    //   ) {
-    //     console.log('route', data);
-    //     const payload = data.payload as { name: string };
-    //     this.router
-    //       .navigate([Pages.SONGS_FEATURE, payload?.name])
-    //       .then((d) => console.log('1111111111', d));
-    //   }
-    // });
   }
 }

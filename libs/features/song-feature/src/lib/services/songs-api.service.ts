@@ -7,12 +7,13 @@ import { IShortSong, ISong, ISongBookName } from '@lyri-cast/entities';
 @Injectable({ providedIn: 'root' })
 export class SongsApiService {
   BASE_API_TOKEN = inject(BASE_API_TOKEN);
+  API_SONGS_TOKEN = 'songs';
 
   constructor(private http: HttpClient) {}
 
   getAllSongBooks(): Observable<ISongBookName[]> {
     return this.http
-      .get<ISongBookName[]>(`${this.BASE_API_TOKEN}/book-names/`)
+      .get<ISongBookName[]>(`${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/book-names/`)
       .pipe(
         catchError((err) => {
           console.log(err);
@@ -23,7 +24,7 @@ export class SongsApiService {
 
   getAllSongsByBook(book: ISongBookName): Observable<IShortSong[]> {
     return this.http.get<IShortSong[]>(
-      `${this.BASE_API_TOKEN}/book-songs/${book.fileKey}`
+      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/book-songs/${book.fileKey}`
     );
   }
 
@@ -36,7 +37,7 @@ export class SongsApiService {
     });
 
     return this.http
-      .get<ISong[]>(`${this.BASE_API_TOKEN}/find/${book.fileKey}`, { params })
+      .get<ISong[]>(`${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/find/${book.fileKey}`, { params })
       .pipe(
         catchError((err) => {
           console.log('error', err);
@@ -47,7 +48,7 @@ export class SongsApiService {
 
   getSong(book: ISongBookName, songId: number): Observable<ISong> {
     return this.http.get<ISong>(
-      `${this.BASE_API_TOKEN}/book/${book.fileKey}/${songId}`
+      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/book/${book.fileKey}/${songId}`
     );
   }
 }

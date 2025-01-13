@@ -2,7 +2,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { SongsService } from './songs.service';
 import { IShortSong } from '@lyri-cast/entities';
 
-@Controller()
+@Controller('songs')
 export class SongsController {
   constructor(private readonly songsService: SongsService) {}
 

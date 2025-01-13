@@ -28,12 +28,12 @@ export class MainComponent implements OnInit {
 
   pages: MenuItem[] = [
     {
-      routerLink: ['./', Pages.BIBLE],
+      routerLink: ['./', Pages.BIBLE_FEATURE, Pages.BIBLE],
       label: PageTitlesMap.get(Pages.BIBLE) || Pages.BIBLE,
     },
     {
-      routerLink: ['./', Pages.SONGS_NEW],
-      label: PageTitlesMap.get(Pages.SONGS_NEW) || Pages.SONGS_NEW,
+      routerLink: ['./', Pages.SONGS_FEATURE, Pages.SONGS],
+      label: PageTitlesMap.get(Pages.SONGS) || Pages.SONGS,
     },
     {
       routerLink: ['./', Pages.PROGRAMS],

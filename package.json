@@ -41,6 +41,7 @@
     "axios": "^1.6.0",
     "bootstrap": "5.3.3",
     "ng2-fittext": "^2.0.0",
+    "primeicons": "^6.0.1",
     "primeng": "^17.18.12",
     "reflect-metadata": "^0.1.13",
     "reveal.js": "^5.0.4",

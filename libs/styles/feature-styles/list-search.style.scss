@@ -29,6 +29,8 @@
     width: 100%;
     border: 0;
     background: #191919;
+    font-weight: bold;
+    padding: 6px;
   }
 
 }
@@ -55,7 +57,7 @@
 
   &__number {
     font-weight: bold;
-    font-size: 10px;
+    font-size: 12px;
 
     display: flex;
     align-items: center;

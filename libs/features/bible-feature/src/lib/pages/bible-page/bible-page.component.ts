@@ -20,9 +20,9 @@ import { InputTextModule } from 'primeng/inputtext';
 import { DropdownModule } from 'primeng/dropdown';
 import {
   BibleBookShort,
-  BibleBookType,
+  BibleBookType, BibleChapterSection,
   BibleChapterShort,
-  BibleTranslateShort,
+  BibleTranslateShort
 } from '@lyri-cast/entities';
 import { map, Observable, switchMap, tap } from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
@@ -30,9 +30,11 @@ import { Store } from '@ngrx/store';
 import { BibleState } from '../../store/bible.store';
 import { BibleActions } from '../../store/bible.actions';
 import {
-  selectSelectedBook,
-  selectSelectedTranslate,
+  selectSelectedBook, selectSelectedChapter, selectSelectedChapterSection,
+  selectSelectedTranslate
 } from '../../store/bible.selectors';
+import { NgScrollbarCdkVirtualScroll } from 'ngx-scrollbar/cdk';
+import { NgScrollbar, NgScrollbarExt } from 'ngx-scrollbar';
 
 @Component({
   selector: 'lib-bible-page',
@@ -46,6 +48,9 @@ import {
     ReactiveFormsModule,
     ListBoxComponent,
     HighlighterPipe,
+    NgScrollbarCdkVirtualScroll,
+    NgScrollbarExt,
+    NgScrollbar,
   ],
   templateUrl: './bible-page.component.html',
   styleUrl: './bible-page.component.scss',
@@ -98,7 +103,6 @@ export class BiblePageComponent implements AfterViewInit {
         });
       }),
       tap(() => {
-        console.log('clear');
         this.bibleBookControl.setValue(null);
         this.chapterControl.setValue(null);
       })
@@ -121,6 +125,10 @@ export class BiblePageComponent implements AfterViewInit {
         );
       })
     );
+
+  sectionList$: Observable<BibleChapterSection[]> = this.store
+    .select(selectSelectedChapterSection)
+    .pipe();
 
   constructor() {
     this.bibleTranslateControl.valueChanges.pipe().subscribe((value) => {

@@ -14,12 +14,17 @@ export const BibleReducers = createReducer<BibleState>(
     return {
       ...state,
       selectedTranslate: data.translate,
+      selectedBook: null,
+      selectedChapter: null,
+      selectedChapterSection: [],
     } satisfies BibleState;
   }),
   on(BibleActions.selectBook, (state, data) => {
     return {
       ...state,
       selectedBook: data.book,
+      selectedChapter: null,
+      selectedChapterSection: [],
     } satisfies BibleState;
   }),
   on(BibleActions.selectChapter, (state, data) => {
@@ -28,6 +33,12 @@ export const BibleReducers = createReducer<BibleState>(
       selectedChapter: data.chapter,
     } satisfies BibleState;
   }),
+  on(BibleActions.selectSections, (state, data) => {
+    return {
+      ...state,
+      selectedChapterSection: data.sectionContent,
+    } satisfies BibleState;
+  })
   // on(BibleActions.selectSections, (state, data) => {
   //   return {
   //     ...state,

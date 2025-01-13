@@ -11,6 +11,7 @@ export const {
   selectSelectedTranslate,
   selectSelectedChapter,
   selectSelectedBook,
+  selectSelectedChapterSection
 } = selectBible;
 
 export const getSelectedChapter = createSelector(

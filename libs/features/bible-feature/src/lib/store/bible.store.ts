@@ -1,8 +1,8 @@
 import {
-  BibleBookShort,
+  BibleBookShort, BibleChapterSection,
   BibleChapterSectionContent,
   BibleChapterShort,
-  BibleTranslateShort,
+  BibleTranslateShort
 } from '@lyri-cast/entities';
 
 export type BibleState = {
@@ -10,7 +10,7 @@ export type BibleState = {
   selectedTranslate: BibleTranslateShort | null;
   selectedBook: BibleBookShort | null;
   selectedChapter: BibleChapterShort | null;
-  // selectedChapterSection: BibleChapterSection | null;
+  selectedChapterSection: BibleChapterSection[];
   selectedSectionContent: BibleChapterSectionContent[];
 
   castingPaused: boolean;
@@ -22,7 +22,7 @@ export const bibleInitialState: BibleState = {
   selectedTranslate: null,
   selectedBook: null,
   selectedChapter: null,
-  // selectedChapterSection: null,
+  selectedChapterSection: [],
   selectedSectionContent: [],
 
   castingPaused: true,

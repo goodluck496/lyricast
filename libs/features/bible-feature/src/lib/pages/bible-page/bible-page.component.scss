@@ -40,42 +40,52 @@
       background-color: #1a6e6e; // Более яркий и насыщенный teal для Law
       color: #ffffff; // Белый текст
     }
+
     &--history {
       background-color: #31517b; // Более глубокий синий для History
       color: #ffffff; // Белый текст
     }
+
     &--poetry {
       background-color: #704cb5; // Purple для Poetry (увеличена насыщенность)
       color: #ffffff; // Белый текст
     }
+
     &--major-prophet {
       background-color: #d56a2c; // Orange для Major Prophets (увеличена насыщенность)
       color: #ffffff; // Белый текст
     }
+
     &--minor-prophet {
       background-color: #a17e39; // Yellow для Minor Prophets (увеличена насыщенность)
       color: #ffffff; // Белый текст
     }
+
     &--gospel {
       background-color: #d63a3a; // Red для Gospels (увеличена насыщенность)
       color: #ffffff; // Белый текст
     }
+
     &--acts {
       background-color: #00ffb5;
       color: black;
     }
+
     &--church-history {
       background-color: #3b6b96; // Light Blue для Church History (увеличена насыщенность)
       color: #ffffff; // Белый текст
     }
+
     &--pauline-epistle {
       background-color: #5c8a5e; // Green для Pauline Epistles (увеличена насыщенность)
       color: #ffffff; // Белый текст
     }
+
     &--pastoral-epistle {
       background-color: #9f5353; // Maroon для Pastoral Epistles (увеличена насыщенность)
       color: #ffffff; // Белый текст
     }
+
     &--general-epistle {
       background-color: #74888f; // Gray для General Epistles (увеличена насыщенность)
       color: #ffffff; // Белый текст
@@ -86,4 +96,47 @@
       color: #ffffff; // Белый текст
     }
   }
+}
+
+
+/**
+ перенести в отдельный компонент
+ */
+.bible-chapter-section {
+  display: flex;
+  flex-direction: column;
+
+  &__header {
+
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0;
+  }
+
+  &__verse {
+    display: flex;
+    padding: 10px 0;
+    background: #191919;
+    width: 100%;
+  }
+
+  &__verse-number {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: 40px;
+    min-width: 40px;
+    height: 100%;
+  }
+
+  &__verse-content {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
 }

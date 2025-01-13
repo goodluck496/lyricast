@@ -19,7 +19,6 @@ export class BibleEffects {
       ofType(BibleActions.selectChapter),
       withLatestFrom(this.store.select(getSelectedChapter)),
       switchMap(([actionData, { translate, book }]) => {
-        console.log('--------',actionData, translate, book);
         if (!translate || !book) {
           return of([]);
         }

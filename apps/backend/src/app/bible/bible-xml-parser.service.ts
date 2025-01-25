@@ -129,7 +129,7 @@ export class BibleXmlParserService {
                   content: chapter.verse.map((verse) => {
                     const verseNumber = verse.$.number;
                     return {
-                      type: 'line',
+                      contentType: 'line',
                       number: +verseNumber, // Номер стиха
                       text: verse._, // Текст стиха
                       bookId: book.number,

@@ -18,14 +18,7 @@ import {
   switchMap,
   tap,
 } from 'rxjs';
-import {
-  HighlighterPipe,
-  IUiLyriItemInList,
-  IUiLyriListItem,
-  ListBoxComponent,
-  ListBoxTemplates,
-  PageContainerComponent,
-} from '@lyri-cast/ui-lib';
+import { HighlighterPipe, PageContainerComponent } from '@lyri-cast/ui-lib';
 import { AsyncPipe } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {
@@ -50,6 +43,12 @@ import { Store } from '@ngrx/store';
 import { SongActions } from '../../../index';
 import { SongsApiService } from '../../services/songs-api.service';
 import { CastingPreviewComponent, SongComponent } from '../../components/index';
+import {
+  IUiLyriItemInList,
+  IUiLyriListItem,
+  ListBoxComponent,
+  ListBoxTemplates,
+} from '@lyri-cast/form';
 
 export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
   [SPLIT_PARTS_COUNT.NONE]: 'Нет',

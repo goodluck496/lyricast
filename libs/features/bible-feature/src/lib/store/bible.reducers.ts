@@ -25,24 +25,76 @@ export const BibleReducers = createReducer<BibleState>(
       selectedBook: data.book,
       selectedChapter: null,
       selectedChapterSection: [],
+      selectedPath: data.book ? [data.book.number.toString()] : [],
     } satisfies BibleState;
   }),
   on(BibleActions.selectChapter, (state, data) => {
     return {
       ...state,
       selectedChapter: data.chapter,
+      selectedPath: [
+        ...state.selectedPath.slice(0,1),
+        data.chapter.number.toString(),
+        '1',
+      ],
     } satisfies BibleState;
   }),
-  on(BibleActions.selectSections, (state, data) => {
+  on(BibleActions.selectChapterSection, (state, data) => {
     return {
       ...state,
-      selectedChapterSection: data.sectionContent,
+      selectedChapterSection: data.chapterSection,
+      selectedPath: [
+        ...state.selectedPath.slice(0, 2),
+        data.chapterSection[0]?.content[0]?.number?.toString() || '1',
+      ],
+    } satisfies BibleState;
+  }),
+  on(BibleActions.selectChapterSectionContent, (state, data) => {
+    return {
+      ...state,
+      selectedChapterSectionContent: data,
+      selectedPath: [
+        ...state.selectedPath.slice(0, 2),
+        data.number.toString() || '1',
+      ],
+    } satisfies BibleState;
+  }),
+  on(BibleActions.startCasting, (state, data) => {
+    return {
+      ...state,
+      castingProcess: data,
+      castingPaused: false,
+    } satisfies BibleState;
+  }),
+  on(BibleActions.openCasting, (state, data) => {
+    return {
+      ...state,
+      castingProcess: data,
+      castingPaused: false,
+    } satisfies BibleState;
+  }),
+  on(BibleActions.stopCasting, (state) => {
+    return {
+      ...state,
+      selectedChapterSection: [],
+    } satisfies BibleState;
+  }),
+  on(BibleActions.pauseCasting, (state) => {
+    return {
+      ...state,
+      castingPaused: true,
+    } satisfies BibleState;
+  }),
+  on(BibleActions.castingProcessChange, (state, data) => {
+    return {
+      ...state,
+      castingProcessNavigate: data,
+    } satisfies BibleState;
+  }),
+  on(BibleActions.changePath, (state, data) => {
+    return {
+      ...state,
+      selectedPath: data.path,
     } satisfies BibleState;
   })
-  // on(BibleActions.selectSections, (state, data) => {
-  //   return {
-  //     ...state,
-  //     selectedSectionContent: data.sectionContent,
-  //   } satisfies BibleState;
-  // })
 );

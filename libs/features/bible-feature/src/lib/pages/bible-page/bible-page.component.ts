@@ -7,37 +7,48 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BibleApiService } from '../../services/index';
-import {
-  HighlighterPipe,
-  IUiLyriItemInList,
-  IUiLyriListItem,
-  ListBoxComponent,
-  ListBoxTemplates,
-  PageContainerComponent,
-} from '@lyri-cast/ui-lib';
+import { HighlighterPipe, PageContainerComponent } from '@lyri-cast/ui-lib';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { DropdownModule } from 'primeng/dropdown';
 import {
   BibleBookShort,
-  BibleBookType, BibleChapterSection,
+  BibleBookType,
+  BibleChapterSection,
+  BibleChapterSectionContent,
   BibleChapterShort,
-  BibleTranslateShort
+  BibleTranslateShort,
 } from '@lyri-cast/entities';
-import { map, Observable, switchMap, tap } from 'rxjs';
+import {
+  debounceTime,
+  map,
+  Observable, startWith,
+  switchMap,
+  take,
+  tap,
+  withLatestFrom
+} from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
 import { Store } from '@ngrx/store';
 import { BibleState } from '../../store/bible.store';
 import { BibleActions } from '../../store/bible.actions';
 import {
-  selectSelectedBook, selectSelectedChapter, selectSelectedChapterSection,
-  selectSelectedTranslate
+  selectSelectedBook,
+  selectSelectedChapterSection,
+  selectSelectedPath,
+  selectSelectedTranslate,
 } from '../../store/bible.selectors';
-import { NgScrollbarCdkVirtualScroll } from 'ngx-scrollbar/cdk';
-import { NgScrollbar, NgScrollbarExt } from 'ngx-scrollbar';
+import { ButtonDirective } from 'primeng/button';
+import { BibleChapterComponent } from '../../components/bible-chapter/bible-chapter.component';
+import {
+  IUiLyriItemInList,
+  IUiLyriListItem,
+  ListBoxComponent,
+  ListBoxTemplates,
+} from '@lyri-cast/form';
 
 @Component({
-  selector: 'lib-bible-page',
+  selector: 'lyri-bible-page',
   standalone: true,
   imports: [
     CommonModule,
@@ -48,9 +59,8 @@ import { NgScrollbar, NgScrollbarExt } from 'ngx-scrollbar';
     ReactiveFormsModule,
     ListBoxComponent,
     HighlighterPipe,
-    NgScrollbarCdkVirtualScroll,
-    NgScrollbarExt,
-    NgScrollbar,
+    ButtonDirective,
+    BibleChapterComponent,
   ],
   templateUrl: './bible-page.component.html',
   styleUrl: './bible-page.component.scss',
@@ -126,29 +136,67 @@ export class BiblePageComponent implements AfterViewInit {
       })
     );
 
-  sectionList$: Observable<BibleChapterSection[]> = this.store
-    .select(selectSelectedChapterSection)
-    .pipe();
+  sectionList$: Observable<BibleChapterSection[]> = this.store.select(
+    selectSelectedChapterSection
+  );
 
   constructor() {
-    this.bibleTranslateControl.valueChanges.pipe().subscribe((value) => {
-      const translate = (value && value.baseEntity) || null;
-      if (!translate) {
-        return;
-      }
-      this.store.dispatch(BibleActions.selectTranslate({ translate }));
-    });
+    this.bibleTranslateControl.valueChanges
+      .pipe(filterEmpty())
+      .subscribe((value) => {
+        const translate = (value && value.baseEntity) || null;
+        if (!translate) {
+          return;
+        }
+        this.store.dispatch(BibleActions.selectTranslate({ translate }));
+      });
 
-    this.bibleBookControl.valueChanges.pipe().subscribe((value) => {
-      const book = (value && value.baseEntity) || null;
-      this.store.dispatch(BibleActions.selectBook({ book }));
-    });
+    this.bibleBookControl.valueChanges
+      .pipe(filterEmpty())
+      .subscribe((value) => {
+        const book = (value && value.baseEntity) || null;
+        this.store.dispatch(BibleActions.selectBook({ book }));
+      });
 
     this.chapterControl.valueChanges.pipe(filterEmpty()).subscribe((value) => {
       this.store.dispatch(
         BibleActions.selectChapter({ chapter: value.baseEntity })
       );
     });
+
+    this.store
+      .select(selectSelectedPath)
+      .pipe(
+        startWith(['1', '1', '1']),
+        withLatestFrom(this.bookList$, this.chapterList$, this.sectionList$),
+        debounceTime(10)
+      )
+      .subscribe(([path, books, chapters, sections]) => {
+        if (path.length === 1) {
+          this.chapterControl.setValue(chapters[0]);
+          console.log('select chapter');
+          // this.store.dispatch(BibleActions.changePath())
+        }
+
+        console.log('--------');
+        if (path.length === 3) {
+          console.log('path', path);
+          const book = books.find((book) => book.searchKey === path[0]);
+          const chapter = chapters.find(
+            (chapter) => chapter.searchKey === path[1]
+          );
+          //
+          // if (book) {
+          //   this.bibleBookControl.setValue(book, {emitEvent: false});
+          // }
+          //
+          // if(chapter) {
+          //   this.chapterControl.setValue(chapter, {emitEvent: false});
+          // }
+        }
+
+        console.log('path', path, chapters.length);
+      });
   }
 
   ngAfterViewInit() {
@@ -167,6 +215,26 @@ export class BiblePageComponent implements AfterViewInit {
 
   public onSearch(value: string) {
     console.log('search', value);
+  }
+
+  onStartCasting() {
+    this.sectionList$.pipe(take(1)).subscribe((data) => {
+      if (this.bibleBookControl.value && this.chapterControl.value) {
+        this.store.dispatch(
+          BibleActions.openCasting({
+            book: this.bibleBookControl.value.baseEntity,
+            chapter: this.chapterControl.value.baseEntity,
+            fromIndex: 0,
+            content: data[0].content.map((el) => {
+              return {
+                ...el,
+                text: [el.text],
+              };
+            }),
+          })
+        );
+      }
+    });
   }
 
   protected readonly ListBoxTemplates = ListBoxTemplates;

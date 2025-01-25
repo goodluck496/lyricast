@@ -1,25 +1,14 @@
 import { inject, Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import {
-  filter,
-  map,
-  mergeMap,
-  of,
-  switchMap,
-  tap,
-  withLatestFrom,
-} from 'rxjs';
-import {
-  APP_COMMON_ACTIONS,
-  AppWindowTypes,
-  EventData,
-} from '@lyri-cast/common-electron';
+import { filter, map, mergeMap, of, switchMap, tap, withLatestFrom } from 'rxjs';
+import { APP_COMMON_ACTIONS, AppWindowTypes, EventData } from '@lyri-cast/common-electron';
 import {
   AppActions,
+  BaseEffectsWithBridgeInterface,
   BridgeService,
   Pages,
   selectOpenedWindow,
-  WindowService,
+  WindowService
 } from '@lyri-cast/common-browser';
 import { Action, Store } from '@ngrx/store';
 import { selectCastingProcess, SongPageState } from './song.reducers';
@@ -27,50 +16,51 @@ import { SONG_ACTIONS, SongActions } from './song.actions';
 import { SongPayloadsMap } from './song-electron.types';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 
-/**
- * Маппер IPC событий из electron на конкретные действия в NGRX
- * @param eventData
- */
-export function actionMapper(eventData: EventData): Action | null {
-  switch (eventData.event) {
-    case SONG_ACTIONS.selectSong:
-      return SongActions.selectSong(
-        (eventData.payload as SongPayloadsMap['SELECT_SONG']).song
-      );
-
-    case SONG_ACTIONS.openCasting:
-      return SongActions.startCasting(
-        eventData.payload as SongPayloadsMap['OPEN_CASTING']
-      );
-
-    case SONG_ACTIONS.selectBook:
-      return SongActions.stopCasting();
-
-    case SONG_ACTIONS.slideNavigate:
-      return SongActions.slideNavigate(
-        eventData.payload as SongPayloadsMap['SLIDE_NAVIGATE']
-      );
-
-    default:
-      console.warn('Not found event', eventData.event, eventData.payload);
-      return null;
-  }
-}
 
 @Injectable()
-export class SongsPageEffects {
+export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
   actions$ = inject(Actions);
   store = inject(Store<SongPageState>);
   bridge = inject(BridgeService);
   window = inject(WindowService);
 
   constructor() {
+    this.initSubscribeByBridge();
+  }
+
+  actionMapper(eventData: EventData): Action | null {
+    switch (eventData.event) {
+      case SONG_ACTIONS.selectSong:
+        return SongActions.selectSong(
+          (eventData.payload as SongPayloadsMap['SELECT_SONG']).song
+        );
+
+      case SONG_ACTIONS.openCasting:
+        return SongActions.startCasting(
+          eventData.payload as SongPayloadsMap['OPEN_CASTING']
+        );
+
+      case SONG_ACTIONS.selectBook:
+        return SongActions.stopCasting();
+
+      case SONG_ACTIONS.slideNavigate:
+        return SongActions.slideNavigate(
+          eventData.payload as SongPayloadsMap['SLIDE_NAVIGATE']
+        );
+
+      default:
+        console.warn('Not found event', eventData.event, eventData.payload);
+        return null;
+    }
+  }
+
+  initSubscribeByBridge() {
     this.bridge.queueEvents.subscribe((data) => {
       if (!data) {
         console.log('queue is empty');
         return;
       }
-      const action = actionMapper(data);
+      const action = this.actionMapper(data);
 
       if (!action) {
         return;
@@ -121,7 +111,7 @@ export class SongsPageEffects {
       filter(([event]) => !!event && event.event === SONG_ACTIONS.openedPage),
       map(([, data]) => {
         if (!data) {
-          return { type: SONG_ACTIONS.stopCasting };
+          return { type: SONG_ACTIONS.pauseCasting };
         }
         return SongActions.startCasting({
           ...data,
@@ -146,7 +136,7 @@ export class SongsPageEffects {
         return fromPromise(
           this.window.electronContext
             .openWindow({
-              type: AppWindowTypes.SONG_CASTING_NEW,
+              type: AppWindowTypes.SONG_CASTING,
               title: 'Casting new',
               show: true,
               center: true,
@@ -154,12 +144,17 @@ export class SongsPageEffects {
               focusable: true,
             })
             .then((procId) => ({
-              type: AppWindowTypes.SONG_CASTING_NEW,
+              type: AppWindowTypes.SONG_CASTING,
               procId,
             }))
         ).pipe(
           tap((openedWindow) => {
-            this.store.dispatch(AppActions.setProcId({ procId: openedWindow.procId }));
+            this.store.dispatch(
+              AppActions.setProcId({
+                procId: openedWindow.procId,
+                pageType: AppWindowTypes.SONG_CASTING,
+              })
+            );
           }),
           switchMap(() => this.bridge.queueEvents),
           filter(

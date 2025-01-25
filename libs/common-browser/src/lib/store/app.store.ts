@@ -44,7 +44,7 @@ export const AppActions = createActionGroup({
   source: 'APP_ACTIONS',
   events: {
     appInit: emptyProps(),
-    setProcId: props<{ procId: number }>(),
+    setProcId: props<{ procId: number, pageType: AppWindowTypes }>(),
     clearWindowId: emptyProps(),
     openPage: props<ActionOpenPageProps>(),
     closeWindow: props<ActionCloseWindowProps>(),
@@ -67,7 +67,7 @@ export const AppReducer = createReducer(
       openedWindow: {
         ...state.openedWindow,
         procId: data.procId,
-        type: AppWindowTypes.SONG_CASTING_NEW,
+        type: data.pageType
       },
     })
   }),

@@ -39,4 +39,9 @@ export const appRoutes: Route[] = [
     loadChildren: () =>
       import('@lyri-cast/song-feature').then((c) => c.SongFeatureRoutes),
   },
+  {
+    path: Pages.BIBLE_FEATURE,
+    loadChildren: () =>
+      import('@lyri-cast/bible-feature').then((c) => c.bibleFeatureRoutes),
+  },
 ];

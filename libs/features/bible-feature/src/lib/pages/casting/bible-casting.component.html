@@ -1,0 +1,31 @@
+<div class="info-block" [class.hide]="!showingContent()">
+  <!--  <div class="info-block__type" [class.hide]="!selectedBook()">{{ selectedChapter()?.title }}</div>-->
+  <!--  <div class="info-block__number" [class.hide]="!selectedBook()">{{ selectedBook()?.number }}</div>-->
+</div>
+
+<div class="slides__container" [class.hide]="!showingContent()">
+  <div class="reveal">
+    <div class="slides">
+      <section class="stack">
+        @for (content of selectedContents(); track content.number) {
+          @for (line of content.text; track line) {
+            @if (showingContent()) {
+              <section
+                class="slides__section">
+                <div [fittext]="true"
+                     [maxFontSize]="120"
+                     [activateOnResize]="true">
+                  <div
+                    [innerHTML]="line"
+                    class="slides__content"></div>
+                </div>
+
+              </section>
+            }
+          }
+        }
+      </section>
+
+    </div>
+  </div>
+</div>

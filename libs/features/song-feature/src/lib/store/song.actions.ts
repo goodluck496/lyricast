@@ -46,8 +46,8 @@ export const SongActions = createActionGroup({
     selectSong: props<ISong>(),
     openCasting: props<SongStartCastingPayload>(),
     startCasting: props<SongStartCastingPayload>(),
-    pauseCasting: emptyProps(),
     stopCasting: emptyProps(),
+    pauseCasting: emptyProps(),
     slideNavigate: props<SongPresentationNavigatePayload>(),
   } satisfies Record<SongActionKeys, ActionCreatorProps<unknown>>,
 });

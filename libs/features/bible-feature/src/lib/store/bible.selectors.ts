@@ -11,7 +11,12 @@ export const {
   selectSelectedTranslate,
   selectSelectedChapter,
   selectSelectedBook,
-  selectSelectedChapterSection
+  selectSelectedChapterSection,
+  selectCastingPaused,
+  selectCastingProcess,
+  selectCastingProcessNavigate,
+  selectSelectedChapterSectionContent,
+  selectSelectedPath
 } = selectBible;
 
 export const getSelectedChapter = createSelector(

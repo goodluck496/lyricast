@@ -1,10 +1,14 @@
 export type BibleChapterSectionContent = {
-  type: 'line';
+  contentType: 'line';
   number: number;
   text: string;
   chapterId: number;
   bookId: number;
 };
+
+export type BibleChapterSectionContentForCasting = Omit<BibleChapterSectionContent, 'text'> & {
+  text: string[];
+}
 
 export type BibleChapterSection = {
   heading: string;

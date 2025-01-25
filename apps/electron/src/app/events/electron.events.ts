@@ -37,7 +37,7 @@ ipcMain.handle(
     /**
      * todo можно оформить в отдельную функцию
      */
-    if (args.type === AppWindowTypes.SONG_CASTING || args.type === AppWindowTypes.SONG_CASTING_NEW) {
+    if (args.type === AppWindowTypes.BIBLE_CASTING || args.type === AppWindowTypes.SONG_CASTING) {
       App.createWindow(args.type, {
         webPreferences: {
           ...DEFAULT_WEB_PREF,

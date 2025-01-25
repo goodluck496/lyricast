@@ -80,7 +80,7 @@ export class BibleHtmlParserService {
 
         if (currentSubsection) {
           currentSubsection.content.push({
-            type: 'line',
+            contentType: 'line',
             number: +lineNumber,
             text: lineText,
             bookId: book.number,
@@ -94,7 +94,7 @@ export class BibleHtmlParserService {
             chapterId: currentChapter.number,
             content: [
               {
-                type: 'line',
+                contentType: 'line',
                 number: +lineNumber,
                 text: lineText,
                 bookId: book.number,

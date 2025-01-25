@@ -24,7 +24,7 @@ export class CastingService {
   closeCasting() {
     this.store.dispatch(
       AppActions.closeWindow({
-        windowType: AppWindowTypes.SONG_CASTING_NEW,
+        windowType: AppWindowTypes.SONG_CASTING,
       })
     );
   }

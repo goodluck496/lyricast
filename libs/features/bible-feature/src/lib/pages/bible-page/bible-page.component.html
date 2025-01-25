@@ -17,7 +17,7 @@
         </p-dropdown>
 
         <lyri-list-box [items]="(bookList$ | async) || []"
-                       [formControl]="bibleBookControl"
+                                 [formControl]="bibleBookControl"
         >
           <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
             <div class="list-item__wrapper">
@@ -63,33 +63,23 @@
 
 
       @if ((sectionList$ | async); as sections) {
-        <!-- todo    перенести в отдельный компонент-->
-        <ng-scrollbar style="width: 100%; border-radius: 8px 8px 0 0;">
-          @for (section of sections; track section.heading) {
-            <div class="bible-chapter-section">
-              @if (section.heading) {
-                <div class="bible-chapter-section__header">
-                  {{ section.heading }}
-                </div>
-              }
-              <div class="list-item__wrapper bible-chapter-section__content">
-                @for (verse of section.content; track verse.number) {
-                  <div class="bible-chapter-section__verse list-item">
-                    <div class="bible-chapter-section__verse-number">
-                      <div class="list-item__number">{{ verse.number }}
-                      </div>
-                    </div>
-                    <div class="bible-chapter-section__verse-content list-item__title">{{ verse.text }}</div>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        </ng-scrollbar>
+        <lyri-bible-chapter [sections]="sections"></lyri-bible-chapter>
       }
     }
 
   </ng-container>
   <ng-container page-sideibar-preview></ng-container>
-  <ng-container page-sideibar-content></ng-container>
+  <ng-container page-sideibar-content>
+    <button pButton (click)="onStartCasting()">транслировать</button>
+    <!--    <button pButton (click)="onStartCasting(true)">Начать с выбранного слайда</button>-->
+    <div class="flex">
+      <!--      <button pButton severity="danger" (click)="onPauseCasting()">Остановить</button>-->
+      <!--      <button pButton severity="danger" (click)="onCloseCasting()">Закрыть</button>-->
+    </div>
+
+    <div class="flex">
+      <!--      <button pButton severity="help" (click)="onNavigateSlide('prev')">Назад</button>-->
+      <!--      <button pButton severity="help" (click)="onNavigateSlide('next')">В перед</button>-->
+    </div>
+  </ng-container>
 </lyri-page-container>

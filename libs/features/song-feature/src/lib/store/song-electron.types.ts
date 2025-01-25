@@ -25,7 +25,7 @@ export type SongPayloadsMap =  {
     fromIndex?: number;
   };
   [SONG_ACTIONS.pauseCasting]: void;
-  [SONG_ACTIONS.stopCasting]: void;
+  [SONG_ACTIONS.pauseCasting]: void;
   [SONG_ACTIONS.slideNavigate]: {
     currentLyric: LyricForCasting;
     /**

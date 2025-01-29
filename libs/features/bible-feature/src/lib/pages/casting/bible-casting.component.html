@@ -7,6 +7,15 @@
   <div class="reveal">
     <div class="slides">
       <section class="stack">
+        <section
+          class="slides__section">
+          <div [fittext]="true"
+               [maxFontSize]="120"
+               [activateOnResize]="true">
+            <div class="slides__content"></div>
+          </div>
+
+        </section>
         @for (content of selectedContents(); track content.number) {
           @for (line of content.text; track line) {
             @if (showingContent()) {

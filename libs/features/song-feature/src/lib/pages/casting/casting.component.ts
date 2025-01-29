@@ -104,9 +104,16 @@ export class CastingComponent implements OnInit, AfterViewInit {
     this.deckRef?.sync();
 
     if (payload.fromIndex) {
-      this.deckRef?.slide(undefined, payload.fromIndex);
+      /**
+       * добавляем к индексу 1, т.к. первым слайдом всегда идет заглушка
+       * чтобы при переключении слайдов не мерцал первый слайд (особенности реализации библиотеки презентации)
+       */
+      this.deckRef?.slide(undefined, payload.fromIndex + 1);
     } else {
-      this.deckRef?.slide(0, 0);
+      /**
+       * т.к. первым слайдом всегда идет заглушка, то начинаем с индекса 1
+       */
+      this.deckRef?.slide(0, 1);
     }
     this.updateTextSize();
   }

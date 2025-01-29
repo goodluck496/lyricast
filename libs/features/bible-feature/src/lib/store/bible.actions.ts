@@ -1,7 +1,7 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
 import {
   BibleBookShort,
-  BibleChapterSection, BibleChapterSectionContent,
+  BibleChapterSection, BibleVerse,
   BibleChapterSectionContentForCasting,
   BibleChapterShort,
   BibleTranslateShort
@@ -32,10 +32,12 @@ export const BibleActions = createActionGroup({
   events: {
     selectLang: props<{ lang: string }>(),
     selectTranslate: props<{ translate: BibleTranslateShort }>(),
+    setBooks: props<{data: BibleBookShort[]}>(),
+    setChapters: props<{data: BibleChapterShort[]}>(),
     selectBook: props<{ book: BibleBookShort | null }>(),
     selectChapter: props<{ chapter: BibleChapterShort }>(),
-    selectChapterSection: props<{ chapterSection: BibleChapterSection[] }>(),
-    selectChapterSectionContent: props<BibleChapterSectionContent>(),
+    selectChapterSection: props<{ chapterSection: BibleChapterSection[], contentId: string }>(),
+    selectChapterSectionContent: props<BibleVerse>(),
 
     changePath: props<{ path: string[] }>(),
 

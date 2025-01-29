@@ -8,25 +8,29 @@ import {
 import { CommonModule } from '@angular/common';
 import { BibleApiService } from '../../services/index';
 import { HighlighterPipe, PageContainerComponent } from '@lyri-cast/ui-lib';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { DropdownModule } from 'primeng/dropdown';
 import {
   BibleBookShort,
   BibleBookType,
   BibleChapterSection,
-  BibleChapterSectionContent,
   BibleChapterShort,
   BibleTranslateShort,
 } from '@lyri-cast/entities';
 import {
   debounceTime,
+  filter,
   map,
-  Observable, startWith,
+  Observable,
   switchMap,
-  take,
   tap,
-  withLatestFrom
+  withLatestFrom,
 } from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
 import { Store } from '@ngrx/store';
@@ -34,9 +38,9 @@ import { BibleState } from '../../store/bible.store';
 import { BibleActions } from '../../store/bible.actions';
 import {
   selectSelectedBook,
-  selectSelectedChapterSection,
+  selectSelectedChapterSections, selectSelectedChapterSectionContent,
   selectSelectedPath,
-  selectSelectedTranslate,
+  selectSelectedTranslate
 } from '../../store/bible.selectors';
 import { ButtonDirective } from 'primeng/button';
 import { BibleChapterComponent } from '../../components/bible-chapter/bible-chapter.component';
@@ -72,14 +76,16 @@ export class BiblePageComponent implements AfterViewInit {
 
   searchSig = signal<string>('');
 
-  bibleTranslateControl =
-    new FormControl<IUiLyriListItem<BibleTranslateShort> | null>(null);
-  bibleBookControl = new FormControl<IUiLyriListItem<BibleBookShort> | null>(
-    null
-  );
-  chapterControl = new FormControl<IUiLyriListItem<BibleChapterShort> | null>(
-    null
-  );
+  bibleFormGroup = new FormGroup({
+    translate: new FormControl<IUiLyriListItem<BibleTranslateShort> | null>(
+      null
+    ),
+    book: new FormControl<IUiLyriListItem<BibleBookShort> | null>(null),
+    chapter: new FormControl<IUiLyriListItem<BibleChapterShort> | null>(null),
+    content: new FormControl(null),
+  });
+
+  disableFormEmitChange = false;
 
   bibleTranslates$: Observable<IUiLyriListItem<BibleTranslateShort>[]> =
     this.apiSrv.getTranslates().pipe(
@@ -113,8 +119,7 @@ export class BiblePageComponent implements AfterViewInit {
         });
       }),
       tap(() => {
-        this.bibleBookControl.setValue(null);
-        this.chapterControl.setValue(null);
+        this.bibleFormGroup.patchValue({ book: null, chapter: null });
       })
     );
 
@@ -137,12 +142,15 @@ export class BiblePageComponent implements AfterViewInit {
     );
 
   sectionList$: Observable<BibleChapterSection[]> = this.store.select(
-    selectSelectedChapterSection
+    selectSelectedChapterSections
   );
 
   constructor() {
-    this.bibleTranslateControl.valueChanges
-      .pipe(filterEmpty())
+    this.bibleFormGroup.controls.translate.valueChanges
+      .pipe(
+        filterEmpty(),
+        filter(() => !this.disableFormEmitChange)
+      )
       .subscribe((value) => {
         const translate = (value && value.baseEntity) || null;
         if (!translate) {
@@ -151,51 +159,59 @@ export class BiblePageComponent implements AfterViewInit {
         this.store.dispatch(BibleActions.selectTranslate({ translate }));
       });
 
-    this.bibleBookControl.valueChanges
-      .pipe(filterEmpty())
+    this.bibleFormGroup.controls.book.valueChanges
+      .pipe(
+        filterEmpty(),
+        filter(() => !this.disableFormEmitChange)
+      )
       .subscribe((value) => {
         const book = (value && value.baseEntity) || null;
         this.store.dispatch(BibleActions.selectBook({ book }));
+        this.store.dispatch(
+          BibleActions.changePath({ path: [book.number.toString(), '1', '1'] })
+        );
       });
 
-    this.chapterControl.valueChanges.pipe(filterEmpty()).subscribe((value) => {
-      this.store.dispatch(
-        BibleActions.selectChapter({ chapter: value.baseEntity })
-      );
-    });
+    this.bibleFormGroup.controls.chapter.valueChanges
+      .pipe(
+        filterEmpty(),
+        filter(() => !this.disableFormEmitChange)
+      )
+      .subscribe((value) => {
+        this.store.dispatch(
+          BibleActions.selectChapter({ chapter: value.baseEntity })
+        );
+      });
 
     this.store
       .select(selectSelectedPath)
       .pipe(
-        startWith(['1', '1', '1']),
-        withLatestFrom(this.bookList$, this.chapterList$, this.sectionList$),
+        withLatestFrom(this.bookList$, this.chapterList$),
+        filter(() => !this.disableFormEmitChange),
         debounceTime(10)
       )
-      .subscribe(([path, books, chapters, sections]) => {
+      .subscribe(([path, books, chapters]) => {
         if (path.length === 1) {
-          this.chapterControl.setValue(chapters[0]);
-          console.log('select chapter');
-          // this.store.dispatch(BibleActions.changePath())
+          this.bibleFormGroup.patchValue({ chapter: chapters[0] });
         }
 
-        console.log('--------');
         if (path.length === 3) {
-          console.log('path', path);
+          this.disableFormEmitChange = true;
+
           const book = books.find((book) => book.searchKey === path[0]);
           const chapter = chapters.find(
             (chapter) => chapter.searchKey === path[1]
           );
-          //
-          // if (book) {
-          //   this.bibleBookControl.setValue(book, {emitEvent: false});
-          // }
-          //
-          // if(chapter) {
-          //   this.chapterControl.setValue(chapter, {emitEvent: false});
-          // }
-        }
 
-        console.log('path', path, chapters.length);
+          this.bibleFormGroup.patchValue({
+            book,
+            chapter,
+          });
+
+          setTimeout(() => {
+            this.disableFormEmitChange = false;
+          });
+        }
       });
   }
 
@@ -208,9 +224,15 @@ export class BiblePageComponent implements AfterViewInit {
       if (!translate) {
         return;
       }
-      this.bibleTranslateControl.setValue(translate);
-      this.bibleBookControl.setValue(null);
+      this.bibleFormGroup.patchValue({
+        translate,
+        book: null,
+      });
     });
+
+    // setTimeout(() => {
+    //   this.store.dispatch(BibleActions.changePath({ path: ['2', '15', '10'] }));
+    // }, 2000);
   }
 
   public onSearch(value: string) {
@@ -218,23 +240,27 @@ export class BiblePageComponent implements AfterViewInit {
   }
 
   onStartCasting() {
-    this.sectionList$.pipe(take(1)).subscribe((data) => {
-      if (this.bibleBookControl.value && this.chapterControl.value) {
-        this.store.dispatch(
-          BibleActions.openCasting({
-            book: this.bibleBookControl.value.baseEntity,
-            chapter: this.chapterControl.value.baseEntity,
-            fromIndex: 0,
-            content: data[0].content.map((el) => {
-              return {
-                ...el,
-                text: [el.text],
-              };
-            }),
-          })
-        );
-      }
-    });
+
+    this.store.select(selectSelectedChapterSectionContent).pipe(filterEmpty(), withLatestFrom(this.sectionList$)).subscribe(([verse, sections]) => {
+      const groupValue = this.bibleFormGroup.value;
+
+        if (groupValue.book && groupValue.chapter) {
+          this.store.dispatch(
+            BibleActions.openCasting({
+              book: groupValue.book.baseEntity,
+              chapter: groupValue.chapter.baseEntity,
+              fromIndex: verse.number,
+              content: sections[0].content.map((el) => {
+                return {
+                  ...el,
+                  text: [el.text],
+                };
+              }),
+            })
+          );
+        }
+
+    })
   }
 
   protected readonly ListBoxTemplates = ListBoxTemplates;

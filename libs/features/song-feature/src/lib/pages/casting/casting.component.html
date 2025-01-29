@@ -7,6 +7,15 @@
   <div class="reveal">
     <div class="slides">
       <section class="stack">
+        <section
+          class="slides__section">
+          <div [fittext]="true"
+               [maxFontSize]="120"
+               [activateOnResize]="true">
+            <div class="slides__content"></div>
+          </div>
+
+        </section>
         @for (lyric of selectedLyrics(); track lyric.uniqId) {
 
           @for (line of lyric.lines; track line.rangeIndex) {

@@ -5,9 +5,10 @@ import {
   BibleBook,
   BibleBookShort,
   BibleChapter,
-  BibleChapterSection, BibleChapterShort,
+  BibleChapterSection,
+  BibleChapterShort,
   BibleSearchDto,
-  BibleTranslateShort
+  BibleTranslateShort,
 } from '@lyri-cast/entities';
 import { Observable } from 'rxjs';
 

@@ -72,7 +72,6 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     });
 
     this.store.select(selectCastingProcess).subscribe((data) => {
-      console.log('selectCastingProcess', data);
       if (data) {
         this.startCastingHandler(data);
       }
@@ -142,6 +141,8 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
       transition: 'fade', //todo можно сделать событие, которое будет изменять тип переходов между слайдами
       center: true,
       embedded: true,
+      progress: false,
+      controls: false
     });
 
     return deck;

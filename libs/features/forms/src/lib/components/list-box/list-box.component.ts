@@ -31,36 +31,13 @@ import {
 import { NgScrollbarExt } from 'ngx-scrollbar';
 import { NgScrollbarCdkVirtualScroll } from 'ngx-scrollbar/cdk';
 import { InputTextModule } from 'primeng/inputtext';
-import { HighlighterPipe } from '../../../../../../ui-lib/src/lib/pipes/index';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { ControlValueAccessorBaseDirective } from '../../control-value-accessor-base.directive';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HighlighterPipe } from '@lyri-cast/ui-lib';
+import { IUiLyriListItem, ListBoxTemplates } from './types';
 
-export interface IUiLyriListItem<Entity = object> {
-  title: string;
-  searchKey: string;
-
-  baseEntity: Entity;
-}
-
-export interface IUiLyriDictItem<Entity = object> {
-  title: string;
-  searchKey: string;
-
-  baseEntity: Entity;
-}
-
-export interface IUiLyriItemInList<Entity = object> {
-  title: string;
-  searchKey: string;
-
-  baseEntity: Entity;
-}
-
-export enum ListBoxTemplates {
-  ITEM = 'item',
-}
 
 @Component({
   selector: 'lyri-list-box',
@@ -123,27 +100,16 @@ export class ListBoxComponent<T>
 
   selectedItems: Map<string, IUiLyriListItem<T>> = new Map();
 
-  // onChanges: (data: IUiLyriListItem | IUiLyriListItem[] | null) => void = (
-  //   data: IUiLyriListItem | IUiLyriListItem[] | null
-  // ) => void 0;
-  // onTouched: () => void = () => void 0;
-
-  value?: IUiLyriListItem<T> | IUiLyriListItem<T>[] | null;
-
   ngOnInit() {
     this.control.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => {
         if (value) {
           // if (!Array.isArray(this.value) && value.searchKey === this.value?.searchKey) {
-            this.calcSelectedItem(value);
+          this.calcSelectedItem(value);
           // }
-          console.log(this.selectedItems);
-
-          this.value = value;
 
           this.cdr.detectChanges();
-          console.log('eee');
         }
       });
   }
@@ -161,8 +127,6 @@ export class ListBoxComponent<T>
   }
 
   public onItemClick(item: IUiLyriListItem<T>, emitEvent = true) {
-    console.log('click item');
-
     this.calcSelectedItem(item);
 
     this.control.setValue(item, { emitEvent });
@@ -186,29 +150,8 @@ export class ListBoxComponent<T>
   }
 
   onClear() {
-    this.value = null;
-    // this.onChanges(null);
     this.searchStringSig.set('');
   }
 
   protected readonly ListBoxTemplates = ListBoxTemplates;
-  //
-  // registerOnChange(
-  //   fn: (data: IUiLyriListItem | IUiLyriListItem[] | null) => void
-  // ): void {
-  //   this.onChanges = fn;
-  // }
-  //
-  // registerOnTouched(fn: () => void): void {
-  //   this.onTouched = fn;
-  // }
-  //
-  // writeValue(): void {
-  //   const result = Array.from(this.selectedItems).map(([_, data]) => data);
-  //
-  //   const value = this.multi() ? result : result[0];
-  //
-  //   console.log('write', result);
-  //   this.onChanges(value);
-  // }
 }

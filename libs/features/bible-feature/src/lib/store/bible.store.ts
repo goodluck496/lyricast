@@ -1,29 +1,36 @@
 import {
   BibleBookShort,
-  BibleChapterSection, BibleChapterSectionContent,
-  BibleChapterSectionContentForCasting,
+  BibleChapterSection,
+  BibleVerse,
   BibleChapterShort,
-  BibleTranslateShort
+  BibleTranslateShort,
 } from '@lyri-cast/entities';
-import { BiblePresentationNavigatePayload, BibleStartCastingPayload } from './bible.actions';
+import {
+  BiblePresentationNavigatePayload,
+  BibleStartCastingPayload,
+} from './bible.actions';
 
 export type BibleState = {
   selectedLang: string;
   selectedTranslate: BibleTranslateShort | null;
+
+  books: BibleBookShort[];
+  chaptersOfBook: BibleChapterShort[];
+
   selectedBook: BibleBookShort | null;
   selectedChapter: BibleChapterShort | null;
-  selectedChapterSection: BibleChapterSection[];
-  selectedChapterSectionContent: BibleChapterSectionContent | null;
+  selectedChapterSections: BibleChapterSection[];
+  selectedChapterSectionContent: BibleVerse | null;
 
   /**
    * Путь к стиху в формате '[bookId, chapterId, verseId]'
    * в пути вместо элемента может быть просто null,
    * в таком случае селектор с null останется не выбранным
    */
-  selectedPath: string[]
+  selectedPath: string[];
 
   castingProcess: BibleStartCastingPayload | null;
-  castingProcessNavigate:BiblePresentationNavigatePayload | null
+  castingProcessNavigate: BiblePresentationNavigatePayload | null;
 
   castingPaused: boolean;
 };
@@ -31,9 +38,13 @@ export type BibleState = {
 export const bibleInitialState: BibleState = {
   selectedLang: '',
   selectedTranslate: null,
+
+  books: [],
+  chaptersOfBook: [],
+
   selectedBook: null,
   selectedChapter: null,
-  selectedChapterSection: [],
+  selectedChapterSections: [],
   selectedChapterSectionContent: null,
   selectedPath: ['1', '1', '1'],
 

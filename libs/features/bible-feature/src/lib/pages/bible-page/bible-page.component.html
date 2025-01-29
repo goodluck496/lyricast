@@ -4,11 +4,11 @@
       <input pInputText placeholder="Поиск" [(ngModel)]="searchSig" (ngModelChange)="onSearch($event)" />
     </div>
   </ng-container>
-  <ng-container page-content>
+  <ng-container page-content [formGroup]="bibleFormGroup">
     <div class="list-search-wrapper">
       <div class="list-search-block">
         <p-dropdown
-          [formControl]="bibleTranslateControl"
+          [formControl]="bibleFormGroup.controls.translate"
           [options]="bibleTranslates"
           optionLabel="title"
           styleClass="list-search-dropdown"
@@ -17,7 +17,7 @@
         </p-dropdown>
 
         <lyri-list-box [items]="(bookList$ | async) || []"
-                                 [formControl]="bibleBookControl"
+                                 [formControl]="bibleFormGroup.controls.book"
         >
           <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
             <div class="list-item__wrapper">
@@ -43,14 +43,14 @@
       </div>
     </div>
 
-    @if (bibleBookControl.valueChanges | async) {
+    @if (bibleFormGroup.controls.book.valueChanges | async) {
       <div class="list-search-wrapper list-search-wrapper__chapters">
         <div class="list-search-block">
           <div class="list-search-block__header">
             Главы
           </div>
 
-          <lyri-list-box [items]="(chapterList$ | async) || []" [formControl]="chapterControl" [withSearch]="false">
+          <lyri-list-box [items]="(chapterList$ | async) || []" [formControl]="bibleFormGroup.controls.chapter" [withSearch]="false">
             <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
               <div class="list-item__wrapper">
                 <div class="list-item__title" [innerHTML]="data.title | highliter: search"></div>

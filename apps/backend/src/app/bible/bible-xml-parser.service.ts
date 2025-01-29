@@ -7,7 +7,7 @@ import {
   BibleBookType,
   BibleChapter,
   BibleChapterSection,
-  BibleChapterSectionContent,
+  BibleVerse,
   BibleTranslate,
   BOOK_NAMES,
 } from '@lyri-cast/entities';
@@ -134,7 +134,7 @@ export class BibleXmlParserService {
                       text: verse._, // Текст стиха
                       bookId: book.number,
                       chapterId: currentChapter.number,
-                    } satisfies BibleChapterSectionContent;
+                    } satisfies BibleVerse;
                   }),
                 };
 

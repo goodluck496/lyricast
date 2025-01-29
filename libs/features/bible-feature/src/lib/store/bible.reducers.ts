@@ -16,7 +16,19 @@ export const BibleReducers = createReducer<BibleState>(
       selectedTranslate: data.translate,
       selectedBook: null,
       selectedChapter: null,
-      selectedChapterSection: [],
+      selectedChapterSections: [],
+    } satisfies BibleState;
+  }),
+  on(BibleActions.setBooks, (state, data) => {
+    return {
+      ...state,
+      books: data.data,
+    } satisfies BibleState;
+  }),
+  on(BibleActions.setChapters, (state, data) => {
+    return {
+      ...state,
+      chaptersOfBook: data.data,
     } satisfies BibleState;
   }),
   on(BibleActions.selectBook, (state, data) => {
@@ -24,8 +36,7 @@ export const BibleReducers = createReducer<BibleState>(
       ...state,
       selectedBook: data.book,
       selectedChapter: null,
-      selectedChapterSection: [],
-      selectedPath: data.book ? [data.book.number.toString()] : [],
+      selectedChapterSections: [],
     } satisfies BibleState;
   }),
   on(BibleActions.selectChapter, (state, data) => {
@@ -33,7 +44,7 @@ export const BibleReducers = createReducer<BibleState>(
       ...state,
       selectedChapter: data.chapter,
       selectedPath: [
-        ...state.selectedPath.slice(0,1),
+        ...state.selectedPath.slice(0, 1),
         data.chapter.number.toString(),
         '1',
       ],
@@ -42,11 +53,7 @@ export const BibleReducers = createReducer<BibleState>(
   on(BibleActions.selectChapterSection, (state, data) => {
     return {
       ...state,
-      selectedChapterSection: data.chapterSection,
-      selectedPath: [
-        ...state.selectedPath.slice(0, 2),
-        data.chapterSection[0]?.content[0]?.number?.toString() || '1',
-      ],
+      selectedChapterSections: data.chapterSection,
     } satisfies BibleState;
   }),
   on(BibleActions.selectChapterSectionContent, (state, data) => {
@@ -76,7 +83,7 @@ export const BibleReducers = createReducer<BibleState>(
   on(BibleActions.stopCasting, (state) => {
     return {
       ...state,
-      selectedChapterSection: [],
+      selectedChapterSections: [],
     } satisfies BibleState;
   }),
   on(BibleActions.pauseCasting, (state) => {

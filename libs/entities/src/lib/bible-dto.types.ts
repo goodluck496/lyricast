@@ -1,6 +1,6 @@
 import {
   BibleBook,
-  BibleChapterSectionContent,
+  BibleVerse,
   BibleTranslate,
 } from './bible.types';
 
@@ -98,6 +98,6 @@ export type BibleSearchDto = {
     // translate: BibleTranslateShort;
     bookId: number;
     chapterId: number;
-    content: BibleChapterSectionContent;
+    content: BibleVerse;
   }[];
 };

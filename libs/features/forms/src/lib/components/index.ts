@@ -1,1 +1,1 @@
-export * from './list-box/list-box.component';
+export * from './list-box';

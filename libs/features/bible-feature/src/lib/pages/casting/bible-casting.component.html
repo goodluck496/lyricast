@@ -1,6 +1,7 @@
 <div class="info-block" [class.hide]="!showingContent()">
-  <!--  <div class="info-block__type" [class.hide]="!selectedBook()">{{ selectedChapter()?.title }}</div>-->
-  <!--  <div class="info-block__number" [class.hide]="!selectedBook()">{{ selectedBook()?.number }}</div>-->
+  <div class="info-block__type" [class.hide]="!selectedBook()">{{ selectedBook()?.title?.short }}
+    - {{ selectedChapter()?.number }}:{{ selectedVerseId() }}
+  </div>
 </div>
 
 <div class="slides__container" [class.hide]="!showingContent()">

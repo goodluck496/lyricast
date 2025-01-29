@@ -48,6 +48,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
   selectedBook = signal<BibleBookShort | null>(null);
   selectedChapter = signal<BibleChapterShort | null>(null);
   selectedContents = signal<BibleChapterSectionContentForCasting[]>([]);
+  selectedVerseId = signal<number>(1);
 
   showingContent = signal(false);
   lines = signal<string[]>([]);
@@ -100,6 +101,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     this.selectedContents.set(payload.content);
     this.selectedChapter.set(payload.chapter);
     this.showingContent.set(true);
+    this.selectedVerseId.set(payload.fromIndex || 1);
     this.cdr.detectChanges();
 
     await this.initReveal();
@@ -142,7 +144,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
       center: true,
       embedded: true,
       progress: false,
-      controls: false
+      controls: false,
     });
 
     return deck;

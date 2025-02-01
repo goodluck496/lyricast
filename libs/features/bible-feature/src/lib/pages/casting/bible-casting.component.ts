@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import {
   BibleBookShort,
-  BibleChapterSectionContentForCasting,
+  BibleVerseForCasting,
   BibleChapterShort,
 } from '@lyri-cast/entities';
 
@@ -47,7 +47,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
   selectedBook = signal<BibleBookShort | null>(null);
   selectedChapter = signal<BibleChapterShort | null>(null);
-  selectedContents = signal<BibleChapterSectionContentForCasting[]>([]);
+  selectedContents = signal<BibleVerseForCasting[]>([]);
   selectedVerseId = signal<number>(1);
 
   showingContent = signal(false);

@@ -7,9 +7,10 @@ import {
   BibleBookType,
   BibleChapter,
   BibleChapterSection,
-  BibleVerse,
   BibleTranslate,
+  BibleVerse,
   BOOK_NAMES,
+  PrevOrNextVerse,
 } from '@lyri-cast/entities';
 
 type TranslateMetaInfo = {
@@ -128,12 +129,32 @@ export class BibleXmlParserService {
                   chapterId: currentChapter.number,
                   content: chapter.verse.map((verse) => {
                     const verseNumber = verse.$.number;
+
                     return {
                       contentType: 'line',
                       number: +verseNumber, // Номер стиха
                       text: verse._, // Текст стиха
                       bookId: book.number,
                       chapterId: currentChapter.number,
+                      path: [book.number, chapterNumber, verseNumber].map(String),
+                      next: {
+                        path: [],
+                        bookId: book.number,
+                        chapterId: currentChapter.number,
+                        number: verseNumber,
+                        contentType: 'line',
+                        chapterChanged: false,
+                        bookChanged: false,
+                      },
+                      prev: {
+                        path: [],
+                        bookId: book.number,
+                        chapterId: currentChapter.number,
+                        number: verseNumber,
+                        contentType: 'line',
+                        chapterChanged: false,
+                        bookChanged: false,
+                      },
                     } satisfies BibleVerse;
                   }),
                 };
@@ -241,6 +262,8 @@ export class BibleXmlParserService {
 
             translate.sourceTitle = parseResult.sourceTitle;
 
+            this.patchBibleVerse4(translate);
+
             const fileName =
               path.resolve(this.assetsJsonsPath) +
               `/${langVersion}__${subVersion}.bible.json`;
@@ -252,6 +275,181 @@ export class BibleXmlParserService {
       }
     } catch (error) {
       console.log('ERROR', error);
+    }
+  }
+
+  patchBibleVerse2(bible: BibleTranslate) {
+    const books = bible.books;
+    let previousVerse: BibleVerse | null = null;
+
+    for (let bookIndex = 0; bookIndex < books.length; bookIndex++) {
+      const book = books[bookIndex];
+      for (
+        let chapterIndex = 0;
+        chapterIndex < book.chapters.length;
+        chapterIndex++
+      ) {
+        const chapter = book.chapters[chapterIndex];
+        for (const section of chapter.subsections) {
+          for (
+            let verseIndex = 0;
+            verseIndex < section.content.length;
+            verseIndex++
+          ) {
+            const verse = section.content[verseIndex];
+
+            // Устанавливаем prev ссылку
+            if (previousVerse) {
+              verse.prev = {
+                number: previousVerse.number,
+                chapterId: previousVerse.chapterId,
+                bookId: previousVerse.bookId,
+                path: [
+                  previousVerse.bookId,
+                  previousVerse.chapterId,
+                  previousVerse.number,
+                ]
+                  .toString()
+                  .split(','),
+                contentType: previousVerse.contentType,
+                chapterChanged: previousVerse.chapterId !== verse.chapterId,
+                bookChanged: previousVerse.bookId !== verse.bookId,
+              };
+              previousVerse.next = {
+                number: verse.number,
+                chapterId: verse.chapterId,
+                bookId: verse.bookId,
+                path: [verse.bookId, verse.chapterId, verse.number]
+                  .toString()
+                  .split(','),
+                contentType: verse.contentType,
+                chapterChanged: previousVerse.chapterId !== verse.chapterId,
+                bookChanged: previousVerse.bookId !== verse.bookId,
+              };
+            }
+
+            previousVerse = verse;
+          }
+        }
+      }
+    }
+
+    // Замыкаем последнюю и первую книги
+    if (previousVerse && books.length > 0) {
+      const firstBook = books[0];
+      const firstChapter = firstBook.chapters[0];
+      const firstVerse = firstChapter.subsections[0].content[0];
+      previousVerse.next = {
+        number: firstVerse.number,
+        chapterId: firstVerse.chapterId,
+        bookId: firstVerse.bookId,
+        path: [firstVerse.bookId, firstVerse.chapterId, firstVerse.number]
+          .toString()
+          .split(','),
+        contentType: firstVerse.contentType,
+        chapterChanged: previousVerse.chapterId !== firstVerse.chapterId,
+        bookChanged: previousVerse.bookId !== firstVerse.bookId,
+      };
+      firstVerse.prev = {
+        number: previousVerse.number,
+        chapterId: previousVerse.chapterId,
+        bookId: previousVerse.bookId,
+        path: [
+          previousVerse.bookId,
+          previousVerse.chapterId,
+          previousVerse.number,
+        ]
+          .toString()
+          .split(','),
+        contentType: previousVerse.contentType,
+        chapterChanged: previousVerse.chapterId !== firstVerse.chapterId,
+        bookChanged: previousVerse.bookId !== firstVerse.bookId,
+      };
+    }
+  }
+
+  patchBibleVerse3(bible: BibleTranslate) {
+    const books = bible.books;
+    let previousVerse: BibleVerse | null = null;
+
+    const createPrevOrNext = (
+      verse: BibleVerse | null,
+      target: BibleVerse
+    ): PrevOrNextVerse | null => {
+      if (!verse) return null;
+      return {
+        number: verse.number,
+        chapterId: verse.chapterId,
+        bookId: verse.bookId,
+        path: [
+          verse.bookId.toString(),
+          verse.chapterId.toString(),
+          verse.number.toString(),
+        ],
+        contentType: verse.contentType,
+        chapterChanged: verse.chapterId !== target.chapterId,
+        bookChanged: verse.bookId !== target.bookId,
+      };
+    };
+
+    for (const book of books) {
+      for (const chapter of book.chapters) {
+        for (const section of chapter.subsections) {
+          for (const verse of section.content) {
+            verse.prev = createPrevOrNext(previousVerse, verse);
+            if (previousVerse) {
+              previousVerse.next = createPrevOrNext(verse, previousVerse);
+            }
+            previousVerse = verse;
+          }
+        }
+      }
+    }
+
+    if (previousVerse && books.length > 0) {
+      const firstVerse = books[0].chapters[0].subsections[0].content[0];
+      previousVerse.next = createPrevOrNext(firstVerse, previousVerse);
+      firstVerse.prev = createPrevOrNext(previousVerse, firstVerse);
+    }
+  }
+
+  patchBibleVerse4(bible: BibleTranslate) {
+    let previousVerse: BibleVerse | null = null;
+
+    const createLink = (
+      source: BibleVerse | null,
+      target: BibleVerse
+    ): PrevOrNextVerse | null =>
+      source
+        ? {
+            number: source.number,
+            chapterId: source.chapterId,
+            bookId: source.bookId,
+            path: [source.bookId, source.chapterId, source.number].map(String),
+            contentType: source.contentType,
+            chapterChanged: source.chapterId !== target.chapterId,
+            bookChanged: source.bookId !== target.bookId,
+          }
+        : null;
+
+    bible.books.forEach((book) =>
+      book.chapters.forEach((chapter) =>
+        chapter.subsections.forEach((section) =>
+          section.content.forEach((verse) => {
+            verse.path = [book.number, chapter.number, verse.number].map(String);
+            verse.prev = createLink(previousVerse, verse);
+            if (previousVerse)
+              previousVerse.next = createLink(verse, previousVerse);
+            previousVerse = verse;
+          })
+        )
+      )
+    );
+
+    if (previousVerse && bible.books.length) {
+      const firstVerse = bible.books[0].chapters[0].subsections[0].content[0];
+      previousVerse.next = createLink(firstVerse, previousVerse);
+      firstVerse.prev = createLink(previousVerse, firstVerse);
     }
   }
 

@@ -85,6 +85,25 @@ export class BibleHtmlParserService {
             text: lineText,
             bookId: book.number,
             chapterId: currentChapter.number,
+            path: [`${book.number}`, `${currentChapter.number}`, lineNumber],
+            next: {
+              path: [],
+              bookId: book.number,
+              chapterId: currentChapter.number,
+              number: +lineNumber,
+              contentType: 'line',
+              chapterChanged: false,
+              bookChanged: false
+            },
+            prev: {
+              path: [],
+              bookId: book.number,
+              chapterId: currentChapter.number,
+              number: +lineNumber,
+              contentType: 'line',
+              chapterChanged: false,
+              bookChanged: false
+            },
           });
         } else if (currentChapter) {
           // Если нет подраздела, добавляем контент в главу
@@ -99,6 +118,25 @@ export class BibleHtmlParserService {
                 text: lineText,
                 bookId: book.number,
                 chapterId: currentChapter.number,
+                path: [],
+                next: {
+                  path: [],
+                  bookId: book.number,
+                  chapterId: currentChapter.number,
+                  number: +lineNumber,
+                  contentType: 'line',
+                  chapterChanged: false,
+                  bookChanged: false
+                },
+                prev: {
+                  path: [],
+                  bookId: book.number,
+                  chapterId: currentChapter.number,
+                  number: +lineNumber,
+                  contentType: 'line',
+                  chapterChanged: false,
+                  bookChanged: false
+                },
               },
             ],
           });

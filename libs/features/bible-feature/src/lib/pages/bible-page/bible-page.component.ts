@@ -2,7 +2,9 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
+  ElementRef,
   inject,
+  OnInit,
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -22,10 +24,13 @@ import {
   BibleChapterSection,
   BibleChapterShort,
   BibleTranslateShort,
+  BibleVerse,
 } from '@lyri-cast/entities';
 import {
+  combineLatest,
   debounceTime,
   filter,
+  fromEvent,
   map,
   Observable,
   switchMap,
@@ -37,10 +42,12 @@ import { Store } from '@ngrx/store';
 import { BibleState } from '../../store/bible.store';
 import { BibleActions } from '../../store/bible.actions';
 import {
+  selectChapterLoading,
+  selectSelectedBibleVerse,
   selectSelectedBook,
-  selectSelectedChapterSections, selectSelectedChapterSectionContent,
+  selectSelectedChapterSections,
   selectSelectedPath,
-  selectSelectedTranslate
+  selectSelectedTranslate,
 } from '../../store/bible.selectors';
 import { ButtonDirective } from 'primeng/button';
 import { BibleChapterComponent } from '../../components/bible-chapter/bible-chapter.component';
@@ -69,8 +76,9 @@ import {
   templateUrl: './bible-page.component.html',
   styleUrl: './bible-page.component.scss',
 })
-export class BiblePageComponent implements AfterViewInit {
+export class BiblePageComponent implements OnInit, AfterViewInit {
   cdr = inject(ChangeDetectorRef);
+  elRef = inject(ElementRef);
   apiSrv = inject(BibleApiService);
   store = inject<Store<BibleState>>(Store<BibleState>);
 
@@ -215,6 +223,34 @@ export class BiblePageComponent implements AfterViewInit {
       });
   }
 
+  ngOnInit(): void {
+    combineLatest([
+      fromEvent<KeyboardEvent>(this.elRef.nativeElement, 'keydown').pipe(
+        debounceTime(100)
+      ),
+    ])
+      .pipe(
+        withLatestFrom(
+          this.store.select(selectChapterLoading),
+          this.store.select(selectSelectedBibleVerse)
+        ),
+        map((data) => data.flat() as [KeyboardEvent, boolean, BibleVerse]),
+        filter(([, loading, verse]) => !loading || !verse)
+      )
+      .subscribe(([event, , verse]) => {
+        if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
+          this.onNavigateSlide(
+            event.key === 'ArrowDown' ? 'next' : 'prev',
+            verse
+          );
+        }
+
+        if (event.key === 'Enter') {
+          this.onStartCasting();
+        }
+      });
+  }
+
   ngAfterViewInit() {
     this.bibleTranslates$.pipe().subscribe((data) => {
       this.bibleTranslates = [...data];
@@ -228,11 +264,8 @@ export class BiblePageComponent implements AfterViewInit {
         translate,
         book: null,
       });
-    });
 
-    // setTimeout(() => {
-    //   this.store.dispatch(BibleActions.changePath({ path: ['2', '15', '10'] }));
-    // }, 2000);
+    });
   }
 
   public onSearch(value: string) {
@@ -240,9 +273,11 @@ export class BiblePageComponent implements AfterViewInit {
   }
 
   onStartCasting() {
-
-    this.store.select(selectSelectedChapterSectionContent).pipe(filterEmpty(), withLatestFrom(this.sectionList$)).subscribe(([verse, sections]) => {
-      const groupValue = this.bibleFormGroup.value;
+    this.store
+      .select(selectSelectedBibleVerse)
+      .pipe(filterEmpty(), withLatestFrom(this.sectionList$))
+      .subscribe(([verse, sections]) => {
+        const groupValue = this.bibleFormGroup.value;
 
         if (groupValue.book && groupValue.chapter) {
           this.store.dispatch(
@@ -259,8 +294,38 @@ export class BiblePageComponent implements AfterViewInit {
             })
           );
         }
+      });
+  }
 
-    })
+  onNavigateSlide(dir: 'prev' | 'next', selectedVerse: BibleVerse) {
+    console.log('navigate', selectedVerse);
+    if (dir === 'prev') {
+      if (selectedVerse.prev.chapterChanged || selectedVerse.prev.bookChanged) {
+        this.store.dispatch(
+          BibleActions.changePath({ path: selectedVerse.prev.path })
+        );
+      } else {
+        this.store.dispatch(
+          BibleActions.selectPrevOrNextVerse(selectedVerse.prev)
+        );
+      }
+    } else if (dir === 'next') {
+      if (selectedVerse.next.chapterChanged || selectedVerse.next.bookChanged) {
+        this.store.dispatch(
+          BibleActions.changePath({ path: selectedVerse.next.path })
+        );
+      } else {
+        this.store.dispatch(
+          BibleActions.selectPrevOrNextVerse(selectedVerse.next)
+        );
+      }
+    }
+
+    // this.store.dispatch(BibleActions.castingProcessChange({
+    //   currentContent: null,
+    //   direction: dir,
+    //   index: 0
+    // }))
   }
 
   protected readonly ListBoxTemplates = ListBoxTemplates;

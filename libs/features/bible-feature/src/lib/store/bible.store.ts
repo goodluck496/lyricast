@@ -1,9 +1,10 @@
 import {
   BibleBookShort,
   BibleChapterSection,
-  BibleVerse,
   BibleChapterShort,
   BibleTranslateShort,
+  BibleVerse,
+  PrevOrNextVerse,
 } from '@lyri-cast/entities';
 import {
   BiblePresentationNavigatePayload,
@@ -17,10 +18,13 @@ export type BibleState = {
   books: BibleBookShort[];
   chaptersOfBook: BibleChapterShort[];
 
+  chapterLoading: boolean;
+
   selectedBook: BibleBookShort | null;
   selectedChapter: BibleChapterShort | null;
   selectedChapterSections: BibleChapterSection[];
-  selectedChapterSectionContent: BibleVerse | null;
+  selectedBibleVerse: BibleVerse | null;
+  selectedPrevOrNextVerse: PrevOrNextVerse | null;
 
   /**
    * Путь к стиху в формате '[bookId, chapterId, verseId]'
@@ -42,14 +46,17 @@ export const bibleInitialState: BibleState = {
   books: [],
   chaptersOfBook: [],
 
+  chapterLoading: false,
+
   selectedBook: null,
   selectedChapter: null,
   selectedChapterSections: [],
-  selectedChapterSectionContent: null,
+  selectedBibleVerse: null,
+  selectedPrevOrNextVerse: null,
   selectedPath: ['1', '1', '1'],
 
   castingProcessNavigate: null,
 
   castingPaused: true,
-  castingProcess: null
-}
+  castingProcess: null,
+};

@@ -15,10 +15,12 @@ export const {
   selectCastingPaused,
   selectCastingProcess,
   selectCastingProcessNavigate,
-  selectSelectedChapterSectionContent,
+  selectSelectedBibleVerse,
+  selectSelectedPrevOrNextVerse,
   selectSelectedPath,
   selectBooks,
-  selectChaptersOfBook
+  selectChaptersOfBook,
+  selectChapterLoading,
 } = selectBible;
 
 export const getSelectedChapter = createSelector(

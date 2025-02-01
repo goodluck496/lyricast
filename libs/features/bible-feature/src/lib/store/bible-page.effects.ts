@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Action, Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { BibleActions } from './bible.actions';
-import { map, of, switchMap, take, withLatestFrom } from 'rxjs';
+import { map, of, switchMap, take, tap, withLatestFrom } from 'rxjs';
 import { BibleApiService } from '../services/index';
 import { BibleState } from './bible.store';
 import {
@@ -60,15 +60,18 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
     this.actions$.pipe(
       ofType(BibleActions.selectChapter),
       withLatestFrom(this.store.select(getSelectedChapter)),
+      tap(() => this.store.dispatch(BibleActions.chapterLoading())),
       switchMap(([actionData, { translate, book }]) => {
         if (!translate || !book) {
           return of([]);
         }
+        console.log('load chapter');
         return this.apiSrv.getSections(translate, book, actionData.chapter);
       }),
       map((data: BibleChapterSection[]) =>
         BibleActions.selectChapterSection({ chapterSection: data, contentId: '1' })
-      )
+      ),
+      tap(() => this.store.dispatch(BibleActions.chapterLoaded()))
     )
   );
 
@@ -96,7 +99,7 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
           withLatestFrom(this.store.select(selectSelectedPath))
         )
       ),
-      map(([bookData, path]) => {
+      tap(([bookData, path]) => {
         const book = bookData.book;
         const chapterId = path[1];
         const chapter = book?.chapters.find(
@@ -107,8 +110,7 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
             `Not found chapterId - ${chapterId} in book ${book?.number} ${book?.title}`
           );
         }
-
-        return BibleActions.selectChapter({ chapter });
+        this.store.dispatch(BibleActions.chapterLoading())
       }),
       withLatestFrom(
         this.store.select(selectSelectedTranslate),
@@ -132,6 +134,7 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
             `Not found chapterId - ${chapterId} in loaded chapters`
           );
         }
+        this.store.dispatch(BibleActions.chapterLoaded())
 
         return BibleActions.selectChapterSection({
           chapterSection: chapter.subsections,
@@ -158,7 +161,7 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
           );
         }
 
-        return BibleActions.selectChapterSectionContent(content);
+        return BibleActions.selectBibleVerse(content);
       })
     )
   );

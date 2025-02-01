@@ -1,6 +1,7 @@
 import { createReducer, on } from '@ngrx/store';
 import { bibleInitialState, BibleState } from './bible.store';
 import { BibleActions } from './bible.actions';
+import { BibleVerse } from '@lyri-cast/entities';
 
 export const BibleReducers = createReducer<BibleState>(
   bibleInitialState,
@@ -39,6 +40,18 @@ export const BibleReducers = createReducer<BibleState>(
       selectedChapterSections: [],
     } satisfies BibleState;
   }),
+  on(BibleActions.chapterLoading, (state) => {
+    return {
+      ...state,
+      chapterLoading: true,
+    } satisfies BibleState;
+  }),
+  on(BibleActions.chapterLoaded, (state) => {
+    return {
+      ...state,
+      chapterLoading: false,
+    } satisfies BibleState;
+  }),
   on(BibleActions.selectChapter, (state, data) => {
     return {
       ...state,
@@ -56,14 +69,30 @@ export const BibleReducers = createReducer<BibleState>(
       selectedChapterSections: data.chapterSection,
     } satisfies BibleState;
   }),
-  on(BibleActions.selectChapterSectionContent, (state, data) => {
+  on(BibleActions.selectBibleVerse, (state, data) => {
     return {
       ...state,
-      selectedChapterSectionContent: data,
-      selectedPath: [
-        ...state.selectedPath.slice(0, 2),
-        data.number.toString() || '1',
-      ],
+      selectedBibleVerse: data,
+      selectedPath: data.path,
+    } satisfies BibleState;
+  }),
+  on(BibleActions.selectPrevOrNextVerse, (state, data) => {
+    const section = state.selectedChapterSections[0];
+    let verse: BibleVerse | null = null;
+    if (section) {
+      verse =
+        section.content.find(
+          (el) => el.path.toString() === data.path.toString()
+        ) || null;
+
+      console.log('verse', verse, section, data.path.toString());
+    }
+
+    return {
+      ...state,
+      selectedBibleVerse: verse || state.selectedBibleVerse,
+      selectedPrevOrNextVerse: data,
+      selectedPath: data.path,
     } satisfies BibleState;
   }),
   on(BibleActions.startCasting, (state, data) => {

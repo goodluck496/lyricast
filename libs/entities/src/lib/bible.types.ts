@@ -1,12 +1,20 @@
+export type PrevOrNextVerse = Omit<BibleVerse, 'text' | 'prev' | 'next'> & {
+  bookChanged: boolean;
+  chapterChanged: boolean;
+};
+
 export type BibleVerse = {
   contentType: 'line';
   number: number;
   text: string;
   chapterId: number;
   bookId: number;
+  path: string[],
+  next: PrevOrNextVerse;
+  prev: PrevOrNextVerse;
 };
 
-export type BibleChapterSectionContentForCasting = Omit<BibleVerse, 'text'> & {
+export type BibleVerseForCasting = Omit<BibleVerse, 'text'> & {
   text: string[];
 }
 

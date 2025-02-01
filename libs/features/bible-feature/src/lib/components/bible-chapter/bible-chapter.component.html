@@ -8,12 +8,11 @@
       }
       <div class="list-item__wrapper bible-chapter-section__content">
         @for (verse of section.content; track verse.number) {
-          <div class="bible-chapter-section__verse list-item"
+          <div #verseItem class="bible-chapter-section__verse list-item"
                [class.bible-chapter-section__verse--selected]="selectedVerse()?.number === verse.number"
                (click)="onSelectVerse(verse)">
             <div class="bible-chapter-section__verse-number">
-              <div class="list-item__number">{{ verse.number }}
-              </div>
+              <div class="list-item__number">{{ verse.number }}</div>
             </div>
             <div class="bible-chapter-section__verse-content list-item__title">{{ verse.text }}</div>
           </div>

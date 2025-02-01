@@ -19,6 +19,7 @@ import { CommonModule } from '@angular/common';
 import {
   CdkFixedSizeVirtualScroll,
   CdkVirtualForOf,
+  CdkVirtualScrollViewport,
   ScrollingModule,
 } from '@angular/cdk/scrolling';
 import { CdkListbox, CdkOption } from '@angular/cdk/listbox';
@@ -37,7 +38,6 @@ import { ControlValueAccessorBaseDirective } from '../../control-value-accessor-
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HighlighterPipe } from '@lyri-cast/ui-lib';
 import { IUiLyriListItem, ListBoxTemplates } from './types';
-
 
 @Component({
   selector: 'lyri-list-box',
@@ -74,6 +74,7 @@ export class ListBoxComponent<T>
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
   private virtualScroll = viewChild(NgScrollbarExt);
+  private cdkScroll = viewChild.required(CdkVirtualScrollViewport);
 
   items = input<IUiLyriListItem[]>([]);
   multi = input(false);
@@ -107,6 +108,8 @@ export class ListBoxComponent<T>
         if (value) {
           // if (!Array.isArray(this.value) && value.searchKey === this.value?.searchKey) {
           this.calcSelectedItem(value);
+          console.log('change value', value);
+          this.scrollToSelected(value);
           // }
 
           this.cdr.detectChanges();
@@ -126,13 +129,21 @@ export class ListBoxComponent<T>
     }
   }
 
-  public onItemClick(item: IUiLyriListItem<T>, emitEvent = true) {
+  public onItemClick(item: IUiLyriListItem<T>) {
     this.calcSelectedItem(item);
 
-    this.control.setValue(item, { emitEvent });
+    this.control.setValue(item);
   }
 
-  calcSelectedItem(item: IUiLyriListItem<T>) {
+  public onSearch(search: string): void {
+    this.searchStringSig.set(search);
+  }
+
+  public onClear() {
+    this.searchStringSig.set('');
+  }
+
+  private calcSelectedItem(item: IUiLyriListItem<T>) {
     if (!this.selectedItems.has(item.searchKey)) {
       if (this.multi()) {
         this.selectedItems.set(item.searchKey, item);
@@ -143,14 +154,19 @@ export class ListBoxComponent<T>
     } else {
       // this.selectedItems.delete(item.searchKey);
     }
+
+    this.cdkScroll();
   }
 
-  public onSearch(search: string): void {
-    this.searchStringSig.set(search);
-  }
+  private scrollToSelected(selectedItem: IUiLyriListItem<T>) {
+    this.showItems().forEach((item, index) => {
+      if (selectedItem.searchKey !== item.searchKey) {
+        return;
+      }
 
-  onClear() {
-    this.searchStringSig.set('');
+      this.cdkScroll().scrollToIndex(index, 'smooth');
+
+    });
   }
 
   protected readonly ListBoxTemplates = ListBoxTemplates;

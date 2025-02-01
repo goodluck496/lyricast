@@ -84,8 +84,6 @@ export const BibleReducers = createReducer<BibleState>(
         section.content.find(
           (el) => el.path.toString() === data.path.toString()
         ) || null;
-
-      console.log('verse', verse, section, data.path.toString());
     }
 
     return {

@@ -108,7 +108,6 @@ export class ListBoxComponent<T>
         if (value) {
           // if (!Array.isArray(this.value) && value.searchKey === this.value?.searchKey) {
           this.calcSelectedItem(value);
-          console.log('change value', value);
           this.scrollToSelected(value);
           // }
 

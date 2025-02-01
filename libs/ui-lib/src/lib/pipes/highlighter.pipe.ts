@@ -27,7 +27,6 @@ export class HighlighterPipe implements PipeTransform {
     if (!searchTerm) {
       return value;
     }
-    console.log('searchTerm', searchTerm, value);
 
     return type === 'full'
       ? value.replace(

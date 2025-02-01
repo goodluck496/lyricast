@@ -109,8 +109,10 @@ export class BibleChapterComponent implements OnInit {
             'bible-chapter-section__verse--selected'
           )
         ) {
+          /**
+           * работает хуже чем нативный scrollIntoView
+           */
           // this.scrollBar().scrollToElement(item);
-          // console.log('selected', item);
           item.nativeElement.scrollIntoView({
             block: 'center',
             behavior: 'smooth',

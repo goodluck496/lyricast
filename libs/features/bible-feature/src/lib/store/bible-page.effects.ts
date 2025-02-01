@@ -65,7 +65,6 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
         if (!translate || !book) {
           return of([]);
         }
-        console.log('load chapter');
         return this.apiSrv.getSections(translate, book, actionData.chapter);
       }),
       map((data: BibleChapterSection[]) =>

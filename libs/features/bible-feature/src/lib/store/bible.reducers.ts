@@ -110,7 +110,6 @@ export const BibleReducers = createReducer<BibleState>(
   on(BibleActions.stopCasting, (state) => {
     return {
       ...state,
-      selectedChapterSections: [],
     } satisfies BibleState;
   }),
   on(BibleActions.pauseCasting, (state) => {
@@ -130,5 +129,5 @@ export const BibleReducers = createReducer<BibleState>(
       ...state,
       selectedPath: data.path,
     } satisfies BibleState;
-  })
+  }),
 );

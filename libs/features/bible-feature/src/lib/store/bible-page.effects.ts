@@ -1,13 +1,14 @@
 import { inject, Injectable } from '@angular/core';
 import { Action, Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { BibleActions } from './bible.actions';
-import { map, of, switchMap, take, tap, withLatestFrom } from 'rxjs';
+import { BibleActions, BibleActionsEnum } from './bible.actions';
+import { filter, map, of, switchMap, take, tap, withLatestFrom } from 'rxjs';
 import { BibleApiService } from '../services/index';
 import { BibleState } from './bible.store';
 import {
   getSelectedChapter,
   selectBooks,
+  selectCastingPaused,
   selectSelectedBook,
   selectSelectedPath,
   selectSelectedTranslate,
@@ -68,7 +69,10 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
         return this.apiSrv.getSections(translate, book, actionData.chapter);
       }),
       map((data: BibleChapterSection[]) =>
-        BibleActions.selectChapterSection({ chapterSection: data, contentId: '1' })
+        BibleActions.selectChapterSection({
+          chapterSection: data,
+          contentId: '1',
+        })
       ),
       tap(() => this.store.dispatch(BibleActions.chapterLoaded()))
     )
@@ -109,11 +113,11 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
             `Not found chapterId - ${chapterId} in book ${book?.number} ${book?.title}`
           );
         }
-        this.store.dispatch(BibleActions.chapterLoading())
+        this.store.dispatch(BibleActions.chapterLoading());
       }),
       withLatestFrom(
         this.store.select(selectSelectedTranslate),
-        this.store.select(selectSelectedBook),
+        this.store.select(selectSelectedBook)
       ),
       switchMap(([, translate, book]) => {
         if (!translate || !book) {
@@ -133,12 +137,12 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
             `Not found chapterId - ${chapterId} in loaded chapters`
           );
         }
-        this.store.dispatch(BibleActions.chapterLoaded())
+        this.store.dispatch(BibleActions.chapterLoaded());
 
         return BibleActions.selectChapterSection({
           chapterSection: chapter.subsections,
-          contentId
-        })
+          contentId,
+        });
       })
     )
   );
@@ -164,4 +168,23 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
       })
     )
   );
+
+  selectVerse$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(BibleActions.selectBibleVerse),
+      withLatestFrom(this.store.select(selectCastingPaused)),
+      filter(([verse, paused]) => !paused),
+      map(([verse, paused]) => {
+        return BibleActions.castingProcessChange({
+          currentContent: {
+            ...verse,
+            text: [verse.text],
+          },
+          nextIndex: verse.number,
+        });
+      })
+    )
+  );
+
+
 }

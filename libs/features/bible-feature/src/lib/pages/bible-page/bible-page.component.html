@@ -17,7 +17,7 @@
         </p-dropdown>
 
         <lyri-list-box [items]="(bookList$ | async) || []"
-                                 [formControl]="bibleFormGroup.controls.book"
+                       [formControl]="bibleFormGroup.controls.book"
         >
           <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
             <div class="list-item__wrapper">
@@ -50,7 +50,8 @@
             Главы
           </div>
 
-          <lyri-list-box [items]="(chapterList$ | async) || []" [formControl]="bibleFormGroup.controls.chapter" [withSearch]="false">
+          <lyri-list-box [items]="(chapterList$ | async) || []" [formControl]="bibleFormGroup.controls.chapter"
+                         [withSearch]="false">
             <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
               <div class="list-item__wrapper">
                 <div class="list-item__title" [innerHTML]="data.title | highliter: search"></div>
@@ -71,10 +72,10 @@
   <ng-container page-sideibar-preview></ng-container>
   <ng-container page-sideibar-content>
     <button pButton (click)="onStartCasting()">транслировать</button>
-    <!--    <button pButton (click)="onStartCasting(true)">Начать с выбранного слайда</button>-->
+<!--    <button pButton severity="info" (click)="onStartCasting()">Начать с выбранного слайда</button>-->
     <div class="flex">
-      <!--      <button pButton severity="danger" (click)="onPauseCasting()">Остановить</button>-->
-      <!--      <button pButton severity="danger" (click)="onCloseCasting()">Закрыть</button>-->
+            <button pButton severity="danger" (click)="onPauseCasting()">Остановить</button>
+            <button pButton severity="danger" (click)="onStopCasting()">Закрыть</button>
     </div>
 
     <div class="flex">

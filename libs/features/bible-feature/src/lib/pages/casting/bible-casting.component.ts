@@ -13,7 +13,7 @@ import {
 import {
   BibleBookShort,
   BibleVerseForCasting,
-  BibleChapterShort,
+  BOOK_NAMES,
 } from '@lyri-cast/entities';
 
 import { NgxFitTextModule } from '@pikselin/ngx-fittext';
@@ -27,7 +27,10 @@ import {
   selectCastingProcess,
   selectCastingProcessNavigate,
 } from '../../store/bible.selectors';
-import { BibleStartCastingPayload } from '../../store/bible.actions';
+import {
+  BiblePresentationNavigatePayload,
+  BibleStartCastingPayload,
+} from '../../store/bible.actions';
 
 @Component({
   selector: 'lyri-bible-casting-page',
@@ -45,8 +48,10 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
   deckRef?: Reveal.Api;
 
+  selectedBookTitle = signal('');
+
   selectedBook = signal<BibleBookShort | null>(null);
-  selectedChapter = signal<BibleChapterShort | null>(null);
+  selectedChapterId = signal<number | null>(null);
   selectedContents = signal<BibleVerseForCasting[]>([]);
   selectedVerseId = signal<number>(1);
 
@@ -80,6 +85,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
     this.store.select(selectCastingProcessNavigate).subscribe((data) => {
       if (data) {
+        console.log('data', data);
         this.navigateCastingHandler(data);
       }
     });
@@ -98,8 +104,9 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     this.clearSlides();
 
     this.selectedBook.set(payload.book);
+    this.selectedBookTitle.set(payload.book.title.short);
     this.selectedContents.set(payload.content);
-    this.selectedChapter.set(payload.chapter);
+    this.selectedChapterId.set(payload.chapter.number);
     this.showingContent.set(true);
     this.selectedVerseId.set(payload.fromIndex || 1);
     this.cdr.detectChanges();
@@ -116,22 +123,27 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     this.updateTextSize();
   }
 
-  navigateCastingHandler(payload: any /*SongPayloadsMap['SLIDE_NAVIGATE']*/) {
+  navigateCastingHandler(
+    payload: BiblePresentationNavigatePayload /*SongPayloadsMap['SLIDE_NAVIGATE']*/
+  ) {
     if (!this.deckRef) {
       return;
     }
-    /*
-        if (payload.direction) {
-          this.deckRef[payload.direction]();
-        } else if (payload.index !== undefined) {
-          this.deckRef.slide(undefined, payload.index);
-        }
+    if (payload.direction) {
+      this.deckRef[payload.direction]();
+    } else if (payload.nextIndex !== undefined) {
+      this.deckRef.slide(undefined, payload.nextIndex);
+    }
 
-        this.selectedLyric.set(payload.currentLyric);
-        this.cdr.detectChanges();
-        this.updateTextSize();
-      }
-    */
+    const bookName = BOOK_NAMES[payload.currentContent.bookId];
+
+    this.selectedBookTitle.set(bookName.short);
+    this.selectedChapterId.set(payload.currentContent.chapterId);
+    this.selectedVerseId.set(payload.currentContent.number);
+
+    // this.selectedLyric.set(payload.currentLyric);
+    this.cdr.detectChanges();
+    // this.updateTextSize();
   }
 
   async initReveal(): Promise<Api> {

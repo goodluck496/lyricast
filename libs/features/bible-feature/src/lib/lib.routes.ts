@@ -6,7 +6,7 @@ import { provideEffects } from '@ngrx/effects';
 import { provideState } from '@ngrx/store';
 import { BibleCastingPageEffects } from './store/bible-casting-page.effects';
 import { BiblePageEffects } from './store/bible-page.effects';
-import { BibleForCastingEffects } from './store/bible-for-casting.effects';
+import {BibleForCastingEffects} from "./store/bible-for-casting.effects";
 
 export const bibleFeatureRoutes: Route[] = [
   {

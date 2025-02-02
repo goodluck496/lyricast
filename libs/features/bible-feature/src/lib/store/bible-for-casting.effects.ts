@@ -3,6 +3,7 @@ import { Action, Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import {
   BibleActions,
+  BibleActionsEnum,
   BiblePresentationNavigatePayload,
   BibleStartCastingPayload,
 } from './bible.actions';
@@ -17,8 +18,11 @@ import {
 } from 'rxjs';
 import { BibleApiService } from '../services/index';
 import { BibleState } from './bible.store';
-import { selectCastingProcess } from './bible.selectors';
-import { SONG_ACTIONS } from '@lyri-cast/song-feature';
+import {
+  selectCastingPaused,
+  selectCastingProcess,
+  selectSelectedBibleVerse,
+} from './bible.selectors';
 import {
   AppActions,
   BaseEffectsWithBridgeInterface,
@@ -34,17 +38,16 @@ import {
   AppWindowTypes,
   EventData,
 } from '@lyri-cast/common-electron';
-import { BIBLE_ACTIONS } from './bible-electron.types';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
-  [BIBLE_ACTIONS.startCasting]: (eventData: EventData) =>
+  [BibleActionsEnum.startCasting]: (eventData: EventData) =>
     BibleActions.startCasting(eventData.payload as BibleStartCastingPayload),
-  [BIBLE_ACTIONS.changeCastingProcess]: (eventData: EventData) =>
+  [BibleActionsEnum.castingProcessChange]: (eventData: EventData) =>
     BibleActions.castingProcessChange(
       eventData.payload as BiblePresentationNavigatePayload
     ),
-  [BIBLE_ACTIONS.stopCasting]: () => BibleActions.stopCasting(),
-  [BIBLE_ACTIONS.pauseCasting]: () => BibleActions.pauseCasting(),
+  [BibleActionsEnum.stopCasting]: () => BibleActions.stopCasting(),
+  [BibleActionsEnum.pauseCasting]: () => BibleActions.pauseCasting(),
 };
 
 @Injectable()
@@ -61,12 +64,9 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
     this.actions$.pipe(
       ofType(BibleActions.startCasting),
       tap((data) => {
-        this.bridge.send(
-          /*<'START_CASTING', SongPayloadsMap>*/ 'START_CASTING',
-          data
-        );
+        this.bridge.send(BibleActionsEnum.startCasting, data);
       }),
-      map(() => ({ type: SONG_ACTIONS.startCasting }))
+      map(() => ({ type: BibleActionsEnum.startCasting }))
     )
   );
 
@@ -85,7 +85,7 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
       map(([, data]) => {
         console.log('OPENED_PAGE', data);
         if (!data) {
-          return { type: SONG_ACTIONS.pauseCasting };
+          return { type: BibleActionsEnum.pauseCasting };
         }
         return BibleActions.startCasting({
           ...data,
@@ -141,6 +141,57 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
             })
           )
         );
+      })
+    )
+  );
+
+  stopCasting$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(BibleActions.stopCasting),
+      map(() => {
+        return AppActions.closeWindow({
+          windowType: AppWindowTypes.BIBLE_CASTING,
+        });
+      })
+    )
+  );
+
+  castingChange$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(BibleActions.castingProcessChange),
+      map((castingProcessChange) => {
+        this.bridge.send(
+          BibleActionsEnum.castingProcessChange,
+          castingProcessChange
+        );
+        return { type: BibleActionsEnum.castingProcessChange };
+      })
+    )
+  );
+
+  prevOrNextVerse$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(BibleActions.selectPrevOrNextVerse),
+      withLatestFrom(
+        this.store.select(selectSelectedBibleVerse),
+        this.store.select(selectCastingPaused)
+      ),
+      map(([nextVerse, selectedVerse, paused]) => {
+        if (!selectedVerse || paused) {
+          return { type: BibleActionsEnum.selectPrevOrNextVerse };
+        }
+
+        this.store.dispatch(
+          BibleActions.castingProcessChange({
+            nextIndex: selectedVerse.number,
+            currentContent: {
+              ...selectedVerse,
+              text: [selectedVerse.text],
+            },
+          })
+        );
+
+        return { type: BibleActionsEnum.selectPrevOrNextVerse };
       })
     )
   );

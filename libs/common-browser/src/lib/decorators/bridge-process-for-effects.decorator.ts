@@ -4,6 +4,11 @@ import { EventData } from '@lyri-cast/common-electron';
 import { BridgeService } from '../services/index';
 import { inject } from '@angular/core';
 
+/**
+ * Декоратор принимает Record c названием actions которые нужно dispatch'ить в store
+ * @param map
+ * @constructor
+ */
 export function BridgeProcessForEffectsDecorator(
   map: Record<string, (eventData: EventData) => Action>
 ) {

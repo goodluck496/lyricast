@@ -34,6 +34,7 @@ import {
   map,
   Observable,
   switchMap,
+  take,
   tap,
   withLatestFrom,
 } from 'rxjs';
@@ -264,7 +265,6 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
         translate,
         book: null,
       });
-
     });
   }
 
@@ -272,14 +272,17 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
     console.log('search', value);
   }
 
+  //////////////////////
+  ////////перенести в эффекты
+  //////////////////////
   onStartCasting() {
     this.store
       .select(selectSelectedBibleVerse)
-      .pipe(filterEmpty(), withLatestFrom(this.sectionList$))
+      .pipe(take(1), filterEmpty(), withLatestFrom(this.sectionList$))
       .subscribe(([verse, sections]) => {
         const groupValue = this.bibleFormGroup.value;
 
-        if (groupValue.book && groupValue.chapter) {
+        if (groupValue.book && groupValue.chapter && sections.length) {
           this.store.dispatch(
             BibleActions.openCasting({
               book: groupValue.book.baseEntity,
@@ -297,12 +300,24 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
       });
   }
 
+  onStopCasting() {
+    this.store.dispatch(BibleActions.stopCasting());
+  }
+
+  onPauseCasting() {
+    this.store.dispatch(BibleActions.pauseCasting());
+  }
+
   onNavigateSlide(dir: 'prev' | 'next', selectedVerse: BibleVerse) {
     if (dir === 'prev') {
       if (selectedVerse.prev.chapterChanged || selectedVerse.prev.bookChanged) {
         this.store.dispatch(
           BibleActions.changePath({ path: selectedVerse.prev.path })
         );
+        //////////////////////
+        ////////перенести в эффекты
+        this.onStartCasting();
+        //////////////////////
       } else {
         this.store.dispatch(
           BibleActions.selectPrevOrNextVerse(selectedVerse.prev)
@@ -313,18 +328,17 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
         this.store.dispatch(
           BibleActions.changePath({ path: selectedVerse.next.path })
         );
+
+        //////////////////////
+        ////////перенести в эффекты
+        this.onStartCasting();
+        //////////////////////
       } else {
         this.store.dispatch(
           BibleActions.selectPrevOrNextVerse(selectedVerse.next)
         );
       }
     }
-
-    // this.store.dispatch(BibleActions.castingProcessChange({
-    //   currentContent: null,
-    //   direction: dir,
-    //   index: 0
-    // }))
   }
 
   protected readonly ListBoxTemplates = ListBoxTemplates;

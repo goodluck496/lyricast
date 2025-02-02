@@ -99,8 +99,6 @@ export class BibleChapterComponent implements OnInit {
   }
 
   scrollToSelected() {
-
-
     setTimeout(() => {
       this.listItems().forEach((item) => {
         if (

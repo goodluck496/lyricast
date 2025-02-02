@@ -73,10 +73,13 @@ export class BibleByFilesService {
       return [];
     }
 
-    return translate.books.map((book) => ({
-      ...book,
-      title: BOOK_NAMES[book.number] ?? book.title.full,
-    }));
+    return translate.books.map((book) => {
+      const bookName = BOOK_NAMES[book.number];
+      return {
+        ...book,
+        title: bookName ?? book.title,
+      }
+    });
   }
 
   getBooksShort(key: string): BibleBookShort[] {

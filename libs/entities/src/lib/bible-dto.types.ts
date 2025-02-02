@@ -23,7 +23,7 @@ export type BibleBookShort = Omit<BibleBook, 'chapters'> & {
 
 export type BibleTranslateShort = Omit<BibleTranslate, 'books'>;
 
-export const BOOK_NAMES = {
+export const BOOK_NAMES: Record<number, {short: string, full: string}> = {
   1: { short: 'Быт', full: 'Бытие' },
   2: { short: 'Исх', full: 'Исход' },
   3: { short: 'Лев', full: 'Левит' },

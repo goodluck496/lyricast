@@ -1,6 +1,6 @@
 <div class="info-block" [class.hide]="!showingContent()">
-  <div class="info-block__type" [class.hide]="!selectedBook()">{{ selectedBook()?.title?.short }}
-    - {{ selectedChapter()?.number }}:{{ selectedVerseId() }}
+  <div class="info-block__type" [class.hide]="!selectedBookTitle()">{{ selectedBookTitle() }}
+    - {{ selectedChapterId() }}:{{ selectedVerseId() }}
   </div>
 </div>
 

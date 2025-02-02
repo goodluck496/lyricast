@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Action, Store } from '@ngrx/store';
 import {
   BibleActions,
+  BibleActionsEnum,
   BiblePresentationNavigatePayload,
   BibleStartCastingPayload,
 } from './bible.actions';
@@ -12,17 +13,16 @@ import {
   BridgeService,
 } from '@lyri-cast/common-browser';
 import { EventData } from '@lyri-cast/common-electron';
-import { BIBLE_ACTIONS } from './bible-electron.types';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
-  [BIBLE_ACTIONS.startCasting]: (eventData) =>
+  [BibleActionsEnum.startCasting]: (eventData) =>
     BibleActions.startCasting(eventData.payload as BibleStartCastingPayload),
-  [BIBLE_ACTIONS.changeCastingProcess]: (eventData) =>
+  [BibleActionsEnum.castingProcessChange]: (eventData) =>
     BibleActions.castingProcessChange(
       eventData.payload as BiblePresentationNavigatePayload
     ),
-  [BIBLE_ACTIONS.pauseCasting]: () => BibleActions.pauseCasting(),
-  [BIBLE_ACTIONS.stopCasting]: () => BibleActions.stopCasting(),
+  [BibleActionsEnum.pauseCasting]: () => BibleActions.pauseCasting(),
+  [BibleActionsEnum.stopCasting]: () => BibleActions.stopCasting(),
 };
 
 @Injectable()

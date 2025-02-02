@@ -40,6 +40,10 @@ export class MainComponent implements OnInit {
       label: PageTitlesMap.get(Pages.PROGRAMS) || Pages.PROGRAMS,
     },
     {
+      routerLink: ['./', Pages.SETTINGS],
+      label: PageTitlesMap.get(Pages.SETTINGS) || Pages.SETTINGS,
+    },
+    {
       routerLink: ['./', Pages.TEST],
       label: PageTitlesMap.get(Pages.TEST) || Pages.TEST,
     },

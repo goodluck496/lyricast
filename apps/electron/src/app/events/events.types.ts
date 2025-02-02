@@ -18,4 +18,5 @@ export const ElectronAppEvents = {
   WINDOW_ALL_CLOSED: 'window-all-closed',
   READY: 'ready',
   ACTIVATE: 'activate',
+  GET_DISPLAYS: 'get-displays',
 } as const;

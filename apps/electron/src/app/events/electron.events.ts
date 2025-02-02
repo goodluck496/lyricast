@@ -3,9 +3,13 @@
  * between the frontend to the electron backend.
  */
 
-import { app, ipcMain } from 'electron';
+import { app, ipcMain, screen } from 'electron';
 import { environment } from '../../environments/environment';
-import { ElectronActionEvents, ElectronCommonEvents } from './events.types';
+import {
+  ElectronActionEvents,
+  ElectronAppEvents,
+  ElectronCommonEvents,
+} from './events.types';
 import {
   AppWindowTypes,
   CloseWindowArgs,
@@ -37,16 +41,21 @@ ipcMain.handle(
     /**
      * todo можно оформить в отдельную функцию
      */
-    if (args.type === AppWindowTypes.BIBLE_CASTING || args.type === AppWindowTypes.SONG_CASTING) {
+    if (
+      args.type === AppWindowTypes.BIBLE_CASTING ||
+      args.type === AppWindowTypes.SONG_CASTING
+    ) {
+      const { x, y } = args.display.bounds;
+
       App.createWindow(args.type, {
         webPreferences: {
           ...DEFAULT_WEB_PREF,
         },
+        x,
+        y,
         ...args,
       });
-      App.loadWindow(
-        args.type
-      );
+      App.loadWindow(args.type);
 
       return App.openedWindows[args.type].webContents.getProcessId();
     }
@@ -70,7 +79,7 @@ ipcMain.on('quit', (event, code) => {
 
 ipcMain.handle(ElectronActionEvents.GET_WINDOW_TYPE, (event) => {
   return App.openedWindowTypesByProcess[event.processId];
-})
+});
 
 ipcMain.handle(ElectronCommonEvents.SEND, (event, payload) => {
   Object.keys(App.openedWindows).forEach((key) => {
@@ -86,6 +95,22 @@ ipcMain.handle(ElectronCommonEvents.SEND, (event, payload) => {
       );
       return; // Пропускаем, если это отправляющее окно
     }
-    App.openedWindows[key].webContents.send(ElectronCommonEvents.RECEIVE, payload);
+    App.openedWindows[key].webContents.send(
+      ElectronCommonEvents.RECEIVE,
+      payload
+    );
   });
+});
+
+ipcMain.handle(ElectronAppEvents.GET_DISPLAYS, () => {
+  const displays = screen.getAllDisplays();
+  const primaryId = screen.getPrimaryDisplay().id;
+
+  return displays.map(el => {
+
+    return {
+      ...el,
+      primary: el.id === primaryId
+    }
+  })
 });

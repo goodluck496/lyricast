@@ -1,21 +1,34 @@
 import { inject, Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { filter, map, mergeMap, of, switchMap, tap, withLatestFrom } from 'rxjs';
-import { APP_COMMON_ACTIONS, AppWindowTypes, EventData } from '@lyri-cast/common-electron';
+import {
+  filter,
+  map,
+  mergeMap,
+  of,
+  switchMap,
+  tap,
+  withLatestFrom,
+} from 'rxjs';
+import {
+  APP_COMMON_ACTIONS,
+  AppWindowTypes,
+  EventData,
+} from '@lyri-cast/common-electron';
 import {
   AppActions,
   BaseEffectsWithBridgeInterface,
   BridgeService,
   Pages,
   selectOpenedWindow,
-  WindowService
+  SettingsService,
+  WindowService,
 } from '@lyri-cast/common-browser';
 import { Action, Store } from '@ngrx/store';
 import { selectCastingProcess, SongPageState } from './song.reducers';
 import { SONG_ACTIONS, SongActions } from './song.actions';
 import { SongPayloadsMap } from './song-electron.types';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
-
+import { snapshot } from '@lyri-cast/common';
 
 @Injectable()
 export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
@@ -23,6 +36,7 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
   store = inject(Store<SongPageState>);
   bridge = inject(BridgeService);
   window = inject(WindowService);
+  settingsSrv = inject(SettingsService);
 
   constructor() {
     this.initSubscribeByBridge();
@@ -133,6 +147,10 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
           );
         }
 
+        const selectedDisplay = snapshot(
+          this.settingsSrv.getDisplayForCasting()
+        );
+
         return fromPromise(
           this.window.electronContext
             .openWindow({
@@ -140,8 +158,8 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
               title: 'Casting new',
               show: true,
               center: true,
-              // fullscreen: true,
-              focusable: true,
+              fullscreen: true,
+              display: selectedDisplay,
             })
             .then((procId) => ({
               type: AppWindowTypes.SONG_CASTING,

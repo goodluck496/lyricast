@@ -157,6 +157,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
       embedded: true,
       progress: false,
       controls: false,
+      overview :false
     });
 
     return deck;

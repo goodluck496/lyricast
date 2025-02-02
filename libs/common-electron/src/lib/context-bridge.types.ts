@@ -1,10 +1,11 @@
-import { AppWindowTypes } from './common-electron';
+import { AppDisplay, AppWindowTypes } from './common-electron';
 
 import { BrowserWindowConstructorOptions } from 'electron';
 
 export type OpenWindowArgs = BrowserWindowConstructorOptions & {
   type: AppWindowTypes;
   title: string;
+  display: AppDisplay
 };
 
 export type CloseWindowArgs = {
@@ -22,6 +23,8 @@ export const APP_COMMON_ACTIONS = {
    */
   clearWindowId: 'CLEAR_WINDOW_ID',
   openPage: 'OPEN_PAGE',
+  openedPage: 'OPENED_PAGE',
+
   closeWindow: 'CLOSE_WINDOW',
 } as const;
 
@@ -37,6 +40,7 @@ export type Context = {
   getAppVersion: () => Promise<string>;
   openWindow: (arg: OpenWindowArgs) => Promise<number>;
   closeWindow: (arg: CloseWindowArgs) => Promise<void>;
+  getDisplays: () => Promise<AppDisplay[]>;
 
   send: (data: EventData) => void;
   receive: (cb: (event: string, payload: EventData) => void) => void;

@@ -11,7 +11,7 @@ import { ActionCreatorProps, Creator } from '@ngrx/store/src/models';
 import {
   APP_COMMON_ACTIONS,
   AppCommonActionKeys,
-  AppWindowTypes,
+  AppWindowTypes, OpenWindowArgs,
 } from '@lyri-cast/common-electron';
 
 export interface AppState {
@@ -28,7 +28,7 @@ export const initialState: AppState = {
 };
 
 export type ActionOpenedWindow = { procId: number; type: AppWindowTypes };
-export type ActionOpenPageProps = { path: Pages[] };
+export type ActionOpenPageProps = { path: Pages[], windowProps?: OpenWindowArgs };
 export type ActionCloseWindowProps = {
   windowType: AppWindowTypes;
 };
@@ -47,6 +47,7 @@ export const AppActions = createActionGroup({
     setProcId: props<{ procId: number, pageType: AppWindowTypes }>(),
     clearWindowId: emptyProps(),
     openPage: props<ActionOpenPageProps>(),
+    openedPage: props<ActionOpenPageProps>(),
     closeWindow: props<ActionCloseWindowProps>(),
   } satisfies Record<
     AppCommonActionKeys,

@@ -16,6 +16,7 @@ import {
   Pages,
   PageTitlesMap,
   selectAppInit,
+  SettingsService,
 } from '@lyri-cast/common-browser';
 
 @Component({
@@ -29,7 +30,7 @@ export class AppComponent implements OnInit {
   //не удалять
   bridge = inject(BridgeService);
   store = inject(Store);
-  // songApiService =  inject(SongsApiService);
+  settingsSrv = inject(SettingsService);
 
   cdr = inject(ChangeDetectorRef);
   route = inject(ActivatedRoute);
@@ -59,14 +60,13 @@ export class AppComponent implements OnInit {
   isNotCastingPage$ = this.router.events.pipe(
     // tap((v) => console.log('route', this.route, v)),
     filter((route) => route instanceof NavigationEnd),
-    map(
-      (data) =>
-        !data.url.includes(Pages.CASTING)
-    )
+    map((data) => !data.url.includes(Pages.CASTING))
   );
 
   ngOnInit() {
     this.isNotCastingPage$.subscribe();
+
+    this.settingsSrv.init();
 
     this.store
       .select(selectAppInit)

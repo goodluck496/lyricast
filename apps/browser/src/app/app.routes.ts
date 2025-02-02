@@ -26,6 +26,13 @@ export const appRoutes: Route[] = [
           ),
       },
       {
+        path: Pages.SETTINGS,
+        loadComponent: () =>
+          import('./pages/settings/settings.component').then(
+            (c) => c.SettingsComponent
+          ),
+      },
+      {
         path: Pages.TEST,
         loadComponent: () =>
           import('./pages/test-page/test-page.component').then(

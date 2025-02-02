@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import {
-  ElectronActionEvents,
+  ElectronActionEvents, ElectronAppEvents,
   ElectronCommonEvents,
 } from '../events/events.types';
 import {
@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke(ElectronActionEvents.OPEN_WINDOW, arg),
   closeWindow: (arg: CloseWindowArgs) =>
     ipcRenderer.invoke(ElectronActionEvents.CLOSE_WINDOW, arg),
+  getDisplays: () => ipcRenderer.invoke(ElectronAppEvents.GET_DISPLAYS),
   send: (data: EventData) => {
     return ipcRenderer.invoke(ElectronCommonEvents.SEND, JSON.stringify(data));
   },

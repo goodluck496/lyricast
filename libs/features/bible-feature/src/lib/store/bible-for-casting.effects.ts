@@ -30,6 +30,7 @@ import {
   BridgeService,
   Pages,
   selectOpenedWindow,
+  SettingsService,
   WindowService,
 } from '@lyri-cast/common-browser';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
@@ -38,6 +39,7 @@ import {
   AppWindowTypes,
   EventData,
 } from '@lyri-cast/common-electron';
+import { snapshot } from '@lyri-cast/common';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   [BibleActionsEnum.startCasting]: (eventData: EventData) =>
@@ -59,6 +61,7 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
   window = inject(WindowService);
   bridge = inject(BridgeService);
   apiSrv = inject(BibleApiService);
+  settingsSrv = inject(SettingsService);
 
   startCasting$ = createEffect(() =>
     this.actions$.pipe(
@@ -74,18 +77,18 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
     this.actions$.pipe(
       ofType(BibleActions.openPage),
       map((data) => {
-        console.log('openPage', data);
-        this.bridge.send('OPEN_PAGE', data);
+        this.bridge.send(APP_COMMON_ACTIONS.openPage, data);
 
-        return { type: 'OPEN_PAGE' };
+        return { type: APP_COMMON_ACTIONS.openPage };
       }),
       switchMap(() => this.bridge.queueEvents),
       withLatestFrom(this.store.select(selectCastingProcess)),
-      filter(([event]) => !!event && event.event === 'OPENED_PAGE'),
+      filter(
+        ([event]) => !!event && event.event === APP_COMMON_ACTIONS.openedPage
+      ),
       map(([, data]) => {
-        console.log('OPENED_PAGE', data);
         if (!data) {
-          return { type: BibleActionsEnum.pauseCasting };
+          return BibleActions.pauseCasting();
         }
         return BibleActions.startCasting({
           ...data,
@@ -107,6 +110,10 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
           );
         }
 
+        const selectedDisplay = snapshot(
+          this.settingsSrv.getDisplayForCasting()
+        );
+
         return fromPromise(
           this.window.electronContext
             .openWindow({
@@ -114,8 +121,9 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
               title: 'Casting new',
               show: true,
               center: true,
-              // fullscreen: true,
+              fullscreen: true,
               focusable: true,
+              display: selectedDisplay
             })
             .then((procId) => ({
               type: AppWindowTypes.BIBLE_CASTING,

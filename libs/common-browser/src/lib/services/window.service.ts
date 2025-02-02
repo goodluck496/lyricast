@@ -4,7 +4,7 @@ import { AppWindowTypes, Context } from '@lyri-cast/common-electron';
 @Injectable({ providedIn: 'platform' })
 export class WindowService {
   get hasElectron(): boolean {
-    return ('electron' in (window as Window));
+    return 'electron' in (window as Window);
   }
 
   get electronContext(): Context {
@@ -17,6 +17,7 @@ export class WindowService {
           getWindowType: () => Promise.resolve(AppWindowTypes.MAIN),
           closeWindow: () => Promise.resolve(void 0),
           openWindow: () => Promise.resolve(0),
+          getDisplays: () => Promise.resolve([]),
           platform: '',
         };
   }

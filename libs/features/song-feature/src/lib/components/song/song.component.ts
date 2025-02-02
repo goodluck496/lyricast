@@ -1,17 +1,18 @@
 import {
   Component,
   computed,
-  effect,
+  effect, ElementRef,
   inject,
   input,
   output,
-  signal,
+  signal, viewChildren,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ISong, LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { NgScrollbar } from 'ngx-scrollbar';
 import { SongPageSelectService } from '../../pages/song-page/song-page-select.service';
 import { DblClickDirective } from '@lyri-cast/ui-lib';
+import {DomHandler} from "primeng/dom";
 
 @Component({
   selector: 'lyri-song',
@@ -27,6 +28,7 @@ export class SongComponent {
   lyrics = computed<LyricForCasting[]>(() =>
     this.songPageSelectSrv.selectedLyricsForCasting()
   );
+  lyricItems = viewChildren<ElementRef<HTMLElement>>('lyricItem');
 
   selectedLyricLine = signal<LyricLine | null>(null);
   selectedLyric = signal<LyricForCasting | undefined>(undefined);
@@ -44,6 +46,7 @@ export class SongComponent {
         if (selectedLyric) {
           this.selectedLyric.set(selectedLyric);
         }
+        this.scrollToSelected();
       },
       { allowSignalWrites: true }
     );
@@ -56,7 +59,31 @@ export class SongComponent {
   ): void {
     this.selectedLyric.set(lyric);
     this.selectedLyricLine.set(line);
+    this.scrollToSelected();
 
     this.selectLyricLine.emit([lyric, line, startPresentation]);
+  }
+
+  scrollToSelected() {
+    setTimeout(() => {
+      this.lyricItems().forEach((item) => {
+        if (
+          DomHandler.hasClass(
+            item.nativeElement,
+            'lyric-item__line--selected'
+          )
+        ) {
+          /**
+           * работает хуже чем нативный scrollIntoView
+           */
+          // this.scrollBar().scrollToElement(item);
+          item.nativeElement.scrollIntoView({
+            block: 'center',
+            behavior: 'smooth',
+          });
+        }
+      });
+    }, 1000)
+
   }
 }

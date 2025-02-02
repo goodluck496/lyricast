@@ -10,6 +10,12 @@ import { join } from 'path';
 import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
 import * as process from 'node:process';
 import { ElectronAppEvents, ElectronCommonEvents } from './events/events.types';
+import {
+  debounceTime,
+  distinctUntilChanged,
+  fromEvent,
+  Subscription,
+} from 'rxjs';
 
 export const DEFAULT_WEB_PREF = {
   contextIsolation: true,
@@ -89,6 +95,8 @@ export default class App {
     App.openedWindows[type] = win;
     App.openedWindowTypesByProcess[processId] = type;
 
+    const subs: Subscription[] = [];
+
     win.on(ElectronAppEvents.CLOSE, () => {
       // Dereference the window object, usually you would store windows
       // in an array if your app supports multi windows, this is the time
@@ -111,21 +119,33 @@ export default class App {
       // when you should delete the corresponding element.
 
       App.openedWindows[type] = null;
+      subs.forEach((sub) => sub.unsubscribe());
     });
+
+    subs.push(
+      fromEvent(win, 'move')
+        .pipe(debounceTime(200), distinctUntilChanged())
+        .subscribe(() => {
+          const winBounds = win.getBounds();
+          const display = screen.getDisplayMatching(winBounds);
+          console.log('Окно теперь на дисплее:', display.id);
+        })
+    );
 
     return win;
   }
 
   private static initMainWindow() {
     const workAreaSize = screen.getPrimaryDisplay().workAreaSize;
-    const width = Math.min(1280, workAreaSize.width || 1280);
-    const height = Math.min(720, workAreaSize.height || 720);
+    const width = Math.max(1280, workAreaSize.width || 1280);
+    const height = Math.max(720, workAreaSize.height || 720);
 
     const windowType = AppWindowTypes.MAIN;
     App.createWindow(windowType, {
       width: width,
       height: height,
       show: false,
+      fullscreen: false,
       webPreferences: {
         ...DEFAULT_WEB_PREF,
       },
@@ -175,7 +195,10 @@ export default class App {
     App.BrowserWindow = browserWindow;
     App.application = app;
 
-    App.application.on(ElectronAppEvents.WINDOW_ALL_CLOSED, App.onWindowAllClosed); // Quit when all windows are closed.
+    App.application.on(
+      ElectronAppEvents.WINDOW_ALL_CLOSED,
+      App.onWindowAllClosed
+    ); // Quit when all windows are closed.
     App.application.on(ElectronAppEvents.READY, App.onReady); // App is ready to load data
     App.application.on(ElectronAppEvents.ACTIVATE, App.onActivate); // App is activated
   }

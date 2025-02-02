@@ -1,0 +1,18 @@
+
+:host {
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+}
+
+.settings {
+  &__displays {
+    display: flex;
+
+    gap: 16px;
+    border: 1px solid #2d6879;
+  }
+  &__display-item {
+    height: 100%;
+  }
+}

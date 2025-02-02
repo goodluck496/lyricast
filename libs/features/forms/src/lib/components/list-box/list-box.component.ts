@@ -101,6 +101,8 @@ export class ListBoxComponent<T>
 
   selectedItems: Map<string, IUiLyriListItem<T>> = new Map();
 
+  ITEM_SIZE = 41;
+
   ngOnInit() {
     this.control.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -163,8 +165,10 @@ export class ListBoxComponent<T>
         return;
       }
 
-      this.cdkScroll().scrollToIndex(index, 'smooth');
+      const viewportSize = this.cdkScroll().getViewportSize(); // Высота видимой области
+      const scrollOffset = index * this.ITEM_SIZE - viewportSize / 2 + this.ITEM_SIZE / 2;
 
+      this.cdkScroll().scrollToOffset(scrollOffset, 'smooth');
     });
   }
 

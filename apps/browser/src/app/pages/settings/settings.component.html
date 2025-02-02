@@ -1,0 +1,27 @@
+<h3>Дисплей для отображения презентации</h3>
+<div class="settings__displays">
+
+
+  @if (selectedDisplay$ | async; as selectedDisplay) {
+    @for (display of displays; track display.id) {
+      <p-card class="settings__display-item">
+        <ng-template pTemplate="title">{{ display.label || 'Display - ' + display.id }}</ng-template>
+
+        <p>{{ display.bounds.width }}x{{ display.bounds.height }} \ {{ display.displayFrequency.toFixed(0) }} Гц</p>
+
+        <ng-template pTemplate="footer">
+          @if (selectedDisplay.id !== display.id) {
+            <button pButton severity="primary" (click)="onSelectDisplay(display)">Выбрать</button>
+          } @else {
+            <button pButton severity="secondary" [disabled]="true">Выбрано</button>
+          }
+
+        </ng-template>
+      </p-card>
+    }
+  }
+
+
+</div>
+
+

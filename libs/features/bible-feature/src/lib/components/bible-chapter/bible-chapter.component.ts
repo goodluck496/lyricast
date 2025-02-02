@@ -36,8 +36,6 @@ export class BibleChapterComponent implements OnInit {
   destroyRef = inject(DestroyRef);
   listItems = viewChildren<ElementRef<HTMLElement>>('verseItem');
 
-  scrollBar = viewChild.required(NgScrollbar)
-
   sections = input<BibleChapterSection[]>([]);
 
   selectedVerse = signal<BibleVerse | null>(null);

@@ -17,7 +17,8 @@
     "_start:electron": "npm-run-all -c _wait-on-start:browser _electron:serve",
     "start": "npm-run-all -p _start:backend _start:browser _start:electron",
     "build": "npm-run-all -c _build:browser _build:electron _package:electron",
-    "build-with-backend": "npm-run-all -c build _start:backend"
+    "build-with-backend": "npm-run-all -c build _start:backend",
+    "parseSong" : "ts-node parse-song-from-html.ts"
   },
   "private": true,
   "dependencies": {

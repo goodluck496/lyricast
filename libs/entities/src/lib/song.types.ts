@@ -1,6 +1,8 @@
 export enum LyricTypeEnum {
   COUPLET = 'COUPLET',
   CHORUS = 'CHORUS',
+  PUBLIC = 'PUBLIC',
+  END = 'END',
 }
 
 export type LyricLine = {
@@ -60,6 +62,9 @@ export interface ISong {
    * Текст песни
    */
   lyrics: Lyric[];
+
+  ref?: string;
+  category?: string;
 
   bookName: ISongBookName;
 }

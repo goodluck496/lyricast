@@ -81,6 +81,7 @@ todo доделать сплитование
     songObj.lyrics = lyrics;
     songObj.ref = reference;
     songObj.category = category;
+    songObj.title = songObj.lyrics[0]?.lines[0] || songObj.title;
 
     return songObj;
   }

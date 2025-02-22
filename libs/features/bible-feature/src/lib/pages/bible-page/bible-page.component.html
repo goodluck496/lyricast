@@ -74,8 +74,9 @@
     <button pButton (click)="onStartCasting()">транслировать</button>
 <!--    <button pButton severity="info" (click)="onStartCasting()">Начать с выбранного слайда</button>-->
     <div class="flex">
-            <button pButton severity="danger" (click)="onPauseCasting()">Остановить</button>
-            <button pButton severity="danger" (click)="onStopCasting()">Закрыть</button>
+      
+            <button pButton severity="danger" [disabled]="castingIsPaused$ | async" (click)="onPauseCasting()">Остановить</button>
+            <button pButton severity="danger" [disabled]="windowHasClose$ | async" (click)="onStopCasting()">Закрыть</button>
     </div>
 
     <div class="flex">

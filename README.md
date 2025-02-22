@@ -43,5 +43,9 @@ npm run build
 npm run build-with-backend
 ````
 
+## Problems
+1) не собирается проект из-за electron:build
+   2) нужно выполнить ``rebuild`` внутри node_modules/better-sqlite3 - ``nodegyp rebuild``
+
 ------ 
 "bible-xml": "https://github.com/Beblia/Holy-Bible-XML-Format"

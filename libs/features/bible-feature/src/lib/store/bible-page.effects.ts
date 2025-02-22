@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Action, Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { BibleActions, BibleActionsEnum } from './bible.actions';
+import { BibleActions } from './bible.actions';
 import { filter, map, of, switchMap, take, tap, withLatestFrom } from 'rxjs';
 import { BibleApiService } from '../services/index';
 import { BibleState } from './bible.store';
@@ -185,6 +185,4 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
       })
     )
   );
-
-
 }

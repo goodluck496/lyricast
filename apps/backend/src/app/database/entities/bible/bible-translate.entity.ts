@@ -5,13 +5,13 @@ export class BibleTranslateEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({type: 'varchar', length: 255})
   name: string;
 
-  @Column()
+  @Column({type: 'varchar', length: 255})
   language: string;
 
-  @Column()
+  @Column({type: 'varchar', length: 255})
   keyForSearch: string;
 
   @Column()

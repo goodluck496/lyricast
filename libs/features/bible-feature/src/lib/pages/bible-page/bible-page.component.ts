@@ -43,6 +43,7 @@ import { Store } from '@ngrx/store';
 import { BibleState } from '../../store/bible.store';
 import { BibleActions } from '../../store/bible.actions';
 import {
+  selectCastingPaused,
   selectChapterLoading,
   selectSelectedBibleVerse,
   selectSelectedBook,
@@ -58,6 +59,7 @@ import {
   ListBoxComponent,
   ListBoxTemplates,
 } from '@lyri-cast/form';
+import { selectOpenedWindow } from '@lyri-cast/common-browser';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -153,6 +155,9 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   sectionList$: Observable<BibleChapterSection[]> = this.store.select(
     selectSelectedChapterSections
   );
+
+  castingIsPaused$ = this.store.select(selectCastingPaused);
+  windowHasClose$ = this.store.select(selectOpenedWindow).pipe(tap((d) => console.log('d',d)),map(data => !data));
 
   constructor() {
     this.bibleFormGroup.controls.translate.valueChanges

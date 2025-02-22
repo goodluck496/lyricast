@@ -15,8 +15,6 @@ import {
   BibleVerseForCasting,
   BOOK_NAMES,
 } from '@lyri-cast/entities';
-
-import { NgxFitTextModule } from '@pikselin/ngx-fittext';
 import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import Reveal, { Api } from 'reveal.js';
 
@@ -35,7 +33,7 @@ import {
 @Component({
   selector: 'lyri-bible-casting-page',
   standalone: true,
-  imports: [NgxFitTextModule, Ng2FittextModule],
+  imports: [Ng2FittextModule],
   templateUrl: './bible-casting.component.html',
   styleUrl: './bible-casting.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -157,7 +155,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
       embedded: true,
       progress: false,
       controls: false,
-      overview :false
+      overview: false,
     });
 
     return deck;

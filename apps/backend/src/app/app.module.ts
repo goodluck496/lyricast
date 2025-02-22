@@ -12,8 +12,9 @@ import { BibleTranslateEntity } from './database/entities/bible/bible-translate.
     SongsModule,
     BibleModule,
     TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: './data/database.sqlite', // Путь к SQLite файлу
+      type: 'better-sqlite3',
+      // database: './data/database.sqlite', // Путь к SQLite файлу
+      database: './data/database.db', // Путь к SQLite файлу
       entities: [BibleTranslateEntity], // Укажите ваши Entity
       synchronize: true, // Автоматическое создание таблиц
       logging: true, // Для отладки

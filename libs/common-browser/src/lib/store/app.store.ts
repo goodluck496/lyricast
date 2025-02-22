@@ -63,14 +63,14 @@ export const AppReducer = createReducer(
   })),
   on(AppActions.setProcId, (state, data) => {
     console.log(state, data);
-    return ({
+    return {
       ...state,
       openedWindow: {
         ...state.openedWindow,
         procId: data.procId,
         type: data.pageType
       },
-    })
+    } satisfies AppState
   }),
   on(AppActions.openPage, (state) => ({
     ...state,

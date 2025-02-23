@@ -33,7 +33,6 @@ import {
   fromEvent,
   map,
   Observable,
-  switchMap,
   take,
   tap,
   withLatestFrom,
@@ -43,13 +42,13 @@ import { Store } from '@ngrx/store';
 import { BibleState } from '../../store/bible.store';
 import { BibleActions } from '../../store/bible.actions';
 import {
+  selectBooks,
   selectCastingPaused,
   selectChapterLoading,
   selectSelectedBibleVerse,
   selectSelectedBook,
   selectSelectedChapterSections,
   selectSelectedPath,
-  selectSelectedTranslate,
 } from '../../store/bible.selectors';
 import { ButtonDirective } from 'primeng/button';
 import { BibleChapterComponent } from '../../components/bible-chapter/bible-chapter.component';
@@ -114,12 +113,9 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   bibleTranslates: IUiLyriListItem<BibleTranslateShort>[] = [];
 
   bookList$: Observable<IUiLyriItemInList<BibleBookShort>[]> = this.store
-    .select(selectSelectedTranslate)
+    .select(selectBooks)
     .pipe(
       filterEmpty(),
-      switchMap((value) => {
-        return this.apiSrv.getBooks(value);
-      }),
       map((data) => {
         return data.map((el) => {
           return {
@@ -157,7 +153,9 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   );
 
   castingIsPaused$ = this.store.select(selectCastingPaused);
-  windowHasClose$ = this.store.select(selectOpenedWindow).pipe(tap((d) => console.log('d',d)),map(data => !data));
+  windowHasClose$ = this.store
+    .select(selectOpenedWindow)
+    .pipe(map((data) => !data));
 
   constructor() {
     this.bibleFormGroup.controls.translate.valueChanges

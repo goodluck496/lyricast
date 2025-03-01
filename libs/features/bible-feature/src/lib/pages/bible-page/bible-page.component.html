@@ -18,6 +18,7 @@
 
         <lyri-list-box [items]="(bookList$ | async) || []"
                        [formControl]="bibleFormGroup.controls.book"
+                       [tabIndex]="0"
         >
           <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
             <div class="list-item__wrapper">
@@ -51,7 +52,7 @@
           </div>
 
           <lyri-list-box [items]="(chapterList$ | async) || []" [formControl]="bibleFormGroup.controls.chapter"
-                         [withSearch]="false">
+                         [withSearch]="false" [tabIndex]="1">
             <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
               <div class="list-item__wrapper">
                 <div class="list-item__title" [innerHTML]="data.title | highliter: search"></div>
@@ -64,7 +65,7 @@
 
 
       @if ((sectionList$ | async); as sections) {
-        <lyri-bible-chapter [sections]="sections"></lyri-bible-chapter>
+        <lyri-bible-chapter [sections]="sections" [tabIndex]="2"></lyri-bible-chapter>
       }
     }
 
@@ -72,11 +73,12 @@
   <ng-container page-sideibar-preview></ng-container>
   <ng-container page-sideibar-content>
     <button pButton (click)="onStartCasting()">транслировать</button>
-<!--    <button pButton severity="info" (click)="onStartCasting()">Начать с выбранного слайда</button>-->
+    <!--    <button pButton severity="info" (click)="onStartCasting()">Начать с выбранного слайда</button>-->
     <div class="flex">
 
-            <button pButton severity="danger" [disabled]="castingIsPaused$ | async" (click)="onPauseCasting()">Остановить</button>
-            <button pButton severity="danger" [disabled]="windowHasClose$ | async" (click)="onStopCasting()">Закрыть</button>
+      <button pButton severity="danger" [disabled]="castingIsPaused$ | async" (click)="onPauseCasting()">Остановить
+      </button>
+      <button pButton severity="danger" [disabled]="windowHasClose$ | async" (click)="onStopCasting()">Закрыть</button>
     </div>
 
     <div class="flex">

@@ -49,6 +49,7 @@ import {
   ListBoxComponent,
   ListBoxTemplates,
 } from '@lyri-cast/form';
+import { CheckboxModule } from 'primeng/checkbox';
 
 export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
   [SPLIT_PARTS_COUNT.NONE]: 'Нет',
@@ -74,6 +75,7 @@ export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
     FormsModule,
     CastingPreviewComponent,
     PageContainerComponent,
+    CheckboxModule,
   ],
   templateUrl: './song-page.component.html',
   styleUrl: './song-page.component.scss',
@@ -89,6 +91,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
   searchSig = signal<string>('');
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
+  chorusAfterCouplet = signal(true);
 
   songBooksDict: IUiLyriListItem<ISongBookName>[] = [];
 

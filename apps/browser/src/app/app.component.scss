@@ -8,18 +8,3 @@
 
   background-color: var(black);
 }
-
-.page {
-
-  &__tab-menu {
-    display: flex;
-    width: 100%;
-    height: var(--tab-menu-h);
-  }
-
-  &__wrapper {
-    width: 100%;
-    height: calc(100% - var(--tab-menu-h));
-    display: block;
-  }
-}

@@ -56,6 +56,7 @@ ipcMain.handle(
         ...args,
       });
       App.loadWindow(args.type);
+      App.openedWindows[args.type].menuBarVisible = false;
 
       return App.openedWindows[args.type].webContents.getProcessId();
     }

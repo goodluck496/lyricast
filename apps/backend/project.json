@@ -28,6 +28,17 @@
       "options": {
         "jestConfig": "apps/backend/jest.config.ts"
       }
+    },
+    "__build-not-working-but-maybe-use-in-future__": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "platform": "node",
+        "outputPath": "dist/apps/backend",
+        "main": "apps/backend/src/main.ts",
+        "tsConfig": "apps/backend/tsconfig.app.json",
+        "external": ["better-sqlite3", "tslib"],
+        "generatePackageJson": true
+      }
     }
   }
 }

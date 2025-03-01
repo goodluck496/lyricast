@@ -4,6 +4,8 @@
       <input pInputText placeholder="Поиск" [(ngModel)]="searchSig" (ngModelChange)="onSearch($event)" />
     </div>
     <div class="page-header__lyric-count">
+      <label for="chorusAfterCouplet">Припев после куплета</label>
+      <p-checkbox id="chorusAfterCouplet" inputId="chorusAfterCouplet" [binary]="true" [(ngModel)]="chorusAfterCouplet"></p-checkbox>
       <label for="lyric-count">Разделить припев<br />и куплет на блоки:</label>
       <p-dropdown id="lyric-count" inputId="lyric-count" [(ngModel)]="splitCount"
                   (onChange)="onSelectSplitValue($event.value)"
@@ -24,7 +26,7 @@
           <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
         </p-dropdown>
 
-        <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl">
+        <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl" [tabIndex]="0">
           <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
             <div class="list-item__wrapper">
               <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
@@ -37,7 +39,7 @@
 
     @if (selectedSong$ | async; as song) {
       @if (song) {
-        <lyri-song [song]="song" (selectLyricLine)="onSelectLyricLine($event)"></lyri-song>
+        <lyri-song [song]="song" (selectLyricLine)="onSelectLyricLine($event)" [tabIndex]="1"></lyri-song>
       }
 
     }

@@ -10,6 +10,10 @@
   --list-box-item-selected-bg: #0D99FF;
   --list-box-item-hover-bg: #92cdff;
   --list-box-item-selected-text-color: white;
+
+  &:focus {
+    outline: none;
+  }
 }
 
 .song {

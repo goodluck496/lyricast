@@ -10,20 +10,30 @@ import { Like, Repository } from 'typeorm';
 @Module({
   imports: [TypeOrmModule.forFeature([BibleTranslateEntity])],
   controllers: [BibleController],
-  providers: [BibleHtmlParserService, BibleXmlParserService, BibleByFilesService],
+  providers: [
+    BibleHtmlParserService,
+    BibleXmlParserService,
+    BibleByFilesService,
+  ],
+  exports: [BibleByFilesService]
 })
 export class BibleModule {
   constructor(
-    bibleHtmlParserService: BibleHtmlParserService,
-    bibleXmlParserService: BibleXmlParserService,
+    private bibleHtmlParserService: BibleHtmlParserService,
+    private bibleXmlParserService: BibleXmlParserService,
     private readonly bibleService: BibleByFilesService,
     @InjectRepository(BibleTranslateEntity)
     private readonly bibleTranslateRepo: Repository<BibleTranslateEntity>
   ) {
+    this.init();
+  }
+
+  init() {
     Promise.all([
-      bibleHtmlParserService.convertToJson(),
-      bibleXmlParserService.convertToJson(),
+      this.bibleHtmlParserService.convertToJson(),
+      this.bibleXmlParserService.convertToJson(),
     ]).then(async () => {
+      this.bibleService.isReady = true;
       for (const bibleObj of this.bibleService.getAllShortBibles()) {
         const bible = await this.bibleTranslateRepo.findOne({
           where: { keyForSearch: Like(bibleObj.keyForSearch) },

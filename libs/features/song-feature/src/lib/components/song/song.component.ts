@@ -23,6 +23,8 @@ import {DomHandler} from "primeng/dom";
 })
 export class SongComponent {
   songPageSelectSrv = inject(SongPageSelectService);
+  elRef = inject(ElementRef);
+
 
   song = input.required<ISong>();
   lyrics = computed<LyricForCasting[]>(() =>
@@ -47,6 +49,7 @@ export class SongComponent {
           this.selectedLyric.set(selectedLyric);
         }
         this.scrollToSelected();
+        this.elRef.nativeElement.focus();
       },
       { allowSignalWrites: true }
     );

@@ -3,7 +3,7 @@ import { MainComponent } from './pages/main/main.component';
 import { Pages } from '@lyri-cast/common-browser';
 
 export const appRoutes: Route[] = [
-  { path: '', redirectTo: Pages.MAIN, pathMatch: 'full' },
+  { path: '', redirectTo: [Pages.MAIN, Pages.SONGS_FEATURE].join('/'), pathMatch: 'full' },
   {
     path: Pages.MAIN,
     component: MainComponent,

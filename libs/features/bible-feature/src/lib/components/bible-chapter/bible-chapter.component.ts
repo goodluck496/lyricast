@@ -6,8 +6,8 @@ import {
   inject,
   input,
   OnInit,
-  signal, viewChild,
-  viewChildren
+  signal,
+  viewChildren,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgScrollbar } from 'ngx-scrollbar';
@@ -34,6 +34,7 @@ import { DomHandler } from 'primeng/dom';
 export class BibleChapterComponent implements OnInit {
   store = inject(Store);
   destroyRef = inject(DestroyRef);
+  elRef = inject(ElementRef);
   listItems = viewChildren<ElementRef<HTMLElement>>('verseItem');
 
   sections = input<BibleChapterSection[]>([]);
@@ -82,6 +83,8 @@ export class BibleChapterComponent implements OnInit {
       return;
     }
 
+    this.elRef.nativeElement.focus();
+
     const verseId = path[path.length - 1];
     if (this.selectedVerse()?.number.toString() === verseId) {
       return;
@@ -115,8 +118,7 @@ export class BibleChapterComponent implements OnInit {
           });
         }
       });
-    }, 1000)
-
+    }, 1000);
   }
 
   onSelectVerse(verse: BibleVerse) {

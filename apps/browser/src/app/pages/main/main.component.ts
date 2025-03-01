@@ -11,11 +11,21 @@ import { TabViewModule } from 'primeng/tabview';
 import { MenuItem, PrimeTemplate } from 'primeng/api';
 import { TabMenuModule } from 'primeng/tabmenu';
 import { Pages, PageTitlesMap } from '@lyri-cast/common-browser';
+import { HttpClient } from '@angular/common/http';
+import { BASE_API_TOKEN } from '@lyri-cast/common';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { catchError, first, Observable, of, switchMap, timer } from 'rxjs';
 
 @Component({
   selector: 'lyri-main-page',
   standalone: true,
-  imports: [RouterOutlet, TabViewModule, PrimeTemplate, TabMenuModule],
+  imports: [
+    RouterOutlet,
+    TabViewModule,
+    PrimeTemplate,
+    TabMenuModule,
+    ProgressSpinnerModule,
+  ],
   templateUrl: './main.component.html',
   styleUrl: './main.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,6 +33,8 @@ import { Pages, PageTitlesMap } from '@lyri-cast/common-browser';
 export class MainComponent implements OnInit {
   cdr = inject(ChangeDetectorRef);
   route = inject(ActivatedRoute);
+  http = inject(HttpClient);
+  BASE_API_TOKEN = inject(BASE_API_TOKEN);
 
   activePage?: MenuItem;
 
@@ -49,7 +61,30 @@ export class MainComponent implements OnInit {
     },
   ];
 
+  backendReady = false;
+
   ngOnInit() {
     this.cdr.detectChanges();
+
+    this.repeatCheckBackend().subscribe((res) => {
+      this.backendReady = !!res;
+      if (this.backendReady) {
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  getBackendReady(): Observable<boolean | null> {
+    return this.http
+      .get<boolean>(`${this.BASE_API_TOKEN}/ready`)
+      .pipe(catchError(() => of(null)));
+  }
+
+  repeatCheckBackend(): Observable<boolean | null> {
+    return timer(0, 2000).pipe(
+      // Запускаем немедленно, затем каждые 2 секунды
+      switchMap(() => this.getBackendReady()),
+      first((response) => !!response) // Останавливаем на успешном ответе
+    );
   }
 }

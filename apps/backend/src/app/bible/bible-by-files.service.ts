@@ -21,6 +21,8 @@ export class BibleByFilesService {
 
   biblesCache: Record<string, BibleTranslate> = {};
 
+  isReady = false;
+
   constructor(
     @InjectRepository(BibleTranslateEntity)
     private readonly bibleTranslateRepo: Repository<BibleTranslateEntity>

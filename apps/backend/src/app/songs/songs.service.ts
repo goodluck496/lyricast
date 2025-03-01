@@ -17,6 +17,8 @@ export class SongsService {
   bookCache: Record<string, ISongBook> = {};
   songCache: Record<string, ISong> = {};
 
+  isReady = false;
+
   readBookNames(): ISongBookName[] {
     try {
       const files = fs.readdirSync(this.assetsPath);

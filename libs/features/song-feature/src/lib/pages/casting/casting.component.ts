@@ -12,7 +12,6 @@ import {
 } from '@angular/core';
 import { ISong, LyricForCasting } from '@lyri-cast/entities';
 
-import { NgxFitTextModule } from '@pikselin/ngx-fittext';
 import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import Reveal, { Api } from 'reveal.js';
 
@@ -29,16 +28,16 @@ import {
 @Component({
   selector: 'lyri-casting-new-page',
   standalone: true,
-  imports: [NgxFitTextModule, Ng2FittextModule],
+  imports: [Ng2FittextModule],
   templateUrl: './casting.component.html',
   styleUrl: './casting.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CastingComponent implements OnInit, AfterViewInit {
-  private bridge = inject(BridgeService);
-  private cdr = inject(ChangeDetectorRef);
-  private elRef = inject(ElementRef<HTMLElement>);
-  private store = inject(Store);
+  private readonly  bridge = inject(BridgeService);
+  private readonly  cdr = inject(ChangeDetectorRef);
+  private readonly  elRef = inject(ElementRef<HTMLElement>);
+  private readonly  store = inject(Store);
 
   deckRef?: Reveal.Api;
 

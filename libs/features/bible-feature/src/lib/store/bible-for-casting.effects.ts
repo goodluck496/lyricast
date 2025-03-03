@@ -117,7 +117,7 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
         return fromPromise(
           this.window.electronContext
             .openWindow({
-              type: AppWindowTypes.BIBLE_CASTING,
+              type: AppWindowTypes.CASTING,
               title: 'Casting new',
               show: true,
               center: true,
@@ -126,7 +126,7 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
               display: selectedDisplay
             })
             .then((procId) => ({
-              type: AppWindowTypes.BIBLE_CASTING,
+              type: AppWindowTypes.CASTING,
               procId,
             }))
         ).pipe(
@@ -135,7 +135,7 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
             this.store.dispatch(
               AppActions.setProcId({
                 procId: openedWindow.procId,
-                pageType: AppWindowTypes.BIBLE_CASTING,
+                pageType: openedWindow.type,
               })
             );
           }),
@@ -158,7 +158,7 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
       ofType(BibleActions.stopCasting),
       map(() => {
         return AppActions.closeWindow({
-          windowType: AppWindowTypes.BIBLE_CASTING,
+          windowType: AppWindowTypes.CASTING,
         });
       })
     )

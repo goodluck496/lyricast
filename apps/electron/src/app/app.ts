@@ -179,9 +179,20 @@ export default class App {
       );
     }
 
-    App.openedWindows[windowType].loadURL(urlObject.href).then(() => {
+    const openedWindow = App.openedWindows[windowType];
+    openedWindow.loadURL(urlObject.href).then(() => {
       if (windowType === AppWindowTypes.MAIN) {
         App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+      }
+    });
+
+    openedWindow.once('ready-to-show', () => {
+      if (windowType === AppWindowTypes.MAIN) {
+        openedWindow.focus();
+      } else {
+        App.openedWindows.MAIN.focus();
+        openedWindow.setFullScreen(true);
+
       }
     });
   }

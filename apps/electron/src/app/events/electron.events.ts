@@ -41,21 +41,21 @@ ipcMain.handle(
     /**
      * todo можно оформить в отдельную функцию
      */
-    if (
-      args.type === AppWindowTypes.BIBLE_CASTING ||
-      args.type === AppWindowTypes.SONG_CASTING
-    ) {
+    if (args.type === AppWindowTypes.CASTING) {
       const { x, y } = args.display.bounds;
-
       App.createWindow(args.type, {
         webPreferences: {
           ...DEFAULT_WEB_PREF,
         },
         x,
         y,
+        fullscreenable: true,
+        fullscreen: true,
+        alwaysOnTop: true,
         ...args,
       });
       App.loadWindow(args.type);
+      // App.openedWindows[args.type].menuBarVisible = true;
       App.openedWindows[args.type].menuBarVisible = false;
 
       return App.openedWindows[args.type].webContents.getProcessId();
@@ -107,11 +107,10 @@ ipcMain.handle(ElectronAppEvents.GET_DISPLAYS, () => {
   const displays = screen.getAllDisplays();
   const primaryId = screen.getPrimaryDisplay().id;
 
-  return displays.map(el => {
-
+  return displays.map((el) => {
     return {
       ...el,
-      primary: el.id === primaryId
-    }
-  })
+      primary: el.id === primaryId,
+    };
+  });
 });

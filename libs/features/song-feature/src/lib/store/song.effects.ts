@@ -1,14 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import {
-  filter,
-  map,
-  mergeMap,
-  of,
-  switchMap,
-  tap,
-  withLatestFrom,
-} from 'rxjs';
+import { filter, map, of, switchMap, tap, withLatestFrom } from 'rxjs';
 import {
   APP_COMMON_ACTIONS,
   AppWindowTypes,
@@ -138,7 +130,7 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
     this.actions$.pipe(
       ofType(SongActions.openCasting),
       withLatestFrom(this.store.select(selectOpenedWindow)),
-      mergeMap(([, windowData]) => {
+      switchMap(([, windowData]) => {
         if (windowData) {
           return of(
             SongActions.openPage({
@@ -154,7 +146,7 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
         return fromPromise(
           this.window.electronContext
             .openWindow({
-              type: AppWindowTypes.SONG_CASTING,
+              type: AppWindowTypes.CASTING,
               title: 'Casting new',
               show: true,
               center: true,
@@ -162,7 +154,7 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
               display: selectedDisplay,
             })
             .then((procId) => ({
-              type: AppWindowTypes.SONG_CASTING,
+              type: AppWindowTypes.CASTING,
               procId,
             }))
         ).pipe(
@@ -170,7 +162,7 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
             this.store.dispatch(
               AppActions.setProcId({
                 procId: openedWindow.procId,
-                pageType: AppWindowTypes.SONG_CASTING,
+                pageType: openedWindow.type,
               })
             );
           }),

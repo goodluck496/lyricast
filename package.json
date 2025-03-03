@@ -52,6 +52,7 @@
     "bootstrap": "5.3.3",
     "cheerio": "^1.0.0",
     "electron-log": "^5.3.0",
+    "lodash-es": "^4.17.21",
     "ng2-fittext": "^2.0.0",
     "ngx-scrollbar": "^16.1.1",
     "primeicons": "^6.0.1",

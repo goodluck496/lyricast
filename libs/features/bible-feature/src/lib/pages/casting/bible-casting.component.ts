@@ -39,10 +39,10 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BibleCastingComponent implements OnInit, AfterViewInit {
-  private bridge = inject(BridgeService);
-  private cdr = inject(ChangeDetectorRef);
-  private elRef = inject(ElementRef<HTMLElement>);
-  private store = inject(Store);
+  private readonly  bridge = inject(BridgeService);
+  private readonly  cdr = inject(ChangeDetectorRef);
+  private readonly  elRef = inject(ElementRef<HTMLElement>);
+  private readonly  store = inject(Store);
 
   deckRef?: Reveal.Api;
 
@@ -102,7 +102,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     this.clearSlides();
 
     this.selectedBook.set(payload.book);
-    this.selectedBookTitle.set(payload.book.title.short);
+    this.selectedBookTitle.set(payload.book.title.full);
     this.selectedContents.set(payload.content);
     this.selectedChapterId.set(payload.chapter.number);
     this.showingContent.set(true);
@@ -135,13 +135,11 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
     const bookName = BOOK_NAMES[payload.currentContent.bookId];
 
-    this.selectedBookTitle.set(bookName.short);
+    this.selectedBookTitle.set(bookName.full);
     this.selectedChapterId.set(payload.currentContent.chapterId);
     this.selectedVerseId.set(payload.currentContent.number);
 
-    // this.selectedLyric.set(payload.currentLyric);
     this.cdr.detectChanges();
-    // this.updateTextSize();
   }
 
   async initReveal(): Promise<Api> {

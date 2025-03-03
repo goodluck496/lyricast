@@ -4,9 +4,9 @@
       <input pInputText placeholder="Поиск" [(ngModel)]="searchSig" (ngModelChange)="onSearch($event)" />
     </div>
     <div class="page-header__lyric-count">
-      <label for="chorusAfterCouplet">Припев после куплета</label>
+      <label for="chorusAfterCouplet">Повторять<br>припев</label>
       <p-checkbox id="chorusAfterCouplet" inputId="chorusAfterCouplet" [binary]="true" [(ngModel)]="chorusAfterCouplet"></p-checkbox>
-      <label for="lyric-count">Разделить припев<br />и куплет на блоки:</label>
+      <label for="lyric-count">Разделить <br>на блоки:</label>
       <p-dropdown id="lyric-count" inputId="lyric-count" [(ngModel)]="splitCount"
                   (onChange)="onSelectSplitValue($event.value)"
                   [options]="SplitPartsCountOptions"></p-dropdown>
@@ -52,8 +52,8 @@
     <button pButton (click)="onStartCasting()">транслировать</button>
     <button pButton (click)="onStartCasting(true)">Начать с выбранного слайда</button>
     <div class="flex">
-      <button pButton severity="danger" (click)="onPauseCasting()">Остановить</button>
-      <button pButton severity="danger" (click)="onCloseCasting()">Закрыть</button>
+      <button pButton severity="danger" [disabled]="(castingIsPaused$ | async) === true" (click)="onPauseCasting()">Остановить</button>
+      <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false" (click)="onCloseCasting()">Закрыть</button>
     </div>
 
     <div class="flex">

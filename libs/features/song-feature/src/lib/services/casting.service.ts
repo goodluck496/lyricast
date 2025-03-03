@@ -8,10 +8,13 @@ import {
   SongStartCastingPayload,
 } from '../store/index';
 import { Store } from '@ngrx/store';
+import { selectCastingPaused } from '../store/song.selectors';
 
 @Injectable({ providedIn: 'root' })
 export class CastingService {
-  private store = inject(Store<SongPageState>);
+  private readonly  store = inject(Store<SongPageState>);
+
+  castingPaused$ = this.store.select(selectCastingPaused);
 
   openCastingPageHandler(data: SongStartCastingPayload): void {
     this.store.dispatch(SongActions.openCasting(data));
@@ -24,7 +27,7 @@ export class CastingService {
   closeCasting() {
     this.store.dispatch(
       AppActions.closeWindow({
-        windowType: AppWindowTypes.SONG_CASTING,
+        windowType: AppWindowTypes.CASTING,
       })
     );
   }

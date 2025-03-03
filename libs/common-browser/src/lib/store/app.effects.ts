@@ -13,10 +13,10 @@ import { ActionOpenPageProps, AppActions } from './app.store';
 
 @Injectable()
 export class AppEffects {
-  actions$ = inject(Actions);
-  bridge = inject(BridgeService);
-  store = inject(Store);
-  private router = inject(Router);
+  private readonly actions$ = inject(Actions);
+  private readonly bridge = inject(BridgeService);
+  private readonly store = inject(Store);
+  private readonly router = inject(Router);
 
   constructor() {
     this.bridge.queueEvents.subscribe((data) => {
@@ -37,7 +37,6 @@ export class AppEffects {
     switch (eventData.event) {
       case APP_COMMON_ACTIONS.openPage: {
         const data = eventData.payload as ActionOpenPageProps;
-
         return AppActions.openPage({
           path: data.path,
         });
@@ -57,7 +56,9 @@ export class AppEffects {
       ofType(AppActions.openPage),
       filter(() => this.bridge.windowType !== AppWindowTypes.MAIN),
       tap((data) => {
-        this.router.navigate(data.path);
+        this.router
+          .navigate(['/', ...data.path])
+          .then((r) => console.log('open page', r));
       }),
       map((data) => ({ type: APP_COMMON_ACTIONS.openPage, payload: data }))
     )

@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   ElementRef,
   inject,
   OnInit,
@@ -10,11 +11,14 @@ import {
 import { PrimeTemplate } from 'primeng/api';
 
 import {
+  BehaviorSubject,
+  combineLatest,
   debounceTime,
   fromEvent,
   map,
   Observable,
   of,
+  startWith,
   switchMap,
   tap,
 } from 'rxjs';
@@ -25,10 +29,12 @@ import {
   IShortSong,
   ISong,
   ISongBookName,
+  Lyric,
   LyricForCasting,
   LyricLine,
+  LyricTypeEnum,
 } from '@lyri-cast/entities';
-import { filterEmpty } from '@lyri-cast/common';
+import { filterEmpty, snapshot } from '@lyri-cast/common';
 import { DropdownModule } from 'primeng/dropdown';
 import { ListboxModule } from 'primeng/listbox';
 import { ButtonDirective } from 'primeng/button';
@@ -50,6 +56,9 @@ import {
   ListBoxTemplates,
 } from '@lyri-cast/form';
 import { CheckboxModule } from 'primeng/checkbox';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { selectCastingPaused } from '../../store/song.selectors';
+import { selectOpenedWindow } from '@lyri-cast/common-browser';
 
 export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
   [SPLIT_PARTS_COUNT.NONE]: 'Нет',
@@ -83,11 +92,12 @@ export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
 })
 export class SongPageComponent implements OnInit, AfterViewInit {
   private songPageSelectSrv = inject(SongPageSelectService);
-  private songsApiService = inject(SongsApiService);
-  private castingSrv = inject(CastingService);
-  private cdr = inject(ChangeDetectorRef);
-  private elRef = inject(ElementRef);
-  private store = inject(Store);
+  private readonly songsApiService = inject(SongsApiService);
+  private readonly castingSrv = inject(CastingService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly elRef = inject(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly store = inject(Store);
 
   searchSig = signal<string>('');
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
@@ -133,7 +143,8 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       })
     );
 
-  selectedSong$: Observable<ISong | null> = this.songControl.valueChanges.pipe(
+  selectedSong$ = new BehaviorSubject<ISong | null>(null);
+  _selectedSong$: Observable<ISong | null> = this.songControl.valueChanges.pipe(
     switchMap((data) => {
       const selectedBook = this.selectedBook.value;
       if (!selectedBook) {
@@ -151,19 +162,12 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     }),
     // filterEmpty(), //почему-то даже в случае возвращения switchMapом null,
     // в data лежит предыдущий объект, можно пофиксить в рамках рефакторинга
-    tap((data) => {
-      if (!data) {
-        return;
-      }
-
-      this.songPageSelectSrv.selectSong(data);
-      this.store.dispatch(SongActions.selectSong(data));
-      const splitCount =
-        data.lyrics[0]?.splitLinesCount || SPLIT_PARTS_COUNT.NONE;
-      this.splitCount.set(splitCount);
-      this.songPageSelectSrv.setSplitCountValue(splitCount);
-    })
   );
+
+  changeChorusAfterCouplet$ = toObservable(this.chorusAfterCouplet);
+
+  castingIsPaused$ = this.store.select(selectCastingPaused);
+  openedCastingWindow$ = this.store.select(selectOpenedWindow).pipe(map(e => !!e))
 
   ngOnInit() {
     fromEvent<KeyboardEvent>(this.elRef.nativeElement, 'keydown')
@@ -180,17 +184,96 @@ export class SongPageComponent implements OnInit, AfterViewInit {
           }
         }
       });
+
+    combineLatest([
+      this._selectedSong$.pipe(filterEmpty()),
+      this.changeChorusAfterCouplet$.pipe(startWith(true)),
+    ])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([song, changeChorusAfterCouplet]) => {
+        const newSong = this.updateSong(song);
+
+        ///////// todo сделать отдельной функцией
+        this.songPageSelectSrv.selectSong(newSong);
+        this.store.dispatch(SongActions.selectSong(newSong));
+        this.store.dispatch(SongActions.pauseCasting());
+        const splitCount =
+          newSong.lyrics[0]?.splitLinesCount || SPLIT_PARTS_COUNT.NONE;
+        this.splitCount.set(splitCount);
+        this.songPageSelectSrv.setSplitCountValue(splitCount);
+        /////////////////////////
+        this.selectedSong$.next(newSong);
+
+        this.cdr.detectChanges();
+      });
   }
 
   ngAfterViewInit() {
-    this.songBooksDict$.pipe().subscribe((data) => {
-      this.songBooksDict = [...data];
-      const book = data.find((el) => el.searchKey.includes('pesn'));
-      if (!book) {
-        return;
+    this.songBooksDict$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data) => {
+        this.songBooksDict = [...data];
+        const book = data.find((el) => el.searchKey.includes('pesn'));
+        if (!book) {
+          return;
+        }
+        this.selectedBook.setValue(book);
+      });
+  }
+
+  updateSong(song: ISong): ISong {
+    const cloneSong: ISong = JSON.parse(JSON.stringify(song));
+
+    if (!this.chorusAfterCouplet()) {
+      return {
+        ...cloneSong,
+        lyrics: clearChorus(cloneSong.lyrics),
+      };
+    }
+
+    // удаляет дублирующиеся куплеты
+    function clearChorus(lyrics: Lyric[]) {
+      const newLyric: Lyric[] = [];
+
+      lyrics.forEach((lyric) => {
+        const foundChorus = newLyric.find(
+          (el) => el.type === LyricTypeEnum.CHORUS
+        );
+        if (foundChorus && lyric.type === LyricTypeEnum.CHORUS) {
+          return;
+        }
+        newLyric.push(lyric);
+      });
+
+      return newLyric;
+    }
+
+    // добавляет куплеты после припевов
+    function insertChorus(lyrics: Lyric[]) {
+      const result: Lyric[] = [];
+      const chorus = lyrics.find((item) => item.type === LyricTypeEnum.CHORUS);
+      if (!chorus) return lyrics;
+
+      for (let i = 0; i < lyrics.length; i++) {
+        const lyric = lyrics[i];
+        const nextLyricIsChorus = lyrics[i + 1]?.type === LyricTypeEnum.CHORUS;
+
+        result.push(lyric);
+
+        if (lyric.type === LyricTypeEnum.COUPLET && !nextLyricIsChorus) {
+          result.push({
+            ...chorus,
+            uniqId: lyric.uniqId + (Math.random() * 1000).toFixed(0),
+          });
+        }
       }
-      this.selectedBook.setValue(book);
-    });
+
+      return result;
+    }
+
+    cloneSong.lyrics = insertChorus(song.lyrics);
+
+    return cloneSong;
   }
 
   public onSearch(value: string) {
@@ -222,7 +305,9 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   ]): void {
     this.songPageSelectSrv.showPreview(true, lyric, line);
 
-    if (startPresentation) {
+    const paused = snapshot(this.castingSrv.castingPaused$);
+
+    if (startPresentation || !paused) {
       this.onStartCasting(true);
     }
   }

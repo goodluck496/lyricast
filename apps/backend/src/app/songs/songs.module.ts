@@ -3,6 +3,7 @@ import { SongsController } from './songs.controller';
 import { SongsService } from './songs.service';
 import { ParseSongsService } from './parse-songs.service';
 import { ParseSongsFromJsonService } from './parse-songs-from-json.service';
+import { environment } from '../../environments/environment';
 
 @Module({
   controllers: [SongsController],
@@ -16,8 +17,11 @@ export class SongsModule {
     songsService: SongsService
   ) {
     try {
-      parseSongsService.convertSourceToJson();
-      parseSongsFromJSonService.convertSourceToJson();
+      if (!environment.production) {
+        parseSongsService.convertSourceToJson();
+        parseSongsFromJSonService.convertSourceToJson();
+      }
+
       songsService.isReady = true;
     } catch (err) {
       console.error(err);

@@ -19,9 +19,10 @@ import {
 import { BibleApiService } from '../services/index';
 import { BibleState } from './bible.store';
 import {
+  selectBooks,
   selectCastingPaused,
   selectCastingProcess,
-  selectSelectedBibleVerse,
+  selectSelectedBibleVerse, selectSelectedBook
 } from './bible.selectors';
 import {
   AppActions,
@@ -181,13 +182,15 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
     this.actions$.pipe(
       ofType(BibleActions.selectPrevOrNextVerse),
       withLatestFrom(
+        this.store.select(selectSelectedBook),
         this.store.select(selectSelectedBibleVerse),
         this.store.select(selectCastingPaused)
       ),
-      map(([nextVerse, selectedVerse, paused]) => {
+      map(([nextVerse, selectedBook, selectedVerse, paused]) => {
         if (!selectedVerse || paused) {
           return { type: BibleActionsEnum.selectPrevOrNextVerse };
         }
+
 
         this.store.dispatch(
           BibleActions.castingProcessChange({
@@ -195,6 +198,7 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
             currentContent: {
               ...selectedVerse,
               text: [selectedVerse.text],
+              bookTitle: selectedBook!.title,
             },
           })
         );

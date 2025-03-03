@@ -11,9 +11,6 @@ import {
   BOOK_NAMES,
 } from '@lyri-cast/entities';
 import fs from 'fs';
-import { InjectRepository } from '@nestjs/typeorm';
-import { BibleTranslateEntity } from '../database/entities/bible/bible-translate.entity';
-import { Repository } from 'typeorm';
 
 @Injectable()
 export class BibleByFilesService {
@@ -23,10 +20,7 @@ export class BibleByFilesService {
 
   isReady = false;
 
-  constructor(
-    @InjectRepository(BibleTranslateEntity)
-    private readonly bibleTranslateRepo: Repository<BibleTranslateEntity>
-  ) {}
+  constructor() {} // private readonly bibleTranslateRepo: Repository<BibleTranslateEntity> // @InjectRepository(BibleTranslateEntity)
 
   getAllBibles(): BibleTranslate[] {
     const allBibles = this.getAllShortBibles();
@@ -76,11 +70,11 @@ export class BibleByFilesService {
     }
 
     return translate.books.map((book) => {
-      const bookName = BOOK_NAMES[book.number];
+      const bookName = book.title ?? BOOK_NAMES[book.number];
       return {
         ...book,
         title: bookName ?? book.title,
-      }
+      };
     });
   }
 

@@ -19,12 +19,12 @@ import {
 import { InputTextModule } from 'primeng/inputtext';
 import { DropdownModule } from 'primeng/dropdown';
 import {
-  BibleBookShort,
+  BibleBookShort, BibleBookTitle,
   BibleBookType,
   BibleChapterSection,
   BibleChapterShort,
   BibleTranslateShort,
-  BibleVerse,
+  BibleVerse
 } from '@lyri-cast/entities';
 import {
   combineLatest,
@@ -295,6 +295,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
                 return {
                   ...el,
                   text: [el.text],
+                  bookTitle: groupValue?.book?.baseEntity?.title as BibleBookTitle
                 };
               }),
             })

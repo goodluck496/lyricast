@@ -18,7 +18,13 @@
           "buildTarget": "backend:build:development"
         },
         "production": {
-          "buildTarget": "backend:build:production"
+          "buildTarget": "backend:build:production",
+          "fileReplacements": [
+            {
+              "replace": "apps/backend/src/environments/environment.ts",
+              "with": "apps/backend/src/environments/environment.prod.ts"
+            }
+          ]
         }
       }
     },

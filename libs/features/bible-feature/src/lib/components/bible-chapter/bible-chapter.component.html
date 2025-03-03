@@ -10,6 +10,7 @@
         @for (verse of section.content; track verse.number) {
           <div #verseItem class="bible-chapter-section__verse list-item"
                [class.bible-chapter-section__verse--selected]="selectedVerse()?.number === verse.number"
+               (dblclick)="onSelectVerse(verse, true)"
                (click)="onSelectVerse(verse)">
             <div class="bible-chapter-section__verse-number">
               <div class="list-item__number">{{ verse.number }}</div>

@@ -10,11 +10,7 @@ import {
   signal,
   viewChildren,
 } from '@angular/core';
-import {
-  BibleBookShort,
-  BibleVerseForCasting,
-  BOOK_NAMES,
-} from '@lyri-cast/entities';
+import { BibleBookShort, BibleVerseForCasting } from '@lyri-cast/entities';
 import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import Reveal, { Api } from 'reveal.js';
 
@@ -39,10 +35,10 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BibleCastingComponent implements OnInit, AfterViewInit {
-  private readonly  bridge = inject(BridgeService);
-  private readonly  cdr = inject(ChangeDetectorRef);
-  private readonly  elRef = inject(ElementRef<HTMLElement>);
-  private readonly  store = inject(Store);
+  private readonly bridge = inject(BridgeService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly elRef = inject(ElementRef<HTMLElement>);
+  private readonly store = inject(Store);
 
   deckRef?: Reveal.Api;
 
@@ -133,7 +129,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
       this.deckRef.slide(undefined, payload.nextIndex);
     }
 
-    const bookName = BOOK_NAMES[payload.currentContent.bookId];
+    const bookName = payload.currentContent.bookTitle;
 
     this.selectedBookTitle.set(bookName.full);
     this.selectedChapterId.set(payload.currentContent.chapterId);

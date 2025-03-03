@@ -44,6 +44,8 @@ type TranslateMetaInfo = {
    * в случае если использовать "классический" порядок книг
    */
   isClassicBookOrder: false;
+
+  bookNames: Record<number, { short: string; full: string }>;
 };
 
 @Injectable()
@@ -136,7 +138,9 @@ export class BibleXmlParserService {
                       text: verse._, // Текст стиха
                       bookId: book.number,
                       chapterId: currentChapter.number,
-                      path: [book.number, chapterNumber, verseNumber].map(String),
+                      path: [book.number, chapterNumber, verseNumber].map(
+                        String
+                      ),
                       next: {
                         path: [],
                         bookId: book.number,
@@ -228,6 +232,7 @@ export class BibleXmlParserService {
             enable,
             keyForSearch,
             isClassicBookOrder,
+            bookNames,
           }: TranslateMetaInfo = JSON.parse(metaString);
 
           if (!enable) {
@@ -243,6 +248,13 @@ export class BibleXmlParserService {
             });
 
             const parseResult = await this.parseXMLContent(bibleContent);
+
+            if (bookNames) {
+              parseResult.books.forEach((book) => {
+                const bookTitle = bookNames[book.number];
+                book.title = bookTitle;
+              });
+            }
 
             if (keyForSearch) {
               translate.keyForSearch = keyForSearch;
@@ -436,7 +448,9 @@ export class BibleXmlParserService {
       book.chapters.forEach((chapter) =>
         chapter.subsections.forEach((section) =>
           section.content.forEach((verse) => {
-            verse.path = [book.number, chapter.number, verse.number].map(String);
+            verse.path = [book.number, chapter.number, verse.number].map(
+              String
+            );
             verse.prev = createLink(previousVerse, verse);
             if (previousVerse)
               previousVerse.next = createLink(verse, previousVerse);

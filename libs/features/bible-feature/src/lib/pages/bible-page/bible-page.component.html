@@ -65,7 +65,7 @@
 
 
       @if ((sectionList$ | async); as sections) {
-        <lyri-bible-chapter [sections]="sections" [tabIndex]="2"></lyri-bible-chapter>
+        <lyri-bible-chapter [sections]="sections" [tabIndex]="2" (startCasting)="onStartCasting()"></lyri-bible-chapter>
       }
     }
 

@@ -6,6 +6,7 @@ import {
   inject,
   input,
   OnInit,
+  output,
   signal,
   viewChildren,
 } from '@angular/core';
@@ -38,6 +39,8 @@ export class BibleChapterComponent implements OnInit {
   listItems = viewChildren<ElementRef<HTMLElement>>('verseItem');
 
   sections = input<BibleChapterSection[]>([]);
+
+  startCasting = output();
 
   selectedVerse = signal<BibleVerse | null>(null);
   selectedVerse$ = this.store.select(selectSelectedBibleVerse);
@@ -121,7 +124,11 @@ export class BibleChapterComponent implements OnInit {
     }, 1000);
   }
 
-  onSelectVerse(verse: BibleVerse) {
+  onSelectVerse(verse: BibleVerse, casting = false) {
     this.store.dispatch(BibleActions.selectBibleVerse(verse));
+
+    if (casting) {
+      this.startCasting.emit();
+    }
   }
 }

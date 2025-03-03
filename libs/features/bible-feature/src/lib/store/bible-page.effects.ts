@@ -22,6 +22,7 @@ import {
 import { EventData } from '@lyri-cast/common-electron';
 import {
   BibleBookShort,
+  BibleBookTitle,
   BibleChapter,
   BibleChapterSection,
 } from '@lyri-cast/entities';
@@ -172,12 +173,17 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
   selectVerse$ = createEffect(() =>
     this.actions$.pipe(
       ofType(BibleActions.selectBibleVerse),
-      withLatestFrom(this.store.select(selectCastingPaused)),
+      withLatestFrom(
+        this.store.select(selectCastingPaused),
+        this.store.select(selectBooks)
+      ),
       filter(([verse, paused]) => !paused),
-      map(([verse, paused]) => {
+      map(([verse, paused, books]) => {
+        const book = books.find((book) => book.number === verse.bookId);
         return BibleActions.castingProcessChange({
           currentContent: {
             ...verse,
+            bookTitle: book!.title as BibleBookTitle,
             text: [verse.text],
           },
           nextIndex: verse.number,

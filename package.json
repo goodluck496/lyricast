@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "electron-builder install-app-deps && npm run __rebuild:better-sqlite",
     "_build:browser": "nx run browser:build:production",
-    "_build:electron": "nx run electron:build",
+    "_build:electron": "nx run electron:build:production",
     "_package:electron": "nx run electron:package",
     "_build:backend": "nx run backend:build",
     "_start:backend": "nx run backend:serve",

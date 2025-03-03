@@ -9,14 +9,15 @@ export type BibleVerse = {
   text: string;
   chapterId: number;
   bookId: number;
-  path: string[],
+  path: string[];
   next: PrevOrNextVerse;
   prev: PrevOrNextVerse;
 };
 
 export type BibleVerseForCasting = Omit<BibleVerse, 'text'> & {
   text: string[];
-}
+  bookTitle: { short: string; full: string };
+};
 
 export type BibleChapterSection = {
   heading: string;
@@ -46,9 +47,10 @@ export enum BibleBookType {
   Apocalyptic = 'Apocalyptic', // Апокалиптические книги
 }
 
+export type BibleBookTitle = { short: string; full: string }
 export type BibleBook = {
   number: number;
-  title: { short: string; full: string };
+  title: BibleBookTitle;
   chapters: BibleChapter[];
   type: BibleBookType;
 };
@@ -61,5 +63,5 @@ export type BibleTranslate = {
   version: string;
   books: BibleBook[];
   isDefault: boolean;
-  isClassicBookOrder: boolean
+  isClassicBookOrder: boolean;
 };

@@ -28,9 +28,11 @@ export default class Main {
   }
 
   static bootstrapBackend() {
+    console.log('run backend?', environment.production);
     if (!environment.production) {
       return;
     }
+    console.log('yes');
 
     const child = require('child_process');
     const path = require('path');

@@ -59,6 +59,7 @@ import {
   ListBoxTemplates,
 } from '@lyri-cast/form';
 import { selectOpenedWindow } from '@lyri-cast/common-browser';
+import { BibleCastingComponent } from '../casting/bible-casting.component';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -74,6 +75,7 @@ import { selectOpenedWindow } from '@lyri-cast/common-browser';
     HighlighterPipe,
     ButtonDirective,
     BibleChapterComponent,
+    BibleCastingComponent,
   ],
   templateUrl: './bible-page.component.html',
   styleUrl: './bible-page.component.scss',
@@ -295,7 +297,8 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
                 return {
                   ...el,
                   text: [el.text],
-                  bookTitle: groupValue?.book?.baseEntity?.title as BibleBookTitle
+                  bookTitle: groupValue?.book?.baseEntity
+                    ?.title as BibleBookTitle,
                 };
               }),
             })

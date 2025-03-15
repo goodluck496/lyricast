@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import fs from 'fs';
+import * as fs from 'fs';
 
 const DB_PATH = 'RST+.SQLite3'; // Укажи путь к файлу SQLite
 // const DB_PATH = 'KYB.SQLite3'; // Укажи путь к файлу SQLite

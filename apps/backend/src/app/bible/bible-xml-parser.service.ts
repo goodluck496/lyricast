@@ -9,7 +9,6 @@ import {
   BibleChapterSection,
   BibleTranslate,
   BibleVerse,
-  BOOK_NAMES,
   PrevOrNextVerse,
 } from '@lyri-cast/entities';
 
@@ -66,12 +65,12 @@ export class BibleXmlParserService {
     if (bookNumber >= 28 && bookNumber <= 39) return BibleBookType.MinorProphet;
     if (bookNumber >= 40 && bookNumber <= 43) return BibleBookType.Gospel;
     if (bookNumber === 44) return BibleBookType.Acts;
-    if ([58, 59, 60].includes(bookNumber)) return BibleBookType.PastoralEpistle; // Пастырские послания
-    if (bookNumber >= 52 && bookNumber <= 57)
+    if ([54, 55, 56].includes(bookNumber)) return BibleBookType.PastoralEpistle; // Пастырские послания
+    if ((bookNumber >= 45 && bookNumber <= 53) || bookNumber === 57)
       return BibleBookType.PaulineEpistle; // Послания Павла
     if (
-      (bookNumber >= 61 && bookNumber <= 65) ||
-      (bookNumber >= 45 && bookNumber <= 51)
+      bookNumber >= 59 &&
+      bookNumber <= 65
     )
       return BibleBookType.GeneralEpistle; // Общие послания
     if (bookNumber === 66) return BibleBookType.Apocalyptic;
@@ -79,11 +78,26 @@ export class BibleXmlParserService {
   }
 
   parseXMLContent(xmlString: string): Promise<BibleTranslate> {
-    const parser = new xml2js.Parser();
+    function addCDATA(xml: string): string {
+      // Найдем все элементы <verse>, содержащие HTML теги, и заменим их на CDATA
+      return xml.replace(
+        /<verse([^>]*)>(.*?)<\/verse>/g,
+        (match, attrs, content) => {
+          // Помещаем контент в CDATA, чтобы сохранить HTML теги внутри
+          return `<verse${attrs}><![CDATA[${content}]]></verse>`;
+        }
+      );
+    }
+
+    const xmlWithCDATA = addCDATA(xmlString);
+
+    const parser = new xml2js.Parser({
+      normalizeTags: false, // Оставляем теги в исходном виде
+    });
 
     // Возвращаем промис, чтобы дождаться завершения парсинга
     return new Promise((resolve, reject) => {
-      parser.parseString(xmlString, (err, data) => {
+      parser.parseString(xmlWithCDATA, (err, data) => {
         const result: BibleTranslate = {
           lang: '',
           sourceTitle: '',
@@ -101,14 +115,17 @@ export class BibleXmlParserService {
 
           containers.map((testament) => {
             // Создаем массив книг
-            const books = testament.book.map((bibleBook) => {
+            const books = testament.book.map((bibleBook, index: number) => {
               // Объект книги
-              const bookNumber = bibleBook.$.number;
+              const bookNumber = String(index + 1); //bibleBook.$.number;
+              const bookShortName = bibleBook.$.short_number;
+              const bookFullName = bibleBook.$.long_name;
               const book: BibleBook = {
                 number: +bookNumber,
-                title: BOOK_NAMES[bookNumber] ?? {
-                  full: bookNumber,
-                  short: bookNumber,
+                // title: BOOK_NAMES[bookNumber] ?? {
+                title: {
+                  full: bookFullName,
+                  short: bookShortName,
                 }, // Название книги
                 chapters: [],
                 type: BibleBookType.Law,
@@ -287,141 +304,6 @@ export class BibleXmlParserService {
       }
     } catch (error) {
       console.log('ERROR', error);
-    }
-  }
-
-  patchBibleVerse2(bible: BibleTranslate) {
-    const books = bible.books;
-    let previousVerse: BibleVerse | null = null;
-
-    for (let bookIndex = 0; bookIndex < books.length; bookIndex++) {
-      const book = books[bookIndex];
-      for (
-        let chapterIndex = 0;
-        chapterIndex < book.chapters.length;
-        chapterIndex++
-      ) {
-        const chapter = book.chapters[chapterIndex];
-        for (const section of chapter.subsections) {
-          for (
-            let verseIndex = 0;
-            verseIndex < section.content.length;
-            verseIndex++
-          ) {
-            const verse = section.content[verseIndex];
-
-            // Устанавливаем prev ссылку
-            if (previousVerse) {
-              verse.prev = {
-                number: previousVerse.number,
-                chapterId: previousVerse.chapterId,
-                bookId: previousVerse.bookId,
-                path: [
-                  previousVerse.bookId,
-                  previousVerse.chapterId,
-                  previousVerse.number,
-                ]
-                  .toString()
-                  .split(','),
-                contentType: previousVerse.contentType,
-                chapterChanged: previousVerse.chapterId !== verse.chapterId,
-                bookChanged: previousVerse.bookId !== verse.bookId,
-              };
-              previousVerse.next = {
-                number: verse.number,
-                chapterId: verse.chapterId,
-                bookId: verse.bookId,
-                path: [verse.bookId, verse.chapterId, verse.number]
-                  .toString()
-                  .split(','),
-                contentType: verse.contentType,
-                chapterChanged: previousVerse.chapterId !== verse.chapterId,
-                bookChanged: previousVerse.bookId !== verse.bookId,
-              };
-            }
-
-            previousVerse = verse;
-          }
-        }
-      }
-    }
-
-    // Замыкаем последнюю и первую книги
-    if (previousVerse && books.length > 0) {
-      const firstBook = books[0];
-      const firstChapter = firstBook.chapters[0];
-      const firstVerse = firstChapter.subsections[0].content[0];
-      previousVerse.next = {
-        number: firstVerse.number,
-        chapterId: firstVerse.chapterId,
-        bookId: firstVerse.bookId,
-        path: [firstVerse.bookId, firstVerse.chapterId, firstVerse.number]
-          .toString()
-          .split(','),
-        contentType: firstVerse.contentType,
-        chapterChanged: previousVerse.chapterId !== firstVerse.chapterId,
-        bookChanged: previousVerse.bookId !== firstVerse.bookId,
-      };
-      firstVerse.prev = {
-        number: previousVerse.number,
-        chapterId: previousVerse.chapterId,
-        bookId: previousVerse.bookId,
-        path: [
-          previousVerse.bookId,
-          previousVerse.chapterId,
-          previousVerse.number,
-        ]
-          .toString()
-          .split(','),
-        contentType: previousVerse.contentType,
-        chapterChanged: previousVerse.chapterId !== firstVerse.chapterId,
-        bookChanged: previousVerse.bookId !== firstVerse.bookId,
-      };
-    }
-  }
-
-  patchBibleVerse3(bible: BibleTranslate) {
-    const books = bible.books;
-    let previousVerse: BibleVerse | null = null;
-
-    const createPrevOrNext = (
-      verse: BibleVerse | null,
-      target: BibleVerse
-    ): PrevOrNextVerse | null => {
-      if (!verse) return null;
-      return {
-        number: verse.number,
-        chapterId: verse.chapterId,
-        bookId: verse.bookId,
-        path: [
-          verse.bookId.toString(),
-          verse.chapterId.toString(),
-          verse.number.toString(),
-        ],
-        contentType: verse.contentType,
-        chapterChanged: verse.chapterId !== target.chapterId,
-        bookChanged: verse.bookId !== target.bookId,
-      };
-    };
-
-    for (const book of books) {
-      for (const chapter of book.chapters) {
-        for (const section of chapter.subsections) {
-          for (const verse of section.content) {
-            verse.prev = createPrevOrNext(previousVerse, verse);
-            if (previousVerse) {
-              previousVerse.next = createPrevOrNext(verse, previousVerse);
-            }
-            previousVerse = verse;
-          }
-        }
-      }
-    }
-
-    if (previousVerse && books.length > 0) {
-      const firstVerse = books[0].chapters[0].subsections[0].content[0];
-      previousVerse.next = createPrevOrNext(firstVerse, previousVerse);
-      firstVerse.prev = createPrevOrNext(previousVerse, firstVerse);
     }
   }
 

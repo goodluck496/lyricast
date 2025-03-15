@@ -15,7 +15,7 @@
             <div class="bible-chapter-section__verse-number">
               <div class="list-item__number">{{ verse.number }}</div>
             </div>
-            <div class="bible-chapter-section__verse-content list-item__title">{{ verse.text }}</div>
+            <div class="list-item__title bible-chapter-section__verse-content" [innerHTML]="sanitizeHtml(verse.text)"></div>
           </div>
         }
       </div>

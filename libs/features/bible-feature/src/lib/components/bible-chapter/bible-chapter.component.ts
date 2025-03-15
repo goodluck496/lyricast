@@ -24,6 +24,7 @@ import { debounceTime } from 'rxjs';
 import { BibleActions } from '../../store/bible.actions';
 import { filterEmpty } from '@lyri-cast/common';
 import { DomHandler } from 'primeng/dom';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'lyri-bible-chapter',
@@ -36,6 +37,7 @@ export class BibleChapterComponent implements OnInit {
   store = inject(Store);
   destroyRef = inject(DestroyRef);
   elRef = inject(ElementRef);
+   sanitizer = inject(DomSanitizer)
   listItems = viewChildren<ElementRef<HTMLElement>>('verseItem');
 
   sections = input<BibleChapterSection[]>([]);
@@ -51,6 +53,12 @@ export class BibleChapterComponent implements OnInit {
     effect(() => {
       this.scrollToSelected();
     });
+  }
+
+
+  // Функция для санитизации HTML
+  sanitizeHtml(rawHtml: string): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(rawHtml);
   }
 
   ngOnInit() {

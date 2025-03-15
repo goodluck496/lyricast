@@ -26,8 +26,8 @@
                      [maxFontSize]="120"
                      [activateOnResize]="true">
                   <div
-                    [innerHTML]="line"
-                    class="slides__content"></div>
+                    class="slides__content" [innerHTML]="sanitizeHtml(line)">
+                  </div>
                 </div>
 
               </section>

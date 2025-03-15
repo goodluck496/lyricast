@@ -259,7 +259,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
     this.bibleTranslates$.pipe().subscribe((data) => {
       this.bibleTranslates = [...data];
       const translate = data.find((el) =>
-        el.searchKey.toLowerCase().includes('syno')
+        el.searchKey.toLowerCase().includes('rst')
       );
       if (!translate) {
         return;

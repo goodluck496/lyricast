@@ -25,6 +25,7 @@ import {
   BiblePresentationNavigatePayload,
   BibleStartCastingPayload,
 } from '../../store/bible.actions';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'lyri-bible-casting-page',
@@ -64,6 +65,14 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
     this.deckRef.layout();
     this.updateTextSize();
+  }
+
+  constructor(private sanitizer: DomSanitizer) {
+  }
+
+  // Функция для санитизации HTML
+  sanitizeHtml(rawHtml: string): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(rawHtml);
   }
 
   ngOnInit() {

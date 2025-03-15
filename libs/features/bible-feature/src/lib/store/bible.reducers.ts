@@ -74,7 +74,7 @@ export const BibleReducers = createReducer<BibleState>(
       castingPaused: true,
     } satisfies BibleState;
   }),
-  on(BibleActions.selectBibleVerse, (state, data) => {
+  on(BibleActions.selectBibleVerse, (state, data: BibleVerse) => {
     return {
       ...state,
       selectedBibleVerse: data,

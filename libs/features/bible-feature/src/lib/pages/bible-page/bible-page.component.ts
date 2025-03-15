@@ -2,10 +2,11 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   ElementRef,
   inject,
   OnInit,
-  signal,
+  viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BibleApiService } from '../../services/index';
@@ -19,12 +20,15 @@ import {
 import { InputTextModule } from 'primeng/inputtext';
 import { DropdownModule } from 'primeng/dropdown';
 import {
-  BibleBookShort, BibleBookTitle,
+  BibleBookShort,
+  BibleBookTitle,
   BibleBookType,
   BibleChapterSection,
   BibleChapterShort,
+  BibleSearchDto,
+  BibleSearchSectionDto,
   BibleTranslateShort,
-  BibleVerse
+  BibleVerse,
 } from '@lyri-cast/entities';
 import {
   combineLatest,
@@ -33,6 +37,8 @@ import {
   fromEvent,
   map,
   Observable,
+  of,
+  switchMap,
   take,
   tap,
   withLatestFrom,
@@ -60,6 +66,16 @@ import {
 } from '@lyri-cast/form';
 import { selectOpenedWindow } from '@lyri-cast/common-browser';
 import { BibleCastingComponent } from '../casting/bible-casting.component';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { OverlayPanel, OverlayPanelModule } from 'primeng/overlaypanel';
+import {
+  CdkFixedSizeVirtualScroll,
+  CdkVirtualForOf,
+  CdkVirtualScrollViewport,
+} from '@angular/cdk/scrolling';
+import { CdkListbox, CdkOption } from '@angular/cdk/listbox';
+import { NgScrollbarExt } from 'ngx-scrollbar';
+import { NgScrollbarCdkVirtualScroll } from 'ngx-scrollbar/cdk';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -76,6 +92,14 @@ import { BibleCastingComponent } from '../casting/bible-casting.component';
     ButtonDirective,
     BibleChapterComponent,
     BibleCastingComponent,
+    OverlayPanelModule,
+    CdkFixedSizeVirtualScroll,
+    CdkListbox,
+    NgScrollbarExt,
+    NgScrollbarCdkVirtualScroll,
+    CdkVirtualScrollViewport,
+    CdkVirtualForOf,
+    CdkOption,
   ],
   templateUrl: './bible-page.component.html',
   styleUrl: './bible-page.component.scss',
@@ -84,9 +108,13 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   cdr = inject(ChangeDetectorRef);
   elRef = inject(ElementRef);
   apiSrv = inject(BibleApiService);
+  destroyRef = inject(DestroyRef);
   store = inject<Store<BibleState>>(Store<BibleState>);
 
-  searchSig = signal<string>('');
+  searchControl = new FormControl<string>('');
+  searchResult$: Observable<BibleSearchDto> = of({ search: '', sections: [] });
+
+  searchOverlay = viewChild('searchOverlay', { read: OverlayPanel });
 
   bibleFormGroup = new FormGroup({
     translate: new FormControl<IUiLyriListItem<BibleTranslateShort> | null>(
@@ -232,6 +260,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     combineLatest([
       fromEvent<KeyboardEvent>(this.elRef.nativeElement, 'keydown').pipe(
+        takeUntilDestroyed(this.destroyRef),
         debounceTime(100)
       ),
     ])
@@ -255,26 +284,52 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
           this.onStartCasting();
         }
       });
+
+    this.searchResult$ = this.searchControl.valueChanges.pipe(
+      filterEmpty(),
+      takeUntilDestroyed(this.destroyRef),
+      debounceTime(200),
+      switchMap((value: string) => {
+        const translate = this.bibleFormGroup.controls.translate.value;
+        if (!translate || !value) {
+          this.searchOverlay()?.hide();
+          return of(null);
+        }
+
+        return this.apiSrv.search(translate.baseEntity, {
+          query: value,
+        });
+      }),
+      filterEmpty(),
+      tap((data: BibleSearchDto) => {
+        if (data.sections.length) {
+          const target = this.elRef.nativeElement.querySelector(
+            '.page-header__search-input'
+          );
+          this.searchOverlay()?.show(new Event('input'), target);
+        } else {
+          this.searchOverlay()?.hide();
+        }
+      })
+    );
   }
 
   ngAfterViewInit() {
-    this.bibleTranslates$.pipe().subscribe((data) => {
-      this.bibleTranslates = [...data];
-      const translate = data.find((el) =>
-        el.searchKey.toLowerCase().includes('rst')
-      );
-      if (!translate) {
-        return;
-      }
-      this.bibleFormGroup.patchValue({
-        translate,
-        book: null,
+    this.bibleTranslates$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data) => {
+        this.bibleTranslates = [...data];
+        const translate = data.find((el) =>
+          el.searchKey.toLowerCase().includes('rst')
+        );
+        if (!translate) {
+          return;
+        }
+        this.bibleFormGroup.patchValue({
+          translate,
+          book: null,
+        });
       });
-    });
-  }
-
-  public onSearch(value: string) {
-    console.log('search', value);
   }
 
   //////////////////////
@@ -346,6 +401,11 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
         );
       }
     }
+  }
+
+  onSelectSearchElement(value: BibleSearchSectionDto) {
+    this.store.dispatch(BibleActions.changePath({ path: value.content.path }));
+    this.searchOverlay()?.hide();
   }
 
   protected readonly ListBoxTemplates = ListBoxTemplates;

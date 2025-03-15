@@ -98,7 +98,7 @@ export class BibleApiService {
   search(
     translate: BibleTranslateShort,
     searchParams: {
-      text: string;
+      query: string;
       book?: number;
       chapter?: number;
     }

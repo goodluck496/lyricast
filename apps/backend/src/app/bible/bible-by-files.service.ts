@@ -6,6 +6,7 @@ import {
   BibleChapter,
   BibleChapterSection,
   BibleChapterShort,
+  BibleSearchDto,
   BibleTranslate,
   BibleTranslateShort,
   BOOK_NAMES,
@@ -120,7 +121,7 @@ export class BibleByFilesService {
     bookId?: number,
     chapterId?: number
   ) {
-    const result = {
+    const result: BibleSearchDto = {
       search,
       sections: [],
     };
@@ -197,11 +198,17 @@ export class BibleByFilesService {
 
     uniqueMatches.sort((a, b) => b.score - a.score);
 
-    result.sections = uniqueMatches.map((match) => ({
-      bookId: match.bookId,
-      chapterId: match.chapterId,
-      content: match.content,
-    }));
+    result.sections = uniqueMatches.map((match) => {
+      const foundBook = books.find((book) => String(book.number) === String(match.bookId));
+      const bookShortName = foundBook.title.short;
+
+      return {
+        bookId: match.bookId,
+        bookShortName: bookShortName ?? match.bookId,
+        chapterId: match.chapterId,
+        content: match.content,
+      };
+    });
 
     return result;
   }

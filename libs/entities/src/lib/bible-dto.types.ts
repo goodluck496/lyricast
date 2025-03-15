@@ -92,12 +92,15 @@ export const BOOK_NAMES: Record<number, {short: string, full: string}> = {
   66: { short: 'Откр', full: 'Откровение' },
 } as const;
 
+export type BibleSearchSectionDto = {
+  // translate: BibleTranslateShort;
+  bookId: number;
+  bookShortName: string;
+  chapterId: number;
+  content: BibleVerse;
+}
+
 export type BibleSearchDto = {
   search: string;
-  sections: {
-    // translate: BibleTranslateShort;
-    bookId: number;
-    chapterId: number;
-    content: BibleVerse;
-  }[];
+  sections: BibleSearchSectionDto[];
 };

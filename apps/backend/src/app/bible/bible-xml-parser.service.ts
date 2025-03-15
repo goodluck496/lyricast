@@ -118,7 +118,7 @@ export class BibleXmlParserService {
             const books = testament.book.map((bibleBook, index: number) => {
               // Объект книги
               const bookNumber = String(index + 1); //bibleBook.$.number;
-              const bookShortName = bibleBook.$.short_number;
+              const bookShortName = bibleBook.$.short_name;
               const bookFullName = bibleBook.$.long_name;
               const book: BibleBook = {
                 number: +bookNumber,

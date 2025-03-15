@@ -67,11 +67,11 @@ export class BibleController {
     @Param('translate') translate: string,
     @Query('book') book: string,
     @Query('chapter') chapter: string,
-    @Query('text') search: string
+    @Query('query') query: string
   ): BibleSearchDto {
     return this.bibleService.searchInContent(
       translate,
-      search,
+      query,
       Number(book),
       Number(chapter)
     );

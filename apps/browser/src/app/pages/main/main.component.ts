@@ -2,10 +2,16 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   inject,
   OnInit,
 } from '@angular/core';
-import { ActivatedRoute, RouterOutlet } from '@angular/router';
+import {
+  ActivatedRoute,
+  NavigationEnd,
+  Router,
+  RouterOutlet,
+} from '@angular/router';
 import { TabViewModule } from 'primeng/tabview';
 
 import { MenuItem, PrimeTemplate } from 'primeng/api';
@@ -14,7 +20,16 @@ import { Pages, PageTitlesMap } from '@lyri-cast/common-browser';
 import { HttpClient } from '@angular/common/http';
 import { BASE_API_TOKEN } from '@lyri-cast/common';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { catchError, first, Observable, of, switchMap, timer } from 'rxjs';
+import {
+  catchError,
+  filter,
+  first,
+  Observable,
+  of,
+  switchMap,
+  timer,
+} from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'lyri-main-page',
@@ -33,7 +48,9 @@ import { catchError, first, Observable, of, switchMap, timer } from 'rxjs';
 export class MainComponent implements OnInit {
   cdr = inject(ChangeDetectorRef);
   route = inject(ActivatedRoute);
+  router = inject(Router);
   http = inject(HttpClient);
+  destroyRef = inject(DestroyRef);
   BASE_API_TOKEN = inject(BASE_API_TOKEN);
 
   activePage?: MenuItem;
@@ -65,6 +82,15 @@ export class MainComponent implements OnInit {
 
   ngOnInit() {
     this.cdr.detectChanges();
+
+    this.router.events
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        filter((e) => e instanceof NavigationEnd)
+      )
+      .subscribe(() => {
+        window.dispatchEvent(new Event('resize'));
+      });
 
     this.repeatCheckBackend().subscribe((res) => {
       this.backendReady = !!res;

@@ -68,14 +68,7 @@ import { selectOpenedWindow } from '@lyri-cast/common-browser';
 import { BibleCastingComponent } from '../casting/bible-casting.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { OverlayPanel, OverlayPanelModule } from 'primeng/overlaypanel';
-import {
-  CdkFixedSizeVirtualScroll,
-  CdkVirtualForOf,
-  CdkVirtualScrollViewport,
-} from '@angular/cdk/scrolling';
-import { CdkListbox, CdkOption } from '@angular/cdk/listbox';
-import { NgScrollbarExt } from 'ngx-scrollbar';
-import { NgScrollbarCdkVirtualScroll } from 'ngx-scrollbar/cdk';
+import { SearchFeatureComponent } from '@lyri-cast/search-feature';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -93,13 +86,7 @@ import { NgScrollbarCdkVirtualScroll } from 'ngx-scrollbar/cdk';
     BibleChapterComponent,
     BibleCastingComponent,
     OverlayPanelModule,
-    CdkFixedSizeVirtualScroll,
-    CdkListbox,
-    NgScrollbarExt,
-    NgScrollbarCdkVirtualScroll,
-    CdkVirtualScrollViewport,
-    CdkVirtualForOf,
-    CdkOption,
+    SearchFeatureComponent,
   ],
   templateUrl: './bible-page.component.html',
   styleUrl: './bible-page.component.scss',
@@ -401,11 +388,6 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
         );
       }
     }
-  }
-
-  onSelectSearchElement(value: BibleSearchSectionDto) {
-    this.store.dispatch(BibleActions.changePath({ path: value.content.path }));
-    this.searchOverlay()?.hide();
   }
 
   protected readonly ListBoxTemplates = ListBoxTemplates;

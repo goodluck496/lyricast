@@ -1,0 +1,36 @@
+<p-iconField iconPosition="right">
+  <p-inputIcon styleClass="pi pi-times" (click)="searchControl.setValue('')" />
+  <input pInputText placeholder="Поиск" class="search__input" [formControl]="searchControl"
+         (keydown)="onKeydown($event)" (click)="onClickInput($event)" />
+</p-iconField>
+
+<p-overlayPanel #searchOverlay>
+
+  <div class="search__wrapper">
+    <div class="row">
+      <div class="search__tabs">
+        <p-selectButton
+          [options]="tabOptions"
+          [formControl]="activeTab"
+          (onChange)="onSelectTab($event)"
+          optionLabel="label"
+          optionValue="value" />
+      </div>
+      <div class="search__additional-controls"></div>
+    </div>
+
+    <div class="row search__result">
+      @if (activeTab.value === SearchTypeTabs.BIBLE && searchOverlay.overlayVisible) {
+        <lyri-bible-search-result />
+      }
+      @if (activeTab.value === SearchTypeTabs.SONGS && searchOverlay.overlayVisible) {
+        <lyri-song-search-result />
+      }
+      @if (activeTab.value === SearchTypeTabs.PROGRAMS) {
+        nothing...
+      }
+    </div>
+
+  </div>
+
+</p-overlayPanel>

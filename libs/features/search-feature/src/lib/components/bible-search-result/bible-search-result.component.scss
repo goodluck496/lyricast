@@ -1,0 +1,63 @@
+:host {
+  padding: 1rem 1rem 0 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.bible-search-result {
+
+  &__scroll-container {
+    width: 100%;
+    height: 400px;
+  }
+
+  &__viewport {
+    display: flex;
+    height: 100%;
+  }
+
+  &__wrapper {
+    display: flex;
+  }
+
+  &__item {
+    min-height: 56px;
+    max-height: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 ;
+    padding: 0 8px;
+
+    &:hover {
+      background-color: #92cdff;
+      color: white;
+      text-shadow: 1px 1px 10px black;
+      transition: background-color .3s;
+
+      .bible-search-result__link {
+        color: blue;
+      }
+    }
+  }
+
+  &__item-text {
+    width: 100%;
+  }
+
+  /**
+  TODO заменить на компоненты ссылки
+   */
+  &__link {
+    max-width: 100px;
+    width: 100px;
+    display: inline-flex;
+    align-items: center;
+    color: dodgerblue;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+}

@@ -1,37 +1,7 @@
 <lyri-page-container>
   <ng-container page-header>
     <div class="page-header__input">
-      <input pInputText placeholder="Поиск" class="page-header__search-input" [formControl]="searchControl" (click)="searchControl.value && searchOverlay.show($event)" />
-      <p-overlayPanel #searchOverlay>
-
-        @if (searchResult$ | async; as searchResultDto) {
-          <ng-scrollbar externalViewport cdkVirtualScrollViewport style="width: 1000px; height: 250px">
-            <cdk-virtual-scroll-viewport [appendOnly]="false" orientation="vertical" [itemSize]="48" minBufferPx="100"
-                                         maxBufferPx="300" style="display: flex; height: 100%;">
-              <span cdkListbox>
-                <div *cdkVirtualFor="let item of searchResultDto.sections; let index; templateCacheSize: 10"
-                     [cdkOption]="item"
-                     style="min-height: 48px; display: flex; align-items: center; gap: 8px; margin: 4px 0; border-bottom: 1px solid white;"
-                     (click)="onSelectSearchElement(item)"
-                >
-                  <div
-                    style="max-width: 100px; width: 100px; display: inline-flex; align-items: center; color: dodgerblue; text-decoration: underline; cursor: pointer;" (click)="onSelectSearchElement(item)">
-                    {{ item.bookShortName }}
-                    {{ item.chapterId }}:{{ item.content.number }}</div>
-                  <div style="width: 100%;"
-                       [innerHTML]="item.content.text | highliter: searchControl.value ?? ''"></div>
-                </div>
-
-              </span>
-            </cdk-virtual-scroll-viewport>
-
-          </ng-scrollbar>
-
-
-        }
-
-
-      </p-overlayPanel>
+      <lyri-search-feature />
     </div>
   </ng-container>
   <ng-container page-content [formGroup]="bibleFormGroup">
@@ -67,7 +37,9 @@
                     'list-item__number--apocalyptic': data.baseEntity.type === BibleBookType.Apocalyptic
                    }"
                    [innerHTML]="data.searchKey  | highliter: search"></div>
-              <div class="list-item__title" [innerHTML]="data.title | highliter: search"></div>
+              <div class="list-item__title">
+                <span class="list-item__title-content" [innerHTML]="data.title | highliter: search"></span>
+              </div>
             </div>
           </ng-template>
         </lyri-list-box>

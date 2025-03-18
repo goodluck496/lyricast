@@ -30,7 +30,9 @@
           <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
             <div class="list-item__wrapper">
               <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
-              <div class="list-item__title" [innerHTML]="data.title | highliter: search"></div>
+              <div class="list-item__title">
+                <span class="list-item__title-content" [innerHTML]="data.title | highliter: search"></span>
+              </div>
             </div>
           </ng-template>
         </lyri-list-box>
@@ -58,7 +60,7 @@
 
     <div class="flex">
       <button pButton severity="help" (click)="onNavigateSlide('prev')">Назад</button>
-      <button pButton severity="help" (click)="onNavigateSlide('next')">В перед</button>
+      <button pButton severity="help" (click)="onNavigateSlide('next')">Вперед</button>
     </div>
   </ng-container>
 </lyri-page-container>

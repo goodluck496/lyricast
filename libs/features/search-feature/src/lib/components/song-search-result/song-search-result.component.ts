@@ -2,7 +2,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  inject,
+  inject, output
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProgressBarModule } from 'primeng/progressbar';
@@ -56,6 +56,8 @@ export class SongSearchResultComponent {
 
   isLoading = this.searchSrv.isLoading;
 
+  onSelectSong = output<ISongForSearch>();
+
   selectedTabIndex = 0;
 
   searchResult$: Observable<SongsSearchDto[]> = this.searchSrv.searchResult$
@@ -75,8 +77,6 @@ export class SongSearchResultComponent {
     );
 
   async onSelectSearchElement(value: ISongForSearch) {
-    // this.store.dispatch(SongActions.selectSong(value));
-    console.log('onSelectSearchElement', value);
     const songPagePath = [Pages.MAIN, Pages.SONGS_FEATURE, Pages.SONGS];
     const isSongPage = this.router.isActive(songPagePath.join('/'), {
       paths: 'exact',
@@ -93,11 +93,10 @@ export class SongSearchResultComponent {
         this.store.dispatch(
           SongActions.selectSongByNumber({ data: { number: value.number } })
         );
+        this.onSelectSong.emit(value);
       });
 
     this.store.dispatch(SongActions.selectBook(value.bookName));
-
-    // this.store.dispatch(SongActions.selectSong())
   }
 
   onChangeTab(tabIndex: number) {

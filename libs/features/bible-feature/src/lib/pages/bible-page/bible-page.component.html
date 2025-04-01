@@ -16,6 +16,7 @@
         <lyri-list-box [items]="(bookList$ | async) || []"
                        [formControl]="bibleFormGroup.controls.book"
                        [tabIndex]="0"
+                       [loading]="isLoading()"
         >
           <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
             <div class="list-item__wrapper">

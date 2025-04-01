@@ -1,5 +1,6 @@
 import {
   AfterContentInit,
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   computed,
@@ -38,6 +39,7 @@ import { ControlValueAccessorBaseDirective } from '../../control-value-accessor-
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HighlighterPipe } from '@lyri-cast/ui-lib';
 import { IUiLyriListItem, ListBoxTemplates } from './types';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 @Component({
   selector: 'lyri-list-box',
@@ -56,6 +58,7 @@ import { IUiLyriListItem, ListBoxTemplates } from './types';
     HighlighterPipe,
     IconFieldModule,
     InputIconModule,
+    ProgressSpinnerModule,
   ],
   templateUrl: './list-box.component.html',
   styleUrl: './list-box.component.scss',
@@ -66,6 +69,7 @@ import { IUiLyriListItem, ListBoxTemplates } from './types';
       multi: true,
     },
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ListBoxComponent<T>
   extends ControlValueAccessorBaseDirective<IUiLyriListItem<T>>
@@ -80,6 +84,7 @@ export class ListBoxComponent<T>
   multi = input(false);
   withSearch = input(true);
   placeholder = input('');
+  loading = input(false);
 
   showItems = computed(() => {
     return this.items().filter((item) => {
@@ -110,13 +115,9 @@ export class ListBoxComponent<T>
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => {
         if (value) {
-          // if (!Array.isArray(this.value) && value.searchKey === this.value?.searchKey) {
-
           this.calcSelectedItem(value);
           this.scrollToSelected(value);
-          // }
 
-          // console.log('!_!__!_!_!', value,this.selectedItems.has(value.searchKey));
           this.cdr.detectChanges();
         }
       });
@@ -136,12 +137,10 @@ export class ListBoxComponent<T>
       const foundInItem = this.items().find(
         (el) => el.searchKey === selectedItem?.searchKey
       );
-      console.log('control', this.control.value, selectedItem, foundInItem);
+
       if (selectedItem && foundInItem) {
         this.calcSelectedItem(selectedItem);
       }
-
-
     }
   }
 

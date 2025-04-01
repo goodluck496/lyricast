@@ -23,7 +23,7 @@
           <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
         </p-dropdown>
 
-        <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl" [tabIndex]="0">
+        <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl" [tabIndex]="0" [loading]="isLoading()">
           <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
             <div class="list-item__wrapper">
               <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>

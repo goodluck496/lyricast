@@ -101,7 +101,6 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
   changePath$ = this.actions$.pipe(
     ofType(BibleActions.changePath),
     tap(() => {
-      console.log('change path');
       this.searchOverlay().hide();
     })
   );
@@ -135,7 +134,6 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
         );
         if (all) {
           this.selectedSongBook = all;
-          // this.onSongBookSelect(pesnVozr);
           this.songSearchSrv.isLoading.set(false);
         }
       })
@@ -157,7 +155,6 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
         )
       ),
       tap((data) => {
-        console.log('sel translate');
         const synodalTranslate = data.find((el) =>
           el.searchKey.toLowerCase().includes('rst')
         );
@@ -223,7 +220,7 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     fromEvent<KeyboardEvent>(window, 'keydown')
-      .pipe(tap(e => console.log(e)),filter((event) => event.ctrlKey && event.code === 'KeyF'))
+      .pipe(filter((event) => event.ctrlKey && event.code === 'KeyF'))
       .subscribe((event) => {
         this.input().el.nativeElement.focus();
         this.searchOverlay().show(event, this.input().el.nativeElement);

@@ -47,10 +47,10 @@
 
     <div class="row search__result">
       @if (activeTab.value === SearchTypeTabs.BIBLE && searchOverlay.overlayVisible) {
-        <lyri-bible-search-result />
+        <lyri-bible-search-result (onSelectPath)="searchOverlay.hide()" />
       }
       @if (activeTab.value === SearchTypeTabs.SONGS && searchOverlay.overlayVisible) {
-        <lyri-song-search-result />
+        <lyri-song-search-result (onSelectSong)="searchOverlay.hide()" />
       }
       @if (activeTab.value === SearchTypeTabs.PROGRAMS) {
         nothing...

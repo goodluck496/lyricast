@@ -117,6 +117,8 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
   songBooksDict: IUiLyriListItem<ISongBookName>[] = [];
 
+  isLoading = signal(false);
+
   songBooks$ = this.songsApiService.getAllSongBooks();
 
   selectedBook$ = this.store.select(selectSelectedBook);
@@ -143,6 +145,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     this.selectedBook.valueChanges.pipe(
       filterEmpty(),
       switchMap((value) => {
+        this.isLoading.set(true);
         return this.songsApiService.getAllSongsByBook(value.baseEntity);
       }),
       map((data) => {
@@ -156,8 +159,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       }),
       tap((songs) => {
         this.currentSongsList$.next(songs);
-        console.log('change?');
-        // this.songControl.setValue(null);
+        this.isLoading.set(false);
       }),
       shareReplay(1)
     );
@@ -165,7 +167,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   selectedSong$ = new BehaviorSubject<ISong | null>(null);
   _selectedSong$: Observable<ISong | null> = this.songControl.valueChanges.pipe(
     switchMap((data) => {
-      console.log('------', data);
+      this.isLoading.set(true);
       const selectedBook = this.selectedBook.value;
       if (!selectedBook) {
         throw new Error('Не выбран справочник');
@@ -179,6 +181,9 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         selectedBook.baseEntity,
         data.baseEntity.number
       );
+    }),
+    tap(() => {
+      this.isLoading.set(false);
     })
     // filterEmpty(), //почему-то даже в случае возвращения switchMapом null,
     // в data лежит предыдущий объект, можно пофиксить в рамках рефакторинга

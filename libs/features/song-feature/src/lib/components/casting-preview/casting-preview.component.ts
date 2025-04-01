@@ -2,11 +2,12 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
-  Component, DestroyRef,
+  Component,
+  DestroyRef,
   ElementRef,
   inject,
   OnDestroy,
-  signal
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -14,7 +15,6 @@ import Reveal from 'reveal.js';
 import { SongPageSelectService } from '../../pages/song-page/song-page-select.service';
 import { LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { Ng2FittextModule } from 'ng2-fittext';
-import { debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
@@ -29,7 +29,7 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
   public elRef = inject(ElementRef<HTMLElement>);
   public songPageSelectSrv = inject(SongPageSelectService);
   private cdr = inject(ChangeDetectorRef);
-  private destroyRef = inject(DestroyRef)
+  private destroyRef = inject(DestroyRef);
 
   deckRef?: Reveal.Api;
   deck?: Reveal.Api;
@@ -40,21 +40,23 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
   public selectedLyric = signal<LyricForCasting | null>(null);
 
   constructor() {
-    this.songPageSelectSrv.isShowPreview.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((isShowPreview) => {
-      if(!this.deckRef) {
-        return
-      }
-      this.selectedLyricLine = this.songPageSelectSrv.selectedLyricLine;
-      this.selectedLyric = this.songPageSelectSrv.selectedLyric;
-      this.slideText = this.songPageSelectSrv.selectedLyricLine()?.text || '';
-      this.deckRef?.sync();
+    this.songPageSelectSrv.isShowPreview
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((isShowPreview) => {
+        if (!this.deckRef) {
+          return;
+        }
+        this.selectedLyricLine = this.songPageSelectSrv.selectedLyricLine;
+        this.selectedLyric = this.songPageSelectSrv.selectedLyric;
+        this.slideText = this.songPageSelectSrv.selectedLyricLine()?.text || '';
+        this.deckRef?.sync();
 
-      if (isShowPreview) {
-        this.initReveal();
-      } else {
-        this.closePreview();
-      }
-    });
+        if (isShowPreview) {
+          this.initReveal();
+        } else {
+          this.closePreview();
+        }
+      });
   }
 
   async initReveal(): Promise<void> {
@@ -70,8 +72,6 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit() {
-
-
     setTimeout(async () => {
       this.deckRef = new Reveal(this.elRef.nativeElement);
       this.deck = await this.deckRef?.initialize({

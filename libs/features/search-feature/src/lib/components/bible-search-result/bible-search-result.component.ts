@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { Observable } from 'rxjs';
@@ -40,10 +40,13 @@ export class BibleSearchResultComponent {
 
   isLoading = this.searchSrv.isLoading;
 
+  onSelectPath = output<string[]>();
+
   searchResult$: Observable<BibleSearchDto> =
     this.searchSrv.searchResult$.asObservable();
 
   onSelectSearchElement(value: BibleSearchSectionDto) {
     this.store.dispatch(BibleActions.changePath({ path: value.content.path }));
+    this.onSelectPath.emit(value.content.path);
   }
 }

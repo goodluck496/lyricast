@@ -6,10 +6,14 @@ import {
   ElementRef,
   inject,
   OnInit,
-  viewChild,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HighlighterPipe, PAGE_CONTAINER_TEMPLATES, PageContainerComponent } from '@lyri-cast/ui-lib';
+import {
+  HighlighterPipe,
+  PAGE_CONTAINER_TEMPLATES,
+  PageContainerComponent,
+} from '@lyri-cast/ui-lib';
 import {
   FormControl,
   FormGroup,
@@ -24,7 +28,6 @@ import {
   BibleBookType,
   BibleChapterSection,
   BibleChapterShort,
-  BibleSearchDto,
   BibleTranslateShort,
   BibleVerse,
 } from '@lyri-cast/entities';
@@ -35,8 +38,6 @@ import {
   fromEvent,
   map,
   Observable,
-  of,
-  switchMap,
   take,
   tap,
   withLatestFrom,
@@ -64,9 +65,8 @@ import {
   ListBoxTemplates,
 } from '@lyri-cast/form';
 import { Pages, selectOpenedWindow } from '@lyri-cast/common-browser';
-import { BibleCastingComponent } from '../casting/bible-casting.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { OverlayPanel, OverlayPanelModule } from 'primeng/overlaypanel';
+import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { Router } from '@angular/router';
 
@@ -84,7 +84,6 @@ import { Router } from '@angular/router';
     HighlighterPipe,
     ButtonDirective,
     BibleChapterComponent,
-    BibleCastingComponent,
     OverlayPanelModule,
   ],
   templateUrl: './bible-page.component.html',
@@ -92,16 +91,11 @@ import { Router } from '@angular/router';
 })
 export class BiblePageComponent implements OnInit, AfterViewInit {
   cdr = inject(ChangeDetectorRef);
-  router = inject(Router)
+  router = inject(Router);
   elRef = inject(ElementRef);
   apiSrv = inject(BibleApiService);
   destroyRef = inject(DestroyRef);
   store = inject<Store<BibleState>>(Store<BibleState>);
-
-  searchControl = new FormControl<string>('');
-  searchResult$: Observable<BibleSearchDto> = of({ search: '', sections: [] });
-
-  searchOverlay = viewChild('searchOverlay', { read: OverlayPanel });
 
   bibleFormGroup = new FormGroup({
     translate: new FormControl<IUiLyriListItem<BibleTranslateShort> | null>(
@@ -125,7 +119,10 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
               baseEntity: el,
             } satisfies IUiLyriListItem<BibleTranslateShort>)
         )
-      )
+      ),
+      tap(() => {
+        this.isLoading.set(false);
+      })
     );
   bibleTranslates: IUiLyriListItem<BibleTranslateShort>[] = [];
 
@@ -173,6 +170,8 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   windowHasClose$ = this.store
     .select(selectOpenedWindow)
     .pipe(map((data) => !data));
+
+  isLoading = signal(true);
 
   constructor() {
     this.bibleFormGroup.controls.translate.valueChanges
@@ -245,7 +244,15 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   }
 
   isActivePage() {
-    return this.router.isActive([Pages.MAIN, Pages.BIBLE_FEATURE, Pages.BIBLE].join('/'), {paths: 'exact', queryParams: 'exact', fragment: 'ignored', matrixParams: 'ignored'})
+    return this.router.isActive(
+      [Pages.MAIN, Pages.BIBLE_FEATURE, Pages.BIBLE].join('/'),
+      {
+        paths: 'exact',
+        queryParams: 'exact',
+        fragment: 'ignored',
+        matrixParams: 'ignored',
+      }
+    );
   }
 
   ngOnInit(): void {
@@ -275,7 +282,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
           this.onStartCasting();
         }
       });
-
+    /*
     this.searchResult$ = this.searchControl.valueChanges.pipe(
       filterEmpty(),
       takeUntilDestroyed(this.destroyRef),
@@ -302,7 +309,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
           this.searchOverlay()?.hide();
         }
       })
-    );
+    );*/
   }
 
   ngAfterViewInit() {

@@ -1,12 +1,20 @@
-import { Route } from '@angular/router';
+import {
+  ActivatedRouteSnapshot,
+  Route,
+  RouterStateSnapshot,
+} from '@angular/router';
 import { MainComponent } from './pages/main/main.component';
 import { Pages } from '@lyri-cast/common-browser';
 
 export const appRoutes: Route[] = [
-  { path: '', redirectTo: [Pages.MAIN, Pages.SONGS_FEATURE].join('/'), pathMatch: 'full' },
   {
     path: Pages.MAIN,
     component: MainComponent,
+    canActivate: [
+      (_: ActivatedRouteSnapshot, rss: RouterStateSnapshot) => {
+        return !rss.url.includes(Pages.CASTING);
+      },
+    ],
     children: [
       {
         path: Pages.SONGS_FEATURE,

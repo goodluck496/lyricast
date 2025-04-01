@@ -1,13 +1,14 @@
 import { Routes } from '@angular/router';
-import { Pages } from '@lyri-cast/common-browser';
+import { MainComponentService, Pages } from '@lyri-cast/common-browser';
 import { provideState } from '@ngrx/store';
 import {
+  SongCastingEffects,
   SongFeatureName,
   SongPageReducers,
   SongsPageEffects,
-} from './lib/store';
+} from '@lyri-cast/song-store';
 import { provideEffects } from '@ngrx/effects';
-import { SongCastingEffects } from './lib/store/song-casting.effects';
+import { inject } from '@angular/core';
 
 export const SongFeatureRoutes: Routes = [
   {
@@ -21,6 +22,16 @@ export const SongFeatureRoutes: Routes = [
       import('./lib/pages/song-page/song-page.component').then(
         (p) => p.SongPageComponent
       ),
+    // canActivate: [(a: any,b: any) => {
+    //   console.log('SongFeatureRoutes Activated', a);
+    //   return true
+    // }],
+    canDeactivate: [
+      () => {
+        const mainCompSrv = inject(MainComponentService);
+        mainCompSrv.setPageHeaderControlsContainer(null);
+      },
+    ],
     providers: [
       provideState(SongFeatureName, SongPageReducers),
       provideEffects(SongsPageEffects),

@@ -1,7 +1,10 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { ISong, LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { Subject } from 'rxjs';
-import { SongPresentationNavigatePayload, SongStartCastingPayload } from '../../store/index';
+import {
+  SongPresentationNavigatePayload,
+  SongStartCastingPayload,
+} from '@lyri-cast/song-store';
 
 export const SPLIT_PARTS_COUNT = {
   NONE: -1,
@@ -41,7 +44,9 @@ export class SongPageSelectService {
   private _isShowPreview = new Subject();
   public isShowPreview = this._isShowPreview.asObservable();
 
-  public getStartCastingPayload(fromSelectedBlock = false): SongStartCastingPayload | undefined {
+  public getStartCastingPayload(
+    fromSelectedBlock = false
+  ): SongStartCastingPayload | undefined {
     const song = this.selectedSong();
     if (!song) {
       return;
@@ -67,7 +72,9 @@ export class SongPageSelectService {
     };
   }
 
-  public getNavigatePayload(dir: 'prev' | 'next'): SongPresentationNavigatePayload | undefined {
+  public getNavigatePayload(
+    dir: 'prev' | 'next'
+  ): SongPresentationNavigatePayload | undefined {
     const lyric = this.selectedLyric;
     const song = this.selectedSong();
     if (!lyric || !song) {
@@ -103,7 +110,8 @@ export class SongPageSelectService {
     this.showPreview(true, nextLyric, nextLine);
 
     return {
-      direction: dir, currentLyric: nextLyric
+      direction: dir,
+      currentLyric: nextLyric,
     };
   }
 
@@ -186,5 +194,6 @@ export class SongPageSelectService {
     this.selectedLyricLine.set(lyricLine);
     this.selectedLyric.set(lyric);
     this._isShowPreview.next(state);
+    console.log('!!!!!!!!!!!!!!!!!!!');
   }
 }

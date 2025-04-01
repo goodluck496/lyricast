@@ -145,7 +145,7 @@ export class BibleByFilesService {
         chapter.subsections.forEach((section) => {
           const cleanedContentText = section.content.map((content) => ({
             ...content,
-            cleanedText: content.text.replace(punctPattern, '').toLowerCase(),
+            cleanedText: (content.text || '').replace(punctPattern, '').toLowerCase(),
           }));
 
           const searchWithTerms = (terms: string[]) => {

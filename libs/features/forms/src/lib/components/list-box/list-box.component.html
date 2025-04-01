@@ -11,8 +11,9 @@
 }
 <div class="list-box__container">
   <ng-scrollbar externalViewport cdkVirtualScrollViewport style="width: 100%">
-    <cdk-virtual-scroll-viewport [appendOnly]="false" orientation="vertical" [itemSize]="ITEM_SIZE" class="list-box__viewport" minBufferPx="100" maxBufferPx="200">
-      <span cdkListbox>
+    <cdk-virtual-scroll-viewport [appendOnly]="false" orientation="vertical" [itemSize]="ITEM_SIZE"
+                                 class="list-box__viewport" minBufferPx="100" maxBufferPx="200">
+      <div cdkListbox>
         <div *cdkVirtualFor="let item of showItems(); let index; templateCacheSize: 10"
              [cdkOption]="item"
              class="list-box__item"
@@ -28,7 +29,7 @@
           }
         </div>
 
-      </span>
+      </div>
     </cdk-virtual-scroll-viewport>
 
   </ng-scrollbar>

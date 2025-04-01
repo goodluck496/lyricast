@@ -22,7 +22,9 @@
   z-index: 4;
   padding: 0 12px;
 
-  font-size: 90px;
+  font-size: 70px;
+  max-font-size: 70px;
+  min-font-size: 70px;
   font-weight: bold;
 
   &__number, &__type {

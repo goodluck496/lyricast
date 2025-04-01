@@ -2,11 +2,11 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
-  Component,
+  Component, DestroyRef,
   ElementRef,
   inject,
   OnDestroy,
-  signal,
+  signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -14,6 +14,8 @@ import Reveal from 'reveal.js';
 import { SongPageSelectService } from '../../pages/song-page/song-page-select.service';
 import { LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { Ng2FittextModule } from 'ng2-fittext';
+import { debounceTime } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'lyri-casting-preview',
@@ -27,6 +29,7 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
   public elRef = inject(ElementRef<HTMLElement>);
   public songPageSelectSrv = inject(SongPageSelectService);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef)
 
   deckRef?: Reveal.Api;
   deck?: Reveal.Api;
@@ -37,7 +40,10 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
   public selectedLyric = signal<LyricForCasting | null>(null);
 
   constructor() {
-    this.songPageSelectSrv.isShowPreview.subscribe((isShowPreview) => {
+    this.songPageSelectSrv.isShowPreview.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((isShowPreview) => {
+      if(!this.deckRef) {
+        return
+      }
       this.selectedLyricLine = this.songPageSelectSrv.selectedLyricLine;
       this.selectedLyric = this.songPageSelectSrv.selectedLyric;
       this.slideText = this.songPageSelectSrv.selectedLyricLine()?.text || '';
@@ -64,6 +70,8 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit() {
+
+
     setTimeout(async () => {
       this.deckRef = new Reveal(this.elRef.nativeElement);
       this.deck = await this.deckRef?.initialize({

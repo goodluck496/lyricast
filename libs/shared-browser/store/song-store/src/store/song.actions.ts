@@ -9,6 +9,7 @@ export const SONG_ACTIONS = {
 
   selectBook: 'SELECT_BOOK',
   selectSong: 'SELECT_SONG',
+  selectSongByNumber: 'SELECT_SONG_BY_NUMBER',
   openCasting: 'OPEN_CASTING',
   startCasting: 'START_CASTING',
   stopCasting: 'STOP_CASTING',
@@ -20,13 +21,13 @@ export type SongActionKeys = keyof typeof SONG_ACTIONS;
 
 export type SongStartCastingPayload = {
   song: ISong;
-  currentLyric: LyricForCasting,
-  lyrics: LyricForCasting[],
-  fromIndex?: number
-}
+  currentLyric: LyricForCasting;
+  lyrics: LyricForCasting[];
+  fromIndex?: number;
+};
 
 export type SongPresentationNavigatePayload = {
-  currentLyric: LyricForCasting,
+  currentLyric: LyricForCasting;
   /**
    * Перемещает слайды по порядку
    */
@@ -34,16 +35,17 @@ export type SongPresentationNavigatePayload = {
   /**
    * Выбирает слайд по индексу
    */
-  index?: number
-}
+  index?: number;
+};
 
 export const SongActions = createActionGroup({
   source: 'SONG_ACTIONS',
   events: {
-    openPage: props<{path: Pages[]}>(),
-    openedPage: props<{name: Pages}>(),
+    openPage: props<{ path: Pages[] }>(),
+    openedPage: props<{ name: Pages }>(),
     selectBook: props<ISongBookName>(),
     selectSong: props<ISong>(),
+    selectSongByNumber: props<{ data: { number: number } }>(),
     openCasting: props<SongStartCastingPayload>(),
     startCasting: props<SongStartCastingPayload>(),
     stopCasting: emptyProps(),

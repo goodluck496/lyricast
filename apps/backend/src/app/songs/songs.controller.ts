@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { SongsService } from './songs.service';
-import { IShortSong } from '@lyri-cast/entities';
+import { IShortSong, ISongForSearch } from '@lyri-cast/entities';
 
 @Controller('songs')
 export class SongsController {
@@ -29,15 +29,10 @@ export class SongsController {
   @Get('find/:book')
   findSong(
     @Param('book') bookName: string,
-    @Query('search') queryText: string,
-    @Query('full-model') fullModel: string
-  ): IShortSong[] {
+    @Query('search') queryText: string
+  ): ISongForSearch[] {
     const result = this.songsService.findSongByText(bookName, queryText);
 
-    if (fullModel === ' true') {
-      return result;
-    }
-
-    return result.map(this.songsService.convertToShortSong);
+    return result.map(el => this.songsService.convertToSearchSong(el, queryText));
   }
 }

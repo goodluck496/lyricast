@@ -79,10 +79,11 @@ export class ListBoxComponent<T>
   items = input<IUiLyriListItem[]>([]);
   multi = input(false);
   withSearch = input(true);
+  placeholder = input('');
 
   showItems = computed(() => {
-    return this.items().filter(
-      (item) =>
+    return this.items().filter((item) => {
+      return (
         item.title
           .trim()
           .toLowerCase()
@@ -90,7 +91,8 @@ export class ListBoxComponent<T>
         item.searchKey
           .toLowerCase()
           .includes(this.searchStringSig().toLowerCase() || '')
-    );
+      );
+    });
   });
   searchStringSig = signal<string>('');
 
@@ -109,10 +111,12 @@ export class ListBoxComponent<T>
       .subscribe((value) => {
         if (value) {
           // if (!Array.isArray(this.value) && value.searchKey === this.value?.searchKey) {
+
           this.calcSelectedItem(value);
           this.scrollToSelected(value);
           // }
 
+          // console.log('!_!__!_!_!', value,this.selectedItems.has(value.searchKey));
           this.cdr.detectChanges();
         }
       });
@@ -127,6 +131,17 @@ export class ListBoxComponent<T>
   ngOnChanges(changes: SimpleChanges) {
     if ('items' in changes) {
       this.selectedItems = new Map();
+
+      const selectedItem = this.control.value;
+      const foundInItem = this.items().find(
+        (el) => el.searchKey === selectedItem?.searchKey
+      );
+      console.log('control', this.control.value, selectedItem, foundInItem);
+      if (selectedItem && foundInItem) {
+        this.calcSelectedItem(selectedItem);
+      }
+
+
     }
   }
 
@@ -166,7 +181,8 @@ export class ListBoxComponent<T>
       }
 
       const viewportSize = this.cdkScroll().getViewportSize(); // Высота видимой области
-      const scrollOffset = index * this.ITEM_SIZE - viewportSize / 2 + this.ITEM_SIZE / 2;
+      const scrollOffset =
+        index * this.ITEM_SIZE - viewportSize / 2 + this.ITEM_SIZE / 2;
 
       this.cdkScroll().scrollToOffset(scrollOffset, 'smooth');
     });

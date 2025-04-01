@@ -13,7 +13,7 @@ import {
 } from '@angular/cdk/scrolling';
 import { CdkListbox, CdkOption } from '@angular/cdk/listbox';
 import { HighlighterPipe } from '@lyri-cast/ui-lib';
-import { BibleActions } from '../../../../../bible-feature/src/lib/store/bible.actions';
+import { BibleActions } from '@lyri-cast/bible-store';
 import { Store } from '@ngrx/store';
 
 @Component({

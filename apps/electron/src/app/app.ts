@@ -146,6 +146,8 @@ export default class App {
       height: height,
       show: false,
       fullscreen: false,
+      backgroundColor: '#000',
+
       webPreferences: {
         ...DEFAULT_WEB_PREF,
       },
@@ -182,7 +184,7 @@ export default class App {
     const openedWindow = App.openedWindows[windowType];
     openedWindow.loadURL(urlObject.href).then(() => {
       if (windowType === AppWindowTypes.MAIN) {
-        App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+        // App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
       }
     });
 

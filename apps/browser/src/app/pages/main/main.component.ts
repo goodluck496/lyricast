@@ -16,7 +16,7 @@ import { TabViewModule } from 'primeng/tabview';
 
 import { MenuItem, PrimeTemplate } from 'primeng/api';
 import { TabMenuModule } from 'primeng/tabmenu';
-import { Pages, PageTitlesMap } from '@lyri-cast/common-browser';
+import { MainComponentService, Pages, PageTitlesMap } from '@lyri-cast/common-browser';
 import { HttpClient } from '@angular/common/http';
 import { BASE_API_TOKEN } from '@lyri-cast/common';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -30,6 +30,8 @@ import {
   timer,
 } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { SearchFeatureComponent } from '@lyri-cast/search-feature';
+import { NgTemplateOutlet } from '@angular/common';
 
 @Component({
   selector: 'lyri-main-page',
@@ -40,6 +42,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     PrimeTemplate,
     TabMenuModule,
     ProgressSpinnerModule,
+    SearchFeatureComponent,
+    NgTemplateOutlet,
   ],
   templateUrl: './main.component.html',
   styleUrl: './main.component.scss',
@@ -52,6 +56,8 @@ export class MainComponent implements OnInit {
   http = inject(HttpClient);
   destroyRef = inject(DestroyRef);
   BASE_API_TOKEN = inject(BASE_API_TOKEN);
+
+  mainCompService = inject(MainComponentService);
 
   activePage?: MenuItem;
 
@@ -98,6 +104,11 @@ export class MainComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  onChangeTabs(tab: any) {
+    this.activePage = tab;
+    this.cdr.detectChanges();
   }
 
   getBackendReady(): Observable<boolean | null> {

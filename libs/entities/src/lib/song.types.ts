@@ -20,7 +20,7 @@ export type LyricLine = {
    */
   globalSongIndex: number;
   text: string;
-}
+};
 
 export type Lyric = {
   songId: string;
@@ -29,16 +29,15 @@ export type Lyric = {
   type: LyricTypeEnum;
   splitLinesCount: number;
   lines: string[];
-}
+};
 
 export type LyricForCasting = Omit<Lyric, 'lines'> & {
   lines: LyricLine[];
-}
+};
 
 export type LyricSelectedForCasting = LyricLine & {
   lyric: LyricForCasting;
-}
-
+};
 
 export interface SelectedLyricChunk extends Lyric {
   lyric: Lyric;
@@ -73,12 +72,18 @@ export type IShortSong = Pick<ISong, 'number' | 'title'> & {
   bookName: ISongBookName;
 };
 
+export type ISongForSearch = Pick<ISong, 'number' | 'title'> & {
+  inlineContent: string;
+  bookName: ISongBookName;
+};
+
 export interface ISongBookHeader {
   number: string;
   title: string;
   author: string;
   updatedAt: string;
   bookKey: string;
+  disabled: boolean;
 }
 
 export interface ISongBook {

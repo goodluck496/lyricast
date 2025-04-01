@@ -1,33 +1,51 @@
 <!--@if (!$isLoading())-->
 
 @if (searchResult$ | async; as searchResultDto) {
-  @if (searchResultDto.sections.length) {
+  @if (searchResultDto.length) {
 
-    <ng-scrollbar externalViewport cdkVirtualScrollViewport class="bible-search-result__scroll-container">
-      <cdk-virtual-scroll-viewport [appendOnly]="false"
-                                   orientation="vertical"
-                                   [itemSize]="64"
-
-                                   class="bible-search-result__viewport">
-                      <span cdkListbox>
-                        <div *cdkVirtualFor="let item of searchResultDto.sections; let index; templateCacheSize: 5"
-                             [cdkOption]="item"
-                             class="bible-search-result__item"
-                             (dblclick)="onSelectSearchElement(item)"
-                        >
-                          <!-- TODO заменить на компоненты ссылки-->
-                          <div class="bible-search-result__link" (click)="onSelectSearchElement(item)">
-                            {{ item.bookShortName }}
-                            {{ item.chapterId }}:{{ item.content.number }}
-                          </div>
-                          <div class="bible-search-result__item-text"
-                               [innerHTML]="item.content.text | highliter: searchResultDto.search ?? ''"></div>
+    <p-tabView (onChange)="onChangeTab($event.index)">
+      @for (data of searchResultDto; track data.bookName.fileKey) {
+        @if (data.songs.length) {
+          <p-tabPanel #tabPanel [header]="data.bookName.humanName">
+            <!-- виртуальный скролл в табах работает только с таким фиксом
+            https://stackoverflow.com/a/56474174/11542647 -->
+            @if(tabPanel.selected) {
+              <ng-scrollbar externalViewport cdkVirtualScrollViewport class="song-search-result__scroll-container">
+                <cdk-virtual-scroll-viewport [appendOnly]="false"
+                                             orientation="vertical"
+                                             [itemSize]="56"
+                                             minBufferPx="100" maxBufferPx="200"
+                                             class="song-search-result__viewport">
+                  <div cdkListbox>
+                    <div *cdkVirtualFor="let item of data.songs; let index; templateCacheSize: 10"
+                         [cdkOption]="item"
+                         class="song-search-result__item"
+                         (click)="onSelectSearchElement(item)"
+                    >
+                      <div class="list-item__wrapper">
+                        <div class="list-item__number" [innerHTML]="item.number  | highliter: data.search"></div>
+                        <div class="list-item__title" >
+                          <span class="list-item__title-content" [innerHTML]="item.title | highliter: data.search"></span>
                         </div>
+                        <div class="song-search-result__item-text"
+                             [innerHTML]="item.inlineContent | highliter: data.search: 100"></div>
+                      </div>
+                    </div>
 
-                      </span>
-      </cdk-virtual-scroll-viewport>
+                  </div>
 
-    </ng-scrollbar>
+
+                </cdk-virtual-scroll-viewport>
+
+              </ng-scrollbar>
+            }
+
+          </p-tabPanel>
+        }
+
+      }
+    </p-tabView>
+
 
   } @else {
     Ничего не нет

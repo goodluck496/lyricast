@@ -22,7 +22,7 @@ export function BridgeProcessForEffectsDecorator(
       override actionMapper(eventData: EventData): Action | null {
         if (!(eventData.event in map)) {
           console.warn(
-            `Not found action handler for event - '${eventData.event}'`
+            `Not found action handler for event '${eventData.event}' in ${constructor.name}`
           );
           return null;
         }

@@ -57,7 +57,7 @@ export class AppEffects {
       filter(() => this.bridge.windowType !== AppWindowTypes.MAIN),
       tap((data) => {
         this.router
-          .navigate(['/', ...data.path])
+          .navigate([...data.path], { replaceUrl: true })
           .then((r) => console.log('open page', r));
       }),
       map((data) => ({ type: APP_COMMON_ACTIONS.openPage, payload: data }))

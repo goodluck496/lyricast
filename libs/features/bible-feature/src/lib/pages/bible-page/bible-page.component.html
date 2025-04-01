@@ -1,9 +1,6 @@
-<lyri-page-container>
-  <ng-container page-header>
-    <div class="page-header__input">
-      <lyri-search-feature />
-    </div>
-  </ng-container>
+<lyri-page-container [pagePath]="[Pages.MAIN, Pages.BIBLE_FEATURE, Pages.BIBLE]">
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
+  </ng-template>
   <ng-container page-content [formGroup]="bibleFormGroup">
     <div class="list-search-wrapper">
       <div class="list-search-block">
@@ -73,21 +70,16 @@
 
   </ng-container>
   <ng-container page-sideibar-preview>
-    <lyri-bible-casting-page></lyri-bible-casting-page>
+<!--    очень глючит простое использование страницы lyri-bible-casting-page внутри текущей страницы -->
+<!--    <lyri-bible-casting-page [isMainWindow]="true"></lyri-bible-casting-page>-->
   </ng-container>
   <ng-container page-sideibar-content>
-    <button pButton (click)="onStartCasting()">транслировать</button>
-    <!--    <button pButton severity="info" (click)="onStartCasting()">Начать с выбранного слайда</button>-->
+    <button pButton (click)="onStartCasting()">Транслировать</button>
     <div class="flex">
 
       <button pButton severity="danger" [disabled]="castingIsPaused$ | async" (click)="onPauseCasting()">Остановить
       </button>
       <button pButton severity="danger" [disabled]="windowHasClose$ | async" (click)="onStopCasting()">Закрыть</button>
-    </div>
-
-    <div class="flex">
-      <!--      <button pButton severity="help" (click)="onNavigateSlide('prev')">Назад</button>-->
-      <!--      <button pButton severity="help" (click)="onNavigateSlide('next')">В перед</button>-->
     </div>
   </ng-container>
 </lyri-page-container>

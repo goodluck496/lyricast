@@ -1,5 +1,7 @@
-import { SongFeatureName, SongPageReducers } from './song.reducers';
+import { SongPageReducers } from './song.reducers';
 import { createFeature } from '@ngrx/store';
+
+export const SongFeatureName = 'Song' as const;
 
 export const selectCastProcess = createFeature({
   name: SongFeatureName,
@@ -10,5 +12,7 @@ export const {
   selectCastingProcess,
   selectSongState,
   selectNavigateState,
-  selectCastingPaused
+  selectCastingPaused,
+  selectSelectedBook,
+  selectSelectedSong,
 } = selectCastProcess;

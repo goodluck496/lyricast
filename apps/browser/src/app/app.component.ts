@@ -18,10 +18,18 @@ import {
   selectAppInit,
   SettingsService,
 } from '@lyri-cast/common-browser';
+import { AsyncPipe } from '@angular/common';
+import { ButtonDirective } from 'primeng/button';
 
 @Component({
   standalone: true,
-  imports: [RouterModule, TabMenuModule, TabViewModule],
+  imports: [
+    RouterModule,
+    TabMenuModule,
+    TabViewModule,
+    AsyncPipe,
+    ButtonDirective,
+  ],
   selector: 'lyri-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
@@ -57,14 +65,17 @@ export class AppComponent implements OnInit {
     },
   ];
 
+  firstRun = false;
+
   isNotCastingPage$ = this.router.events.pipe(
-    // tap((v) => console.log('route', this.route, v)),
     filter((route) => route instanceof NavigationEnd),
     map((data) => !data.url.includes(Pages.CASTING))
   );
 
   ngOnInit() {
-    this.isNotCastingPage$.subscribe();
+    this.isNotCastingPage$
+      .pipe(filter(() => !this.firstRun))
+      .subscribe(() => this.onGo());
 
     this.settingsSrv.init();
 
@@ -73,5 +84,10 @@ export class AppComponent implements OnInit {
       .subscribe(() => console.log('selectAppInit'));
 
     this.store.dispatch(AppActions.appInit());
+  }
+
+  onGo() {
+    this.firstRun = true;
+    this.router.navigateByUrl(['/', Pages.MAIN, Pages.BIBLE_FEATURE].join('/'));
   }
 }

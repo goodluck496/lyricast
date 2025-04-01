@@ -1,3 +1,4 @@
 export * from './bridge.service'
 export * from './window.service'
 export * from './settings.service'
+export * from './main-component.service'

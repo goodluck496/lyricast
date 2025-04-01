@@ -7,7 +7,7 @@
 <p-overlayPanel #searchOverlay>
 
   <div class="search__wrapper">
-    <div class="row">
+    <div class="search-feature-row">
       <div class="search__tabs">
         <p-selectButton
           [options]="tabOptions"
@@ -16,7 +16,33 @@
           optionLabel="label"
           optionValue="value" />
       </div>
-      <div class="search__additional-controls"></div>
+      <div class="search__additional-controls">
+        @if (activeTab.value === SearchTypeTabs.BIBLE) {
+          <p-dropdown [options]="(bibleTranslates$ | async) || []"
+                      optionLabel="title"
+                      placeholder="Выберите перевод"
+                      [(ngModel)]="selectedTranslate"
+                      (ngModelChange)="onTranslateSelect($event)"
+          >
+            <ng-template pTemplate="selectedItem" let-data>
+              {{data.title.toString().substring(0, 30)}}
+            </ng-template>
+          </p-dropdown>
+        }
+
+        @if(activeTab.value === SearchTypeTabs.SONGS) {
+          <p-dropdown [options]="(songBooks$ | async) || []"
+                      optionLabel="title"
+                      placeholder="Выберите сборник"
+                      [(ngModel)]="selectedSongBook"
+                      (ngModelChange)="onSongBookSelect($event)"
+          >
+            <ng-template pTemplate="selectedItem" let-data>
+              {{data.title.toString().substring(0, 30)}}
+            </ng-template>
+          </p-dropdown>
+        }
+      </div>
     </div>
 
     <div class="row search__result">

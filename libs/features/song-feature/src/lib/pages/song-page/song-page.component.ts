@@ -18,11 +18,17 @@ import {
   map,
   Observable,
   of,
+  shareReplay,
   startWith,
   switchMap,
+  take,
   tap,
 } from 'rxjs';
-import { HighlighterPipe, PageContainerComponent } from '@lyri-cast/ui-lib';
+import {
+  HighlighterPipe,
+  PAGE_CONTAINER_TEMPLATES,
+  PageContainerComponent,
+} from '@lyri-cast/ui-lib';
 import { AsyncPipe } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {
@@ -46,9 +52,13 @@ import {
   SplitPartsCount,
 } from './song-page-select.service';
 import { Store } from '@ngrx/store';
-import { SongActions } from '../../../index';
-import { SongsApiService } from '../../services/songs-api.service';
-import { CastingPreviewComponent, SongComponent } from '../../components/index';
+import {
+  selectCastingPaused,
+  selectSelectedBook,
+  SONG_ACTIONS,
+  SongActions,
+} from '@lyri-cast/song-store';
+import { CastingPreviewComponent, SongComponent } from '../../components';
 import {
   IUiLyriItemInList,
   IUiLyriListItem,
@@ -57,8 +67,9 @@ import {
 } from '@lyri-cast/form';
 import { CheckboxModule } from 'primeng/checkbox';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { selectCastingPaused } from '../../store/song.selectors';
-import { selectOpenedWindow } from '@lyri-cast/common-browser';
+import { Pages, selectOpenedWindow } from '@lyri-cast/common-browser';
+import { SongsApiService } from '@lyri-cast/data-access-songs';
+import { Actions, ofType } from '@ngrx/effects';
 
 export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
   [SPLIT_PARTS_COUNT.NONE]: 'Нет',
@@ -98,6 +109,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   private readonly elRef = inject(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly store = inject(Store);
+  private readonly actions$ = inject(Actions);
 
   searchSig = signal<string>('');
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
@@ -106,6 +118,8 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   songBooksDict: IUiLyriListItem<ISongBookName>[] = [];
 
   songBooks$ = this.songsApiService.getAllSongBooks();
+
+  selectedBook$ = this.store.select(selectSelectedBook);
 
   songBooksDict$: Observable<IUiLyriListItem<ISongBookName>[]> =
     this.songBooks$.pipe(
@@ -123,6 +137,8 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   selectedBook = new FormControl<IUiLyriListItem<ISongBookName> | null>(null);
   songControl = new FormControl<IUiLyriListItem<IShortSong> | null>(null);
 
+  currentSongsList$ = new BehaviorSubject<IUiLyriItemInList<IShortSong>[]>([]);
+
   songsList$: Observable<IUiLyriItemInList<IShortSong>[]> =
     this.selectedBook.valueChanges.pipe(
       filterEmpty(),
@@ -138,14 +154,18 @@ export class SongPageComponent implements OnInit, AfterViewInit {
           };
         });
       }),
-      tap(() => {
-        this.songControl.setValue(null);
-      })
+      tap((songs) => {
+        this.currentSongsList$.next(songs);
+        console.log('change?');
+        // this.songControl.setValue(null);
+      }),
+      shareReplay(1)
     );
 
   selectedSong$ = new BehaviorSubject<ISong | null>(null);
   _selectedSong$: Observable<ISong | null> = this.songControl.valueChanges.pipe(
     switchMap((data) => {
+      console.log('------', data);
       const selectedBook = this.selectedBook.value;
       if (!selectedBook) {
         throw new Error('Не выбран справочник');
@@ -159,7 +179,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         selectedBook.baseEntity,
         data.baseEntity.number
       );
-    }),
+    })
     // filterEmpty(), //почему-то даже в случае возвращения switchMapом null,
     // в data лежит предыдущий объект, можно пофиксить в рамках рефакторинга
   );
@@ -167,7 +187,40 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   changeChorusAfterCouplet$ = toObservable(this.chorusAfterCouplet);
 
   castingIsPaused$ = this.store.select(selectCastingPaused);
-  openedCastingWindow$ = this.store.select(selectOpenedWindow).pipe(map(e => !!e))
+  openedCastingWindow$ = this.store
+    .select(selectOpenedWindow)
+    .pipe(map((e) => !!e));
+
+  selectBookInStore$ = this.actions$.pipe(ofType(SongActions.selectBook));
+
+  selectSongByNumber$ = this.actions$.pipe(
+    ofType(SongActions.selectSongByNumber),
+    switchMap((payload) => {
+      console.log('selectSongByNumber$', payload);
+      return combineLatest([
+        of(payload.data.number),
+        this.currentSongsList$.asObservable(),
+      ]);
+    }),
+    map(([number, songs]) => {
+      const song = songs.find((el) => el.baseEntity.number === number);
+      if (!song) {
+        return { type: SONG_ACTIONS.selectSong };
+      }
+
+      if (
+        song.baseEntity.bookName.fileKey !== this.selectedBook.value?.searchKey
+      ) {
+        return { type: SONG_ACTIONS.selectSong };
+      }
+
+      this.songControl.setValue(song);
+
+      console.log('!!!!!!!!!!!!', song, songs, snapshot(this.songsList$));
+
+      return { type: SONG_ACTIONS.selectSong };
+    })
+  );
 
   ngOnInit() {
     fromEvent<KeyboardEvent>(this.elRef.nativeElement, 'keydown')
@@ -192,7 +245,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(([song, changeChorusAfterCouplet]) => {
         const newSong = this.updateSong(song);
-
+        console.log('------------newsong update', newSong);
         ///////// todo сделать отдельной функцией
         this.songPageSelectSrv.selectSong(newSong);
         this.store.dispatch(SongActions.selectSong(newSong));
@@ -206,19 +259,47 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
         this.cdr.detectChanges();
       });
-  }
 
-  ngAfterViewInit() {
-    this.songBooksDict$
+    this.selectedBook$
+      .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
+      .subscribe((book) => {
+        this.selectedBook.setValue(
+          {
+            title: book.humanName,
+            searchKey: book.fileKey,
+            baseEntity: book,
+          },
+          { emitEvent: false }
+        );
+      });
+
+    this.selectBookInStore$
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((data) => {
-        this.songBooksDict = [...data];
-        const book = data.find((el) => el.searchKey.includes('pesn'));
+      .subscribe((payload) => {
+        const book: IUiLyriListItem<ISongBookName> | undefined =
+          this.songBooksDict.find((el) => el.searchKey === payload.fileKey);
         if (!book) {
           return;
         }
         this.selectedBook.setValue(book);
       });
+
+    this.selectSongByNumber$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((song) => {
+        console.log('atsel song', song);
+      });
+  }
+
+  ngAfterViewInit() {
+    this.songBooksDict$.pipe(take(1)).subscribe((data) => {
+      this.songBooksDict = [...data];
+      const book = data.find((el) => el.searchKey.includes('pesn'));
+      if (!book) {
+        return;
+      }
+      this.selectedBook.setValue(book);
+    });
   }
 
   updateSong(song: ISong): ISong {
@@ -274,10 +355,6 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     cloneSong.lyrics = insertChorus(song.lyrics);
 
     return cloneSong;
-  }
-
-  public onSearch(value: string) {
-    console.log('search', value);
   }
 
   onStartCasting(fromSelectedBlock = false): void {
@@ -336,4 +413,6 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         : SplitPartsCountMapVm[value];
     return { label, value };
   });
+  protected readonly Pages = Pages;
+  protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
 }

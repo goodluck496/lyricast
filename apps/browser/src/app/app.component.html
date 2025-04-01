@@ -20,6 +20,13 @@
 <!--}-->
 
 <!--<div class="page__wrapper">-->
+@if((isNotCastingPage$ | async )&& !firstRun) {
+  <div style="display:flex; width: 100vw; height: 100vh; justify-content: center; align-items: center">
+    <button pButton (click)="onGo()">Начнем</button>
+  </div>
+
+}
+
   <router-outlet></router-outlet>
 <!--</div>-->
 

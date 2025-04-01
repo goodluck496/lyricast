@@ -1,5 +1,5 @@
-@if(backendReady) {
-  <p-tabMenu class="page__tab-menu" [model]="pages" [activeItem]="activePage" (activeItemChange)="activePage = $event">
+@if (backendReady) {
+  <p-tabMenu class="page__tab-menu" [model]="pages" [activeItem]="activePage" (activeItemChange)="onChangeTabs($event)">
 
     <ng-template pTemplate="item" let-item>
       @if (item.routerLink) {
@@ -10,12 +10,23 @@
                 </span>
         </a>
       } @else {
-        {{item.label}}
+        {{ item.label }}
       }
 
     </ng-template>
   </p-tabMenu>
   <div class="page__wrapper">
+    <div class="page__header">
+      <div class="page__header-search">
+        <lyri-search-feature />
+      </div>
+      <div class="page__header-controls">
+        @if (mainCompService.pageHeaderControlsContainer) {
+          <ng-container *ngTemplateOutlet="mainCompService.pageHeaderControlsContainer"></ng-container>
+        }
+      </div>
+    </div>
+
     <router-outlet></router-outlet>
   </div>
 

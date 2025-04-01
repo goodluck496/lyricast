@@ -255,6 +255,7 @@ export class BibleXmlParserService {
           if (!enable) {
             continue;
           }
+
           translate.title = title;
           translate.lang = lang;
 

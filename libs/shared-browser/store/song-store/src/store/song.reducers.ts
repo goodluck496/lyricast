@@ -1,12 +1,10 @@
-import { createFeature, createReducer, on } from '@ngrx/store';
+import { createReducer, on } from '@ngrx/store';
 import { ISong, ISongBookName } from '@lyri-cast/entities';
 import {
   SongActions,
   SongPresentationNavigatePayload,
   SongStartCastingPayload,
 } from './song.actions';
-
-export const SongFeatureName = 'Song' as const;
 
 export type SongPageState = {
   selectedBook: ISongBookName | null;
@@ -53,18 +51,3 @@ export const SongPageReducers = createReducer<SongPageState>(
     return { ...state, navigateState: payload } satisfies SongPageState;
   })
 );
-
-const SongFeature = createFeature({
-  name: SongFeatureName,
-  reducer: SongPageReducers,
-});
-
-export const {
-  name,
-  reducer,
-  selectSongState,
-  selectSelectedBook,
-  selectSelectedSong,
-  selectCastingProcess,
-  selectNavigateState,
-} = SongFeature;

@@ -1,18 +1,20 @@
 import {
   Component,
   computed,
-  effect, ElementRef,
+  effect,
+  ElementRef,
   inject,
   input,
   output,
-  signal, viewChildren,
+  signal,
+  viewChildren,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ISong, LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { NgScrollbar } from 'ngx-scrollbar';
 import { SongPageSelectService } from '../../pages/song-page/song-page-select.service';
 import { DblClickDirective } from '@lyri-cast/ui-lib';
-import {DomHandler} from "primeng/dom";
+import { DomHandler } from 'primeng/dom';
 
 @Component({
   selector: 'lyri-song',
@@ -24,7 +26,6 @@ import {DomHandler} from "primeng/dom";
 export class SongComponent {
   songPageSelectSrv = inject(SongPageSelectService);
   elRef = inject(ElementRef);
-
 
   song = input.required<ISong>();
   lyrics = computed<LyricForCasting[]>(() =>
@@ -53,6 +54,12 @@ export class SongComponent {
       },
       { allowSignalWrites: true }
     );
+
+    effect(() => {
+      const lyrics = this.lyrics();
+      const lines = lyrics[0];
+      this.onLineClick(lines, lines.lines[0], false);
+    }, {allowSignalWrites: true});
   }
 
   onLineClick(
@@ -71,10 +78,7 @@ export class SongComponent {
     setTimeout(() => {
       this.lyricItems().forEach((item) => {
         if (
-          DomHandler.hasClass(
-            item.nativeElement,
-            'lyric-item__line--selected'
-          )
+          DomHandler.hasClass(item.nativeElement, 'lyric-item__line--selected')
         ) {
           /**
            * работает хуже чем нативный scrollIntoView
@@ -86,7 +90,6 @@ export class SongComponent {
           });
         }
       });
-    }, 1000)
-
+    }, 1000);
   }
 }

@@ -15,13 +15,13 @@ import { NgScrollbar } from 'ngx-scrollbar';
 import { BibleChapterSection, BibleVerse } from '@lyri-cast/entities';
 import { Store } from '@ngrx/store';
 import {
+  BibleActions,
   selectSelectedBibleVerse,
   selectSelectedPath,
   selectSelectedPrevOrNextVerse,
-} from '../../store/bible.selectors';
+} from '@lyri-cast/bible-store';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime } from 'rxjs';
-import { BibleActions } from '../../store/bible.actions';
 import { filterEmpty } from '@lyri-cast/common';
 import { DomHandler } from 'primeng/dom';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -37,7 +37,7 @@ export class BibleChapterComponent implements OnInit {
   store = inject(Store);
   destroyRef = inject(DestroyRef);
   elRef = inject(ElementRef);
-   sanitizer = inject(DomSanitizer)
+  sanitizer = inject(DomSanitizer);
   listItems = viewChildren<ElementRef<HTMLElement>>('verseItem');
 
   sections = input<BibleChapterSection[]>([]);
@@ -54,7 +54,6 @@ export class BibleChapterComponent implements OnInit {
       this.scrollToSelected();
     });
   }
-
 
   // Функция для санитизации HTML
   sanitizeHtml(rawHtml: string): SafeHtml {

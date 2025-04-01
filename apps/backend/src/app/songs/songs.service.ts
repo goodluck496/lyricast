@@ -6,6 +6,7 @@ import {
   ISong,
   ISongBook,
   ISongBookName,
+  ISongForSearch,
 } from '@lyri-cast/entities';
 
 @Injectable()
@@ -31,13 +32,18 @@ export class SongsService {
       for (const bookName of bookFiles) {
         const preparedBookName = bookName.replace(this.fileNameSuffix, '');
         const book = this.readBook(preparedBookName);
+        if (book.header.disabled) {
+          continue;
+        }
         names.push({
           fileKey: preparedBookName,
           humanName: book.header.title,
         });
       }
 
-      return names;
+      return names.sort((a, b) => {
+        return a.humanName.toLowerCase().includes('песнь') ? -1 : 1;
+      });
     } catch (error) {
       console.log('ERROR', error);
     }
@@ -115,6 +121,22 @@ export class SongsService {
       number: song.number,
       title: song.title,
       bookName: song.bookName,
+    };
+  }
+
+  convertToSearchSong(song: ISong, query: string): ISongForSearch {
+    const inlineContent = song.lyrics.reduce((acc, curr) => {
+      if (curr.lines.toString().toLowerCase().includes(query)) {
+        acc += curr.lines.join(' ');
+      }
+      return acc;
+    }, '');
+
+    return {
+      title: song.title,
+      number: song.number,
+      bookName: song.bookName,
+      inlineContent,
     };
   }
 

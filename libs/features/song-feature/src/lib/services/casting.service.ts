@@ -6,9 +6,9 @@ import {
   SongPageState,
   SongPresentationNavigatePayload,
   SongStartCastingPayload,
-} from '../store/index';
+  selectCastingPaused
+} from '@lyri-cast/song-store';
 import { Store } from '@ngrx/store';
-import { selectCastingPaused } from '../store/song.selectors';
 
 @Injectable({ providedIn: 'root' })
 export class CastingService {

@@ -4,6 +4,7 @@
   height: 100%;
 
   --tab-menu-h: 64px;
+  --header-height: 36px;
 }
 
 .page {
@@ -15,7 +16,7 @@
   }
 
   &__wrapper {
-    height: calc(100% - var(--tab-menu-h));
+    height: calc(100% - var(--tab-menu-h) - var(--header-height));
     display: block;
   }
 
@@ -25,5 +26,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    height: var(--header-height);
+    padding: 0 12px;
+  }
+
+  &__header-search {
+    max-width: 700px;
+    width: 700px;
+  }
+
+  &__header-controls {
+    display: flex;
+    align-items: center;
+    justify-content: right;
   }
 }

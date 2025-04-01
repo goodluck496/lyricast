@@ -3,12 +3,13 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   ElementRef,
   HostListener,
-  inject,
+  inject, input,
   OnInit,
   signal,
-  viewChildren,
+  viewChildren
 } from '@angular/core';
 import { BibleBookShort, BibleVerseForCasting } from '@lyri-cast/entities';
 import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
@@ -17,15 +18,15 @@ import Reveal, { Api } from 'reveal.js';
 import { Store } from '@ngrx/store';
 import { BridgeService, Pages } from '@lyri-cast/common-browser';
 import {
+  BiblePresentationNavigatePayload,
+  BibleStartCastingPayload,
   selectCastingPaused,
   selectCastingProcess,
   selectCastingProcessNavigate,
-} from '../../store/bible.selectors';
-import {
-  BiblePresentationNavigatePayload,
-  BibleStartCastingPayload,
-} from '../../store/bible.actions';
+} from '@lyri-cast/bible-store';
+
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'lyri-bible-casting-page',
@@ -36,10 +37,13 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BibleCastingComponent implements OnInit, AfterViewInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly bridge = inject(BridgeService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly elRef = inject(ElementRef<HTMLElement>);
   private readonly store = inject(Store);
+
+  isMainWindow = input(false);
 
   deckRef?: Reveal.Api;
 
@@ -67,8 +71,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     this.updateTextSize();
   }
 
-  constructor(private sanitizer: DomSanitizer) {
-  }
+  constructor(private sanitizer: DomSanitizer) {}
 
   // Функция для санитизации HTML
   sanitizeHtml(rawHtml: string): SafeHtml {
@@ -76,9 +79,11 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
-    this.castingPaused$.subscribe((value) => {
-      this.showingContent.set(!value);
-    });
+    this.castingPaused$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => {
+        this.showingContent.set(!value);
+      });
 
     this.store.select(selectCastingProcess).subscribe((data) => {
       if (data) {
@@ -97,6 +102,9 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
   async ngAfterViewInit() {
     await this.initReveal();
 
+    if(this.isMainWindow()) {
+      return;
+    }
     this.bridge.windowSrv.electronContext.send({
       event: 'OPENED_PAGE', //SONG_ACTIONS.openedPage,
       payload: { state: 'after-view-init', page: Pages.CASTING },

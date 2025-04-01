@@ -9,6 +9,7 @@ import {
 import {
   AppActions,
   BaseEffectsWithBridgeInterface,
+  BridgeProcessForEffectsDecorator,
   BridgeService,
   Pages,
   selectOpenedWindow,
@@ -16,13 +17,31 @@ import {
   WindowService,
 } from '@lyri-cast/common-browser';
 import { Action, Store } from '@ngrx/store';
-import { selectCastingProcess, SongPageState } from './song.reducers';
+import { SongPageState } from './song.reducers';
 import { SONG_ACTIONS, SongActions } from './song.actions';
 import { SongPayloadsMap } from './song-electron.types';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 import { snapshot } from '@lyri-cast/common';
+import { selectCastingProcess, selectSelectedBook } from './song.selectors';
+
+const actionsMap: Record<string, (eventData: EventData) => Action> = {
+  [SONG_ACTIONS.selectSong]: (eventData: EventData) =>
+    SongActions.selectSong(
+      (eventData.payload as SongPayloadsMap['SELECT_SONG']).song
+    ),
+  [SONG_ACTIONS.openCasting]: (eventData: EventData) =>
+    SongActions.startCasting(
+      eventData.payload as SongPayloadsMap['OPEN_CASTING']
+    ),
+  [SONG_ACTIONS.selectBook]: () => SongActions.stopCasting(),
+  // [SONG_ACTIONS.slideNavigate]: (eventData: EventData) =>
+  //   SongActions.slideNavigate(
+  //     eventData.payload as SongPayloadsMap['SLIDE_NAVIGATE']
+  //   ),
+};
 
 @Injectable()
+@BridgeProcessForEffectsDecorator(actionsMap)
 export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
   actions$ = inject(Actions);
   store = inject(Store<SongPageState>);
@@ -30,51 +49,10 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
   window = inject(WindowService);
   settingsSrv = inject(SettingsService);
 
+
   constructor() {
-    this.initSubscribeByBridge();
+    console.log('SongsPageEffects');
   }
-
-  actionMapper(eventData: EventData): Action | null {
-    switch (eventData.event) {
-      case SONG_ACTIONS.selectSong:
-        return SongActions.selectSong(
-          (eventData.payload as SongPayloadsMap['SELECT_SONG']).song
-        );
-
-      case SONG_ACTIONS.openCasting:
-        return SongActions.startCasting(
-          eventData.payload as SongPayloadsMap['OPEN_CASTING']
-        );
-
-      case SONG_ACTIONS.selectBook:
-        return SongActions.stopCasting();
-
-      case SONG_ACTIONS.slideNavigate:
-        return SongActions.slideNavigate(
-          eventData.payload as SongPayloadsMap['SLIDE_NAVIGATE']
-        );
-
-      default:
-        console.warn('Not found event', eventData.event, eventData.payload);
-        return null;
-    }
-  }
-
-  initSubscribeByBridge() {
-    this.bridge.queueEvents.subscribe((data) => {
-      if (!data) {
-        console.log('queue is empty');
-        return;
-      }
-      const action = this.actionMapper(data);
-
-      if (!action) {
-        return;
-      }
-      this.store.dispatch(action);
-    });
-  }
-
   selectedSong$ = createEffect(() =>
     this.actions$.pipe(
       ofType(SongActions.selectSong),
@@ -150,7 +128,7 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
               title: 'Casting new',
               show: true,
               center: true,
-              fullscreen: true,
+              fullscreen: false,
               display: selectedDisplay,
             })
             .then((procId) => ({
@@ -158,6 +136,7 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
               procId,
             }))
         ).pipe(
+          // take(1),
           tap((openedWindow) => {
             this.store.dispatch(
               AppActions.setProcId({
@@ -180,21 +159,25 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
     )
   );
 
-  onNavigate$ = createEffect(() =>
-    this.actions$.pipe(
-      ofType(SongActions.slideNavigate),
-      map((data) => {
-        this.bridge.send<'SLIDE_NAVIGATE', SongPayloadsMap>(
-          SONG_ACTIONS.slideNavigate,
-          {
-            currentLyric: data.currentLyric,
-            direction: data.direction,
-            index: data.index,
-          }
-        );
-        return { type: SONG_ACTIONS.slideNavigate };
-      })
-    )
+  onNavigate$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(SongActions.slideNavigate),
+        map((data) => {
+          console.log('slide?', data);
+          this.bridge.send<'SLIDE_NAVIGATE', SongPayloadsMap>(
+            SONG_ACTIONS.slideNavigate,
+            {
+              currentLyric: data.currentLyric,
+              direction: data.direction,
+              index: data.index,
+            }
+          );
+          return { type: '1111SONG_ACTIONS.slideNavigate' };
+          // return { type: SONG_ACTIONS.slideNavigate };
+        })
+      ),
+    { dispatch: false }
   );
 
   pauseCasting$ = createEffect(() =>

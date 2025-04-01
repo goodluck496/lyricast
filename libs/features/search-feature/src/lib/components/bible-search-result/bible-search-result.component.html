@@ -21,7 +21,7 @@
                             {{ item.chapterId }}:{{ item.content.number }}
                           </div>
                           <div class="bible-search-result__item-text"
-                               [innerHTML]="item.content.text | highliter: searchResultDto.search ?? ''"></div>
+                               [innerHTML]="item.content.text | highliter: searchResultDto.search || ''"></div>
                         </div>
 
                       </span>

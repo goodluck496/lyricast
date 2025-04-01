@@ -17,16 +17,17 @@ import Reveal, { Api } from 'reveal.js';
 
 import { Store } from '@ngrx/store';
 import { BridgeService, Pages } from '@lyri-cast/common-browser';
-import { SONG_ACTIONS, SongStartCastingPayload } from '../../../index';
-import { SongPayloadsMap } from '../../store/song-electron.types';
 import {
   selectCastingPaused,
   selectCastingProcess,
   selectNavigateState,
-} from '../../store/song.selectors';
+  SONG_ACTIONS,
+  SongPayloadsMap,
+  SongStartCastingPayload,
+} from '@lyri-cast/song-store';
 
 @Component({
-  selector: 'lyri-casting-new-page',
+  selector: 'lyri-casting-page',
   standalone: true,
   imports: [Ng2FittextModule],
   templateUrl: './casting.component.html',
@@ -34,10 +35,10 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CastingComponent implements OnInit, AfterViewInit {
-  private readonly  bridge = inject(BridgeService);
-  private readonly  cdr = inject(ChangeDetectorRef);
-  private readonly  elRef = inject(ElementRef<HTMLElement>);
-  private readonly  store = inject(Store);
+  private readonly bridge = inject(BridgeService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly elRef = inject(ElementRef<HTMLElement>);
+  private readonly store = inject(Store);
 
   deckRef?: Reveal.Api;
 

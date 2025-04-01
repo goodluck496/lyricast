@@ -1,10 +1,10 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { BehaviorSubject, of, switchMap, tap } from 'rxjs';
 import { BibleSearchDto } from '@lyri-cast/entities';
-import { BibleApiService } from '@lyri-cast/bible-feature';
-import { BibleState } from '../../../bible-feature/src/lib/store/bible.store';
+import { BibleApiService } from '@lyri-cast/data-access-bible';
+
 import { Store } from '@ngrx/store';
-import { selectSelectedTranslate } from '../../../bible-feature/src/lib/store/bible.selectors';
+import { BibleState, selectSelectedTranslate } from '@lyri-cast/bible-store';
 import { filterEmpty } from '@lyri-cast/common';
 
 @Injectable()

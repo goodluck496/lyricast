@@ -35,22 +35,23 @@
     }
   }
 
-  &-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    width: 100%;
-    height: 36px;
-
-    padding: 12px;
-  }
+  //&-header {
+  //  display: flex;
+  //  align-items: center;
+  //  justify-content: space-between;
+  //  gap: 8px;
+  //  width: 100%;
+  //  height: 36px;
+  //
+  //  padding: 12px;
+  //}
 
 
   &-entity-block {
     display: flex;
     width: 100%;
-    height: calc(100% - 36px);
+    height: 100%;
+    //height: calc(100% - 36px);
     padding: 12px;
     gap: 10px;
   }

@@ -2,13 +2,15 @@ import {
   AfterViewInit,
   Component,
   DestroyRef,
+  effect,
   inject,
+  input,
   OnInit,
   viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { InputTextModule } from 'primeng/inputtext';
+import { InputText, InputTextModule } from 'primeng/inputtext';
 import { OverlayPanel, OverlayPanelModule } from 'primeng/overlaypanel';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SelectButtonChangeEvent } from 'primeng/selectbutton/selectbutton.interface';
@@ -17,9 +19,14 @@ import { SongSearchService } from '../song-search.service';
 import { BibleSearchResultComponent } from '../components/bible-search-result/bible-search-result.component';
 import { SongSearchResultComponent } from '../components/song-search-result/song-search-result.component';
 import {
+  BehaviorSubject,
   combineLatest,
   debounceTime,
   distinctUntilChanged,
+  filter,
+  fromEvent,
+  map,
+  Observable,
   of,
   startWith,
   switchMap,
@@ -28,9 +35,16 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filterEmpty } from '@lyri-cast/common';
 import { Actions, ofType } from '@ngrx/effects';
-import { BibleActions } from '../../../../bible-feature/src/lib/store/bible.actions';
+import { BibleActions } from '@lyri-cast/bible-store';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
+import { BibleTranslateShort, ISongBookName } from '@lyri-cast/entities';
+import { IUiLyriItemInList, IUiLyriListItem } from '@lyri-cast/form';
+import { NavigationStart, Router } from '@angular/router';
+import { DropdownModule } from 'primeng/dropdown';
+import { Store } from '@ngrx/store';
+import { SongActions } from '@lyri-cast/song-store';
+import { Pages } from '@lyri-cast/common-browser';
 
 export enum SearchTypeTabs {
   BIBLE = 'bible',
@@ -52,20 +66,26 @@ export enum SearchTypeTabs {
     SongSearchResultComponent,
     IconFieldModule,
     InputIconModule,
+    DropdownModule,
   ],
   templateUrl: './search-feature.component.html',
   styleUrl: './search-feature.component.scss',
-
   providers: [BibleSearchService, SongSearchService],
 })
 export class SearchFeatureComponent implements OnInit, AfterViewInit {
   destroyRef = inject(DestroyRef);
+  router = inject(Router);
+
+  store = inject(Store);
 
   bibleSearchSrv = inject(BibleSearchService);
   songSearchSrv = inject(SongSearchService);
 
   actions$ = inject(Actions);
 
+  defaultTab = input<SearchTypeTabs>(SearchTypeTabs.BIBLE);
+
+  input = viewChild.required(InputText);
   searchOverlay = viewChild.required('searchOverlay', { read: OverlayPanel });
 
   searchControl = new FormControl<string>('');
@@ -81,28 +101,113 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
   changePath$ = this.actions$.pipe(
     ofType(BibleActions.changePath),
     tap(() => {
+      console.log('change path');
       this.searchOverlay().hide();
     })
   );
 
+  updateSearchResult$ = new BehaviorSubject<void>(void 0);
+
+  selectedSongBook: IUiLyriItemInList<ISongBookName> | null = null;
+  songBooks$: Observable<IUiLyriItemInList<ISongBookName>[]> =
+    this.songSearchSrv.apiSrv.getAllSongBooks().pipe(
+      map((data) => [
+        {
+          title: 'Все сборники',
+          searchKey: 'all',
+          baseEntity: {
+            fileKey: 'all',
+            humanName: 'all',
+          },
+        },
+        ...data.map(
+          (el) =>
+            ({
+              title: el.humanName,
+              searchKey: el.fileKey,
+              baseEntity: el,
+            } as IUiLyriItemInList<ISongBookName>)
+        ),
+      ]),
+      tap((data) => {
+        const all = data.find((el) =>
+          el.searchKey.toLowerCase().includes('all')
+        );
+        if (all) {
+          this.selectedSongBook = all;
+          // this.onSongBookSelect(pesnVozr);
+          this.songSearchSrv.isLoading.set(false);
+        }
+      })
+    );
+
   readonly SearchTypeTabs = SearchTypeTabs;
 
+  selectedTranslate: IUiLyriListItem<BibleTranslateShort> | null = null;
+  bibleTranslates$: Observable<IUiLyriListItem<BibleTranslateShort>[]> =
+    this.bibleSearchSrv.apiSrv.getTranslates().pipe(
+      map((data) =>
+        data.map(
+          (el) =>
+            ({
+              title: el.title || el.sourceTitle,
+              searchKey: el.keyForSearch,
+              baseEntity: el,
+            } satisfies IUiLyriListItem<BibleTranslateShort>)
+        )
+      ),
+      tap((data) => {
+        console.log('sel translate');
+        const synodalTranslate = data.find((el) =>
+          el.searchKey.toLowerCase().includes('rst')
+        );
+        if (synodalTranslate) {
+          this.selectedTranslate = synodalTranslate;
+
+          this.store.dispatch(
+            BibleActions.selectTranslate({
+              translate: synodalTranslate.baseEntity,
+            })
+          );
+        }
+      })
+    );
+
   constructor() {
+    let first = true;
+    effect(() => {
+      const tab = this.defaultTab();
+      if (first) {
+        this.onSelectTab({ value: tab });
+        first = false;
+      }
+    });
+
     this.changePath$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+
+    this.router.events
+      .pipe(
+        takeUntilDestroyed(),
+        filter((e) => e instanceof NavigationStart)
+      )
+      .subscribe(() => {
+        this.searchOverlay().hide();
+      });
   }
 
   ngOnInit(): void {
     combineLatest([
+      this.updateSearchResult$.asObservable(),
       this.activeTab.valueChanges.pipe(startWith(this.lastTab)),
       this.searchControl.valueChanges.pipe(
         distinctUntilChanged(),
-        filterEmpty()
+        map(el => el || '')
       ),
     ])
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         debounceTime(500),
-        switchMap(([tab, value]) => {
+        switchMap(([_, tab, value]) => {
           if (tab === SearchTypeTabs.BIBLE) {
             return this.bibleSearchSrv.search(value);
           }
@@ -116,17 +221,56 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
       .subscribe();
   }
 
-  ngAfterViewInit(): void {}
+  ngAfterViewInit(): void {
+    fromEvent<KeyboardEvent>(window, 'keydown')
+      .pipe(tap(e => console.log(e)),filter((event) => event.ctrlKey && event.code === 'KeyF'))
+      .subscribe((event) => {
+        this.input().el.nativeElement.focus();
+        this.searchOverlay().show(event, this.input().el.nativeElement);
+      });
+  }
 
   onKeydown(event: KeyboardEvent): void {
     event.stopPropagation();
 
     if (event.key === 'Escape') {
       this.searchOverlay().hide();
+      this.input().el.nativeElement.blur();
     }
   }
 
   onClickInput(event: MouseEvent): void {
+    if (this.searchOverlay().overlayVisible) {
+      return;
+    }
+
+    const isBiblePath = this.router.isActive(
+      [Pages.MAIN, Pages.BIBLE_FEATURE, Pages.BIBLE].join('/'),
+      {
+        paths: 'exact',
+        queryParams: 'exact',
+        fragment: 'ignored',
+        matrixParams: 'ignored',
+      }
+    );
+    const isSongPath = this.router.isActive(
+      [Pages.MAIN, Pages.SONGS_FEATURE, Pages.SONGS].join('/'),
+      {
+        paths: 'exact',
+        queryParams: 'exact',
+        fragment: 'ignored',
+        matrixParams: 'ignored',
+      }
+    );
+
+    if (isBiblePath) {
+      this.activeTab.setValue(SearchTypeTabs.BIBLE);
+    } else if (isSongPath) {
+      this.activeTab.setValue(SearchTypeTabs.SONGS);
+    } else {
+      return;
+    }
+
     this.searchOverlay().show(event);
   }
 
@@ -138,5 +282,35 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
 
     this.lastTab = tab.value;
     this.activeTab.setValue(tab.value);
+  }
+
+  onTranslateSelect(translate: IUiLyriItemInList<BibleTranslateShort>) {
+    this.bibleSearchSrv.isLoading.set(true);
+    this.store.dispatch(
+      BibleActions.selectTranslate({
+        translate: translate.baseEntity,
+      })
+    );
+  }
+
+  onSongBookSelect(book: IUiLyriItemInList<ISongBookName>) {
+    this.songSearchSrv.isLoading.set(true);
+
+    if (book.searchKey === 'all') {
+      this.songSearchSrv.isSelectBookForSearch = false;
+
+      this.updateSearchResult$.next();
+      return;
+    }
+
+    this.songSearchSrv.isSelectBookForSearch = true;
+
+    this.store.dispatch(
+      SongActions.selectBook({
+        fileKey: book.searchKey,
+        humanName: book.title,
+      })
+    );
+    this.updateSearchResult$.next();
   }
 }

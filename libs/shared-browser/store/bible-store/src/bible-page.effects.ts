@@ -3,7 +3,7 @@ import { Action, Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { BibleActions } from './bible.actions';
 import { filter, map, of, switchMap, take, tap, withLatestFrom } from 'rxjs';
-import { BibleApiService } from '../services/index';
+
 import { BibleState } from './bible.store';
 import {
   getSelectedChapter,
@@ -26,6 +26,7 @@ import {
   BibleChapter,
   BibleChapterSection,
 } from '@lyri-cast/entities';
+import { BibleApiService } from '@lyri-cast/data-access-bible';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   // [BIBLE_ACTIONS.startCasting]: (eventData: EventData) =>

@@ -1,10 +1,21 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { BehaviorSubject, switchMap, tap } from 'rxjs';
-import { IShortSong } from '@lyri-cast/entities';
+import {
+  BehaviorSubject,
+  forkJoin,
+  map,
+  Observable,
+  of,
+  switchMap,
+  tap,
+} from 'rxjs';
+
+import { selectSelectedBook, SongPageState } from '@lyri-cast/song-store';
+import { ISongBookName, SongsSearchDto } from '@lyri-cast/entities';
 import { filterEmpty } from '@lyri-cast/common';
-import { SongsApiService } from '../../../song-feature/src/lib/services/songs-api.service';
-import { selectSelectedBook, SongPageState } from '@lyri-cast/song-feature';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { SongsApiService } from '@lyri-cast/data-access-songs';
+
 
 @Injectable()
 export class SongSearchService {
@@ -14,19 +25,87 @@ export class SongSearchService {
 
   isLoading = signal(false);
 
-  searchResult$ = new BehaviorSubject<IShortSong[]>([]);
+  isSelectBookForSearch = false;
 
-  public search(query: string) {
-    const songBook$ = this.store.select(selectSelectedBook);
+  searchResult$ = new BehaviorSubject<SongsSearchDto[]>([]);
 
-    return songBook$.pipe(
-      filterEmpty(),
-      switchMap((book) => {
-        return this.apiSrv.findSongsByBook(book, query);
-      }),
-      tap((v) => {
-        this.searchResult$.next(v);
-      })
-    );
+  constructor() {
+    this.searchResult$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.isLoading.set(false);
+    });
+  }
+
+  public search(query: string): Observable<SongsSearchDto[]> {
+    if (!query) {
+      return of([]);
+    }
+    this.isLoading.set(true);
+
+    if (this.isSelectBookForSearch) {
+      return this.store
+        .select(selectSelectedBook)
+        .pipe(
+          filterEmpty(),
+          switchMap((book: ISongBookName) => {
+            return this.apiSrv.findSongsByBook(book, query).pipe(
+              map((songs) => {
+                return [
+                  {
+                    bookName: book,
+                    search: query,
+                    songs,
+                  } satisfies SongsSearchDto,
+                ];
+              })
+            );
+          })
+        )
+        .pipe(
+          tap((data) => {
+            this.searchResult$.next(data);
+          })
+        );
+    }
+
+    return this.apiSrv
+      .getAllSongBooks()
+      .pipe(
+        switchMap((data) => {
+          return forkJoin(
+            [...data].map((bookName: ISongBookName) => {
+              return this.apiSrv.findSongsByBook(bookName, query).pipe(
+                map((songs) => {
+                  return {
+                    bookName: bookName,
+                    search: query,
+                    songs,
+                  } satisfies SongsSearchDto;
+                })
+              );
+            })
+          );
+        })
+      )
+      .pipe(
+        tap((data) => {
+          this.searchResult$.next(data);
+        })
+      );
+
+    // return songBook$.pipe(
+    //   filterEmpty(),
+    //   switchMap((book) => {
+    //     return this.apiSrv
+    //       .findSongsByBook(book, query)
+    //       .pipe(map((result) => [book, result] as [ISongBookName, IShortSong[]]));
+    //   }),
+    //   tap(([book, songs]) => {
+    //     this.searchResult$.next({
+    //       search: query,
+    //       bookName: book,
+    //       songs,
+    //     });
+    //   })
+    // );
   }
 }

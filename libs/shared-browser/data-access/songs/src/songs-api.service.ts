@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { catchError, Observable, of } from 'rxjs';
 import { BASE_API_TOKEN } from '@lyri-cast/common';
-import { IShortSong, ISong, ISongBookName } from '@lyri-cast/entities';
+import { IShortSong, ISong, ISongBookName, ISongForSearch } from '@lyri-cast/entities';
 
 @Injectable({ providedIn: 'root' })
 export class SongsApiService {
@@ -31,13 +31,13 @@ export class SongsApiService {
   findSongsByBook(
     book: ISongBookName,
     search: string
-  ): Observable<IShortSong[]> {
+  ): Observable<ISongForSearch[]> {
     const params = new HttpParams({
       fromObject: { search, 'full-model': false },
     });
 
     return this.http
-      .get<ISong[]>(`${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/find/${book.fileKey}`, { params })
+      .get<ISongForSearch[]>(`${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/find/${book.fileKey}`, { params })
       .pipe(
         catchError((err) => {
           console.log('error', err);

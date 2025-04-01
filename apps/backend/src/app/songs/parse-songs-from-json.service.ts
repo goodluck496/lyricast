@@ -150,8 +150,6 @@ todo доделать сплитование
     const title = data.bookTitle;
     const date = data.date;
 
-
-
     const parsedSongs = songs.map((block) => {
       return this.parseSong(block, bookKey);
     });
@@ -163,6 +161,7 @@ todo доделать сплитование
         number: '',
         author: '',
         updatedAt: date,
+        disabled: false,
       } satisfies ISongBookHeader,
       songs: parsedSongs.sort((a, b) => a.number - b.number),
     };

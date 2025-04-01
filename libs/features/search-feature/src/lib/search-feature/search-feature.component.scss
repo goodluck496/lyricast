@@ -1,8 +1,10 @@
 :host {
   display: block;
   width: 100%;
+  max-width: 600px;
+  border-radius: 8px;
+  overflow: hidden;
 }
-
 
 
 .search {
@@ -15,11 +17,11 @@
   }
 
   &__tabs {
-
+    display: flex;
   }
 
   &__additional-controls {
-
+    display: flex;
   }
 
   &__result {
@@ -30,17 +32,20 @@
   &__input {
     display: flex;
     width: 100%;
+    border-radius: 8px;
 
     input {
       width: 100%;
+
     }
   }
 }
 
-.row {
+.search-feature-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
+
 
 

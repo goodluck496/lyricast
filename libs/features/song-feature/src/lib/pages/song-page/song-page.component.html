@@ -1,8 +1,5 @@
-<lyri-page-container>
-  <ng-container page-header>
-    <div class="page-header__input">
-      <input pInputText placeholder="Поиск" [(ngModel)]="searchSig" (ngModelChange)="onSearch($event)" />
-    </div>
+<lyri-page-container [pagePath]="[Pages.MAIN, Pages.SONGS_FEATURE, Pages.SONGS]">
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
     <div class="page-header__lyric-count">
       <label for="chorusAfterCouplet">Повторять<br>припев</label>
       <p-checkbox id="chorusAfterCouplet" inputId="chorusAfterCouplet" [binary]="true" [(ngModel)]="chorusAfterCouplet"></p-checkbox>
@@ -11,7 +8,7 @@
                   (onChange)="onSelectSplitValue($event.value)"
                   [options]="SplitPartsCountOptions"></p-dropdown>
     </div>
-  </ng-container>
+  </ng-template>
 
   <ng-container page-content>
     <div class="list-search-wrapper">

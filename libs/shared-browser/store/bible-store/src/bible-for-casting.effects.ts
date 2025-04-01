@@ -16,13 +16,12 @@ import {
   tap,
   withLatestFrom,
 } from 'rxjs';
-import { BibleApiService } from '../services/index';
 import { BibleState } from './bible.store';
 import {
-  selectBooks,
   selectCastingPaused,
   selectCastingProcess,
-  selectSelectedBibleVerse, selectSelectedBook
+  selectSelectedBibleVerse,
+  selectSelectedBook,
 } from './bible.selectors';
 import {
   AppActions,
@@ -41,6 +40,7 @@ import {
   EventData,
 } from '@lyri-cast/common-electron';
 import { snapshot } from '@lyri-cast/common';
+import { BibleApiService } from '@lyri-cast/data-access-bible';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   [BibleActionsEnum.startCasting]: (eventData: EventData) =>
@@ -73,6 +73,18 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
       map(() => ({ type: BibleActionsEnum.startCasting }))
     )
   );
+
+  pauseCasting$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(BibleActions.pauseCasting),
+      tap((data) => {
+        this.bridge.send(BibleActionsEnum.pauseCasting, data);
+      }),
+      map(() => ({ type: BibleActionsEnum.pauseCasting }))
+    )
+  );
+
+
 
   onOpenPage$ = createEffect(() =>
     this.actions$.pipe(

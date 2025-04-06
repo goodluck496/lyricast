@@ -141,6 +141,8 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
   currentSongsList$ = new BehaviorSubject<IUiLyriItemInList<IShortSong>[]>([]);
 
+  firstLoad = false;
+
   songsList$: Observable<IUiLyriItemInList<IShortSong>[]> =
     this.selectedBook.valueChanges.pipe(
       filterEmpty(),
@@ -160,7 +162,11 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       tap((songs) => {
         this.currentSongsList$.next(songs);
         this.isLoading.set(false);
-        this.songControl.setValue(songs[0]);
+        if(!this.firstLoad) {
+          this.firstLoad = true;
+          this.songControl.setValue(songs[0]);
+        }
+
       }),
       shareReplay(1)
     );

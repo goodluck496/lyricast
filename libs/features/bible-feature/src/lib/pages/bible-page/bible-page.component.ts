@@ -179,13 +179,16 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
 
   isLoading = signal(true);
 
+  firstLoad = false;
+
   setBooks$ = this.actions$
     .pipe(
       ofType(BibleActions.setBooks),
       delay(1000),
       map((payload) => {
         const firstBook = payload.data[0];
-        if (firstBook) {
+        if (firstBook && !this.firstLoad) {
+          this.firstLoad = true;
           this.bibleFormGroup.controls.book.setValue({
             searchKey: firstBook.number.toString(),
             title: firstBook.title.full,

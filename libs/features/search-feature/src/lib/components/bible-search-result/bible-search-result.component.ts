@@ -15,6 +15,8 @@ import { CdkListbox, CdkOption } from '@angular/cdk/listbox';
 import { HighlighterPipe } from '@lyri-cast/ui-lib';
 import { BibleActions } from '@lyri-cast/bible-store';
 import { Store } from '@ngrx/store';
+import { Pages } from '@lyri-cast/common-browser';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'lyri-bible-search-result',
@@ -35,6 +37,7 @@ import { Store } from '@ngrx/store';
   styleUrl: './bible-search-result.component.scss',
 })
 export class BibleSearchResultComponent {
+  router = inject(Router);
   searchSrv = inject(BibleSearchService);
   store = inject(Store);
 
@@ -45,7 +48,18 @@ export class BibleSearchResultComponent {
   searchResult$: Observable<BibleSearchDto> =
     this.searchSrv.searchResult$.asObservable();
 
-  onSelectSearchElement(value: BibleSearchSectionDto) {
+  async onSelectSearchElement(value: BibleSearchSectionDto) {
+    const pagePath = [Pages.MAIN, Pages.BIBLE_FEATURE, Pages.BIBLE];
+    const isBiblePage = this.router.isActive(pagePath.join('/'), {
+      paths: 'exact',
+      queryParams: 'exact',
+      fragment: 'ignored',
+      matrixParams: 'ignored',
+    });
+    if (!isBiblePage) {
+      await this.router.navigate(pagePath);
+    }
+
     this.store.dispatch(BibleActions.changePath({ path: value.content.path }));
     this.onSelectPath.emit(value.content.path);
   }

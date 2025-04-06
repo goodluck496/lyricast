@@ -194,6 +194,5 @@ export class SongPageSelectService {
     this.selectedLyricLine.set(lyricLine);
     this.selectedLyric.set(lyric);
     this._isShowPreview.next(state);
-    console.log('!!!!!!!!!!!!!!!!!!!');
   }
 }

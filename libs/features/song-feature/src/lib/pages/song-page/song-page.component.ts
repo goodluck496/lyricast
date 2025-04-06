@@ -160,6 +160,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       tap((songs) => {
         this.currentSongsList$.next(songs);
         this.isLoading.set(false);
+        this.songControl.setValue(songs[0]);
       }),
       shareReplay(1)
     );
@@ -240,6 +241,10 @@ export class SongPageComponent implements OnInit, AfterViewInit {
           if (event.key === 'Enter') {
             this.onStartCasting(true);
           }
+
+          if (event.key === 'Escape') {
+            this.onPauseCasting();
+          }
         }
       });
 
@@ -250,7 +255,6 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(([song, changeChorusAfterCouplet]) => {
         const newSong = this.updateSong(song);
-        console.log('------------newsong update', newSong);
         ///////// todo сделать отдельной функцией
         this.songPageSelectSrv.selectSong(newSong);
         this.store.dispatch(SongActions.selectSong(newSong));

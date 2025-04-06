@@ -135,17 +135,21 @@ export class CastingComponent implements OnInit, AfterViewInit {
   }
 
   async initReveal(): Promise<Api> {
-    this.deckRef = new Reveal(this.elRef.nativeElement);
+    return new Promise((res, rej) => {
+      setTimeout(async () => {
+        this.deckRef = new Reveal(this.elRef.nativeElement);
 
-    const deck = await this.deckRef?.initialize({
-      margin: -1,
-      disableLayout: true,
-      transition: 'fade', //todo можно сделать событие, которое будет изменять тип переходов между слайдами
-      center: true,
-      embedded: true,
+        const deck = await this.deckRef?.initialize({
+          margin: -1,
+          disableLayout: true,
+          transition: 'fade', //todo можно сделать событие, которое будет изменять тип переходов между слайдами
+          center: true,
+          embedded: true,
+        });
+
+        res(deck);
+      }, 300);
     });
-
-    return deck;
   }
 
   updateTextSize() {

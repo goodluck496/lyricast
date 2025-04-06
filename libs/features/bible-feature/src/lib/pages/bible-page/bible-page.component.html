@@ -75,11 +75,13 @@
 <!--    <lyri-bible-casting-page [isMainWindow]="true"></lyri-bible-casting-page>-->
   </ng-container>
   <ng-container page-sideibar-content>
-    <button pButton (click)="onStartCasting()">Транслировать</button>
-    <div class="flex">
+    @if((castingIsPaused$ | async)) {
+      <button pButton (click)="onStartCasting()" icon="pi pi-play" severity="success">Транслировать</button>
+    } @else {
+      <button pButton (click)="onPauseCasting()" icon="pi pi-stop" severity="danger">Остановить</button>
+    }
 
-      <button pButton severity="danger" [disabled]="castingIsPaused$ | async" (click)="onPauseCasting()">Остановить
-      </button>
+    <div class="flex">
       <button pButton severity="danger" [disabled]="windowHasClose$ | async" (click)="onStopCasting()">Закрыть</button>
     </div>
   </ng-container>

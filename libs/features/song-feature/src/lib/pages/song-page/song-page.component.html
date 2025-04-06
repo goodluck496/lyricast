@@ -2,7 +2,8 @@
   <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
     <div class="page-header__lyric-count">
       <label for="chorusAfterCouplet">Повторять<br>припев</label>
-      <p-checkbox id="chorusAfterCouplet" inputId="chorusAfterCouplet" [binary]="true" [(ngModel)]="chorusAfterCouplet"></p-checkbox>
+      <p-checkbox id="chorusAfterCouplet" inputId="chorusAfterCouplet" [binary]="true"
+                  [(ngModel)]="chorusAfterCouplet"></p-checkbox>
       <label for="lyric-count">Разделить <br>на блоки:</label>
       <p-dropdown id="lyric-count" inputId="lyric-count" [(ngModel)]="splitCount"
                   (onChange)="onSelectSplitValue($event.value)"
@@ -23,7 +24,8 @@
           <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
         </p-dropdown>
 
-        <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl" [tabIndex]="0" [loading]="isLoading()">
+        <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl" [tabIndex]="0"
+                       [loading]="isLoading()">
           <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
             <div class="list-item__wrapper">
               <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
@@ -45,19 +47,24 @@
   </ng-container>
 
   <ng-container page-sideibar-preview>
-    <lyri-casting-preview></lyri-casting-preview>
+    @if (selectedSong$ | async) {
+      <lyri-casting-preview></lyri-casting-preview>
+    }
+
   </ng-container>
   <ng-container page-sideibar-content>
-    <button pButton (click)="onStartCasting()">транслировать</button>
-    <button pButton (click)="onStartCasting(true)">Начать с выбранного слайда</button>
+    @if (castingIsPaused$ | async) {
+      <button pButton (click)="onStartCasting(true)" icon="pi pi-play" severity="success">Транслировать</button>
+    } @else {
+      <button pButton (click)="onPauseCasting()" icon="pi pi-stop" severity="danger">Остановить</button>
+    }
     <div class="flex">
-      <button pButton severity="danger" [disabled]="(castingIsPaused$ | async) === true" (click)="onPauseCasting()">Остановить</button>
-      <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false" (click)="onCloseCasting()">Закрыть</button>
+      <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false"
+              (click)="onCloseCasting()">Закрыть
+      </button>
+      <button pButton severity="help" (click)="onNavigateSlide('prev')" icon="pi pi-arrow-up">Назад</button>
+      <button pButton severity="help" (click)="onNavigateSlide('next')" icon="pi pi-arrow-down">Вперед</button>
     </div>
 
-    <div class="flex">
-      <button pButton severity="help" (click)="onNavigateSlide('prev')">Назад</button>
-      <button pButton severity="help" (click)="onNavigateSlide('next')">Вперед</button>
-    </div>
   </ng-container>
 </lyri-page-container>

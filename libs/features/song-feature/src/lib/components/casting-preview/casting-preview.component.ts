@@ -36,10 +36,51 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
 
   slideText = '';
 
+  initTimeoutId: any;
+
   public selectedLyricLine = signal<LyricLine | null>(null);
   public selectedLyric = signal<LyricForCasting | null>(null);
 
-  constructor() {
+  constructor() {}
+
+  async initReveal(): Promise<void> {
+    this.slideText = this.songPageSelectSrv.selectedLyricLine()?.text || '';
+
+    this.cdr.detectChanges();
+    this.deckRef?.layout();
+    this.deckRef?.sync();
+  }
+
+  initDeck(): void {
+    this.initTimeoutId = setTimeout(async () => {
+      try {
+        this.deckRef = new Reveal(this.elRef.nativeElement);
+        this.deck = await this.deckRef?.initialize({
+          width: 400,
+          height: 300,
+          margin: -1,
+          transition: 'fade',
+          disableLayout: true,
+          embedded: true,
+          overview: false,
+        });
+        await this.initReveal();
+        this.cdr.detectChanges()
+      } catch (err) {
+        clearTimeout(this.initTimeoutId);
+        this.initDeck();
+        console.error(err);
+      }
+    }, 500);
+  }
+
+  closePreview(): void {
+    this.deck?.destroy();
+  }
+
+  ngAfterViewInit() {
+    this.initDeck();
+
     this.songPageSelectSrv.isShowPreview
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((isShowPreview) => {
@@ -59,33 +100,8 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
       });
   }
 
-  async initReveal(): Promise<void> {
-    this.slideText = this.songPageSelectSrv.selectedLyricLine()?.text || '';
-
-    this.cdr.detectChanges();
-    this.deckRef?.layout();
-    this.deckRef?.sync();
-  }
-
-  closePreview(): void {
-    this.deck?.destroy();
-  }
-
-  ngAfterViewInit() {
-    setTimeout(async () => {
-      this.deckRef = new Reveal(this.elRef.nativeElement);
-      this.deck = await this.deckRef?.initialize({
-        width: 400,
-        height: 300,
-        margin: -1,
-        transition: 'fade',
-        disableLayout: true,
-        embedded: true,
-      });
-    }, 100);
-  }
-
   ngOnDestroy() {
+    clearTimeout(this.initTimeoutId);
     this.deck?.destroy();
   }
 }

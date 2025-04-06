@@ -22,7 +22,7 @@ import { SONG_ACTIONS, SongActions } from './song.actions';
 import { SongPayloadsMap } from './song-electron.types';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 import { snapshot } from '@lyri-cast/common';
-import { selectCastingProcess, selectSelectedBook } from './song.selectors';
+import { selectCastingProcess } from './song.selectors';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   [SONG_ACTIONS.selectSong]: (eventData: EventData) =>
@@ -49,10 +49,10 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
   window = inject(WindowService);
   settingsSrv = inject(SettingsService);
 
-
   constructor() {
     console.log('SongsPageEffects');
   }
+
   selectedSong$ = createEffect(() =>
     this.actions$.pipe(
       ofType(SongActions.selectSong),
@@ -101,6 +101,16 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
           ...data,
         });
       })
+    )
+  );
+
+  /**
+   * при закрытии окна нужно сбросить состояние кастинга
+   */
+  openedWindow$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AppActions.closeWindow),
+      map(() => SongActions.pauseCasting())
     )
   );
 
@@ -164,7 +174,6 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
       this.actions$.pipe(
         ofType(SongActions.slideNavigate),
         map((data) => {
-          console.log('slide?', data);
           this.bridge.send<'SLIDE_NAVIGATE', SongPayloadsMap>(
             SONG_ACTIONS.slideNavigate,
             {

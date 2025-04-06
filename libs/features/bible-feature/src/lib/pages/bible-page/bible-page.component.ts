@@ -7,6 +7,7 @@ import {
   inject,
   OnInit,
   signal,
+  viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -34,6 +35,7 @@ import {
 import {
   combineLatest,
   debounceTime,
+  delay,
   filter,
   fromEvent,
   map,
@@ -69,6 +71,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { Router } from '@angular/router';
+import { Actions, ofType } from '@ngrx/effects';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -96,6 +99,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   apiSrv = inject(BibleApiService);
   destroyRef = inject(DestroyRef);
   store = inject<Store<BibleState>>(Store<BibleState>);
+  actions$ = inject(Actions);
 
   bibleFormGroup = new FormGroup({
     translate: new FormControl<IUiLyriListItem<BibleTranslateShort> | null>(
@@ -105,6 +109,8 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
     chapter: new FormControl<IUiLyriListItem<BibleChapterShort> | null>(null),
     content: new FormControl(null),
   });
+
+  lyriBibleChapter = viewChild(BibleChapterComponent);
 
   disableFormEmitChange = false;
 
@@ -172,6 +178,23 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
     .pipe(map((data) => !data));
 
   isLoading = signal(true);
+
+  setBooks$ = this.actions$
+    .pipe(
+      ofType(BibleActions.setBooks),
+      delay(1000),
+      map((payload) => {
+        const firstBook = payload.data[0];
+        if (firstBook) {
+          this.bibleFormGroup.controls.book.setValue({
+            searchKey: firstBook.number.toString(),
+            title: firstBook.title.full,
+            baseEntity: firstBook,
+          });
+        }
+      })
+    )
+    .subscribe();
 
   constructor() {
     this.bibleFormGroup.controls.translate.valueChanges
@@ -281,35 +304,11 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
         if (event.key === 'Enter') {
           this.onStartCasting();
         }
-      });
-    /*
-    this.searchResult$ = this.searchControl.valueChanges.pipe(
-      filterEmpty(),
-      takeUntilDestroyed(this.destroyRef),
-      debounceTime(200),
-      switchMap((value: string) => {
-        const translate = this.bibleFormGroup.controls.translate.value;
-        if (!translate || !value) {
-          this.searchOverlay()?.hide();
-          return of(null);
-        }
 
-        return this.apiSrv.search(translate.baseEntity, {
-          query: value,
-        });
-      }),
-      filterEmpty(),
-      tap((data: BibleSearchDto) => {
-        if (data.sections.length) {
-          const target = this.elRef.nativeElement.querySelector(
-            '.page-header__search-input'
-          );
-          this.searchOverlay()?.show(new Event('input'), target);
-        } else {
-          this.searchOverlay()?.hide();
+        if (event.key === 'Escape') {
+          this.onPauseCasting();
         }
-      })
-    );*/
+      });
   }
 
   ngAfterViewInit() {
@@ -356,16 +355,26 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
               }),
             })
           );
+
+          this.onFocusChapter();
         }
       });
   }
 
+  onFocusChapter() {
+    setTimeout(() => {
+      this.lyriBibleChapter()?.elRef.nativeElement.focus();
+    }, 100);
+  }
+
   onStopCasting() {
     this.store.dispatch(BibleActions.stopCasting());
+    this.onFocusChapter();
   }
 
   onPauseCasting() {
     this.store.dispatch(BibleActions.pauseCasting());
+    this.onFocusChapter();
   }
 
   onNavigateSlide(dir: 'prev' | 'next', selectedVerse: BibleVerse) {

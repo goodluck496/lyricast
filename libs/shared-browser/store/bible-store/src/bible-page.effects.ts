@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Action, Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { BibleActions } from './bible.actions';
-import { filter, map, of, switchMap, take, tap, withLatestFrom } from 'rxjs';
+import { delay, filter, map, mergeMap, of, switchMap, take, tap, withLatestFrom } from 'rxjs';
 
 import { BibleState } from './bible.store';
 import {
@@ -14,6 +14,7 @@ import {
   selectSelectedTranslate,
 } from './bible.selectors';
 import {
+  AppActions,
   BaseEffectsWithBridgeInterface,
   BridgeProcessForEffectsDecorator,
   BridgeService,
@@ -56,6 +57,16 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
       map((data) => {
         return BibleActions.setBooks({ data: data as BibleBookShort[] });
       })
+    )
+  );
+
+  /**
+   * при закрытии окна нужно сбросить состояние кастинга
+   */
+  openedWindow$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AppActions.closeWindow),
+      map(() => BibleActions.pauseCasting())
     )
   );
 

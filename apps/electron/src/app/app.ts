@@ -188,13 +188,14 @@ export default class App {
       }
     });
 
-    openedWindow.once('ready-to-show', () => {
+    openedWindow.once(ElectronAppEvents.READY_TO_SHOW, () => {
       if (windowType === AppWindowTypes.MAIN) {
         openedWindow.focus();
       } else {
-        App.openedWindows.MAIN.focus();
-        openedWindow.setFullScreen(true);
-
+        setTimeout(() => {
+          openedWindow.setFullScreen(true);
+          App.openedWindows.MAIN.focus();
+        }, 201);
       }
     });
   }

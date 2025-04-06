@@ -39,7 +39,7 @@ ipcMain.handle(
     }
 
     /**
-     * todo можно оформить в отдельную функцию
+     * todo можно оформить в отдельную функцию=
      */
     if (args.type === AppWindowTypes.CASTING) {
       const { x, y } = args.display.bounds;
@@ -92,7 +92,7 @@ ipcMain.handle(ElectronCommonEvents.SEND, (event, payload) => {
     if (targetWindow.webContents.id === event.sender.id) {
       console.log(
         '[CONTINUE] targetWindow.webContents.id === event.sender.id',
-        JSON.stringify(payload)
+        // JSON.stringify(payload)
       );
       return; // Пропускаем, если это отправляющее окно
     }

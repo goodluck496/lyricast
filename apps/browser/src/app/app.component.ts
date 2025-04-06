@@ -73,9 +73,19 @@ export class AppComponent implements OnInit {
   );
 
   ngOnInit() {
-    this.isNotCastingPage$
-      .pipe(filter(() => !this.firstRun))
-      .subscribe(() => this.onGo());
+    this.isNotCastingPage$.pipe(filter(() => !this.firstRun)).subscribe(() => {
+      const isRoot = this.router.isActive('/', {
+        paths: 'exact',
+        queryParams: 'exact',
+        fragment: 'ignored',
+        matrixParams: 'ignored',
+      });
+      if (isRoot) {
+        this.onGo();
+      } else {
+        this.onGo(this.router.url);
+      }
+    });
 
     this.settingsSrv.init();
 
@@ -86,8 +96,8 @@ export class AppComponent implements OnInit {
     this.store.dispatch(AppActions.appInit());
   }
 
-  onGo() {
+  onGo(url: string = ['/', Pages.MAIN, Pages.BIBLE_FEATURE].join('/')) {
     this.firstRun = true;
-    this.router.navigateByUrl(['/', Pages.MAIN, Pages.BIBLE_FEATURE].join('/'));
+    this.router.navigateByUrl(url);
   }
 }

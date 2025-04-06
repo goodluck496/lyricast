@@ -41,11 +41,13 @@ export const BibleActionsEnum = {
   selectPrevOrNextVerse: 'selectPrevOrNextVerse',
   changePath: 'changePath',
   openPage: 'openPage',
+  openedCastingPage: 'openedCastingPage',
   openCasting: 'openCasting',
   startCasting: 'startCasting',
   stopCasting: 'stopCasting',
   pauseCasting: 'pauseCasting',
   castingProcessChange: 'castingProcessChange',
+
 } as const;
 
 export type BibleActionsEnumKeys = keyof typeof BibleActionsEnum;
@@ -83,5 +85,6 @@ export const BibleActions = createActionGroup({
     [BibleActionsEnum.pauseCasting]: emptyProps(),
     [BibleActionsEnum.castingProcessChange]:
       props<BiblePresentationNavigatePayload>(),
+    [BibleActionsEnum.openedCastingPage]: emptyProps()
   },
 });

@@ -51,6 +51,7 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
     ),
   [BibleActionsEnum.stopCasting]: () => BibleActions.stopCasting(),
   [BibleActionsEnum.pauseCasting]: () => BibleActions.pauseCasting(),
+  'OPENED_PAGE': () => BibleActions.openedCastingPage()
 };
 
 @Injectable()

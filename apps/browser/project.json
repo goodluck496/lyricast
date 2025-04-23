@@ -24,6 +24,11 @@
           {
             "glob": "**/*",
             "input": "apps/browser/public"
+          },
+          {
+            "glob": "**/*.svg",
+            "input": "libs/styles/assets/icons",
+            "output": "assets/icons"
           }
         ],
         "styles": [

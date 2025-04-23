@@ -1,5 +1,22 @@
 @import "primeicons/primeicons.css";
 
+/**
+  Почему-то не хотят цепляться шрифты из node_modules
+ */
+@font-face {
+  font-family: 'primeicons';
+  font-display: block;
+  src: url('./assets/fonts/primeng/primeicons.eot');
+  src: url('./assets/fonts/primeng/primeicons.eot?#iefix') format('embedded-opentype'), url('./assets/fonts/primeng/primeicons.woff2') format('woff2'), url('./assets/fonts/primeng/primeicons.woff') format('woff'), url('./assets/fonts/primeng/primeicons.ttf') format('truetype'), url('./assets/fonts/primeng/primeicons.svg?#primeicons') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
 .p-button-icon.pi {
   margin-right: 8px;
+}
+
+.p-button {
+  min-height: 36px;
+  max-height: 36px;
 }

@@ -1,9 +1,10 @@
 import { Route } from '@angular/router';
-import { MainComponentService, Pages } from '@lyri-cast/common-browser';
+import { Pages } from '@lyri-cast/common-browser';
 import { provideEffects } from '@ngrx/effects';
-import { provideState } from '@ngrx/store';
+import { provideState, Store } from '@ngrx/store';
 
 import {
+  BibleActions,
   BibleCastingPageEffects,
   BibleFeatureName,
   BibleForCastingEffects,
@@ -26,8 +27,9 @@ export const bibleFeatureRoutes: Route[] = [
       ),
     canDeactivate: [
       () => {
-        const mainCompSrv = inject(MainComponentService);
-        mainCompSrv.setPageHeaderControlsContainer(null);
+        const store = inject(Store);
+
+        store.dispatch(BibleActions.pauseCasting());
       },
     ],
     providers: [

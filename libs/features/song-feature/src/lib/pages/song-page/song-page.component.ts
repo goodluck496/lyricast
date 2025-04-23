@@ -24,11 +24,7 @@ import {
   take,
   tap,
 } from 'rxjs';
-import {
-  HighlighterPipe,
-  PAGE_CONTAINER_TEMPLATES,
-  PageContainerComponent,
-} from '@lyri-cast/ui-lib';
+import { HighlighterPipe, PageContainerComponent } from '@lyri-cast/ui-lib';
 import { AsyncPipe } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {
@@ -43,7 +39,6 @@ import {
 import { filterEmpty, snapshot } from '@lyri-cast/common';
 import { DropdownModule } from 'primeng/dropdown';
 import { ListboxModule } from 'primeng/listbox';
-import { ButtonDirective } from 'primeng/button';
 import { CastingService } from '../../services/casting.service';
 import { InputTextModule } from 'primeng/inputtext';
 import {
@@ -58,7 +53,7 @@ import {
   SONG_ACTIONS,
   SongActions,
 } from '@lyri-cast/song-store';
-import { CastingPreviewComponent, SongComponent } from '../../components';
+import { SongComponent } from '../../components';
 import {
   IUiLyriItemInList,
   IUiLyriListItem,
@@ -67,9 +62,15 @@ import {
 } from '@lyri-cast/form';
 import { CheckboxModule } from 'primeng/checkbox';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { Pages, selectOpenedWindow } from '@lyri-cast/common-browser';
+import {
+  PAGE_CONTAINER_TEMPLATES,
+  Pages,
+  selectOpenedWindow,
+} from '@lyri-cast/common-browser';
 import { SongsApiService } from '@lyri-cast/data-access-songs';
 import { Actions, ofType } from '@ngrx/effects';
+import { SongSidebarComponent } from '../../components/song-sidebar/song-sidebar.component';
+import { Router } from '@angular/router';
 
 export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
   [SPLIT_PARTS_COUNT.NONE]: 'Нет',
@@ -89,13 +90,12 @@ export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
     ListboxModule,
     ListBoxComponent,
     SongComponent,
-    ButtonDirective,
     HighlighterPipe,
     InputTextModule,
     FormsModule,
-    CastingPreviewComponent,
     PageContainerComponent,
     CheckboxModule,
+    SongSidebarComponent,
   ],
   templateUrl: './song-page.component.html',
   styleUrl: './song-page.component.scss',
@@ -105,13 +105,13 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   private songPageSelectSrv = inject(SongPageSelectService);
   private readonly songsApiService = inject(SongsApiService);
   private readonly castingSrv = inject(CastingService);
+  private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly elRef = inject(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly store = inject(Store);
   private readonly actions$ = inject(Actions);
 
-  searchSig = signal<string>('');
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
   chorusAfterCouplet = signal(true);
 
@@ -162,11 +162,10 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       tap((songs) => {
         this.currentSongsList$.next(songs);
         this.isLoading.set(false);
-        if(!this.firstLoad) {
+        if (!this.firstLoad) {
           this.firstLoad = true;
           this.songControl.setValue(songs[0]);
         }
-
       }),
       shareReplay(1)
     );
@@ -228,7 +227,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
       this.songControl.setValue(song);
 
-      console.log('!!!!!!!!!!!!', song, songs, snapshot(this.songsList$));
+      // console.log('!!!!!!!!!!!!', song, songs, snapshot(this.songsList$));
 
       return { type: SONG_ACTIONS.selectSong };
     })
@@ -297,12 +296,6 @@ export class SongPageComponent implements OnInit, AfterViewInit {
           return;
         }
         this.selectedBook.setValue(book);
-      });
-
-    this.selectSongByNumber$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((song) => {
-        console.log('atsel song', song);
       });
   }
 

@@ -1,0 +1,17 @@
+<lyri-song-casting-preview></lyri-song-casting-preview>
+
+@if (castingIsPaused$ | async) {
+  <button pButton (click)="onStartCasting(true)" icon="pi pi-play" severity="success">Транслировать</button>
+} @else {
+  <button pButton (click)="onPauseCasting()" icon="pi pi-stop" severity="danger">Остановить</button>
+}
+<div class="flex">
+  <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false"
+          (click)="onCloseCasting()">Закрыть
+  </button>
+  <button pButton severity="help" (click)="onNavigateSlide('prev')" icon="pi pi-arrow-up">Назад</button>
+  <button pButton severity="help" (click)="onNavigateSlide('next')" icon="pi pi-arrow-down">Вперед</button>
+</div>
+
+<lyri-navigator-feature />
+

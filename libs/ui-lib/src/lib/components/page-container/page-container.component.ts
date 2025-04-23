@@ -1,19 +1,17 @@
 import {
-  AfterContentInit,
+  AfterContentInit, ChangeDetectorRef,
   Component,
   contentChildren,
-  DestroyRef,
+  DestroyRef, effect,
   inject,
-  input,
+  input
 } from '@angular/core';
-import { MainComponentService, Pages } from '@lyri-cast/common-browser';
 import { PrimeTemplate } from 'primeng/api';
 import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MainComponentService, PAGE_CONTAINER_TEMPLATES, Pages } from '@lyri-cast/common-browser';
+import { debounceTime } from 'rxjs';
 
-export enum PAGE_CONTAINER_TEMPLATES {
-  PAGE_HEADER = 'page-header'
-}
 
 @Component({
   selector: 'lyri-page-container',
@@ -22,6 +20,7 @@ export enum PAGE_CONTAINER_TEMPLATES {
   styleUrl: './page-container.component.scss',
 })
 export class PageContainerComponent implements AfterContentInit {
+  cdr = inject(ChangeDetectorRef)
   mainComponentService = inject(MainComponentService);
   destroyRef = inject(DestroyRef);
 
@@ -32,9 +31,16 @@ export class PageContainerComponent implements AfterContentInit {
     read: PrimeTemplate,
   });
 
+  constructor() {
+    effect(() => {
+      const templates = this.templates()
+      this.updateTemplates(templates)
+    });
+  }
+
   ngAfterContentInit() {
     this.router.events
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(takeUntilDestroyed(this.destroyRef),debounceTime(250))
       .subscribe((e) => {
         if (e instanceof NavigationEnd) {
           const isActive = this.router.isActive(this.pagePath().join('/'), {
@@ -44,22 +50,20 @@ export class PageContainerComponent implements AfterContentInit {
             matrixParams: 'ignored',
           });
           if (isActive) {
-            this.addHeaderToMain();
+            this.updateTemplates();
           }
         }
       });
-
-    this.addHeaderToMain();
   }
 
-  addHeaderToMain() {
-    const templates = this.templates();
+  updateTemplates(templates = this.templates()) {
+      templates.forEach((template: PrimeTemplate) => {
+        const type = template.name as PAGE_CONTAINER_TEMPLATES;
 
-    const headerTemplate = templates.find((el) => el.name === PAGE_CONTAINER_TEMPLATES.PAGE_HEADER);
-    if (headerTemplate) {
-      this.mainComponentService.setPageHeaderControlsContainer(
-        headerTemplate.template
-      );
-    }
+        this.mainComponentService.setTemplates(type, template);
+      });
+
+      this.cdr.markForCheck();
+
   }
 }

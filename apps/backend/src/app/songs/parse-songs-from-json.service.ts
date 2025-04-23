@@ -45,10 +45,10 @@ export class ParseSongsFromJsonService {
 
     const titleMatch = rawObj.title.match(TITLE_REGEX);
     const number = titleMatch ? Number(titleMatch[1]) : Number(rawObj.number);
-    const category = titleMatch?.[2] || "";
-    const reference = titleMatch?.[3] || "";
+    const category = titleMatch?.[2] || '';
+    const reference = titleMatch?.[3] || '';
 
-    const lyrics = rawObj.rawContent.reduce<ISong["lyrics"]>((acc, line) => {
+    const lyrics = rawObj.rawContent.reduce<ISong['lyrics']>((acc, line) => {
       const match = line.match(SECTION_REGEX);
       if (match) {
         const isCouplet = !!match[1];
@@ -64,13 +64,13 @@ export class ParseSongsFromJsonService {
         const lastSection = acc[acc.length - 1];
         lastSection.lines.push(line);
 
-/*
-todo доделать сплитование
-        const splitedVerses = this.splitVerses(onlyLines, 4);
+        /*
+        todo доделать сплитование
+                const splitedVerses = this.splitVerses(onlyLines, 4);
 
-        const splitLinesCount =
-          splitedVerses.length > 1 ? 2 : onlyLines.length <= 6 ? 0 : 2;
-*/
+                const splitLinesCount =
+                  splitedVerses.length > 1 ? 2 : onlyLines.length <= 6 ? 0 : 2;
+        */
 
         // lastSection.splitLinesCount++;
       }
@@ -185,7 +185,7 @@ todo доделать сплитование
 
     for (const book of books) {
       try {
-        console.log('convertToJson', book)
+        console.log('convertToJson', book);
         this.convertToJson(book);
       } catch (error) {
         console.log('ERROR convertSourceToJson', error);
@@ -202,7 +202,17 @@ todo доделать сплитование
     try {
       const data = fs.readFileSync(filePath);
       const fromJsonStr = JSON.parse(data.toString());
-      const parsedData = this.parseSongs(fromJsonStr, fileName);
+
+      let parsedData: ISongBook;
+
+      /**
+       * todo так делать нельзя, но нужно вообще уходить от файлов на удаленное хранилище и sql БД
+       */
+      if (fromJsonStr.header) {
+        parsedData = fromJsonStr;
+      } else {
+        parsedData = this.parseSongs(fromJsonStr, fileName);
+      }
 
       const newFilePath = path.resolve(
         this.assetsJsonsPath,

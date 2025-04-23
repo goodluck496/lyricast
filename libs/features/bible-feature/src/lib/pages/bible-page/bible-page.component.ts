@@ -10,11 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  HighlighterPipe,
-  PAGE_CONTAINER_TEMPLATES,
-  PageContainerComponent,
-} from '@lyri-cast/ui-lib';
+import { HighlighterPipe, PageContainerComponent } from '@lyri-cast/ui-lib';
 import {
   FormControl,
   FormGroup,
@@ -51,14 +47,12 @@ import {
   BibleActions,
   BibleState,
   selectBooks,
-  selectCastingPaused,
   selectChapterLoading,
   selectSelectedBibleVerse,
   selectSelectedBook,
   selectSelectedChapterSections,
   selectSelectedPath,
 } from '@lyri-cast/bible-store';
-import { ButtonDirective } from 'primeng/button';
 import { BibleChapterComponent } from '../../components/bible-chapter/bible-chapter.component';
 import {
   IUiLyriItemInList,
@@ -66,12 +60,18 @@ import {
   ListBoxComponent,
   ListBoxTemplates,
 } from '@lyri-cast/form';
-import { Pages, selectOpenedWindow } from '@lyri-cast/common-browser';
+import {
+  PAGE_CONTAINER_TEMPLATES,
+  Pages,
+  SidebarService,
+} from '@lyri-cast/common-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { Router } from '@angular/router';
 import { Actions, ofType } from '@ngrx/effects';
+import { BibleSidebarComponent } from '../../components/bible-sidebar/bible-sidebar.component';
+import { BibleSidebarData } from '../../types';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -85,21 +85,23 @@ import { Actions, ofType } from '@ngrx/effects';
     ReactiveFormsModule,
     ListBoxComponent,
     HighlighterPipe,
-    ButtonDirective,
     BibleChapterComponent,
     OverlayPanelModule,
+    BibleSidebarComponent,
   ],
   templateUrl: './bible-page.component.html',
   styleUrl: './bible-page.component.scss',
 })
 export class BiblePageComponent implements OnInit, AfterViewInit {
-  cdr = inject(ChangeDetectorRef);
-  router = inject(Router);
-  elRef = inject(ElementRef);
-  apiSrv = inject(BibleApiService);
-  destroyRef = inject(DestroyRef);
-  store = inject<Store<BibleState>>(Store<BibleState>);
-  actions$ = inject(Actions);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
+  private readonly elRef = inject(ElementRef);
+  private readonly apiSrv = inject(BibleApiService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly store = inject<Store<BibleState>>(Store<BibleState>);
+  private readonly actions$ = inject(Actions);
+  private readonly sidebarService =
+    inject<SidebarService<BibleSidebarData>>(SidebarService);
 
   bibleFormGroup = new FormGroup({
     translate: new FormControl<IUiLyriListItem<BibleTranslateShort> | null>(
@@ -171,11 +173,6 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   sectionList$: Observable<BibleChapterSection[]> = this.store.select(
     selectSelectedChapterSections
   );
-
-  castingIsPaused$ = this.store.select(selectCastingPaused);
-  windowHasClose$ = this.store
-    .select(selectOpenedWindow)
-    .pipe(map((data) => !data));
 
   isLoading = signal(true);
 
@@ -266,6 +263,20 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
             this.disableFormEmitChange = false;
           });
         }
+      });
+
+    this.bibleFormGroup.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
+      .subscribe((value) => {
+
+        this.sidebarService.updateData({
+          bibleForm: {
+            book: value?.book || null,
+            chapter: value?.chapter || null,
+            translate: value?.translate || null,
+            content: value?.content || [],
+          },
+        });
       });
   }
 
@@ -368,11 +379,6 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
     setTimeout(() => {
       this.lyriBibleChapter()?.elRef.nativeElement.focus();
     }, 100);
-  }
-
-  onStopCasting() {
-    this.store.dispatch(BibleActions.stopCasting());
-    this.onFocusChapter();
   }
 
   onPauseCasting() {

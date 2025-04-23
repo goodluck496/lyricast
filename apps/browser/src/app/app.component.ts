@@ -20,6 +20,8 @@ import {
 } from '@lyri-cast/common-browser';
 import { AsyncPipe } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
+import { MatIconRegistry } from '@angular/material/icon';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
   standalone: true,
@@ -71,6 +73,16 @@ export class AppComponent implements OnInit {
     filter((route) => route instanceof NavigationEnd),
     map((data) => !data.url.includes(Pages.CASTING))
   );
+
+  constructor(iconRegistry: MatIconRegistry, sanitizer: DomSanitizer) {
+    iconRegistry.addSvgIcon(
+      'song-lyric-icon',
+      sanitizer.bypassSecurityTrustResourceUrl('/assets/icons/song-lyrics.svg')
+    );
+    iconRegistry.addSvgIcon('bible-icon', sanitizer.bypassSecurityTrustResourceUrl('/assets/icons/bible.svg'))
+    iconRegistry.addSvgIcon('settings-icon', sanitizer.bypassSecurityTrustResourceUrl('/assets/icons/control.svg'))
+    iconRegistry.addSvgIcon('programs-icon', sanitizer.bypassSecurityTrustResourceUrl('/assets/icons/storyboard.svg'))
+  }
 
   ngOnInit() {
     this.isNotCastingPage$.pipe(filter(() => !this.firstRun)).subscribe(() => {

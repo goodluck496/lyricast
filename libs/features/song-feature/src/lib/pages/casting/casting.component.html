@@ -3,7 +3,7 @@
   <div class="info-block__number" [class.hide]="!selectedSong()">{{ selectedSong()?.number }}</div>
 </div>
 
-<div class="slides__container" [class.hide]="!showingContent()">
+<div class="slides__container" [class.hide]="hideContent">
   <div class="reveal">
     <div class="slides">
       <section class="stack">
@@ -21,6 +21,7 @@
           @for (line of lyric.lines; track line.rangeIndex) {
             @if (showingContent()) {
               <section
+                [class.hide]="hideContent"
                 class="slides__section">
                 <div [fittext]="true"
                      [maxFontSize]="120"

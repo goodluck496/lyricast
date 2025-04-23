@@ -7,6 +7,7 @@
         <p-dropdown
           [formControl]="bibleFormGroup.controls.translate"
           [options]="bibleTranslates"
+          appendTo="body"
           optionLabel="title"
           styleClass="list-search-dropdown"
         >
@@ -70,19 +71,11 @@
     }
 
   </ng-container>
-  <ng-container page-sideibar-preview>
-<!--    очень глючит простое использование страницы lyri-bible-casting-page внутри текущей страницы -->
-<!--    <lyri-bible-casting-page [isMainWindow]="true"></lyri-bible-casting-page>-->
-  </ng-container>
-  <ng-container page-sideibar-content>
-    @if((castingIsPaused$ | async)) {
-      <button pButton (click)="onStartCasting()" icon="pi pi-play" severity="success">Транслировать</button>
-    } @else {
-      <button pButton (click)="onPauseCasting()" icon="pi pi-stop" severity="danger">Остановить</button>
-    }
 
-    <div class="flex">
-      <button pButton severity="danger" [disabled]="windowHasClose$ | async" (click)="onStopCasting()">Закрыть</button>
-    </div>
-  </ng-container>
+
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR">
+    <lyri-bible-sidebar></lyri-bible-sidebar>
+  </ng-template>
+
+
 </lyri-page-container>

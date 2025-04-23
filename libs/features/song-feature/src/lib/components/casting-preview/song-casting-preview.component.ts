@@ -18,14 +18,14 @@ import { Ng2FittextModule } from 'ng2-fittext';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
-  selector: 'lyri-casting-preview',
+  selector: 'lyri-song-casting-preview',
   standalone: true,
   imports: [CommonModule, Ng2FittextModule],
-  templateUrl: './casting-preview.component.html',
-  styleUrl: './casting-preview.component.scss',
+  templateUrl: './song-casting-preview.component.html',
+  styleUrl: './song-casting-preview.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
+export class SongCastingPreviewComponent implements OnDestroy, AfterViewInit {
   public elRef = inject(ElementRef<HTMLElement>);
   public songPageSelectSrv = inject(SongPageSelectService);
   private cdr = inject(ChangeDetectorRef);
@@ -75,7 +75,7 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
   }
 
   closePreview(): void {
-    this.deck?.destroy();
+    this.deck?.destroy?.();
   }
 
   ngAfterViewInit() {
@@ -102,6 +102,6 @@ export class CastingPreviewComponent implements OnDestroy, AfterViewInit {
 
   ngOnDestroy() {
     clearTimeout(this.initTimeoutId);
-    this.deck?.destroy();
+    this.deck?.destroy?.();
   }
 }

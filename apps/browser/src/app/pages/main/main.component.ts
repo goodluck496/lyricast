@@ -4,6 +4,7 @@ import {
   Component,
   DestroyRef,
   inject,
+  Injector,
   OnInit,
 } from '@angular/core';
 import {
@@ -16,7 +17,13 @@ import { TabViewModule } from 'primeng/tabview';
 
 import { MenuItem, PrimeTemplate } from 'primeng/api';
 import { TabMenuModule } from 'primeng/tabmenu';
-import { MainComponentService, Pages, PageTitlesMap } from '@lyri-cast/common-browser';
+import {
+  MainComponentService,
+  PAGE_CONTAINER_TEMPLATES,
+  Pages,
+  PageTitlesMap,
+  SidebarService,
+} from '@lyri-cast/common-browser';
 import { HttpClient } from '@angular/common/http';
 import { BASE_API_TOKEN } from '@lyri-cast/common';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -31,7 +38,11 @@ import {
 } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SearchFeatureComponent } from '@lyri-cast/search-feature';
-import { NgTemplateOutlet } from '@angular/common';
+import { AsyncPipe, NgTemplateOutlet } from '@angular/common';
+import { ComponentType } from '@angular/cdk/portal';
+import { MatIcon } from '@angular/material/icon';
+
+// import lyricSvg from '@styles/assets/icons/song-lyrics.svg';
 
 @Component({
   selector: 'lyri-main-page',
@@ -44,6 +55,8 @@ import { NgTemplateOutlet } from '@angular/common';
     ProgressSpinnerModule,
     SearchFeatureComponent,
     NgTemplateOutlet,
+    MatIcon,
+    AsyncPipe,
   ],
   templateUrl: './main.component.html',
   styleUrl: './main.component.scss',
@@ -64,24 +77,30 @@ export class MainComponent implements OnInit {
   pages: MenuItem[] = [
     {
       routerLink: ['./', Pages.BIBLE_FEATURE, Pages.BIBLE],
-      label: PageTitlesMap.get(Pages.BIBLE) || Pages.BIBLE,
+      label: PageTitlesMap.get(Pages.BIBLE) ?? Pages.BIBLE,
+      icon: 'bible-icon',
     },
     {
       routerLink: ['./', Pages.SONGS_FEATURE, Pages.SONGS],
-      label: PageTitlesMap.get(Pages.SONGS) || Pages.SONGS,
+      label: PageTitlesMap.get(Pages.SONGS) ?? Pages.SONGS,
+      // icon: 'pi-volume-up'
+      icon: 'song-lyric-icon',
     },
     {
       routerLink: ['./', Pages.PROGRAMS],
-      label: PageTitlesMap.get(Pages.PROGRAMS) || Pages.PROGRAMS,
+      label: PageTitlesMap.get(Pages.PROGRAMS) ?? Pages.PROGRAMS,
+      disabled: true,
+      icon: 'programs-icon',
     },
     {
       routerLink: ['./', Pages.SETTINGS],
-      label: PageTitlesMap.get(Pages.SETTINGS) || Pages.SETTINGS,
+      label: PageTitlesMap.get(Pages.SETTINGS) ?? Pages.SETTINGS,
+      icon: 'settings-icon',
     },
-    {
-      routerLink: ['./', Pages.TEST],
-      label: PageTitlesMap.get(Pages.TEST) || Pages.TEST,
-    },
+    // {
+    //   routerLink: ['./', Pages.TEST],
+    //   label: PageTitlesMap.get(Pages.TEST) || Pages.TEST,
+    // },
   ];
 
   backendReady = false;
@@ -124,4 +143,6 @@ export class MainComponent implements OnInit {
       first((response) => !!response) // Останавливаем на успешном ответе
     );
   }
+
+  protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
 }

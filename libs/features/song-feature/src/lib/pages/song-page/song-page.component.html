@@ -13,11 +13,11 @@
 
   <ng-container page-content>
     <div class="list-search-wrapper">
-
-      <div class="list-search-block">
+      <div class="list-search-block list-search-block--wide">
         <p-dropdown
           [formControl]="selectedBook"
           [options]="songBooksDict"
+          appendTo="body"
           optionLabel="title"
           styleClass="list-search-dropdown"
         >
@@ -44,27 +44,12 @@
       }
 
     }
-  </ng-container>
-
-  <ng-container page-sideibar-preview>
-    @if (selectedSong$ | async) {
-      <lyri-casting-preview></lyri-casting-preview>
-    }
 
   </ng-container>
-  <ng-container page-sideibar-content>
-    @if (castingIsPaused$ | async) {
-      <button pButton (click)="onStartCasting(true)" icon="pi pi-play" severity="success">Транслировать</button>
-    } @else {
-      <button pButton (click)="onPauseCasting()" icon="pi pi-stop" severity="danger">Остановить</button>
-    }
-    <div class="flex">
-      <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false"
-              (click)="onCloseCasting()">Закрыть
-      </button>
-      <button pButton severity="help" (click)="onNavigateSlide('prev')" icon="pi pi-arrow-up">Назад</button>
-      <button pButton severity="help" (click)="onNavigateSlide('next')" icon="pi pi-arrow-down">Вперед</button>
-    </div>
 
-  </ng-container>
+
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR">
+    <lyri-song-sidebar></lyri-song-sidebar>
+  </ng-template>
+
 </lyri-page-container>

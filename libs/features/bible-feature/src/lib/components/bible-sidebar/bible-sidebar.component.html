@@ -1,0 +1,13 @@
+<lyri-bible-casting-preview></lyri-bible-casting-preview>
+
+@if ((castingIsPaused$ | async)) {
+  <button pButton (click)="onStartCasting()" icon="pi pi-play" severity="success">Транслировать</button>
+} @else {
+  <button pButton (click)="onPauseCasting()" icon="pi pi-stop" severity="danger">Остановить</button>
+}
+
+<div class="flex">
+  <button pButton severity="danger" [disabled]="windowHasClose$ | async" (click)="onStopCasting()">Закрыть</button>
+</div>
+
+<lyri-navigator-feature />

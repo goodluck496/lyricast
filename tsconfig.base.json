@@ -31,6 +31,9 @@
       ],
       "@lyri-cast/entities": ["libs/entities/src/index.ts"],
       "@lyri-cast/form": ["libs/features/forms/src/index.ts"],
+      "@lyri-cast/navigator-feature": [
+        "libs/features/navigator-feature/src/index.ts"
+      ],
       "@lyri-cast/search-feature": [
         "libs/features/search-feature/src/index.ts"
       ],

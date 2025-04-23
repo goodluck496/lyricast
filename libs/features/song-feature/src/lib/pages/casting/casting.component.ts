@@ -51,6 +51,8 @@ export class CastingComponent implements OnInit, AfterViewInit {
 
   fitTexts = viewChildren(Ng2FittextDirective);
 
+  hideContent = true;
+
   castingPaused$ = this.store.select(selectCastingPaused);
 
   @HostListener('window:resize', ['$event'])
@@ -66,6 +68,10 @@ export class CastingComponent implements OnInit, AfterViewInit {
   ngOnInit() {
     this.castingPaused$.subscribe((value) => {
       this.showingContent.set(!value);
+      setTimeout(() => {
+        this.hideContent = value;
+        this.cdr.detectChanges();
+      }, 500);
     });
 
     this.store.select(selectCastingProcess).subscribe((data) => {
@@ -116,6 +122,11 @@ export class CastingComponent implements OnInit, AfterViewInit {
       this.deckRef?.slide(0, 1);
     }
     this.updateTextSize();
+
+    setTimeout(() => {
+      this.hideContent = false;
+      this.cdr.detectChanges();
+    }, 500);
   }
 
   navigateCastingHandler(payload: SongPayloadsMap['SLIDE_NAVIGATE']) {

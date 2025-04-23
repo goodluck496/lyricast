@@ -119,7 +119,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     this.selectedContents.set(payload.content);
     this.selectedChapterId.set(payload.chapter.number);
     this.showingContent.set(true);
-    this.selectedVerseId.set(payload.fromIndex || 1);
+    this.selectedVerseId.set(payload.fromIndex ?? 0);
     this.cdr.detectChanges();
 
     await this.initReveal();

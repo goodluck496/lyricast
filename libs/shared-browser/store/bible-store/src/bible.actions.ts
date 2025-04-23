@@ -15,7 +15,7 @@ export type BibleStartCastingPayload = {
   book: BibleBookShort;
   chapter: BibleChapterShort;
   content: BibleVerseForCasting[];
-  fromIndex?: number;
+  fromIndex: number;
 };
 
 export type BiblePresentationNavigatePayload = {

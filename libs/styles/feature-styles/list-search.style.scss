@@ -2,18 +2,24 @@
 .list-search {
 
   &-wrapper {
-    width: 300px;
-    max-width: 300px;
+    width: 350px;
+    max-width: 400px;
     height: 100%;
   }
 
   &-block {
     height: 100%;
     width: 100%;
+
+
     background: #191919;
 
     border-radius: 8px 8px 0 0;
     overflow: hidden;
+
+    &--wide {
+      min-width: 350px;
+    }
 
     lyri-list-box {
       height: calc(100% - 46px);

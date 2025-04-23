@@ -1,33 +1,55 @@
 @if (backendReady) {
-  <p-tabMenu class="page__tab-menu" [model]="pages" [activeItem]="activePage" (activeItemChange)="onChangeTabs($event)">
 
-    <ng-template pTemplate="item" let-item>
-      @if (item.routerLink) {
-        <a [routerLink]="item.routerLink" class="p-menuitem-link">
-          <span [class]="item.icon"></span>
-          <span class="ml-2">
-                    {{ item.label }}
-                </span>
-        </a>
-      } @else {
-        {{ item.label }}
-      }
-
-    </ng-template>
-  </p-tabMenu>
   <div class="page__wrapper">
-    <div class="page__header">
-      <div class="page__header-search">
-        <lyri-search-feature />
-      </div>
-      <div class="page__header-controls">
-        @if (mainCompService.pageHeaderControlsContainer) {
-          <ng-container *ngTemplateOutlet="mainCompService.pageHeaderControlsContainer"></ng-container>
+    <div class="page__menu">
+      @for (page of pages; track page.label) {
+        @if (!page.disabled) {
+          <div class="page__menu-item"
+               [routerLink]="page.routerLink"
+               routerLinkActive="page__menu-item--active">
+            @if (page.icon) {
+              <mat-icon [svgIcon]="page.icon"></mat-icon>
+            }
+            {{ page.label }}
+          </div>
+        } @else {
+          <div class="page__menu-item page__menu-item--disabled">
+            @if (page.icon) {
+              <mat-icon [svgIcon]="page.icon"></mat-icon>
+            }
+            {{ page.label }}
+          </div>
         }
-      </div>
-    </div>
 
-    <router-outlet></router-outlet>
+      }
+    </div>
+    <div class="page__content">
+      <div class="page__header">
+        <div class="page__header-search">
+          <lyri-search-feature />
+        </div>
+        <div class="page__header-controls">
+          @if (mainCompService.templatesMap$ | async; as templateMap) {
+            @if (templateMap.get(PAGE_CONTAINER_TEMPLATES.PAGE_HEADER); as headControlTemplate) {
+              <ng-container
+                *ngTemplateOutlet="headControlTemplate.template"></ng-container>
+            }
+
+          }
+
+        </div>
+      </div>
+      <router-outlet></router-outlet>
+    </div>
+    <div class="page__sidebar">
+      @if (mainCompService.templatesMap$ | async; as templateMap) {
+        @if (templateMap.get(PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR); as sidebarTemplate) {
+          <ng-container
+            *ngTemplateOutlet="sidebarTemplate.template"></ng-container>
+        }
+
+      }
+    </div>
   </div>
 
 } @else {

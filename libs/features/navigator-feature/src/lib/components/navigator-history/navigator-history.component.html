@@ -1,0 +1,12 @@
+<p-listbox
+  #listboxRef
+  [options]="(historyItems | async) ?? []"
+  [(ngModel)]="selectedHistory"
+  [style]="{'width':'100%'}"
+  [listStyle]="{'max-height': '220px'}"
+  (onChange)="onChange()"
+>
+  <ng-template pTemplate="item" let-item>
+    {{item.payload.title}}
+  </ng-template>
+</p-listbox>

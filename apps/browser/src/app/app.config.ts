@@ -16,8 +16,11 @@ import { provideState, provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { provideEffects } from '@ngrx/effects';
 import { AppEffects, AppReducer } from '@lyri-cast/common-browser';
-import { NavigatorFeatureEffects, NavigatorFeatureName, NavigatorReducer } from '@lyri-cast/navigator-feature';
-
+import {
+  NavigatorFeatureEffects,
+  NavigatorFeatureName,
+  NavigatorReducer,
+} from '@lyri-cast/navigator-feature';
 
 export const appConfig: ApplicationConfig = {
   providers: [

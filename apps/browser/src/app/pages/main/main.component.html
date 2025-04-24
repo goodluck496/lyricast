@@ -8,14 +8,14 @@
                [routerLink]="page.routerLink"
                routerLinkActive="page__menu-item--active">
             @if (page.icon) {
-              <mat-icon [svgIcon]="page.icon"></mat-icon>
+              <lyri-icon [name]="page.icon"></lyri-icon>
             }
             {{ page.label }}
           </div>
         } @else {
           <div class="page__menu-item page__menu-item--disabled">
             @if (page.icon) {
-              <mat-icon [svgIcon]="page.icon"></mat-icon>
+              <lyri-icon [name]="page.icon"></lyri-icon>
             }
             {{ page.label }}
           </div>

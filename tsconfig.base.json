@@ -42,6 +42,8 @@
         "libs/shared-browser/store/song-store/src/index.ts"
       ],
       "@lyri-cast/styles": ["libs/styles/src/index.ts"],
+      "@lyri-cast/svg-icons": ["libs/svg-icons/src/index.ts"],
+      "@lyri-cast/svg-icons/*": ["libs/svg-icons/src/*"],
       "@lyri-cast/ui-lib": ["libs/ui-lib/src/index.ts"]
     }
   },

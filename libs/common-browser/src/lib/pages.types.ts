@@ -1,3 +1,6 @@
+import { MenuItem as MenuItemPrime } from 'primeng/api';
+import { LyriIconName } from '@lyri-cast/svg-icons';
+
 export enum Pages {
   MAIN = 'main',
   SONGS = 'songs',
@@ -22,5 +25,6 @@ export const PageTitlesMap: Map<Pages, string> = new Map([
 
 export type Page = {
   id: Pages;
-  title:string;
-}
+  title: string;
+};
+

@@ -4,7 +4,6 @@ import {
   Component,
   DestroyRef,
   inject,
-  Injector,
   OnInit,
 } from '@angular/core';
 import {
@@ -15,14 +14,12 @@ import {
 } from '@angular/router';
 import { TabViewModule } from 'primeng/tabview';
 
-import { MenuItem, PrimeTemplate } from 'primeng/api';
 import { TabMenuModule } from 'primeng/tabmenu';
 import {
   MainComponentService,
   PAGE_CONTAINER_TEMPLATES,
   Pages,
   PageTitlesMap,
-  SidebarService,
 } from '@lyri-cast/common-browser';
 import { HttpClient } from '@angular/common/http';
 import { BASE_API_TOKEN } from '@lyri-cast/common';
@@ -39,8 +36,12 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SearchFeatureComponent } from '@lyri-cast/search-feature';
 import { AsyncPipe, NgTemplateOutlet } from '@angular/common';
-import { ComponentType } from '@angular/cdk/portal';
-import { MatIcon } from '@angular/material/icon';
+import { IconsService, SvgIconComponent } from '@lyri-cast/svg-icons';
+import { MenuItem } from '../../types';
+import { lyriBible } from '@lyri-cast/svg-icons/lyri-icons/lyri-bible.icon';
+import { lyriControl } from '@lyri-cast/svg-icons/lyri-icons/lyri-control.icon';
+import { lyriStoryboard } from '@lyri-cast/svg-icons/lyri-icons/lyri-storyboard.icon';
+import { lyriSongLyrics } from '@lyri-cast/svg-icons/lyri-icons/lyri-song-lyrics.icon';
 
 // import lyricSvg from '@styles/assets/icons/song-lyrics.svg';
 
@@ -50,13 +51,12 @@ import { MatIcon } from '@angular/material/icon';
   imports: [
     RouterOutlet,
     TabViewModule,
-    PrimeTemplate,
     TabMenuModule,
     ProgressSpinnerModule,
     SearchFeatureComponent,
     NgTemplateOutlet,
-    MatIcon,
     AsyncPipe,
+    SvgIconComponent,
   ],
   templateUrl: './main.component.html',
   styleUrl: './main.component.scss',
@@ -69,6 +69,7 @@ export class MainComponent implements OnInit {
   http = inject(HttpClient);
   destroyRef = inject(DestroyRef);
   BASE_API_TOKEN = inject(BASE_API_TOKEN);
+  iconService = inject(IconsService);
 
   mainCompService = inject(MainComponentService);
 
@@ -78,24 +79,24 @@ export class MainComponent implements OnInit {
     {
       routerLink: ['./', Pages.BIBLE_FEATURE, Pages.BIBLE],
       label: PageTitlesMap.get(Pages.BIBLE) ?? Pages.BIBLE,
-      icon: 'bible-icon',
+      icon: 'bible',
     },
     {
       routerLink: ['./', Pages.SONGS_FEATURE, Pages.SONGS],
       label: PageTitlesMap.get(Pages.SONGS) ?? Pages.SONGS,
       // icon: 'pi-volume-up'
-      icon: 'song-lyric-icon',
+      icon: 'song_lyrics',
     },
     {
       routerLink: ['./', Pages.PROGRAMS],
       label: PageTitlesMap.get(Pages.PROGRAMS) ?? Pages.PROGRAMS,
       disabled: true,
-      icon: 'programs-icon',
+      icon: 'storyboard',
     },
     {
       routerLink: ['./', Pages.SETTINGS],
       label: PageTitlesMap.get(Pages.SETTINGS) ?? Pages.SETTINGS,
-      icon: 'settings-icon',
+      icon: 'control',
     },
     // {
     //   routerLink: ['./', Pages.TEST],
@@ -104,6 +105,15 @@ export class MainComponent implements OnInit {
   ];
 
   backendReady = false;
+
+  constructor(icons: IconsService) {
+    icons.registerIcons([
+      lyriBible,
+      lyriControl,
+      lyriStoryboard,
+      lyriSongLyrics,
+    ]);
+  }
 
   ngOnInit() {
     this.cdr.detectChanges();

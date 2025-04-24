@@ -1,0 +1,14 @@
+:host {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: content-box;
+  width: 20px;
+  height: 20px;
+  fill: white;
+
+  ::ng-deep svg {
+    width: 100%;
+    height: 100%;
+  }
+}

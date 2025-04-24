@@ -21,6 +21,7 @@ export class BibleByFilesService {
 
   isReady = false;
 
+  readedTranslates = false;
   constructor() {} // private readonly bibleTranslateRepo: Repository<BibleTranslateEntity> // @InjectRepository(BibleTranslateEntity)
 
   getAllBibles(): BibleTranslate[] {
@@ -30,6 +31,9 @@ export class BibleByFilesService {
   }
 
   getAllShortBibles(): BibleTranslateShort[] {
+    if(this.readedTranslates) {
+      return Object.keys(this.biblesCache).map(key => this.biblesCache[key]);
+    }
     const translatesFiles = fs.readdirSync(this.assetsPath);
     const translates: BibleTranslateShort[] = [];
 
@@ -37,6 +41,7 @@ export class BibleByFilesService {
       for (const translateFile of translatesFiles) {
         if (this.biblesCache[translateFile]) {
           translates.push(this.biblesCache[translateFile]);
+          console.log('in cache');
           continue;
         }
 
@@ -57,6 +62,7 @@ export class BibleByFilesService {
         this.biblesCache[translate.keyForSearch] = translate;
       }
 
+      this.readedTranslates = true;
       return translates;
     } catch (error) {
       console.log('getAllBibles', error);

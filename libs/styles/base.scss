@@ -10,6 +10,12 @@
 }
 
 
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 $flex-basis: 10 10%,
 20 20%,
 25 25%,
@@ -30,6 +36,8 @@ $flex-basis: 10 10%,
 
 @import "scroll";
 @import "prime-ng";
+@import "primeng.rewrites";
 
 @import "./feature-styles/list-search.style";
+@import "feature-styles/control-sidebar.style";
 

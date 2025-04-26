@@ -11,6 +11,7 @@ export type SongPayloadsMap =  {
   [SONG_ACTIONS.selectBook]: ISongBookName;
   [SONG_ACTIONS.selectSong]: {
     song: ISong;
+    bookName: ISongBookName;
   };
   [SONG_ACTIONS.openCasting]: {
     song: ISong;

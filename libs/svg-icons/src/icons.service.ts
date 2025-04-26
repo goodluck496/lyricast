@@ -6,6 +6,8 @@ const ICON_IMPORTERS: Record<LyriIconName, () => Promise<LyriIcon | any>> = {
   control: () => import('./lyri-icons/lyri-control.icon'),
   song_lyrics: () => import('./lyri-icons/lyri-song-lyrics.icon'),
   storyboard: () => import('./lyri-icons/lyri-storyboard.icon'),
+  opened_book: () => import('./lyri-icons/lyri-opened-book.icon'),
+  song: () => import('./lyri-icons/lyri-song.icon'),
 };
 
 @Injectable({ providedIn: 'root' })
@@ -13,25 +15,17 @@ export class IconsService {
   private registry = new Map<string, string>();
 
   async registerIcons(icons: LyriIcon[]): Promise<void> {
-    console.log('registerIcons', icons);
-    const imports = icons.map((icon) =>{
-      // return import(`@lyri-cast/svg-icons/lyri-icons/lyri-${name}.icon.ts`).then(
-      // return import(`libs/svg-icons/src/lyri-icons/lyri-${name}.icon`).then(
-      //   (module) => {
-      //     this.registry.set(name, module[`icon${toPascalCase(name)}`]);
-      //   }
-      // )
+    const imports = icons.map((icon) => {
 
       return ICON_IMPORTERS[icon.name];
     });
     await Promise.all(imports).then((e) => {
       e.forEach((entry) => {
-        entry().then(v => {
+        entry().then((v) => {
           const data: LyriIcon = Object.values(v)[0] as LyriIcon;
           this.registry.set(data.name, data.data);
-          console.log('icon?',Object.values(v))
         });
-      })
+      });
     });
   }
 

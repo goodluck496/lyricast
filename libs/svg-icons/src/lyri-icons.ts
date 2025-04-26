@@ -7,6 +7,8 @@ export type LyriIconNameSubset<T extends Readonly<LyriIcon[]>> =
 
 export * from './lyri-icons/lyri-bible.icon';
 export * from './lyri-icons/lyri-control.icon';
+export * from './lyri-icons/lyri-opened-book.icon';
 export * from './lyri-icons/lyri-song-lyrics.icon';
+export * from './lyri-icons/lyri-song.icon';
 export * from './lyri-icons/lyri-storyboard.icon';
 export * from './lyri-icons/lyri-svg-icon.model';

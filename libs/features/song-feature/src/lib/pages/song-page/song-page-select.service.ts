@@ -72,10 +72,16 @@ export class SongPageSelectService {
     };
   }
 
+  /**
+   *
+   * @param dir - направление навигации
+   * @param forceIndex - если указан, то индексом презентации будет взят именно этот параметр
+   */
   public getNavigatePayload(
-    dir: 'prev' | 'next'
+    dir: 'prev' | 'next',
+    forceIndex?: number
   ): SongPresentationNavigatePayload | undefined {
-    const lyric = this.selectedLyric;
+    const lyric = this.selectedLyric();
     const song = this.selectedSong();
     if (!lyric || !song) {
       return;
@@ -85,10 +91,13 @@ export class SongPageSelectService {
     if (!currentLyricLine) {
       return;
     }
-    const nextGlobalIndex =
+    let nextGlobalIndex =
       dir === 'next'
         ? currentLyricLine.globalSongIndex + 1
         : currentLyricLine.globalSongIndex - 1;
+    if (forceIndex !== undefined) {
+      nextGlobalIndex = forceIndex;
+    }
     const lyrics = this.selectedLyricsForCasting();
     const lyricsLines = lyrics.map((el) => el.lines).flat();
     const nextLine = lyricsLines.find(
@@ -112,6 +121,7 @@ export class SongPageSelectService {
     return {
       direction: dir,
       currentLyric: nextLyric,
+      index: nextGlobalIndex,
     };
   }
 

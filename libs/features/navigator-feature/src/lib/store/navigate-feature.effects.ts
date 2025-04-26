@@ -2,9 +2,9 @@ import { inject, Injectable } from '@angular/core';
 import { Action, ActionCreator, Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { HistoryService } from '../services/history.service';
-import { debounceTime, tap } from 'rxjs';
+import { debounceTime, EMPTY, switchMap, tap } from 'rxjs';
 import { loggableActions } from '../navigator-feature';
-import { HistoryItem } from '../services/history.types';
+import { filterEmpty } from '@lyri-cast/common';
 
 type ExtractActionPayload<T> = T extends ActionCreator<string, infer P>
   ? P extends (props: infer R) => any
@@ -19,6 +19,8 @@ function isActionOfType<T extends ActionCreator>(
   return action.type === creator.type;
 }
 
+export const ADD_HISTORY_ITEM_DELAY = 200;
+
 @Injectable({ providedIn: 'root' })
 export class NavigatorFeatureEffects {
   private store = inject(Store);
@@ -29,24 +31,27 @@ export class NavigatorFeatureEffects {
     () =>
       this.actions$.pipe(
         ofType(...loggableActions.map((entry) => entry.action)),
-        debounceTime(300),
-        tap((payload) => {
-          console.log('action', payload  );
+        debounceTime(ADD_HISTORY_ITEM_DELAY),
+        switchMap((payload) => {
           const entry = loggableActions.find(
             (e) => e.action.type === payload.type
           );
-          if (!entry) return;
+          if (!entry) return EMPTY;
 
-          if (isActionOfType(payload, entry.action)) {
-            const props = payload;
-            // const props = (action as { payload: ExtractActionPayload<typeof entry.action> }).payload;
-            /**
-             * ANY | NEVER плохо, но по другому с этим конструктором никак, GPT не смог, deepseek не смог...
-             * не вытянули репку
-             */
-            const historyItem = entry.toHistory(props as never);
-            this.history.add(historyItem);
+          if (!isActionOfType(payload, entry.action)) {
+            return EMPTY;
           }
+          const props = payload;
+          // const props = (action as { payload: ExtractActionPayload<typeof entry.action> }).payload;
+          /**
+           * ANY | NEVER плохо, но по-другому с этим конструктором никак, GPT не смог, deepseek не смог...
+           * не вытянули репку
+           */
+          return entry.toHistory(props as never, [this.store]);
+        }),
+        filterEmpty(),
+        tap((payload) => {
+          this.history.add(payload);
         })
       ),
     { dispatch: false }

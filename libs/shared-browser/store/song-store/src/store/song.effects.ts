@@ -25,10 +25,12 @@ import { snapshot } from '@lyri-cast/common';
 import { selectCastingProcess } from './song.selectors';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
-  [SONG_ACTIONS.selectSong]: (eventData: EventData) =>
-    SongActions.selectSong(
-      (eventData.payload as SongPayloadsMap['SELECT_SONG']).song
-    ),
+  [SONG_ACTIONS.selectSong]: (eventData: EventData) => {
+    const payload = eventData.payload as SongPayloadsMap['SELECT_SONG'];
+    return SongActions.selectSong({
+      ...payload,
+    });
+  },
   [SONG_ACTIONS.openCasting]: (eventData: EventData) =>
     SongActions.startCasting(
       eventData.payload as SongPayloadsMap['OPEN_CASTING']
@@ -48,10 +50,6 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
   bridge = inject(BridgeService);
   window = inject(WindowService);
   settingsSrv = inject(SettingsService);
-
-  constructor() {
-    console.log('SongsPageEffects');
-  }
 
   selectedSong$ = createEffect(() =>
     this.actions$.pipe(

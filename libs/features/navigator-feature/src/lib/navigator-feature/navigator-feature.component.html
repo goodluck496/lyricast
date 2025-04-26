@@ -1,11 +1,13 @@
-<p-tabView [activeIndex]="1">
+<p-tabView [activeIndex]="1" styleClass="navigator-tabs" class="navigator-tabs">
   <p-tabPanel header="Оформление" [disabled]="true">
     <p>
       Lorem ipsum dolor sit amet...
     </p>
   </p-tabPanel>
-  <p-tabPanel header="История">
-    <lyri-navigator-history></lyri-navigator-history>
+  <p-tabPanel header="История" class="navigator-tab">
+    <div class="navigator-tabs__content">
+      <lyri-navigator-history></lyri-navigator-history>
+    </div>
   </p-tabPanel>
   <p-tabPanel header="Очередь" [disabled]="true">
     <p>

@@ -48,7 +48,6 @@ import {
 } from './song-page-select.service';
 import { Store } from '@ngrx/store';
 import {
-  selectCastingPaused,
   selectSelectedBook,
   SONG_ACTIONS,
   SongActions,
@@ -62,11 +61,7 @@ import {
 } from '@lyri-cast/form';
 import { CheckboxModule } from 'primeng/checkbox';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import {
-  PAGE_CONTAINER_TEMPLATES,
-  Pages,
-  selectOpenedWindow,
-} from '@lyri-cast/common-browser';
+import { PAGE_CONTAINER_TEMPLATES, Pages } from '@lyri-cast/common-browser';
 import { SongsApiService } from '@lyri-cast/data-access-songs';
 import { Actions, ofType } from '@ngrx/effects';
 import { SongSidebarComponent } from '../../components/song-sidebar/song-sidebar.component';
@@ -197,17 +192,12 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
   changeChorusAfterCouplet$ = toObservable(this.chorusAfterCouplet);
 
-  castingIsPaused$ = this.store.select(selectCastingPaused);
-  openedCastingWindow$ = this.store
-    .select(selectOpenedWindow)
-    .pipe(map((e) => !!e));
-
   selectBookInStore$ = this.actions$.pipe(ofType(SongActions.selectBook));
+  slideNavigateInStore$ = this.actions$.pipe(ofType(SongActions.slideNavigate));
 
   selectSongByNumber$ = this.actions$.pipe(
     ofType(SongActions.selectSongByNumber),
     switchMap((payload) => {
-      console.log('selectSongByNumber$', payload);
       return combineLatest([
         of(payload.data.number),
         this.currentSongsList$.asObservable(),
@@ -226,8 +216,6 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       }
 
       this.songControl.setValue(song);
-
-      // console.log('!!!!!!!!!!!!', song, songs, snapshot(this.songsList$));
 
       return { type: SONG_ACTIONS.selectSong };
     })
@@ -262,14 +250,23 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         const newSong = this.updateSong(song);
         ///////// todo сделать отдельной функцией
         this.songPageSelectSrv.selectSong(newSong);
-        this.store.dispatch(SongActions.selectSong(newSong));
+
         this.store.dispatch(SongActions.pauseCasting());
+
         const splitCount =
           newSong.lyrics[0]?.splitLinesCount || SPLIT_PARTS_COUNT.NONE;
         this.splitCount.set(splitCount);
         this.songPageSelectSrv.setSplitCountValue(splitCount);
-        /////////////////////////
         this.selectedSong$.next(newSong);
+
+        if (this.selectedBook.value) {
+          this.store.dispatch(
+            SongActions.selectSong({
+              song: newSong,
+              bookName: this.selectedBook.value.baseEntity,
+            })
+          );
+        }
 
         this.cdr.detectChanges();
       });
@@ -296,6 +293,26 @@ export class SongPageComponent implements OnInit, AfterViewInit {
           return;
         }
         this.selectedBook.setValue(book);
+      });
+
+    // не удалять, это для эффекта
+    this.selectSongByNumber$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
+
+    this.slideNavigateInStore$
+      .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
+      .subscribe((data) => {
+        if (!data.fromService) {
+          return;
+        }
+        const line = data.currentLyric.lines.find(
+          (el) => el.globalSongIndex === (data?.index ?? 0)
+        );
+        if (!line) {
+          return;
+        }
+        this.onSelectLyricLine([data.currentLyric, line, false]);
       });
   }
 
@@ -379,10 +396,6 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     this.castingSrv.pauseCasting();
   }
 
-  onCloseCasting(): void {
-    this.castingSrv.closeCasting();
-  }
-
   onSelectLyricLine([lyric, line, startPresentation]: [
     LyricForCasting,
     LyricLine,
@@ -390,10 +403,10 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   ]): void {
     this.songPageSelectSrv.showPreview(true, lyric, line);
 
-    const paused = snapshot(this.castingSrv.castingPaused$);
-
-    if (startPresentation || !paused) {
+    if (startPresentation) {
       this.onStartCasting(true);
+    } else {
+      this.onNavigateSlide('next', line.globalSongIndex);
     }
   }
 
@@ -401,8 +414,11 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     this.songPageSelectSrv.setSplitCountValue(value);
   }
 
-  onNavigateSlide(dir: 'prev' | 'next') {
-    const navigatePayload = this.songPageSelectSrv.getNavigatePayload(dir);
+  onNavigateSlide(dir: 'prev' | 'next', index?: number) {
+    const navigatePayload = this.songPageSelectSrv.getNavigatePayload(
+      dir,
+      index
+    );
     if (!navigatePayload) {
       console.log('Cancel navigate payload', dir);
       return;

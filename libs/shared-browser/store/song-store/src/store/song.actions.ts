@@ -36,6 +36,8 @@ export type SongPresentationNavigatePayload = {
    * Выбирает слайд по индексу
    */
   index?: number;
+
+  fromService?: boolean;
 };
 
 export const SongActions = createActionGroup({
@@ -44,7 +46,7 @@ export const SongActions = createActionGroup({
     openPage: props<{ path: Pages[] }>(),
     openedPage: props<{ name: Pages }>(),
     selectBook: props<ISongBookName>(),
-    selectSong: props<ISong>(),
+    selectSong: props<{bookName: ISongBookName, song: ISong}>(),
     selectSongByNumber: props<{ data: { number: number } }>(),
     openCasting: props<SongStartCastingPayload>(),
     startCasting: props<SongStartCastingPayload>(),

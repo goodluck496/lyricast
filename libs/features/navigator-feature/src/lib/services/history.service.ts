@@ -1,15 +1,23 @@
 import { inject, Injectable } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { Observable } from 'rxjs';
+import { concatMap, Observable, take } from 'rxjs';
 import { NavigatorActions, selectHistory, selectHistoryByType } from '../store';
-import { HistoryItem, HistoryType } from './history.types';
+import {
+  HistoryItem,
+  HistoryType,
+  LyricHistoryItem,
+  SongHistoryItem,
+} from './history.types';
 import { BibleActions } from '@lyri-cast/bible-store';
 import { Router } from '@angular/router';
 import { Pages } from '@lyri-cast/common-browser';
+import { SongActions } from '@lyri-cast/song-store';
+import { Actions, ofType } from '@ngrx/effects';
 
 @Injectable({ providedIn: 'root' })
 export class HistoryService {
   private store = inject(Store);
+  private actions$ = inject(Actions);
   private router = inject(Router);
 
   add(item: HistoryItem): void {
@@ -24,27 +32,93 @@ export class HistoryService {
     return this.store.select(selectHistory);
   }
 
-  getByType(type: HistoryType): Observable<HistoryItem[]> {
-    return this.store.select(selectHistoryByType(type));
+  getByType<R extends HistoryItem>(type: HistoryType): Observable<R[]> {
+    return this.store.select(selectHistoryByType(type)) as Observable<R[]>;
   }
 
-  selectHistoryItem(item: HistoryItem): void {
-    console.log(item);
-
-    if (item.type === HistoryType.SELECT_SONG) {
-      this.router
-        .navigate([Pages.MAIN, Pages.SONGS_FEATURE, Pages.SONGS])
-        .then();
+  async selectHistoryItem(item: HistoryItem): Promise<void> {
+    switch (item.type) {
+      case HistoryType.SELECT_LYRIC:
+        await this.handleSelectLyric(item);
+        break;
+      case HistoryType.SELECT_SONG:
+        await this.ensurePageActive([
+          Pages.MAIN,
+          Pages.SONGS_FEATURE,
+          Pages.SONGS,
+        ]);
+        break;
+      case HistoryType.BIBLE:
+        await this.ensurePageActive([
+          Pages.MAIN,
+          Pages.BIBLE_FEATURE,
+          Pages.BIBLE,
+        ]);
+        this.store.dispatch(
+          BibleActions.changePath({ path: item.payload.path })
+        );
+        break;
     }
-    if (item.type === HistoryType.BIBLE) {
-      this.router
-        .navigate([Pages.MAIN, Pages.BIBLE_FEATURE, Pages.BIBLE])
-        .then(() => {
-          //todo доделать выбор перевода
+  }
+
+  private async handleSelectLyric(item: LyricHistoryItem): Promise<void> {
+    this.getByType<SongHistoryItem>(HistoryType.SELECT_SONG)
+      .pipe(take(1))
+      .subscribe(async (songs) => {
+        const foundSong = songs.find(
+          (el) => el.payload.entityId === item.payload.parent.entityId
+        );
+
+        if (!foundSong) return;
+
+        await this.ensurePageActive([
+          Pages.MAIN,
+          Pages.SONGS_FEATURE,
+          Pages.SONGS,
+        ]);
+
+        setTimeout(() =>
           this.store.dispatch(
-            BibleActions.changePath({ path: item.payload.path })
-          );
-        });
+            SongActions.selectBook(foundSong.payload.bookName)
+          )
+        );
+
+        this.actions$
+          .pipe(
+            ofType(SongActions.selectBook),
+            take(1),
+            concatMap(() => {
+              this.store.dispatch(
+                SongActions.selectSongByNumber({
+                  data: { number: foundSong.payload.entity.number },
+                })
+              );
+              return this.actions$.pipe(
+                ofType(SongActions.selectSong),
+                take(1)
+              );
+            })
+          )
+          .subscribe(() => {
+            this.store.dispatch(
+              SongActions.slideNavigate({
+                ...item.payload.actionData,
+                fromService: true,
+              })
+            );
+          });
+      });
+  }
+
+  private async ensurePageActive(path: string[]): Promise<void> {
+    const isActive = this.router.isActive(path.join('/'), {
+      paths: 'exact',
+      queryParams: 'exact',
+      fragment: 'ignored',
+      matrixParams: 'ignored',
+    });
+    if (!isActive) {
+      await this.router.navigate(path);
     }
   }
 }

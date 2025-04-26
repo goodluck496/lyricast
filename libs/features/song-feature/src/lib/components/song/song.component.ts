@@ -55,11 +55,15 @@ export class SongComponent {
       { allowSignalWrites: true }
     );
 
-    effect(() => {
-      const lyrics = this.lyrics();
-      const lines = lyrics[0];
-      this.onLineClick(lines, lines.lines[0], false);
-    }, {allowSignalWrites: true});
+    effect(
+      () => {
+        //todo выбор первого куплетьа пока отключил, возможно не понадобится
+        // const lyrics = this.lyrics();
+        // const lines = lyrics[0];
+        // this.onLineClick(lines, lines.lines[0], false);
+      },
+      { allowSignalWrites: true }
+    );
   }
 
   onLineClick(

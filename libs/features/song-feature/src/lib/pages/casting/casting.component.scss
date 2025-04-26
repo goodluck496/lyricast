@@ -26,14 +26,14 @@
   font-size: 70px;
 
   &__number, &__type {
-    color: gray;
+    color: rgb(203, 203, 203);
     border: 4px solid gray;
     border-radius: 12px;
     padding: 0 12px;
   }
 
   &__type {
-    color: gray;
+    color: rgb(203, 203, 203);
   }
 }
 

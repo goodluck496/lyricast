@@ -1,8 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TabViewModule } from 'primeng/tabview';
 import { HistoryService } from '../services/history.service';
-import { HistoryItem } from '../services/history.types';
 import { NavigatorHistoryComponent } from '../components';
 
 @Component({
@@ -14,13 +18,7 @@ import { NavigatorHistoryComponent } from '../components';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NavigatorFeatureComponent {
+  elRef = inject(ElementRef);
+
   historyService = inject(HistoryService);
-
-
-  constructor() {
-
-    this.historyService.getAll().subscribe((historyItems: HistoryItem[]) => {
-      console.log('historyItems', historyItems);
-    })
-  }
 }

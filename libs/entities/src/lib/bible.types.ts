@@ -16,7 +16,7 @@ export type BibleVerse = {
 
 export type BibleVerseForCasting = Omit<BibleVerse, 'text'> & {
   text: string[];
-  bookTitle: { short: string; full: string };
+  bookTitle: BibleBookTitle;
 };
 
 export type BibleChapterSection = {

@@ -1,0 +1,26 @@
+/**
+  tabs
+ */
+.p-tabview {
+  .p-tabview-panels {
+    display: flex;
+    //50px высота хедера в табах
+    height: calc(100% - 50px);
+    width: 100%;
+
+    .p-tabview-panel {
+      height: 100%;
+    }
+  }
+}
+
+
+.p-button-icon.pi {
+  margin-right: 8px;
+}
+
+.p-button {
+  min-height: 36px;
+  max-height: 36px;
+}
+

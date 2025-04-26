@@ -1,23 +1,32 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  Signal,
-  viewChild,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Listbox, ListboxModule } from 'primeng/listbox';
+import { ListboxModule } from 'primeng/listbox';
 import { HistoryItem, HistoryType } from '../../services/history.types';
 import { FormsModule } from '@angular/forms';
 import { HistoryService } from '../../services/history.service';
-import { delay, Observable } from 'rxjs';
+import { delay, map, Observable } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Button } from 'primeng/button';
+import { GroupedHistoryItem, groupHistoryItems } from './helpers';
+import { AccordionModule } from 'primeng/accordion';
+import { IconsService, SvgIconComponent } from '@lyri-cast/svg-icons';
+import { lyriSong } from '@lyri-cast/svg-icons/lyri-icons/lyri-song.icon';
+import { lyriOpenedBook } from '@lyri-cast/svg-icons/lyri-icons/lyri-opened-book.icon';
+import { DomSanitizer } from '@angular/platform-browser';
+import { NgScrollbar } from 'ngx-scrollbar';
+import { EmptyStateComponent } from '@lyri-cast/ui-lib';
 
 @Component({
   selector: 'lyri-navigator-history',
   standalone: true,
-  imports: [CommonModule, ListboxModule, FormsModule, Button],
+  imports: [
+    CommonModule,
+    ListboxModule,
+    FormsModule,
+    AccordionModule,
+    SvgIconComponent,
+    NgScrollbar,
+    EmptyStateComponent,
+  ],
   templateUrl: './navigator-history.component.html',
   styleUrl: './navigator-history.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,21 +37,22 @@ export class NavigatorHistoryComponent {
   historyItems: Observable<HistoryItem[]> = this.historyService.getAll();
   selectedHistory?: HistoryItem;
 
-  listboxRef: Signal<Listbox> = viewChild.required('listboxRef');
+  groupedItems$: Observable<GroupedHistoryItem[]>;
 
-  constructor() {
-    this.historyItems
-      .pipe(takeUntilDestroyed(), delay(550))
-      .subscribe((data: HistoryItem[]) => {
-        this.listboxRef().scrollInView(data.length - 1);
-      });
+  constructor(iconService: IconsService, public sanitizer: DomSanitizer) {
+    iconService.registerIcons([lyriSong, lyriOpenedBook]);
+
+
+    this.groupedItems$ = this.historyItems.pipe(
+      takeUntilDestroyed(),
+      delay(0),
+      map((items) => groupHistoryItems(items))
+    );
   }
 
-  onChange() {
-    if (!this.selectedHistory) {
-      return;
-    }
-
-    this.historyService.selectHistoryItem(this.selectedHistory);
+  onSelectHistoryItem(item: HistoryItem) {
+    this.historyService.selectHistoryItem(item);
   }
+
+  protected readonly HistoryType = HistoryType;
 }

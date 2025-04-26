@@ -29,7 +29,12 @@ export const SongPageReducers = createReducer<SongPageState>(
     return { ...state, selectedBook: payload } satisfies SongPageState;
   }),
   on(SongActions.selectSong, (state, payload) => {
-    return { ...state, selectedSong: payload } satisfies SongPageState;
+    return {
+      ...state,
+      selectedSong: payload.song,
+      selectedBook: payload.bookName,
+      castingProcess: null,
+    } satisfies SongPageState;
   }),
   on(SongActions.startCasting, (state, payload) => {
     return {

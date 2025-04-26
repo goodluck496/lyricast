@@ -1,12 +1,46 @@
-<p-listbox
-  #listboxRef
-  [options]="(historyItems | async) ?? []"
-  [(ngModel)]="selectedHistory"
-  [style]="{'width':'100%'}"
-  [listStyle]="{'max-height': '220px'}"
-  (onChange)="onChange()"
->
-  <ng-template pTemplate="item" let-item>
-    {{item.payload.title}}
-  </ng-template>
-</p-listbox>
+<ng-scrollbar style="width: 100%; height:100%; min-height:0; flex: 1 1 auto; max-height: 100%">
+  @if (groupedItems$ | async; as groupItems) {
+    @if (groupItems.length) {
+      <p-accordion [activeIndex]="0" [style]="{width: '100%'}">
+        @for (group of groupItems; track group.payload.key) {
+          @if (group.children?.length) {
+            <p-accordionTab iconPos="end">
+              <ng-template pTemplate="header">
+                <div class="history__group-header">
+                  <div class="history__group-header-icon">
+                    @switch (group.type) {
+                      @case (HistoryType.SELECT_SONG) {
+                        <lyri-icon name="song"></lyri-icon>
+                      }
+                      @case (HistoryType.BIBLE) {
+                        <lyri-icon name="opened_book"></lyri-icon>
+                      }
+                    }
+                  </div>
+                  <div class="history__group-header-label">{{ group.payload.title }}</div>
+                </div>
+              </ng-template>
+
+              <div class="history__item-wrapper">
+                @for (item of group.children; track item.payload.key) {
+                  <div class="history__item" (click)="onSelectHistoryItem(item)">
+                    <div class="ellipsis" [innerHTML]="sanitizer.bypassSecurityTrustHtml(item.payload.title)"></div>
+                  </div>
+                }
+              </div>
+            </p-accordionTab>
+          } @else {
+            <lyri-empty-state>Здесь пока пусто</lyri-empty-state>
+          }
+        }
+      </p-accordion>
+    } @else {
+      <lyri-empty-state>Здесь пока пусто</lyri-empty-state>
+    }
+
+  } @else {
+    <lyri-empty-state>Здесь пока пусто</lyri-empty-state>
+  }
+
+</ng-scrollbar>
+

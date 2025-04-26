@@ -4,9 +4,15 @@
   <div class="control-sidebar__actions">
 
     @if (castingIsPaused$ | async) {
-      <button pButton (click)="onStartCasting(true)" icon="pi pi-play" severity="success">Транслировать</button>
+      <button pButton class="flex flex-w-center flex-h-center" (click)="onStartCasting(true)" severity="success">
+        <lyri-icon name="play" style="width: 14px; height: 14px"></lyri-icon>
+        Транслировать
+      </button>
     } @else {
-      <button pButton (click)="onPauseCasting()" icon="pi pi-stop" severity="danger">Остановить</button>
+      <button pButton class="flex flex-w-center flex-h-center" (click)="onPauseCasting()" severity="danger">
+        <lyri-icon name="stop" style="width: 14px; height: 14px"></lyri-icon>
+        Остановить
+      </button>
     }
     <div class="flex">
       <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false"

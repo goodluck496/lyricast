@@ -72,6 +72,8 @@ import { Router } from '@angular/router';
 import { Actions, ofType } from '@ngrx/effects';
 import { BibleSidebarComponent } from '../../components/bible-sidebar/bible-sidebar.component';
 import { BibleSidebarData } from '../../types';
+import { IconsService } from '@lyri-cast/svg-icons';
+import { lyriPlay } from '@lyri-cast/svg-icons/lyri-icons/lyri-play.icon';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -196,7 +198,9 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
     )
     .subscribe();
 
+
   constructor() {
+
     this.bibleFormGroup.controls.translate.valueChanges
       .pipe(
         filterEmpty(),

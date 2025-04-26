@@ -8,6 +8,8 @@ const ICON_IMPORTERS: Record<LyriIconName, () => Promise<LyriIcon | any>> = {
   storyboard: () => import('./lyri-icons/lyri-storyboard.icon'),
   opened_book: () => import('./lyri-icons/lyri-opened-book.icon'),
   song: () => import('./lyri-icons/lyri-song.icon'),
+  play: () => import('./lyri-icons/lyri-play.icon'),
+  stop: () => import('./lyri-icons/lyri-stop.icon'),
 };
 
 @Injectable({ providedIn: 'root' })
@@ -24,6 +26,7 @@ export class IconsService {
         entry().then((v) => {
           const data: LyriIcon = Object.values(v)[0] as LyriIcon;
           this.registry.set(data.name, data.data);
+          console.log(data.name);
         });
       });
     });

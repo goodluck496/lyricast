@@ -12,6 +12,9 @@ import {
   BibleReducers,
 } from '@lyri-cast/bible-store';
 import { inject } from '@angular/core';
+import { IconsService } from '@lyri-cast/svg-icons';
+import { lyriPlay } from '@lyri-cast/svg-icons/lyri-icons/lyri-play.icon';
+import { lyriStop } from '@lyri-cast/svg-icons/lyri-icons/lyri-stop.icon';
 
 export const bibleFeatureRoutes: Route[] = [
   {
@@ -25,6 +28,10 @@ export const bibleFeatureRoutes: Route[] = [
       import('./pages/bible-page/bible-page.component').then(
         (p) => p.BiblePageComponent
       ),
+    resolve: [() => {
+      const iconSrv = inject(IconsService);
+      return iconSrv.registerIcons([lyriPlay, lyriStop]);
+    }],
     canDeactivate: [
       () => {
         const store = inject(Store);

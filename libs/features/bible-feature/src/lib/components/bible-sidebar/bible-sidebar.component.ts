@@ -26,6 +26,7 @@ import { filterEmpty } from '@lyri-cast/common';
 import { BibleBookTitle, BibleChapterSection } from '@lyri-cast/entities';
 import { selectOpenedWindow, SidebarService } from '@lyri-cast/common-browser';
 import { BibleSidebarData } from '../../types';
+import { SvgIconComponent } from '@lyri-cast/svg-icons';
 
 @Component({
   selector: 'lyri-bible-sidebar',
@@ -35,6 +36,7 @@ import { BibleSidebarData } from '../../types';
     BibleCastingPreviewComponent,
     ButtonDirective,
     NavigatorFeatureComponent,
+    SvgIconComponent,
   ],
   templateUrl: './bible-sidebar.component.html',
   styleUrl: './bible-sidebar.component.scss',

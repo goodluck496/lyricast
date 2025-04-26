@@ -10,6 +10,9 @@ import {
 } from '@lyri-cast/song-store';
 import { provideEffects } from '@ngrx/effects';
 import { inject } from '@angular/core';
+import { IconsService } from '@lyri-cast/svg-icons';
+import { lyriPlay } from '@lyri-cast/svg-icons/lyri-icons/lyri-play.icon';
+import { lyriStop } from '@lyri-cast/svg-icons/lyri-icons/lyri-stop.icon';
 
 export const SongFeatureRoutes: Routes = [
   {
@@ -23,6 +26,10 @@ export const SongFeatureRoutes: Routes = [
       import('./lib/pages/song-page/song-page.component').then(
         (p) => p.SongPageComponent
       ),
+    resolve: [() => {
+      const iconSrv = inject(IconsService);
+      return iconSrv.registerIcons([lyriPlay, lyriStop]);
+    }],
     canDeactivate: [
       () => {
         const store = inject(Store);

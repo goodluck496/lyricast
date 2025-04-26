@@ -5,7 +5,6 @@ import {
   DestroyRef,
   ElementRef,
   inject,
-  OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
@@ -18,11 +17,9 @@ import { CastingService } from '../../services/casting.service';
 import { Store } from '@ngrx/store';
 import { Actions } from '@ngrx/effects';
 import { selectOpenedWindow, SidebarService } from '@lyri-cast/common-browser';
-import { BehaviorSubject, map } from 'rxjs';
-import { ISong } from '@lyri-cast/entities';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { SongSidebarData } from '../../types';
-import { filterEmpty } from '@lyri-cast/common';
+import { SvgIconComponent } from '@lyri-cast/svg-icons';
 
 @Component({
   selector: 'lyri-song-sidebar',
@@ -32,12 +29,13 @@ import { filterEmpty } from '@lyri-cast/common';
     ButtonDirective,
     SongCastingPreviewComponent,
     NavigatorFeatureComponent,
+    SvgIconComponent,
   ],
   templateUrl: './song-sidebar.component.html',
   styleUrl: './song-sidebar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SongSidebarComponent implements OnInit {
+export class SongSidebarComponent {
   private songPageSelectSrv = inject(SongPageSelectService);
   private readonly songsApiService = inject(SongsApiService);
   private readonly castingSrv = inject(CastingService);
@@ -45,18 +43,13 @@ export class SongSidebarComponent implements OnInit {
   private readonly elRef = inject(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly store = inject(Store);
-  private readonly actions$ = inject(Actions);
-  private readonly sidebarService =
-    inject<SidebarService<SongSidebarData>>(SidebarService);
-
   castingIsPaused$ = this.store.select(selectCastingPaused);
   openedCastingWindow$ = this.store
     .select(selectOpenedWindow)
     .pipe(map((e) => !!e));
-
-
-  ngOnInit() {
-  }
+  private readonly actions$ = inject(Actions);
+  private readonly sidebarService =
+    inject<SidebarService<SongSidebarData>>(SidebarService);
 
   onStartCasting(fromSelectedBlock = false): void {
     const payload =

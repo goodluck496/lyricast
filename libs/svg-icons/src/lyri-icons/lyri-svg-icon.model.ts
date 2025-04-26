@@ -4,8 +4,10 @@ export type LyriIconName =
   | 'bible'
   | 'control'
   | 'opened_book'
+  | 'play'
   | 'song_lyrics'
   | 'song'
+  | 'stop'
   | 'storyboard';
 export interface LyriIcon {
   name: LyriIconName;

@@ -65,6 +65,7 @@ export class BibleChapterComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => {
         this.selectedVerse.set(value);
+        this.scrollToSelected();
       });
     this.selectedPrevOrNextVerse$
       .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
@@ -128,7 +129,7 @@ export class BibleChapterComponent implements OnInit {
           });
         }
       });
-    }, 1000);
+    }, 500);
   }
 
   onSelectVerse(verse: BibleVerse, casting = false) {

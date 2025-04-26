@@ -36,7 +36,7 @@ import {
   LyricLine,
   LyricTypeEnum,
 } from '@lyri-cast/entities';
-import { filterEmpty, snapshot } from '@lyri-cast/common';
+import { filterEmpty } from '@lyri-cast/common';
 import { DropdownModule } from 'primeng/dropdown';
 import { ListboxModule } from 'primeng/listbox';
 import { CastingService } from '../../services/casting.service';

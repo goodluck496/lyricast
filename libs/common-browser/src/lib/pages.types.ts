@@ -1,6 +1,3 @@
-import { MenuItem as MenuItemPrime } from 'primeng/api';
-import { LyriIconName } from '@lyri-cast/svg-icons';
-
 export enum Pages {
   MAIN = 'main',
   SONGS = 'songs',
@@ -27,4 +24,3 @@ export type Page = {
   id: Pages;
   title: string;
 };
-

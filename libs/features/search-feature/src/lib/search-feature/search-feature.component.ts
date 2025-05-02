@@ -33,7 +33,6 @@ import {
   tap,
 } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filterEmpty } from '@lyri-cast/common';
 import { Actions, ofType } from '@ngrx/effects';
 import { BibleActions } from '@lyri-cast/bible-store';
 import { IconFieldModule } from 'primeng/iconfield';

@@ -47,6 +47,7 @@ export const AppActions = createActionGroup({
     setProcId: props<{ procId: number, pageType: AppWindowTypes }>(),
     clearWindowId: emptyProps(),
     openPage: props<ActionOpenPageProps>(),
+    focusPage: emptyProps(),
     openedPage: props<ActionOpenPageProps>(),
     closeWindow: props<ActionCloseWindowProps>(),
   } satisfies Record<

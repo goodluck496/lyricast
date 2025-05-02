@@ -25,6 +25,8 @@ export const APP_COMMON_ACTIONS = {
   openPage: 'OPEN_PAGE',
   openedPage: 'OPENED_PAGE',
 
+  focusPage: 'FOCUS_PAGE',
+
   closeWindow: 'CLOSE_WINDOW',
 } as const;
 

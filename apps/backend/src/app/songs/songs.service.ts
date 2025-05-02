@@ -7,6 +7,8 @@ import {
   ISongBook,
   ISongBookName,
   ISongForSearch,
+  Lyric,
+  LyricTypeEnum,
 } from '@lyri-cast/entities';
 
 @Injectable()
@@ -82,7 +84,11 @@ export class SongsService {
     }));
   }
 
-  readSong(bookName: string, songId: number): ISong | undefined {
+  readSong(
+    bookName: string,
+    songId: number,
+    chorusAfterCouplet: boolean
+  ): ISong | undefined {
     const book = this.readBook(bookName);
     const keyInCache = `${book.header.bookKey}__${songId}`;
 
@@ -95,9 +101,69 @@ export class SongsService {
       return;
     }
 
-    this.songCache[keyInCache] = foundSong;
+    function updateSong(song: ISong): ISong {
+      const cloneSong: ISong = JSON.parse(JSON.stringify(song));
 
-    return foundSong;
+      if (!chorusAfterCouplet) {
+        return {
+          ...cloneSong,
+          lyrics: clearChorus(cloneSong.lyrics),
+        };
+      }
+
+      // удаляет дублирующиеся куплеты
+      function clearChorus(lyrics: Lyric[]) {
+        const newLyric: Lyric[] = [];
+
+        lyrics.forEach((lyric) => {
+          const foundChorus = newLyric.find(
+            (el) => el.type === LyricTypeEnum.CHORUS
+          );
+          if (foundChorus && lyric.type === LyricTypeEnum.CHORUS) {
+            return;
+          }
+          newLyric.push(lyric);
+        });
+
+        return newLyric;
+      }
+
+      // добавляет куплеты после припевов
+      function insertChorus(lyrics: Lyric[]) {
+        const result: Lyric[] = [];
+        const chorus = lyrics.find(
+          (item) => item.type === LyricTypeEnum.CHORUS
+        );
+        if (!chorus) return lyrics;
+
+        for (let i = 0; i < lyrics.length; i++) {
+          const lyric = lyrics[i];
+          const nextLyricIsChorus =
+            lyrics[i + 1]?.type === LyricTypeEnum.CHORUS;
+
+          result.push(lyric);
+
+          if (lyric.type === LyricTypeEnum.COUPLET && !nextLyricIsChorus) {
+            result.push({
+              ...chorus,
+              uniqId: lyric.uniqId + (Math.random() * 1000).toFixed(0),
+            });
+          }
+        }
+
+        return result;
+      }
+
+      cloneSong.lyrics = insertChorus(song.lyrics);
+
+      return cloneSong;
+    }
+
+    const updatedSong = updateSong(foundSong);
+
+    this.songCache[keyInCache] = updatedSong;
+
+    return updatedSong;
   }
 
   findSongByText(bookName: string, text: string): ISong[] {

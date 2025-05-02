@@ -9,10 +9,13 @@ import {
   selectCastingPaused
 } from '@lyri-cast/song-store';
 import { Store } from '@ngrx/store';
+import { Observable, tap } from 'rxjs';
+import { Actions, ofType } from '@ngrx/effects';
 
 @Injectable({ providedIn: 'root' })
 export class CastingService {
   private readonly  store = inject(Store<SongPageState>);
+  private readonly actions$ = inject(Actions);
 
   castingPaused$ = this.store.select(selectCastingPaused);
 

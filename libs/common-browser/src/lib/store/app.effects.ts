@@ -41,6 +41,14 @@ export class AppEffects {
           path: data.path,
         });
       }
+      case APP_COMMON_ACTIONS.openedPage: {
+        // const data = eventData.payload as ActionOpenPageProps;
+        // return AppActions.openPage({
+        //   path: data.path,
+        // });
+
+        return AppActions.focusPage();
+      }
 
       case APP_COMMON_ACTIONS.closeWindow: {
         return AppActions.clearWindowId();

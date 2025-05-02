@@ -8,16 +8,21 @@ import {
   inject,
   OnDestroy,
   signal,
+  viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import Reveal from 'reveal.js';
 import { BibleVerse, BibleVerseForCasting } from '@lyri-cast/entities';
-import { Ng2FittextModule } from 'ng2-fittext';
+import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { Actions, ofType } from '@ngrx/effects';
-import { BibleActions, selectSelectedBibleVerse, selectSelectedBook } from '@lyri-cast/bible-store';
+import {
+  BibleActions,
+  selectSelectedBibleVerse,
+  selectSelectedBook,
+} from '@lyri-cast/bible-store';
 import { combineLatest } from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
 
@@ -41,6 +46,8 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
 
   slideText = '';
 
+  fitTextRef = viewChild(Ng2FittextDirective);
+
   initTimeoutId: any;
 
   public selectedBibleVerse = signal<BibleVerse | null>(null);
@@ -56,16 +63,18 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
     combineLatest([
       this.selectedBook$.pipe(filterEmpty()),
       this.selectedVerse$.pipe(filterEmpty()),
-    ]).pipe(takeUntilDestroyed()).subscribe(([book, verse]) => {
-      this.selectedBibleVerse.set(verse);
-      this.selectedBibleVerseForCast.set({
-        ...verse,
-        text: [verse.text],
-        bookTitle: book.title,
-      });
+    ])
+      .pipe(takeUntilDestroyed())
+      .subscribe(([book, verse]) => {
+        this.selectedBibleVerse.set(verse);
+        this.selectedBibleVerseForCast.set({
+          ...verse,
+          text: [verse.text],
+          bookTitle: book.title,
+        });
 
-      this.initReveal();
-    });
+        this.initReveal();
+      });
 
     this.stopCasting$.pipe(takeUntilDestroyed()).subscribe(() => {
       this.deckRef?.sync();
@@ -83,6 +92,10 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
     // this.cdr.detectChanges();
     this.deckRef?.layout();
     this.deckRef?.sync();
+
+    setTimeout(() => {
+      this.fitTextRef()?.el.nativeElement.dispatchEvent(new Event('input'));
+    }, 10);
   }
 
   initDeck(): void {
@@ -91,12 +104,13 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
         this.deckRef = new Reveal(this.elRef.nativeElement);
         this.deck = await this.deckRef?.initialize({
           width: 400,
-          height: 300,
+          height: 260,
           margin: -1,
           transition: 'fade',
           disableLayout: true,
           embedded: true,
           overview: false,
+          keyboard: false,
         });
         await this.initReveal();
         this.cdr.detectChanges();

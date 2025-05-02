@@ -19,8 +19,6 @@ function isActionOfType<T extends ActionCreator>(
   return action.type === creator.type;
 }
 
-export const ADD_HISTORY_ITEM_DELAY = 200;
-
 @Injectable({ providedIn: 'root' })
 export class NavigatorFeatureEffects {
   private store = inject(Store);
@@ -31,7 +29,15 @@ export class NavigatorFeatureEffects {
     () =>
       this.actions$.pipe(
         ofType(...loggableActions.map((entry) => entry.action)),
-        debounceTime(ADD_HISTORY_ITEM_DELAY),
+        /**
+         * из-за задержки при добавлении в историю некоторые события пропускаются
+         * например в песнях срабатывает сначала выбор песни, затем выбор куплета
+         * но почему-то выбор песни не эммитится в историю, а только выбор куплета и из-за этого
+         * не строится группа событий
+         *
+         * пока убрал
+         */
+        // debounceTime(ADD_HISTORY_ITEM_DELAY),
         switchMap((payload) => {
           const entry = loggableActions.find(
             (e) => e.action.type === payload.type

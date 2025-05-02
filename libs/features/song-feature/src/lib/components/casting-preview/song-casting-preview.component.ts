@@ -63,6 +63,7 @@ export class SongCastingPreviewComponent implements OnDestroy, AfterViewInit {
           disableLayout: true,
           embedded: true,
           overview: false,
+          keyboard:false,
         });
         await this.initReveal();
         this.cdr.detectChanges()

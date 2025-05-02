@@ -20,7 +20,7 @@ import {
   BridgeService,
   WindowService,
 } from '@lyri-cast/common-browser';
-import { EventData } from '@lyri-cast/common-electron';
+import { APP_COMMON_ACTIONS, EventData } from '@lyri-cast/common-electron';
 import {
   BibleBookShort,
   BibleBookTitle,
@@ -38,6 +38,10 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
   //   ),
   // [BIBLE_ACTIONS.stopCasting]: () => BibleActions.stopCasting(),
   // [BIBLE_ACTIONS.pauseCasting]: () => BibleActions.pauseCasting(),
+  [APP_COMMON_ACTIONS.openedPage]: () => {
+    console.log('openedPage!!');
+    return AppActions.focusPage
+  }
 };
 
 @Injectable()

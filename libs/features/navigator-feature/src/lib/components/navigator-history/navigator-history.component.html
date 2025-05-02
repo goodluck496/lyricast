@@ -4,7 +4,7 @@
       <p-accordion [activeIndex]="0" [style]="{width: '100%'}">
         @for (group of groupItems; track group.payload.key) {
           @if (group.children?.length) {
-            <p-accordionTab iconPos="end">
+            <p-accordionTab iconPos="end" >
               <ng-template pTemplate="header">
                 <div class="history__group-header">
                   <div class="history__group-header-icon">

@@ -28,6 +28,7 @@ import {
   BaseEffectsWithBridgeInterface,
   BridgeProcessForEffectsDecorator,
   BridgeService,
+  DEFAULT_CASTING_PAGE_CONFIG,
   Pages,
   selectOpenedWindow,
   SettingsService,
@@ -51,7 +52,6 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
     ),
   [BibleActionsEnum.stopCasting]: () => BibleActions.stopCasting(),
   [BibleActionsEnum.pauseCasting]: () => BibleActions.pauseCasting(),
-  'OPENED_PAGE': () => BibleActions.openedCastingPage()
 };
 
 @Injectable()
@@ -64,6 +64,18 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
   bridge = inject(BridgeService);
   apiSrv = inject(BibleApiService);
   settingsSrv = inject(SettingsService);
+
+  closeWindow$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AppActions.clearWindowId),
+        tap(() => {
+          this.store.dispatch(BibleActions.pauseCasting());
+        }),
+        map(() => ({type: AppActions.clearWindowId.toString()}))
+      ),
+    { dispatch: true }
+  );
 
   startCasting$ = createEffect(() =>
     this.actions$.pipe(
@@ -84,8 +96,6 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
       map(() => ({ type: BibleActionsEnum.pauseCasting }))
     )
   );
-
-
 
   onOpenPage$ = createEffect(() =>
     this.actions$.pipe(
@@ -131,13 +141,8 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
         return fromPromise(
           this.window.electronContext
             .openWindow({
-              type: AppWindowTypes.CASTING,
-              title: 'Casting new',
-              show: true,
-              center: true,
-              fullscreen: true,
-              focusable: true,
-              display: selectedDisplay
+              ...DEFAULT_CASTING_PAGE_CONFIG,
+              display: selectedDisplay,
             })
             .then((procId) => ({
               type: AppWindowTypes.CASTING,
@@ -203,7 +208,6 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
         if (!selectedVerse || paused) {
           return { type: BibleActionsEnum.selectPrevOrNextVerse };
         }
-
 
         this.store.dispatch(
           BibleActions.castingProcessChange({

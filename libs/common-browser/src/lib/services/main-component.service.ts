@@ -16,6 +16,7 @@ export class MainComponentService {
 
   setTemplates(type: PAGE_CONTAINER_TEMPLATES, template: PrimeTemplate): void {
     const oldTempl = this._templates.value;
+    oldTempl.set(type, null);
     oldTempl.set(type, template);
     this._templates.next(oldTempl);
   }

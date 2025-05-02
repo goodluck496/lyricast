@@ -1,15 +1,18 @@
 <div style="width: 100%; height: 40px;  top: 0; display: flex; justify-content: space-between; align-items: center; position: absolute;     z-index: 4;
     padding: 0 12px;">
-  @if(selectedBibleVerseForCast(); as data) {
-    <div>{{data.bookTitle.full }} {{data.chapterId}}:{{data.number}}</div>
+  @if (selectedBibleVerseForCast(); as data) {
+    <div>{{ data.bookTitle.full }} {{ data.chapterId }}:{{ data.number }}</div>
   }
 
 </div>
-<div style="width: 100%; height: 300px">
+<div style="width: 100%; height: 260px; margin-top: 40px;">
   <div class="reveal">
     <div class="slides">
       <section>
-        <div fittext [maxFontSize]="25">
+        <div [fittext]="true"
+             [maxFontSize]="30"
+             [activateOnInputEvents]="true"
+             [activateOnResize]="true">
           <div [innerHTML]="slideText" class="slide-content"></div>
         </div>
 

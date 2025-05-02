@@ -90,6 +90,7 @@ export default class App {
     type: AppWindowTypes,
     options: BrowserWindowConstructorOptions
   ): BrowserWindow {
+    //
     const win = new BrowserWindow(options);
     const processId = win.webContents.getProcessId();
     App.openedWindows[type] = win;
@@ -146,8 +147,8 @@ export default class App {
       height: height,
       show: false,
       fullscreen: false,
+      backgroundMaterial:'none',
       backgroundColor: '#000',
-
       webPreferences: {
         ...DEFAULT_WEB_PREF,
       },
@@ -192,10 +193,30 @@ export default class App {
       if (windowType === AppWindowTypes.MAIN) {
         openedWindow.focus();
       } else {
-        setTimeout(() => {
+        /**
+         * КОСТЫЛЬ
+         * почему-то только интервально вызывая App.openedWindows.MAIN.focus();
+         * ГЛАВНОЕ окно все таки получает фокус после открытия ДОПОЛНИТЕЛЬНОГО окна
+         */
+        let inFocus = false;
+        const int = setInterval(() => {
+          if (inFocus) {
+            return;
+          }
           openedWindow.setFullScreen(true);
+
+          App.application.focus({ steal: true });
+          App.openedWindows.MAIN.show();
           App.openedWindows.MAIN.focus();
-        }, 201);
+
+          // открываем devTools для отладки
+          App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+
+          if (App.openedWindows.MAIN.isFocused()) {
+            inFocus = true;
+            clearInterval(int);
+          }
+        }, 500);
       }
     });
   }

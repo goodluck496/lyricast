@@ -91,25 +91,15 @@ export class BibleSidebarComponent {
               }),
             })
           );
-
-          this.onFocusChapter();
         }
       });
   }
 
   onStopCasting() {
     this.store.dispatch(BibleActions.stopCasting());
-    this.onFocusChapter();
   }
 
   onPauseCasting() {
     this.store.dispatch(BibleActions.pauseCasting());
-    this.onFocusChapter();
-  }
-
-  onFocusChapter() {
-    // setTimeout(() => {
-    //   this.lyriBibleChapter()?.elRef.nativeElement.focus();
-    // }, 100);
   }
 }

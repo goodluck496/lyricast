@@ -72,8 +72,6 @@ import { Router } from '@angular/router';
 import { Actions, ofType } from '@ngrx/effects';
 import { BibleSidebarComponent } from '../../components/bible-sidebar/bible-sidebar.component';
 import { BibleSidebarData } from '../../types';
-import { IconsService } from '@lyri-cast/svg-icons';
-import { lyriPlay } from '@lyri-cast/svg-icons/lyri-icons/lyri-play.icon';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -198,9 +196,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
     )
     .subscribe();
 
-
   constructor() {
-
     this.bibleFormGroup.controls.translate.valueChanges
       .pipe(
         filterEmpty(),
@@ -272,7 +268,6 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
     this.bibleFormGroup.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
       .subscribe((value) => {
-
         this.sidebarService.updateData({
           bibleForm: {
             book: value?.book || null,
@@ -298,10 +293,10 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     combineLatest([
-      fromEvent<KeyboardEvent>(this.elRef.nativeElement, 'keydown').pipe(
-        takeUntilDestroyed(this.destroyRef),
-        debounceTime(100)
-      ),
+      fromEvent<KeyboardEvent>(
+        window /*this.elRef.nativeElement*/,
+        'keydown'
+      ).pipe(takeUntilDestroyed(this.destroyRef), debounceTime(100)),
     ])
       .pipe(
         withLatestFrom(
@@ -309,7 +304,8 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
           this.store.select(selectSelectedBibleVerse)
         ),
         map((data) => data.flat() as [KeyboardEvent, boolean, BibleVerse]),
-        filter(([, loading, verse]) => !loading || !verse)
+        filter(([, loading, verse]) => !loading || !verse),
+        filter(() => this.isActivePage())
       )
       .subscribe(([event, , verse]) => {
         if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
@@ -382,7 +378,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   onFocusChapter() {
     setTimeout(() => {
       this.lyriBibleChapter()?.elRef.nativeElement.focus();
-    }, 100);
+    }, 500);
   }
 
   onPauseCasting() {

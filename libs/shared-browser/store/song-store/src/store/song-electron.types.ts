@@ -5,9 +5,9 @@ import { APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
 
 // export type SongActionEvents = (typeof SONG_ACTIONS)[keyof typeof SONG_ACTIONS];
 
-export type SongPayloadsMap =  {
+export type SongPayloadsMap = {
   [APP_COMMON_ACTIONS.openPage]: { path: Pages[] };
-  // [SONG_ACTIONS.openedPage]: { name: Pages };
+  [SONG_ACTIONS.openedPage]: { page: Pages };
   [SONG_ACTIONS.selectBook]: ISongBookName;
   [SONG_ACTIONS.selectSong]: {
     song: ISong;
@@ -37,5 +37,6 @@ export type SongPayloadsMap =  {
      * Выбирает слайд по индексу
      */
     index?: number;
-  } ;
+  };
+  [SONG_ACTIONS.castingStarted]: void;
 };

@@ -6,9 +6,8 @@ import {
   SongActions,
 } from '@lyri-cast/song-store';
 import { BibleActions } from '@lyri-cast/bible-store';
-import { debounceTime, filter, map, Observable, of } from 'rxjs';
+import { filter, map, Observable, of } from 'rxjs';
 import { sliceTextAtBreak } from '@lyri-cast/ui-lib';
-import { filterEmpty } from '@lyri-cast/common';
 
 export type PayloadFor<T extends ActionCreator> = Parameters<T>[0];
 
@@ -36,12 +35,10 @@ function defineLoggableActions<
 
 export const loggableActions = defineLoggableActions([
   {
-    action: SongActions.openCasting,
+    action: SongActions.startCasting,
     toHistory: (data, [store]) => {
       return store.select(selectCastingProcess).pipe(
-        debounceTime(300),
-        filterEmpty(),
-        map((castProcess) => {
+        map(() => {
           return {
             type: HistoryType.SELECT_SONG,
             dateTime: Date.now(),

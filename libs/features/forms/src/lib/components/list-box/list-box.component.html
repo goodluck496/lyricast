@@ -2,7 +2,10 @@
   <div class="list-box__search">
     <p-iconField iconPosition="right">
       <input pInputText placeholder="Введите" [(ngModel)]="searchStringSig" (ngModelChange)="onSearch($event)" />
-      <p-inputIcon styleClass="pi pi-times-circle" class="list-box__clear-btn" (click)="onClear()"></p-inputIcon>
+
+      @if(searchStringSig().length) {
+        <p-inputIcon styleClass="pi pi-times" class="list-box__clear-btn" (click)="onClear()"></p-inputIcon>
+      }
     </p-iconField>
     @if(loading()) {
       <p-progressSpinner />

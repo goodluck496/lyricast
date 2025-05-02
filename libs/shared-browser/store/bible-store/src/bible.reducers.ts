@@ -115,6 +115,7 @@ export const BibleReducers = createReducer<BibleState>(
   on(BibleActions.stopCasting, (state) => {
     return {
       ...state,
+      castingPaused: true,
     } satisfies BibleState;
   }),
   on(BibleActions.pauseCasting, (state) => {

@@ -4,7 +4,7 @@
       <div class="lyric-item">
         <div class="lyric-item__header">{{ lyric.sectionTitle }}</div>
         <div class="lyric-item__content">
-          @for (line of lyric.lines; track line) {
+          @for (line of lyric.lines; track line.rangeIndex) {
             <div class="lyric-item__line"
                  #lyricItem
                  [class.lyric-item__line--selected]="selectedLyricLine()?.rangeIndex === line.rangeIndex

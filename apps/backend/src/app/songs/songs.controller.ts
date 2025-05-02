@@ -18,7 +18,7 @@ export class SongsController {
 
   @Get('book/:book/:songId')
   getSong(@Param('book') bookName: string, @Param('songId') songId: string) {
-    return this.songsService.readSong(bookName, Number(songId));
+    return this.songsService.readSong(bookName, Number(songId), true);
   }
 
   @Get('book-songs/:book')

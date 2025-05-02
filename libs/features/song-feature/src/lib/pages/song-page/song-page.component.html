@@ -1,9 +1,13 @@
 <lyri-page-container [pagePath]="[Pages.MAIN, Pages.SONGS_FEATURE, Pages.SONGS]">
   <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
     <div class="page-header__lyric-count">
-      <label for="chorusAfterCouplet">Повторять<br>припев</label>
-      <p-checkbox id="chorusAfterCouplet" inputId="chorusAfterCouplet" [binary]="true"
-                  [(ngModel)]="chorusAfterCouplet"></p-checkbox>
+<!--      todo возможно стоит вынести в какую-то админку,
+            а то если туда-сюда менять галку и вобще подвязываясь на этот флаг
+            ломается история переходов, потому что каждый раз "налету" создаются
+            новые припевы после куплетов
+          <label for="chorusAfterCouplet">Повторять<br>припев</label>-->
+<!--      <p-checkbox id="chorusAfterCouplet" inputId="chorusAfterCouplet" [binary]="true"-->
+<!--                  [(ngModel)]="chorusAfterCouplet"></p-checkbox>-->
       <label for="lyric-count">Разделить <br>на блоки:</label>
       <p-dropdown id="lyric-count" inputId="lyric-count" [(ngModel)]="splitCount"
                   (onChange)="onSelectSplitValue($event.value)"

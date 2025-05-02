@@ -4,14 +4,35 @@ import { ISong, ISongBookName, LyricForCasting } from '@lyri-cast/entities';
 import { Pages } from '@lyri-cast/common-browser';
 
 export const SONG_ACTIONS = {
+  /**
+   * Открытие страницы в открытом окне кастинга, после срабатывания "OPEN_CASTING"
+   */
   openPage: 'OPEN_PAGE',
+  /**
+   * Вызывается после успешного открытия страницы в окне кастинга
+   * приходит через bridge сервис из окна кастинга
+   */
   openedPage: 'OPENED_PAGE',
 
   selectBook: 'SELECT_BOOK',
   selectSong: 'SELECT_SONG',
   selectSongByNumber: 'SELECT_SONG_BY_NUMBER',
+
+  /**
+   * отвечает за первичное открытие окна кастинга
+   */
   openCasting: 'OPEN_CASTING',
+  /**
+   * запускает кастинг с первого слайда (или с того которы выбран)
+   * когда "OPEN_CASTING" уже был вызван
+   */
   startCasting: 'START_CASTING',
+  /**
+   * Вызывается после успешного начала кастинга
+   * приходит через bridge сервис из окна кастинга
+   */
+  castingStarted: 'CASTING_STARTED',
+
   stopCasting: 'STOP_CASTING',
   pauseCasting: 'PAUSE_CASTING',
   slideNavigate: 'SLIDE_NAVIGATE',
@@ -53,5 +74,6 @@ export const SongActions = createActionGroup({
     stopCasting: emptyProps(),
     pauseCasting: emptyProps(),
     slideNavigate: props<SongPresentationNavigatePayload>(),
+    castingStarted: emptyProps()
   } satisfies Record<SongActionKeys, ActionCreatorProps<unknown>>,
 });

@@ -52,6 +52,7 @@ ipcMain.handle(
         fullscreenable: true,
         fullscreen: true,
         alwaysOnTop: true,
+        // focusable: false,
         ...args,
       });
       App.loadWindow(args.type);

@@ -11,6 +11,7 @@ import {
   BaseEffectsWithBridgeInterface,
   BridgeProcessForEffectsDecorator,
   BridgeService,
+  DEFAULT_CASTING_PAGE_CONFIG,
   Pages,
   selectOpenedWindow,
   SettingsService,
@@ -40,6 +41,16 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
   //   SongActions.slideNavigate(
   //     eventData.payload as SongPayloadsMap['SLIDE_NAVIGATE']
   //   ),
+  [SONG_ACTIONS.openedPage]: (eventData: EventData) => {
+    return SongActions.openedPage({
+      name:
+        (eventData.payload as SongPayloadsMap[typeof SONG_ACTIONS.openedPage])
+          .page || Pages.CASTING,
+    });
+  },
+  [SONG_ACTIONS.castingStarted]: () => {
+    return SongActions.castingStarted();
+  },
 };
 
 @Injectable()
@@ -68,36 +79,63 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
     this.actions$.pipe(
       ofType(SongActions.startCasting),
       tap((data) => {
+        console.log('send start casting', data);
         this.bridge.send<'START_CASTING', SongPayloadsMap>(
           SONG_ACTIONS.startCasting,
           data
         );
       }),
-      map(() => ({ type: SONG_ACTIONS.startCasting }))
+      switchMap(() => this.actions$.pipe(ofType(SongActions.castingStarted))),
+      withLatestFrom(this.store.select(selectCastingProcess)),
+      map(([, process]) => {
+        if (!process) {
+          return { type: SONG_ACTIONS.castingStarted + 'ERROR' };
+        }
+        return SongActions.slideNavigate({
+          index: process.fromIndex ?? 0 /*+ 1*/,
+          direction: 'next',
+          currentLyric: process.currentLyric,
+        });
+      })
     )
   );
 
+  /**
+   * Вызывается когда окно и страница с кастингом запустилась
+   */
+  onOpened$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(SongActions.openedPage),
+      withLatestFrom(this.store.select(selectCastingProcess)),
+      map(([page, data]) => {
+        console.log('page | data and START CASTING', page, data);
+        if (!data) {
+          return { type: SONG_ACTIONS.pauseCasting };
+        }
+
+        this.store.dispatch(
+          SongActions.startCasting({
+            ...data,
+          })
+        );
+        return { type: SONG_ACTIONS.startCasting };
+      })
+    )
+  );
+
+  /**
+   * Эффект отправки в окно кастинга событие открытия страницы
+   */
   onOpenPage$ = createEffect(() =>
     this.actions$.pipe(
       ofType(SongActions.openPage),
       map((data) => {
-        this.bridge.send<'OPEN_PAGE', SongPayloadsMap>(
+        this.bridge.send<typeof SONG_ACTIONS.openPage, SongPayloadsMap>(
           SONG_ACTIONS.openPage,
           data
         );
 
         return { type: SONG_ACTIONS.openPage };
-      }),
-      switchMap(() => this.bridge.queueEvents),
-      withLatestFrom(this.store.select(selectCastingProcess)),
-      filter(([event]) => !!event && event.event === SONG_ACTIONS.openedPage),
-      map(([, data]) => {
-        if (!data) {
-          return { type: SONG_ACTIONS.pauseCasting };
-        }
-        return SongActions.startCasting({
-          ...data,
-        });
       })
     )
   );
@@ -105,7 +143,7 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
   /**
    * при закрытии окна нужно сбросить состояние кастинга
    */
-  openedWindow$ = createEffect(() =>
+  closeWindow$ = createEffect(() =>
     this.actions$.pipe(
       ofType(AppActions.closeWindow),
       map(() => SongActions.pauseCasting())
@@ -117,7 +155,17 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
       ofType(SongActions.openCasting),
       withLatestFrom(this.store.select(selectOpenedWindow)),
       switchMap(([, windowData]) => {
+        console.log('onOpenCasting$', windowData);
         if (windowData) {
+          // this.store.dispatch(
+          //   SongActions.openPage({
+          //       path: [Pages.SONGS_FEATURE, Pages.CASTING],
+          //   })
+          // );
+          // return of({type: 'SongActions.openedPage'});
+          // SongActions.openedPage({
+          //   name: Pages.CASTING,
+          // })
           return of(
             SongActions.openPage({
               path: [Pages.SONGS_FEATURE, Pages.CASTING],
@@ -132,11 +180,7 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
         return fromPromise(
           this.window.electronContext
             .openWindow({
-              type: AppWindowTypes.CASTING,
-              title: 'Casting new',
-              show: true,
-              center: true,
-              fullscreen: false,
+              ...DEFAULT_CASTING_PAGE_CONFIG,
               display: selectedDisplay,
             })
             .then((procId) => ({
@@ -172,7 +216,8 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
       this.actions$.pipe(
         ofType(SongActions.slideNavigate),
         map((data) => {
-          this.bridge.send<'SLIDE_NAVIGATE', SongPayloadsMap>(
+          console.log('navigate');
+          this.bridge.send<typeof SONG_ACTIONS.slideNavigate, SongPayloadsMap>(
             SONG_ACTIONS.slideNavigate,
             {
               currentLyric: data.currentLyric,
@@ -191,7 +236,7 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
     this.actions$.pipe(
       ofType(SongActions.pauseCasting),
       map(() => {
-        this.bridge.send<'PAUSE_CASTING', SongPayloadsMap>(
+        this.bridge.send<typeof SONG_ACTIONS.pauseCasting, SongPayloadsMap>(
           SONG_ACTIONS.pauseCasting,
           void 0
         );

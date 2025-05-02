@@ -75,6 +75,7 @@ export class CastingComponent implements OnInit, AfterViewInit {
     });
 
     this.store.select(selectCastingProcess).subscribe((data) => {
+      console.log('change cast proc', data);
       if (data) {
         this.startCastingHandler(data);
       }
@@ -119,7 +120,7 @@ export class CastingComponent implements OnInit, AfterViewInit {
       /**
        * т.к. первым слайдом всегда идет заглушка, то начинаем с индекса 1
        */
-      this.deckRef?.slide(0, 1);
+      this.deckRef?.slide(0, 1 );
     }
     this.updateTextSize();
 
@@ -134,10 +135,10 @@ export class CastingComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    if (payload.direction) {
+    if (payload.index !== undefined) {
+      this.deckRef.slide(undefined, payload.index + 1);
+    } else if (payload.direction) {
       this.deckRef[payload.direction]();
-    } else if (payload.index !== undefined) {
-      this.deckRef.slide(undefined, payload.index);
     }
 
     this.selectedLyric.set(payload.currentLyric);

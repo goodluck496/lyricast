@@ -14,12 +14,12 @@ import {
   BehaviorSubject,
   combineLatest,
   debounceTime,
+  filter,
   fromEvent,
   map,
   Observable,
   of,
   shareReplay,
-  startWith,
   switchMap,
   take,
   tap,
@@ -31,12 +31,10 @@ import {
   IShortSong,
   ISong,
   ISongBookName,
-  Lyric,
   LyricForCasting,
   LyricLine,
-  LyricTypeEnum,
 } from '@lyri-cast/entities';
-import { filterEmpty } from '@lyri-cast/common';
+import { filterEmpty, snapshot } from '@lyri-cast/common';
 import { DropdownModule } from 'primeng/dropdown';
 import { ListboxModule } from 'primeng/listbox';
 import { CastingService } from '../../services/casting.service';
@@ -60,7 +58,7 @@ import {
   ListBoxTemplates,
 } from '@lyri-cast/form';
 import { CheckboxModule } from 'primeng/checkbox';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PAGE_CONTAINER_TEMPLATES, Pages } from '@lyri-cast/common-browser';
 import { SongsApiService } from '@lyri-cast/data-access-songs';
 import { Actions, ofType } from '@ngrx/effects';
@@ -108,7 +106,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   private readonly actions$ = inject(Actions);
 
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
-  chorusAfterCouplet = signal(true);
+  // chorusAfterCouplet = signal(true);
 
   songBooksDict: IUiLyriListItem<ISongBookName>[] = [];
 
@@ -168,6 +166,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   selectedSong$ = new BehaviorSubject<ISong | null>(null);
   _selectedSong$: Observable<ISong | null> = this.songControl.valueChanges.pipe(
     switchMap((data) => {
+      console.log('chang song control');
       this.isLoading.set(true);
       const selectedBook = this.selectedBook.value;
       if (!selectedBook) {
@@ -190,7 +189,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     // в data лежит предыдущий объект, можно пофиксить в рамках рефакторинга
   );
 
-  changeChorusAfterCouplet$ = toObservable(this.chorusAfterCouplet);
+  // changeChorusAfterCouplet$ = toObservable(this.chorusAfterCouplet);
 
   selectBookInStore$ = this.actions$.pipe(ofType(SongActions.selectBook));
   slideNavigateInStore$ = this.actions$.pipe(ofType(SongActions.slideNavigate));
@@ -222,8 +221,11 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   );
 
   ngOnInit() {
-    fromEvent<KeyboardEvent>(this.elRef.nativeElement, 'keydown')
-      .pipe(debounceTime(100))
+    fromEvent<KeyboardEvent>(window /*this.elRef.nativeElement*/, 'keydown')
+      .pipe(
+        debounceTime(100),
+        filter(() => this.isActivePage())
+      )
       .subscribe((event: KeyboardEvent) => {
         const selectedLyric = this.songPageSelectSrv.selectedLyric();
         if (selectedLyric) {
@@ -241,13 +243,9 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         }
       });
 
-    combineLatest([
-      this._selectedSong$.pipe(filterEmpty()),
-      this.changeChorusAfterCouplet$.pipe(startWith(true)),
-    ])
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(([song, changeChorusAfterCouplet]) => {
-        const newSong = this.updateSong(song);
+    this._selectedSong$
+      .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
+      .subscribe((newSong) => {
         ///////// todo сделать отдельной функцией
         this.songPageSelectSrv.selectSong(newSong);
 
@@ -309,6 +307,8 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         const line = data.currentLyric.lines.find(
           (el) => el.globalSongIndex === (data?.index ?? 0)
         );
+
+        console.log('from hist', line, data);
         if (!line) {
           return;
         }
@@ -327,59 +327,16 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     });
   }
 
-  updateSong(song: ISong): ISong {
-    const cloneSong: ISong = JSON.parse(JSON.stringify(song));
-
-    if (!this.chorusAfterCouplet()) {
-      return {
-        ...cloneSong,
-        lyrics: clearChorus(cloneSong.lyrics),
-      };
-    }
-
-    // удаляет дублирующиеся куплеты
-    function clearChorus(lyrics: Lyric[]) {
-      const newLyric: Lyric[] = [];
-
-      lyrics.forEach((lyric) => {
-        const foundChorus = newLyric.find(
-          (el) => el.type === LyricTypeEnum.CHORUS
-        );
-        if (foundChorus && lyric.type === LyricTypeEnum.CHORUS) {
-          return;
-        }
-        newLyric.push(lyric);
-      });
-
-      return newLyric;
-    }
-
-    // добавляет куплеты после припевов
-    function insertChorus(lyrics: Lyric[]) {
-      const result: Lyric[] = [];
-      const chorus = lyrics.find((item) => item.type === LyricTypeEnum.CHORUS);
-      if (!chorus) return lyrics;
-
-      for (let i = 0; i < lyrics.length; i++) {
-        const lyric = lyrics[i];
-        const nextLyricIsChorus = lyrics[i + 1]?.type === LyricTypeEnum.CHORUS;
-
-        result.push(lyric);
-
-        if (lyric.type === LyricTypeEnum.COUPLET && !nextLyricIsChorus) {
-          result.push({
-            ...chorus,
-            uniqId: lyric.uniqId + (Math.random() * 1000).toFixed(0),
-          });
-        }
+  isActivePage(): boolean {
+    return this.router.isActive(
+      [Pages.MAIN, Pages.SONGS_FEATURE, Pages.SONGS].join('/'),
+      {
+        paths: 'exact',
+        queryParams: 'exact',
+        fragment: 'ignored',
+        matrixParams: 'ignored',
       }
-
-      return result;
-    }
-
-    cloneSong.lyrics = insertChorus(song.lyrics);
-
-    return cloneSong;
+    );
   }
 
   onStartCasting(fromSelectedBlock = false): void {
@@ -390,6 +347,8 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     }
 
     this.castingSrv.openCastingPageHandler(payload);
+
+    // this.onNavigateSlide('next');
   }
 
   onPauseCasting(): void {
@@ -403,9 +362,11 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   ]): void {
     this.songPageSelectSrv.showPreview(true, lyric, line);
 
+    const paused = snapshot(this.castingSrv.castingPaused$);
+
     if (startPresentation) {
       this.onStartCasting(true);
-    } else {
+    } else if (!paused) {
       this.onNavigateSlide('next', line.globalSongIndex);
     }
   }

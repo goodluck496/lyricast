@@ -35,6 +35,7 @@ export const SongFeatureRoutes: Routes = [
         const store = inject(Store);
 
         store.dispatch(SongActions.pauseCasting());
+        store.dispatch(SongActions.stopCasting());
       },
     ],
     providers: [

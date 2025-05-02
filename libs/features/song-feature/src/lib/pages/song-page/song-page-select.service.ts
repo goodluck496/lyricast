@@ -26,6 +26,7 @@ export class SongPageSelectService {
   public selectedLyricsForCasting = computed(() => {
     const song = this.selectedSong();
     if (!song) {
+
       return [];
     }
     const lyrics = song.lyrics;
@@ -107,6 +108,7 @@ export class SongPageSelectService {
     if (!nextLine) {
       return;
     }
+    console.log('nextLine', nextLine, nextGlobalIndex);
     const nextLyric = lyrics.find(
       (el) =>
         el.lines.findIndex((el1) => el1.globalSongIndex === nextGlobalIndex) >=
@@ -204,5 +206,6 @@ export class SongPageSelectService {
     this.selectedLyricLine.set(lyricLine);
     this.selectedLyric.set(lyric);
     this._isShowPreview.next(state);
+    console.log(lyricLine, lyric, state);
   }
 }

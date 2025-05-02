@@ -41,6 +41,7 @@ export class SongComponent {
   constructor() {
     effect(
       () => {
+        console.log('eff');
         const selectedLyricLine = this.songPageSelectSrv.selectedLyricLine();
         if (selectedLyricLine) {
           this.selectedLyricLine.set(selectedLyricLine);

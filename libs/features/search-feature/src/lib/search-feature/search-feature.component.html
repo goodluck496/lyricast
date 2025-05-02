@@ -1,5 +1,8 @@
 <p-iconField iconPosition="right">
-  <p-inputIcon styleClass="pi pi-times" (click)="searchControl.setValue('')" />
+  @if(!!searchControl.value) {
+    <p-inputIcon styleClass="pi pi-times " class="search__input-clear-icon" (click)="searchControl.setValue('')" />
+  }
+
   <input pInputText placeholder="Поиск" class="search__input" [formControl]="searchControl"
          (keydown)="onKeydown($event)" (click)="onClickInput($event)" />
 </p-iconField>

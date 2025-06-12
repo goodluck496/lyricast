@@ -27,7 +27,7 @@
                      [maxFontSize]="120"
                      [activateOnResize]="true">
                   <div
-                    [innerHTML]="line.text"
+                    [innerHTML]="sanitizer.bypassSecurityTrustHtml(line.text)"
                     class="slides__content"></div>
                 </div>
 

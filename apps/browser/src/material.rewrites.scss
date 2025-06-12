@@ -7,3 +7,36 @@
   --mdc-list-list-item-selected-container-color: #2d6879;
   --mdc-list-list-item-label-text-color: white;
 }
+
+//
+//.mat-form-field-appearance-fill {
+//  .mat-form-field-flex {
+//    background-color: transparent;       // если надо фон
+//    border: 1px solid #ced4da;           // светлая рамка
+//    border-radius: 4px;                  // скругление
+//    padding: 0 0.75rem;                  // отступы внутри
+//  }
+//
+//  // сам лейбл в обычном состоянии
+//  .mat-form-field-label {
+//    top: 0;                              // чуть прижать к верху контейнера
+//    transform: translate(0, 16px) scale(1);
+//    transform-origin: top left;
+//    transition: transform 200ms ease, color 200ms ease;
+//    color: #6c757d;                      // цвет «подсказки»
+//    font-size: 1rem;
+//    font-weight: 400;
+//  }
+//
+//  // состояние «float» (value || focus)
+//  &.mat-form-field-should-float .mat-form-field-label {
+//    transform: translate(0, -6px) scale(0.75);
+//    color: #495057;                      // цвет активного лейбла
+//  }
+//
+//  // скрываем underline, если нужно
+//  .mat-form-field-underline,
+//  .mat-form-field-ripple {
+//    display: none;
+//  }
+//}

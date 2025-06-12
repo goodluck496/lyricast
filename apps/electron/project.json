@@ -32,6 +32,20 @@
       }
     },
     "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          {
+            "command": "tsc -p apps/electron/workers/tsconfig.workers.json --watch"
+          },
+          {
+            "command": "nx run electron:serve-original"
+          }
+        ],
+        "parallel": true
+      }
+    },
+    "serve-original": {
       "executor": "nx-electron:execute",
       "options": {
         "buildTarget": "electron:build"

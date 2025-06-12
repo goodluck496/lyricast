@@ -147,7 +147,7 @@ export default class App {
       height: height,
       show: false,
       fullscreen: false,
-      backgroundMaterial:'none',
+      backgroundMaterial: 'none',
       backgroundColor: '#000',
       webPreferences: {
         ...DEFAULT_WEB_PREF,
@@ -184,8 +184,8 @@ export default class App {
 
     const openedWindow = App.openedWindows[windowType];
     openedWindow.loadURL(urlObject.href).then(() => {
-      if (windowType === AppWindowTypes.MAIN) {
-        // App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+      if (windowType === AppWindowTypes.MAIN && !environment.production) {
+        App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
       }
     });
 
@@ -203,10 +203,17 @@ export default class App {
           if (inFocus) {
             return;
           }
-          openedWindow.setFullScreen(true);
+
+          if (openedWindow.isDestroyed()) {
+            return;
+          }
+
+          //удалить
+          // openedWindow.setFullScreen(true);
 
           App.application.focus({ steal: true });
-          App.openedWindows.MAIN.show();
+          //удалить
+          // App.openedWindows.MAIN.show();
           App.openedWindows.MAIN.focus();
 
           // открываем devTools для отладки
@@ -217,6 +224,9 @@ export default class App {
             clearInterval(int);
           }
         }, 500);
+        openedWindow.once(ElectronAppEvents.CLOSED, () => {
+          clearInterval(int); // гарантированно отпишемся
+        });
       }
     });
   }

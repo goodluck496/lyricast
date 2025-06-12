@@ -27,6 +27,11 @@ export const appRoutes: Route[] = [
           import('@lyri-cast/bible-feature').then((c) => c.bibleFeatureRoutes),
       },
       {
+        path: Pages.FREE_SLIDE_FEATURE,
+        loadChildren: () =>
+          import('@lyri-cast/free-slide-feature').then((c) => c.freeSlideFeatureRoutes),
+      },
+      {
         path: Pages.PROGRAMS,
         loadComponent: () =>
           import('./pages/programs-page/programs-page.component').then(
@@ -58,5 +63,10 @@ export const appRoutes: Route[] = [
     path: Pages.BIBLE_FEATURE,
     loadChildren: () =>
       import('@lyri-cast/bible-feature').then((c) => c.bibleFeatureRoutes),
+  },
+  {
+    path: Pages.FREE_SLIDE_FEATURE,
+    loadChildren: () =>
+      import('@lyri-cast/free-slide-feature').then((c) => c.freeSlideFeatureRoutes),
   },
 ];

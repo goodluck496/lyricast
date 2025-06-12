@@ -85,7 +85,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
         this.showingContent.set(!value);
       });
 
-    this.store.select(selectCastingProcess).subscribe((data) => {
+    this.store.select(selectCastingProcess).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => {
       if (data) {
         this.startCastingHandler(data);
       }

@@ -42,6 +42,7 @@ import { lyriBible } from '@lyri-cast/svg-icons/lyri-icons/lyri-bible.icon';
 import { lyriControl } from '@lyri-cast/svg-icons/lyri-icons/lyri-control.icon';
 import { lyriStoryboard } from '@lyri-cast/svg-icons/lyri-icons/lyri-storyboard.icon';
 import { lyriSongLyrics } from '@lyri-cast/svg-icons/lyri-icons/lyri-song-lyrics.icon';
+import { lyriOpenedBook } from '@lyri-cast/svg-icons/lyri-icons/lyri-opened-book.icon';
 
 // import lyricSvg from '@styles/assets/icons/song-lyrics.svg';
 
@@ -88,6 +89,11 @@ export class MainComponent implements OnInit {
       icon: 'song_lyrics',
     },
     {
+      routerLink: ['./', Pages.FREE_SLIDE_FEATURE, Pages.FREE_SLIDE],
+      label: PageTitlesMap.get(Pages.FREE_SLIDE) ?? Pages.FREE_SLIDE,
+      icon: 'storyboard',
+    },
+    {
       routerLink: ['./', Pages.PROGRAMS],
       label: PageTitlesMap.get(Pages.PROGRAMS) ?? Pages.PROGRAMS,
       disabled: true,
@@ -98,10 +104,11 @@ export class MainComponent implements OnInit {
       label: PageTitlesMap.get(Pages.SETTINGS) ?? Pages.SETTINGS,
       icon: 'control',
     },
-    // {
-    //   routerLink: ['./', Pages.TEST],
-    //   label: PageTitlesMap.get(Pages.TEST) || Pages.TEST,
-    // },
+    {
+      routerLink: ['./', Pages.TEST],
+      label: PageTitlesMap.get(Pages.TEST) || Pages.TEST,
+      icon: 'opened_book'
+    },
   ];
 
   backendReady = false;
@@ -112,6 +119,7 @@ export class MainComponent implements OnInit {
       lyriControl,
       lyriStoryboard,
       lyriSongLyrics,
+      lyriOpenedBook
     ]);
   }
 

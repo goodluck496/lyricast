@@ -1,0 +1,24 @@
+<lyri-page-container [pagePath]="[Pages.MAIN, Pages.FREE_SLIDE_FEATURE, Pages.FREE_SLIDE]">
+
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
+  </ng-template>
+
+  <ng-container page-content>
+
+
+    <p-editor [(ngModel)]="slideText"
+              [formats]="quillFormats"
+              [modules]="quillModules"
+              (onTextChange)="onChangeContent($event)"
+              [style]="{ height: '320px' }">
+    </p-editor>
+
+  </ng-container>
+
+
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR">
+    <button pButton (click)="onStartCasting()">НАЧАТЬ КАСТИНГ</button>
+    <button pButton (click)="onStopCasting()">Остановить</button>
+
+  </ng-template>
+</lyri-page-container>

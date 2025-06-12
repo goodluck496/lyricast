@@ -8,7 +8,7 @@
     <div class="slides">
       <section>
         <div fittext [maxFontSize]="26">
-          <div [innerHTML]="slideText" class="slide-content"></div>
+          <div [innerHTML]="sanitizer.bypassSecurityTrustHtml(slideText) " class="slide-content"></div>
         </div>
 
       </section>

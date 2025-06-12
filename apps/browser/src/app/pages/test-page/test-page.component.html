@@ -1,1 +1,31 @@
-ffffffff
+
+<p-dropdown [options]="[{label: ' Равно', value: 'EQUAL'}, {label: 'Диапазон', value: 'BETWEEN'}]" (onChange)="onChangeType($event)"></p-dropdown>
+
+
+<lyri-datepicker-primeng [type]="selectType"></lyri-datepicker-primeng>
+
+
+<button
+  (click)="isOpen.set(!isOpen())"
+  type="button"
+  cdkOverlayOrigin
+  #trigger="cdkOverlayOrigin"
+>
+  {{isOpen() ? "Close" : "Open"}}
+</button>
+<ng-template
+  #overlay
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="trigger"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  [cdkConnectedOverlayOpen]="isOpen()"
+>
+
+  <div style="background: green; width: 400px; height: 300px">
+    <lyri-datepicker [type]="selectType"></lyri-datepicker>
+
+    <button (click)="isOpen.set(false)">CLOSE?</button>
+  </div>
+
+</ng-template>
+

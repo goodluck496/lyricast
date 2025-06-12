@@ -11,6 +11,12 @@
 
 @import "libs/styles/fonts";
 
+@import "reveal.js/dist/reveal.css";
+@import "reveal.js/dist/theme/black.css";
+
+@import "quill/dist/quill.core.css";
+@import "quill/dist/quill.snow.css";
+
 
 body {
   margin: 0;

@@ -9,11 +9,12 @@
                  #lyricItem
                  [class.lyric-item__line--selected]="selectedLyricLine()?.rangeIndex === line.rangeIndex
                  && lyric.uniqId === selectedLyric()?.uniqId"
-                 [innerHTML]="line.text"
+                 [innerHTML]="sanitizer.bypassSecurityTrustHtml(line.text)"
                  lyriDblClick
                  (dblClick)="onLineClick(lyric, line, true)"
                  (click)="onLineClick(lyric, line)"
             ></div>
+<!--            <p-editor [(ngModel)]="line.text" (keydown)="$event.stopPropagation()" (onTextChange)="onTextChange($event)"></p-editor>-->
           }
         </div>
       </div>

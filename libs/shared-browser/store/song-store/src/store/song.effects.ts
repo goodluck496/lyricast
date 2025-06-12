@@ -37,10 +37,6 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
       eventData.payload as SongPayloadsMap['OPEN_CASTING']
     ),
   [SONG_ACTIONS.selectBook]: () => SongActions.stopCasting(),
-  // [SONG_ACTIONS.slideNavigate]: (eventData: EventData) =>
-  //   SongActions.slideNavigate(
-  //     eventData.payload as SongPayloadsMap['SLIDE_NAVIGATE']
-  //   ),
   [SONG_ACTIONS.openedPage]: (eventData: EventData) => {
     return SongActions.openedPage({
       name:

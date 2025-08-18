@@ -145,7 +145,8 @@
     "typescript": "~5.5.4",
     "typescript-eslint": "^8.7.0",
     "wait-on": "^8.0.1",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "pnpm": "10.14.0"
   },
   "pnpm": {
     "overrides": {
@@ -155,9 +156,10 @@
   },
   "engines": {
     "node": "20.17.0",
-    "pnpm": "9.15.3"
+    "pnpm": "10.14.0"
   },
   "build": {
     "extends": "electron-builder.config.js"
-  }
+  },
+  "packageManager": "pnpm@10.14.0"
 }

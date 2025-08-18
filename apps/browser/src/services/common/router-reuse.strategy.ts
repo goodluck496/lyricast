@@ -3,12 +3,16 @@ import {
   DetachedRouteHandle,
   RouteReuseStrategy,
 } from '@angular/router';
+import { Pages } from '@lyri-cast/common-browser';
 
 export class CustomReuseStrategy implements RouteReuseStrategy {
   storedRoutes: { [key: string]: DetachedRouteHandle } = {};
 
   shouldDetach(route: ActivatedRouteSnapshot): boolean {
     // Определяет, нужно ли сохранять состояние страницы
+    if (route.routeConfig?.path?.includes(Pages.CASTING)) {
+      return false;
+    }
     return true; // Определите логику для конкретных страниц
   }
 
@@ -28,10 +32,7 @@ export class CustomReuseStrategy implements RouteReuseStrategy {
 
   retrieve(route: ActivatedRouteSnapshot): DetachedRouteHandle | null {
     // Восстанавливаем сохранённую страницу
-    if (
-      !route.routeConfig ||
-      !this.storedRoutes[this.getKey(route)]
-    ) {
+    if (!route.routeConfig || !this.storedRoutes[this.getKey(route)]) {
       return null;
     }
     return this.storedRoutes[this.getKey(route)];

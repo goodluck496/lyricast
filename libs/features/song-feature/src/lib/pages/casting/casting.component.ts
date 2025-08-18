@@ -25,6 +25,8 @@ import {
   SongPayloadsMap,
   SongStartCastingPayload,
 } from '@lyri-cast/song-store';
+import { sanitize } from 'quill/formats/link';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
   selector: 'lyri-casting-page',
@@ -39,6 +41,7 @@ export class CastingComponent implements OnInit, AfterViewInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly elRef = inject(ElementRef<HTMLElement>);
   private readonly store = inject(Store);
+  sanitizer: DomSanitizer = inject(DomSanitizer);
 
   deckRef?: Reveal.Api;
 
@@ -149,15 +152,20 @@ export class CastingComponent implements OnInit, AfterViewInit {
   async initReveal(): Promise<Api> {
     return new Promise((res, rej) => {
       setTimeout(async () => {
-        this.deckRef = new Reveal(this.elRef.nativeElement);
-
-        const deck = await this.deckRef?.initialize({
+        const revealContainer = this.elRef.nativeElement.querySelector('.reveal')
+        this.deckRef = new Reveal(revealContainer, {
           margin: -1,
           disableLayout: true,
           transition: 'fade', //todo можно сделать событие, которое будет изменять тип переходов между слайдами
           center: true,
           embedded: true,
+          hideInactiveCursor: true,
+          controlsBackArrows: 'hidden',
+          controls: false,
+
         });
+
+        const deck = await this.deckRef?.initialize();
 
         res(deck);
       }, 300);
@@ -175,4 +183,6 @@ export class CastingComponent implements OnInit, AfterViewInit {
 
     this.showingContent.set(false);
   }
+
+  protected readonly sanitize = sanitize;
 }

@@ -1,0 +1,28 @@
+<div class="slides__container ql-editor" [class.hide]="hideContent()">
+  <div class="reveal">
+    <div class="slides">
+      <section class="stack">
+
+        @for (content of (slides$ | async) || []; track content.id; let index = $index) {
+          @if (!hideContent()) {
+            <section
+              class="slides__section  ql-container"
+              [class.hide]="hideContent() || showedSlideIndex() !== index">
+              <div [fittext]="true"
+                   [maxFontSize]="130"
+                   [activateOnResize]="true"
+              >
+                <div
+                  class="slides__content" [innerHTML]="sanitizeHtml(content.htmlString)">
+                </div>
+              </div>
+
+            </section>
+          }
+
+        }
+      </section>
+
+    </div>
+  </div>
+</div>

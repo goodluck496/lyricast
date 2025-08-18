@@ -33,7 +33,7 @@ ipcMain.handle(ElectronActionEvents.GET_APP_VERSION, () => {
 ipcMain.handle(
   ElectronActionEvents.OPEN_WINDOW,
   (event, args: OpenWindowArgs) => {
-    console.log(`OpenWindow event: ${event}`, args);
+    console.log(`OpenWindow event: `,event, args);
     if (App.openedWindows[args.type]) {
       return;
     }
@@ -67,10 +67,23 @@ ipcMain.handle(
 ipcMain.handle(
   ElectronActionEvents.CLOSE_WINDOW,
   (event, args: CloseWindowArgs) => {
+    console.log('close ', event, args);
     if (!App.openedWindows[args.type]) {
       return;
     }
-    App.onClose(args.type);
+    if (args.type === AppWindowTypes.MAIN) {
+      Array.from(Object.entries(App.openedWindows))
+        .filter(([key, browserWindow]) => key !== AppWindowTypes.MAIN)
+        .forEach(([key, browserWindow]) => {
+          App.onClose(key as AppWindowTypes);
+
+          if (!browserWindow.isDestroyed()) {
+            browserWindow.destroy();
+          }
+        });
+    } else {
+      App.onClose(args.type);
+    }
   }
 );
 
@@ -92,7 +105,7 @@ ipcMain.handle(ElectronCommonEvents.SEND, (event, payload) => {
     }
     if (targetWindow.webContents.id === event.sender.id) {
       console.log(
-        '[CONTINUE] targetWindow.webContents.id === event.sender.id',
+        '[CONTINUE] targetWindow.webContents.id === event.sender.id'
         // JSON.stringify(payload)
       );
       return; // Пропускаем, если это отправляющее окно

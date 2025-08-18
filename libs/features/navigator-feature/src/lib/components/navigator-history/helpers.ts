@@ -55,12 +55,20 @@ export function groupHistoryItems(items: HistoryItem[]): GroupedHistoryItem[] {
       let group = bibleGroups.get(groupKey);
 
       if (!group) {
+
+
+        if(!item.payload.currentVerse || !item.payload?.currentVerse?.bookTitle) {
+          console.error('ERROR', item, items);
+        }
+
+
         group = {
           ...item,
           payload: {
             ...item.payload,
             key: groupKey,
-            title: `${item.payload.currentVerse.bookTitle.short} ${chapter}:${verse}`,
+            //иногда почему-то currentVerse === undefined
+            title: `${item.payload?.currentVerse?.bookTitle?.short} ${chapter}:${verse}`,
             path: [book, chapter],
           },
           isGroup: true,

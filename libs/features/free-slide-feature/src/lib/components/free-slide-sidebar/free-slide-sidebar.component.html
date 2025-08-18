@@ -1,0 +1,28 @@
+<div class="control-sidebar__wrapper">
+  <lyri-free-slide-casting-preview></lyri-free-slide-casting-preview>
+
+  <div class="control-sidebar__actions">
+
+    @if ((castingIsPaused$ | async)) {
+      <button pButton class="flex flex-w-center flex-h-center" (click)="onStartCasting()" severity="success">
+        <lyri-icon name="play" style="width: 14px; height: 14px"></lyri-icon>
+        Транслировать
+      </button>
+    } @else {
+      <button pButton class="flex flex-w-center flex-h-center" (click)="onPauseCasting()" severity="danger">
+        <lyri-icon name="stop" style="width: 14px; height: 14px"></lyri-icon>
+        Остановить
+      </button>
+    }
+
+    <div class="flex">
+      <button pButton severity="danger" [disabled]="windowHasClose$ | async" (click)="onStopCasting()">Закрыть</button>
+    </div>
+  </div>
+
+  <lyri-navigator-feature class="control-sidebar__navigator" />
+</div>
+
+
+
+

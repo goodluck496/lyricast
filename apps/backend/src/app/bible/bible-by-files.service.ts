@@ -127,95 +127,159 @@ export class BibleByFilesService {
     bookId?: number,
     chapterId?: number
   ) {
-    const result: BibleSearchDto = {
-      search,
-      sections: [],
-    };
+    // ===== helpers =====
+    const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    const books = this.getBooks(translate).filter((book) =>
-      bookId ? book.number === bookId : true
-    );
+    const normalize = (s: string) =>
+      (s ?? '')
+        .replace(/\u00A0/g, ' ')                           // NBSP -> space
+        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()«»"'“”„]/g, ' ')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
 
-    // Удаление знаков препинания из строки поиска
-    const punctPattern = new RegExp('[.,\\/#!$%\\^&\\*;:{}=\\-_`~()]', 'gi');
-    const cleanedSearch = search.replace(punctPattern, '').toLowerCase();
-    const searchTerms = cleanedSearch.split(' ');
+// Собираем секцию в одну строку + карту индексов -> какой content и локальный offset
+    function buildSectionIndex(section: any) {
+      const parts: { idxStart: number; idxEnd: number; contentIndex: number; localStart: number }[] = [];
+      let combined = '';
+      let cursor = 0;
 
-    const matches = [];
+      (section.content ?? []).forEach((c: any, i: number) => {
+        const raw = c.text || '';
+        const norm = normalize(raw);
+        const start = cursor;
+        combined += (combined ? ' ' : '') + norm;
+        const end = combined.length; // после добавления
+        parts.push({
+          idxStart: start + (combined ? 1 : 0), // с учётом добавленного пробела между кусками
+          idxEnd: end,
+          contentIndex: i,
+          localStart: 0, // используем ниже
+        });
+        cursor = end;
+      });
 
-    books.forEach((book) => {
-      book.chapters.forEach((chapter) => {
-        if (chapterId && chapter.number !== chapterId) {
-          return;
-        }
-        chapter.subsections.forEach((section) => {
-          const cleanedContentText = section.content.map((content) => ({
-            ...content,
-            cleanedText: (content.text || '').replace(punctPattern, '').toLowerCase(),
-          }));
+      return { combined, parts };
+    }
 
-          const searchWithTerms = (terms: string[]) => {
-            const regex = new RegExp(terms.join(' '), 'i'); // Регулярное выражение для поиска фразы
+// По глобальному regex находим все попадания (start,end)
+    function findAll(re: RegExp, text: string): Array<{start: number; end: number}> {
+      const res: Array<{start: number; end: number}> = [];
+      re.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(text))) {
+        const start = m.index;
+        const end = start + (m[0]?.length ?? 0);
+        res.push({ start, end });
+        if (re.lastIndex === m.index) re.lastIndex++; // защита от пустых матчей
+      }
+      return res;
+    }
 
-            cleanedContentText.forEach((content) => {
+// Маппинг глобального индекса секции -> индекс контента
+    function mapToContent(pos: number, parts: ReturnType<typeof buildSectionIndex>['parts']) {
+      // бинарный поиск можно, но частей обычно не так много
+      for (const p of parts) {
+        if (pos >= p.idxStart && pos <= p.idxEnd) return p.contentIndex;
+      }
+      return 0;
+    }
+
+
+    const result: BibleSearchDto = { search, sections: [] };
+    const books = this.getBooks(translate).filter(b => (bookId ? b.number === bookId : true));
+
+    const normalizedSearch = normalize(search);
+    const terms = normalizedSearch.split(' ').filter(Boolean);
+    if (terms.length === 0) return result;
+
+    // Фраза “как в блокноте”: слова через \s+, без \b, unicode+ignoreCase+global
+    const phraseRe = new RegExp(terms.map(t => escapeRegExp(t)).join('\\s+'), 'igu');
+
+    // Отдельные слова (для скоринга)
+    const termRes = terms.map(t => new RegExp(`(?:^|\\s)${escapeRegExp(t)}(?:\\s|$)`, 'igu'));
+
+    type Match = { bookId: number; chapterId: number; content: any; score: number };
+    const matches: Match[] = [];
+
+    for (const book of books) {
+      for (const chapter of book.chapters) {
+        if (chapterId && chapter.number !== chapterId) continue;
+
+        for (const section of chapter.subsections) {
+          const { combined, parts } = buildSectionIndex(section);
+          if (!combined) continue;
+
+          // 1) Фразовые совпадения по всей секции
+          const hits = findAll(phraseRe, combined);
+          for (const h of hits) {
+            const contentIdx = mapToContent(h.start, parts);
+            const content = section.content[contentIdx];
+
+            // Базовый скоринг за фразу
+            let score = terms.length * 3;
+
+            // 2) +добавим очки за отдельные слова в рамках всей секции,
+            //    чтобы отдавать приоритет “насыщенным” местам
+            for (const tr of termRes) {
+              score += (combined.match(tr) || []).length;
+            }
+
+            matches.push({
+              bookId: book.number,
+              chapterId: chapter.number,
+              content,
+              score,
+            });
+          }
+
+          // 3) Если фразы нет вообще, но есть отдельные слова — тоже добавим результаты
+          if (hits.length === 0) {
+            // для каждого content посчитаем локальные матчи
+            (section.content ?? []).forEach((c: any) => {
+              const nt = normalize(c.text || '');
               let score = 0;
-
-              if (regex.test(content.cleanedText)) {
-                score += terms.length * 3; // Даем больше очков за совпадение регулярного выражения
-              }
-
-              terms.forEach((term) => {
-                const termRegex = new RegExp(term, 'i'); // Регулярное выражение для поиска отдельных слов
-                const matches = content.cleanedText.match(termRegex);
-                if (matches) {
-                  score += matches.length; // Даем очки за каждое совпадение термина
-                }
-              });
-
+              for (const tr of termRes) score += (nt.match(tr) || []).length;
               if (score > 0) {
                 matches.push({
                   bookId: book.number,
                   chapterId: chapter.number,
-                  content: content,
-                  score: score,
+                  content: c,
+                  score,
                 });
               }
             });
-          };
-
-          if (searchTerms.length > 2) {
-            searchWithTerms([cleanedSearch]);
-          } else {
-            for (let i = searchTerms.length; i > 0; i--) {
-              searchWithTerms(searchTerms.slice(0, i));
-            }
           }
-        });
-      });
-    });
+        }
+      }
+    }
 
-    const uniqueMatches = matches.filter(
-      (match, index, self) =>
-        index ===
-        self.findIndex(
-          (m) => m.bookId === match.bookId && m.chapterId === match.chapterId
-        )
-    );
+    // ВАЖНО: больше НЕ режем “по одной записи на главу”.
+    // Группируем только одинаковые (bookId,chapterId,contentId) чтобы не дублировать один и тот же content из-за нескольких попаданий фразы внутри него.
+    const key = (m: Match) =>
+      `${m.bookId}#${m.chapterId}#${(m.content && (m.content.id ?? m.content.verse ?? m.content.key)) ?? JSON.stringify(m.content)}`;
 
-    uniqueMatches.sort((a, b) => b.score - a.score);
+    const dedupMap = new Map<string, Match>();
+    for (const m of matches) {
+      const k = key(m);
+      const prev = dedupMap.get(k);
+      dedupMap.set(k, !prev || m.score > prev.score ? m : prev);
+    }
 
-    result.sections = uniqueMatches.map((match) => {
-      const foundBook = books.find((book) => String(book.number) === String(match.bookId));
-      const bookShortName = foundBook.title.short;
+    const finalMatches = Array.from(dedupMap.values()).sort((a, b) => b.score - a.score);
 
+    result.sections = finalMatches.map(m => {
+      const foundBook = books.find(b => String(b.number) === String(m.bookId));
+      const bookShortName = foundBook?.title?.short ?? m.bookId;
       return {
-        bookId: match.bookId,
-        bookShortName: bookShortName ?? match.bookId,
-        chapterId: match.chapterId,
-        content: match.content,
+        bookId: m.bookId,
+        bookShortName:String(bookShortName),
+        chapterId: m.chapterId,
+        content: m.content, // оригинал
       };
     });
 
     return result;
   }
+
 }

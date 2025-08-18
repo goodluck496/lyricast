@@ -1,5 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { ISong, LyricForCasting, LyricLine } from '@lyri-cast/entities';
+import { ISong, Lyric, LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { Subject } from 'rxjs';
 import {
   SongPresentationNavigatePayload,
@@ -25,51 +25,29 @@ export class SongPageSelectService {
   public selectedLyric = signal<LyricForCasting | null>(null);
   public selectedLyricsForCasting = computed(() => {
     const song = this.selectedSong();
-    if (!song) {
-
-      return [];
-    }
-    const lyrics = song.lyrics;
-    const result: LyricForCasting[] = lyrics.map((el, i) => {
-      const lines = this.splitArrayIntoParts(el.lines, i);
-
-      return {
-        ...el,
-        lines,
-      } satisfies LyricForCasting;
-    });
-
-    return result;
+    if (!song) return [];
+    return this.buildLyricsForCasting(song);
   });
 
   private _isShowPreview = new Subject();
   public isShowPreview = this._isShowPreview.asObservable();
 
-  public getStartCastingPayload(
-    fromSelectedBlock = false
-  ): SongStartCastingPayload | undefined {
+  public getStartCastingPayload(fromSelectedBlock = false): SongStartCastingPayload | undefined {
     const song = this.selectedSong();
-    if (!song) {
-      return;
-    }
+    if (!song) return;
 
-    const lyrics = song.lyrics.map((lyric, index) => {
-      return {
-        ...lyric,
-        lines: this.splitArrayIntoParts(lyric.lines, index),
-      };
-    });
+    // важный момент: НЕ пересчитываем по-старому,
+    // а берём точно те же разбиения и globalSongIndex, что и в selectedLyricsForCasting
+    const lyrics = this.buildLyricsForCasting(song);
 
     const selectedLyric = this.selectedLyric();
-    const fromIndex = fromSelectedBlock
-      ? this.selectedLyricLine()?.globalSongIndex
-      : undefined;
+    const fromIndex = fromSelectedBlock ? this.selectedLyricLine()?.globalSongIndex : undefined;
 
     return {
       song,
       lyrics,
       fromIndex,
-      currentLyric: selectedLyric ? selectedLyric : lyrics[0],
+      currentLyric: selectedLyric ?? lyrics[0],
     };
   }
 
@@ -108,7 +86,7 @@ export class SongPageSelectService {
     if (!nextLine) {
       return;
     }
-    console.log('nextLine', nextLine, nextGlobalIndex);
+
     const nextLyric = lyrics.find(
       (el) =>
         el.lines.findIndex((el1) => el1.globalSongIndex === nextGlobalIndex) >=
@@ -135,68 +113,83 @@ export class SongPageSelectService {
     this.selectedSong.set(song);
   }
 
-  public splitArrayIntoParts(arr: string[], lyricIndex: number): LyricLine[] {
-    const parts = this.splitPartsCount();
-    if (parts === SPLIT_PARTS_COUNT.NONE || parts > arr.length) {
-      return [
-        {
-          rangeIndex: `0-${arr.length}`,
-          index: 0,
-          globalSongIndex: lyricIndex,
-          text: arr.join('<br />'),
-        },
-      ];
+  private decideParts(lyric: Lyric, globalParts: SplitPartsCount, arrLen: number): number {
+    if (lyric.splitLinesCount === 0) return 1;                               // явно «не делить»
+    if (typeof lyric.splitLinesCount === 'number' && lyric.splitLinesCount > 0) {
+      return Math.min(lyric.splitLinesCount, arrLen);                         // локальный override
+    }
+    if (globalParts === SPLIT_PARTS_COUNT.NONE || globalParts > arrLen) {
+      return 1;                                                               // глобально «не делить»
+    }
+    const p = Number(globalParts || 1);
+    return Math.max(1, Math.min(p, arrLen));
+  }
+
+  private buildLyricsForCasting(song: ISong): LyricForCasting[] {
+    const globalParts = this.splitPartsCount();
+    const counts = song.lyrics.map(l => this.decideParts(l, globalParts, l.lines.length));
+
+    // префиксные суммы стартовых оффсетов
+    const offsets: number[] = [];
+    let acc = 0;
+    for (let i = 0; i < counts.length; i++) {
+      offsets.push(acc);
+      acc += counts[i];
     }
 
-    const preparedArr: LyricLine[] = arr.map((el, i) => ({
-      rangeIndex: `${i}`,
-      index: i,
-      globalSongIndex: lyricIndex * parts + i,
-      text: el,
-    }));
+    return song.lyrics.map((lyric, i) => {
+      const lines = this.splitArrayIntoParts(lyric, i, offsets[i]);
+      return { ...lyric, lines } as LyricForCasting;
+    });
+  }
 
-    const result: LyricLine[][] = [];
-    const partSize = Math.floor(arr.length / parts);
-    let remainder = arr.length % parts;
-    let start = 0;
 
-    for (let i = 0; i < parts; i++) {
-      const end = start + partSize + (remainder > 0 ? 1 : 0);
-      result.push(preparedArr.slice(start, end));
-      start = end;
-      if (remainder > 0) {
-        remainder--;
-      }
+  public splitArrayIntoParts(
+    lyric: Lyric,
+    lyricIndex: number,
+    startOffset = 0
+  ): LyricLine[] {
+    const arr = lyric.lines;
+    const parts = this.decideParts(lyric, this.splitPartsCount(), arr.length);
+
+    // один блок — весь текст подряд
+    if (parts === 1) {
+      return [{
+        rangeIndex: `0-${Math.max(0, arr.length - 1)}`,
+        index: 0,                               // индекс части внутри этого lyric
+        globalSongIndex: startOffset + 0,       // кумулятивный уровень
+        text: arr.join('<br />'),
+      }];
     }
 
-    return result.map((lines, index) => {
-      const objLyricLine = lines.reduce(
-        (acc, curr) => {
-          acc.text.push(curr.text);
-          acc.rangeIndex.push(curr.rangeIndex);
-          acc.index.push(curr.index);
+    // подготовка
+    const prepared = arr.map((text, i) => ({ text, i }));
+    const buckets: typeof prepared[] = [];
+    const base = Math.floor(arr.length / parts);
+    let rem = arr.length % parts;
+    let s = 0;
 
-          return acc;
-        },
-        {
-          rangeIndex: [] as string[],
-          index: [] as number[],
-          globalSongIndex: [] as number[],
-          text: [] as string[],
-        }
-      );
+    for (let p = 0; p < parts; p++) {
+      const e = s + base + (rem > 0 ? 1 : 0);
+      buckets.push(prepared.slice(s, e));
+      s = e;
+      if (rem > 0) rem--;
+    }
 
+    // склеиваем часть → LyricLine
+    return buckets.map((lines, partIdx) => {
+      const minIdx = Math.min(...lines.map(l => l.i));
+      const maxIdx = Math.max(...lines.map(l => l.i));
       return {
-        rangeIndex: [
-          String(Math.min(...objLyricLine.index)),
-          String(Math.max(...objLyricLine.index)),
-        ].join('-'),
-        index: index,
-        globalSongIndex: index + lyricIndex * parts,
-        text: objLyricLine.text.join('<br />'),
+        rangeIndex: `${minIdx}-${maxIdx}`,
+        index: partIdx,                         // индекс части внутри этого lyric
+        globalSongIndex: startOffset + partIdx, // кумулятивный
+        text: lines.map(l => l.text).join('<br />'),
       } satisfies LyricLine;
     });
   }
+
+
 
   public showPreview(
     state: boolean,
@@ -206,6 +199,6 @@ export class SongPageSelectService {
     this.selectedLyricLine.set(lyricLine);
     this.selectedLyric.set(lyric);
     this._isShowPreview.next(state);
-    console.log(lyricLine, lyric, state);
+    // console.log(lyricLine, lyric, state);
   }
 }

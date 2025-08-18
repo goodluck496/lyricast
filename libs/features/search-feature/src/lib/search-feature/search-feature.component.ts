@@ -210,7 +210,6 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
           if (tab === SearchTypeTabs.SONGS) {
             return this.songSearchSrv.search(value);
           }
-
           return of(null);
         })
       )

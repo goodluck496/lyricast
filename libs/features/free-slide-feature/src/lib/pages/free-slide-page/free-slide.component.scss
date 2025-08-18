@@ -1,0 +1,75 @@
+:host {
+  display: block;
+  height: calc(100% - #{var(--header-height)});
+
+  &::ng-deep {
+    .p-card .p-card-content {
+      padding: 0;
+    }
+  }
+}
+
+.free-slide {
+
+  &__page-wrapper {
+    display: flex;
+    height: 100%;
+  }
+
+  &__preview-list,&__preview-list-wrapper, &__contents {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+
+    gap: 1rem
+  }
+
+  &__preview-list-wrapper {
+    height: 100%;
+  }
+
+  &__preview-list {
+    height: 100%;
+  }
+
+  &__preview-slide {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(100px + 3rem);
+    height: 80px;
+    background-color: #5a5a5a;
+    border: 1px solid transparent;
+
+    &--sleected {
+      border: 1px solid whitesmoke;
+    }
+  }
+
+  &__selected-slide {
+
+  }
+
+  &__contents {
+
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 1rem 1rem 0 1rem;
+    width: 100%;
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  &__name-input {
+    width: 100%;
+  }
+}

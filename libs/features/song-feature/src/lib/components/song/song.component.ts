@@ -15,17 +15,28 @@ import { NgScrollbar } from 'ngx-scrollbar';
 import { SongPageSelectService } from '../../pages/song-page/song-page-select.service';
 import { DblClickDirective } from '@lyri-cast/ui-lib';
 import { DomHandler } from 'primeng/dom';
+import { EditorModule } from 'primeng/editor';
+import { FormsModule } from '@angular/forms';
+import { EditorTextChangeEvent } from 'primeng/editor/editor.interface';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
   selector: 'lyri-song',
   standalone: true,
-  imports: [CommonModule, NgScrollbar, DblClickDirective],
+  imports: [
+    CommonModule,
+    NgScrollbar,
+    DblClickDirective,
+    EditorModule,
+    FormsModule,
+  ],
   templateUrl: './song.component.html',
   styleUrl: './song.component.scss',
 })
 export class SongComponent {
   songPageSelectSrv = inject(SongPageSelectService);
   elRef = inject(ElementRef);
+  sanitizer: DomSanitizer = inject(DomSanitizer);
 
   song = input.required<ISong>();
   lyrics = computed<LyricForCasting[]>(() =>
@@ -41,7 +52,6 @@ export class SongComponent {
   constructor() {
     effect(
       () => {
-        console.log('eff');
         const selectedLyricLine = this.songPageSelectSrv.selectedLyricLine();
         if (selectedLyricLine) {
           this.selectedLyricLine.set(selectedLyricLine);
@@ -96,5 +106,9 @@ export class SongComponent {
         }
       });
     }, 1000);
+  }
+
+  onTextChange(event: EditorTextChangeEvent) {
+    console.log('event', event);
   }
 }

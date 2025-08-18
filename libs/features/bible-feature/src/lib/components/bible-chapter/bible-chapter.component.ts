@@ -49,11 +49,7 @@ export class BibleChapterComponent implements OnInit {
   selectedPrevOrNextVerse$ = this.store.select(selectSelectedPrevOrNextVerse);
   selectedPath$ = this.store.select(selectSelectedPath);
 
-  constructor() {
-    effect(() => {
-      this.scrollToSelected();
-    });
-  }
+  isScrolled = false;
 
   // Функция для санитизации HTML
   sanitizeHtml(rawHtml: string): SafeHtml {
@@ -111,6 +107,11 @@ export class BibleChapterComponent implements OnInit {
   }
 
   scrollToSelected() {
+    if (this.isScrolled) {
+      return;
+    }
+    this.isScrolled = true;
+
     setTimeout(() => {
       this.listItems().forEach((item) => {
         if (
@@ -127,9 +128,10 @@ export class BibleChapterComponent implements OnInit {
             block: 'center',
             behavior: 'smooth',
           });
+          this.isScrolled = false;
         }
       });
-    }, 500);
+    }, 100);
   }
 
   onSelectVerse(verse: BibleVerse, casting = false) {

@@ -1,0 +1,76 @@
+<lyri-page-container [pagePath]="[Pages.MAIN, Pages.FREE_SLIDE_FEATURE, Pages.FREE_SLIDE]">
+
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
+  </ng-template>
+
+  <ng-container page-content>
+
+    <div class="free-slide__page-wrapper">
+      <div class="free-slide__preview-list-wrapper">
+        <ng-scrollbar>
+          <div class="free-slide__preview-list">
+            @for (slide of slides$ | async; track slide.id) {
+              <lyri-preview-slide [slide]="slide"
+                                  [selected]="slide.index === currentSlideIndex"
+                                  class="free-slide__preview-slide"
+                                  (click)="onSelectSlide(slide)">
+              </lyri-preview-slide>
+            }
+          </div>
+        </ng-scrollbar>
+      </div>
+      <div class="free-slide__contents">
+        <p-card class="free-slide">
+          <ng-template pTemplate="header">
+            <div class="free-slide__header">
+              {{ currentSlideIndex }}. <input pInputText [(ngModel)]="currentSlideName"
+                                              class="free-slide__name-input" />
+            </div>
+
+          </ng-template>
+
+          <p-editor
+            [(ngModel)]="currentSlideHtml"
+            [formats]="quillFormats"
+            [modules]="quillModules"
+            [style]="{ height: '250px' }">
+          </p-editor>
+
+          <ng-template pTemplate="footer">
+            <div class="free-slide__footer">
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div>
+                  <button pButton (click)="onAddNewSlide()">Добавить еще слайд</button>
+                </div>
+                <div>
+                  @if (currentSlideIndex === 0) {
+                    <button pButton severity="danger" (click)="onResetSlide()"
+                            [disabled]="currentSlideHtml === '' || tempCurrentSlideHtml === ''">
+                      Сбросить
+                    </button>
+                  } @else {
+                    <button pButton severity="danger" (click)="onDeleteSelected()">
+                      Удалить
+                    </button>
+                  }
+
+                </div>
+
+              </div>
+            </div>
+
+          </ng-template>
+
+        </p-card>
+      </div>
+    </div>
+
+
+  </ng-container>
+
+
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR">
+    <lyri-free-slide-sidebar></lyri-free-slide-sidebar>
+  </ng-template>
+
+</lyri-page-container>

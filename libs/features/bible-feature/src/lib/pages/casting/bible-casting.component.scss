@@ -5,6 +5,7 @@
   position: relative;
 
   background-color: var(--r-background-color);
+  cursor: none;
 }
 
 .hide {
@@ -29,8 +30,8 @@
 
   &__number, &__type {
     color: rgb(203, 203, 203);
-    border: 4px solid gray;
-    border-radius: 12px;
+    //border: 4px solid gray;
+    //border-radius: 12px;
     padding: 0 12px;
   }
 

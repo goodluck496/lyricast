@@ -20,6 +20,7 @@
         ],
         "tsConfig": "apps/browser/tsconfig.app.json",
         "inlineStyleLanguage": "scss",
+
         "assets": [
           {
             "glob": "**/*",
@@ -32,12 +33,10 @@
           }
         ],
         "styles": [
-          "apps/browser/src/styles.scss",
-          "node_modules/reveal.js/dist/reveal.css",
-          "node_modules/reveal.js/dist/theme/black.css"
+          "apps/browser/src/styles.scss"
         ],
         "scripts": [
-          "node_modules/reveal.js/dist/reveal.js"
+
         ],
         "allowedCommonJsDependencies": [
         ]

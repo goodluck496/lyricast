@@ -6,7 +6,6 @@
   "scripts": {
     "start": "npm-run-all -p _start:backend _start:browser _start:electron",
     "build-win": "npm-run-all -c 01__build-win 02__build-win",
-
     "noop": "",
     "01__build:browser": "npm run __generate-icons",
     "02__build:browser": "npm run _build:browser",
@@ -20,7 +19,7 @@
     "build:backend": "npm-run-all -c 01__build:backend 02__build:backend",
     "build": "npm-run-all -c build:browser build:backend _build:electron",
     "01__build-win": "npm run build",
-    "02__build-win": "npm-run-all -c __build-win-32 __zip-dist",
+    "02__build-win": "npm-run-all -c __build-win-32 __zip-dist ||  node -e \"process.exit(0)\"",
     "noop1": "",
     "_start:backend": "nx run backend:serve",
     "_browser:serve": "nx run browser:serve",
@@ -43,6 +42,7 @@
   },
   "private": true,
   "dependencies": {
+    "7zip-bin": "^5.2.0",
     "@actions/exec": "^1.1.1",
     "@angular/animations": "~18.2.6",
     "@angular/cdk": "~18.2.7",
@@ -51,6 +51,7 @@
     "@angular/core": "~18.2.6",
     "@angular/forms": "~18.2.6",
     "@angular/material": "~18.2.7",
+    "@angular/material-luxon-adapter": "^18.2.14",
     "@angular/platform-browser": "~18.2.6",
     "@angular/platform-browser-dynamic": "~18.2.6",
     "@angular/router": "~18.2.6",
@@ -62,21 +63,28 @@
     "@ngrx/effects": "^18.1.1",
     "@ngrx/store": "^18.1.1",
     "@ngrx/store-devtools": "^18.1.1",
+    "@tinymce/tinymce-angular": "^8.0.1",
+    "angular-imask": "^7.6.1",
     "axios": "^1.7.7",
     "bootstrap": "5.3.3",
     "cheerio": "^1.0.0",
     "electron-log": "^5.3.0",
+    "imask": "^7.6.1",
     "lodash-es": "^4.17.21",
+    "luxon": "^3.6.1",
     "ng2-fittext": "^2.0.0",
     "ngx-scrollbar": "^16.1.1",
     "primeicons": "^6.0.1",
     "primeng": "^17.18.12",
+    "quill": "^2.0.3",
+    "quill-resize-image": "^1.0.7",
     "reflect-metadata": "^0.1.14",
     "reveal.js": "^5.1.0",
     "rxjs": "~7.8.1",
     "svg-to-ts": "^12.0.0",
     "tslib": "^2.7.0",
     "typeorm": "^0.3.20",
+    "uuid": "^11.1.0",
     "xml2js": "^0.6.2",
     "zone.js": "~0.14.10"
   },
@@ -112,7 +120,9 @@
     "@swc/core": "~1.5.29",
     "@swc/helpers": "~0.5.13",
     "@types/jest": "^29.5.13",
+    "@types/luxon": "^3.6.2",
     "@types/node": "18.16.9",
+    "@types/quill": "^2.0.14",
     "@types/reveal.js": "^5.0.4",
     "@typescript-eslint/utils": "^7.18.0",
     "angular-eslint": "^18.3.1",
@@ -135,7 +145,8 @@
     "typescript": "~5.5.4",
     "typescript-eslint": "^8.7.0",
     "wait-on": "^8.0.1",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "pnpm": "10.14.0"
   },
   "pnpm": {
     "overrides": {
@@ -144,10 +155,10 @@
     }
   },
   "engines": {
-    "node": "20.17.0",
-    "pnpm": "9.15.3"
+    "pnpm": "10.14.0"
   },
   "build": {
     "extends": "electron-builder.config.js"
-  }
+  },
+  "packageManager": "pnpm@10.14.0"
 }

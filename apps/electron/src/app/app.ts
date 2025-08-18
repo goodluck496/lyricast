@@ -55,8 +55,15 @@ export default class App {
     // Dereference the window object, usually you would store windows
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
+    const openedWin = App.openedWindows[type];
 
-    App.openedWindows[type].close();
+    if(openedWin) {
+      if(openedWin.isDestroyed()) {
+        return;
+      }
+      openedWin.destroy();
+    }
+
     App.openedWindows[type] = null;
   }
 
@@ -111,6 +118,16 @@ export default class App {
             payload: { processId },
           })
         );
+      } else {
+
+        Array.from(Object.entries(App.openedWindows)).forEach(([key, browserWindow]) => {
+          App.onClose(key as AppWindowTypes);
+
+          if(!browserWindow.isDestroyed() && browserWindow.destroy) {
+            browserWindow.destroy();
+          }
+        });
+
       }
     });
 
@@ -129,7 +146,7 @@ export default class App {
         .subscribe(() => {
           const winBounds = win.getBounds();
           const display = screen.getDisplayMatching(winBounds);
-          console.log('Окно теперь на дисплее:', display.id);
+          console.log('Окно теперь на дисплее: ', display.id);
         })
     );
 
@@ -147,7 +164,7 @@ export default class App {
       height: height,
       show: false,
       fullscreen: false,
-      backgroundMaterial:'none',
+      backgroundMaterial: 'none',
       backgroundColor: '#000',
       webPreferences: {
         ...DEFAULT_WEB_PREF,
@@ -184,8 +201,8 @@ export default class App {
 
     const openedWindow = App.openedWindows[windowType];
     openedWindow.loadURL(urlObject.href).then(() => {
-      if (windowType === AppWindowTypes.MAIN) {
-        // App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+      if (windowType === AppWindowTypes.MAIN && !environment.production) {
+        App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
       }
     });
 
@@ -203,20 +220,32 @@ export default class App {
           if (inFocus) {
             return;
           }
-          openedWindow.setFullScreen(true);
+
+          if (openedWindow.isDestroyed()) {
+            return;
+          }
+
+          //удалить
+          // openedWindow.setFullScreen(true);
 
           App.application.focus({ steal: true });
-          App.openedWindows.MAIN.show();
+          //удалить
+          // App.openedWindows.MAIN.show();
           App.openedWindows.MAIN.focus();
 
-          // открываем devTools для отладки
-          App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+          if (!environment.production) {
+            // открываем devTools для отладки
+            App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+          }
 
           if (App.openedWindows.MAIN.isFocused()) {
             inFocus = true;
             clearInterval(int);
           }
         }, 500);
+        openedWindow.once(ElectronAppEvents.CLOSED, () => {
+          clearInterval(int); // гарантированно отпишемся
+        });
       }
     });
   }

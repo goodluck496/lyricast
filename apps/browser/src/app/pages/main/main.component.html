@@ -3,23 +3,26 @@
   <div class="page__wrapper">
     <div class="page__menu">
       @for (page of pages; track page.label) {
-        @if (!page.disabled) {
-          <div class="page__menu-item"
-               [routerLink]="page.routerLink"
-               routerLinkActive="page__menu-item--active">
-            @if (page.icon) {
-              <lyri-icon [name]="page.icon"></lyri-icon>
-            }
-            {{ page.label }}
-          </div>
-        } @else {
-          <div class="page__menu-item page__menu-item--disabled">
-            @if (page.icon) {
-              <lyri-icon [name]="page.icon"></lyri-icon>
-            }
-            {{ page.label }}
-          </div>
+        @if(page.visible) {
+          @if (!page.disabled) {
+            <div class="page__menu-item"
+                 [routerLink]="page.routerLink"
+                 routerLinkActive="page__menu-item--active">
+              @if (page.icon) {
+                <lyri-icon [name]="page.icon"></lyri-icon>
+              }
+              {{ page.label }}
+            </div>
+          } @else {
+            <div class="page__menu-item page__menu-item--disabled">
+              @if (page.icon) {
+                <lyri-icon [name]="page.icon"></lyri-icon>
+              }
+              {{ page.label }}
+            </div>
+          }
         }
+
 
       }
     </div>

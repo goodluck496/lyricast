@@ -62,7 +62,7 @@ export class ParseSongsService {
       const splitedVerses = this.splitVerses(onlyLines, 4);
 
       const splitLinesCount =
-        splitedVerses.length > 1 ? 2 : onlyLines.length <= 6 ? 0 : 2;
+        splitedVerses.length > 1 ? 2 : onlyLines.length <= 5 ? 0 : 2;
 
       return {
         songId: String(songObj.number),
@@ -70,7 +70,7 @@ export class ParseSongsService {
         sectionTitle: title, // название секции
         lines: onlyLines,
         type: lyricType,
-        splitLinesCount,
+        splitLinesCount: lyricType === LyricTypeEnum.CHORUS && splitLinesCount === 0 ? 0 : splitLinesCount,
       };
     });
 
@@ -78,7 +78,7 @@ export class ParseSongsService {
   }
 
   private splitVerses(verses: string[], rowCount: number): string[][] {
-    const MAX_LENGTH = 35;
+    const MAX_LENGTH = 38;
 
     // Функция для разбиения строки на строки до MAX_LENGTH
     function splitLine(line: string): string[] {

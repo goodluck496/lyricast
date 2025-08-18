@@ -30,16 +30,7 @@ import {
 import { BibleApiService } from '@lyri-cast/data-access-bible';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
-  // [BIBLE_ACTIONS.startCasting]: (eventData: EventData) =>
-  //   BibleActions.startCasting(eventData.payload as BibleStartCastingPayload),
-  // [BIBLE_ACTIONS.changeCastingProcess]: (eventData: EventData) =>
-  //   BibleActions.castingProcessChange(
-  //     eventData.payload as BiblePresentationNavigatePayload
-  //   ),
-  // [BIBLE_ACTIONS.stopCasting]: () => BibleActions.stopCasting(),
-  // [BIBLE_ACTIONS.pauseCasting]: () => BibleActions.pauseCasting(),
   [APP_COMMON_ACTIONS.openedPage]: () => {
-    console.log('openedPage!!');
     return AppActions.focusPage
   }
 };

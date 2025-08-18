@@ -11,6 +11,12 @@
 
 @import "libs/styles/fonts";
 
+@import "reveal.js/dist/reveal.css";
+@import "reveal.js/dist/theme/black.css";
+
+@import "quill/dist/quill.core.css";
+@import "quill/dist/quill.snow.css";
+
 
 body {
   margin: 0;
@@ -32,4 +38,18 @@ body {
 .highlighted-text {
   background-color: yellow;
   color: black;
+}
+
+.hide {
+  transition: opacity .5s;
+  opacity: 0;
+}
+
+//REVEAL
+.reveal {
+  .progress {
+    color: gray;
+
+    height: 15px;
+  }
 }

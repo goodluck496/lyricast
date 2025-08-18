@@ -89,3 +89,27 @@ Main.bootstrapBackend();
 //
 // // Настройка консольного вывода
 // log.consoleLevel = 'info';
+//
+//
+// import { Worker } from 'worker_threads';
+// import path from 'path';
+// import { fileURLToPath } from 'url';
+//
+// const __dirname = path.dirname(fileURLToPath(import.meta.url));
+//
+// // Путь к .ts файлу воркера
+// // const workerPath = path.join(__dirname, './workers/my-first.worker.ts');
+// const workerPath = path.join(__dirname, '../../../dist/apps/backend/main.js');
+//
+// const worker = new Worker(workerPath, {
+//   execArgv: ['-r', 'ts-node/register'], // важно для запуска .ts
+// });
+//
+// worker.on('message', (msg) => {
+//   console.log('Сообщение от воркера:', msg);
+// });
+//
+// setInterval(() => {
+//   worker.postMessage({ text: 'Иисус' + +new Date() });
+// }, 500)
+//

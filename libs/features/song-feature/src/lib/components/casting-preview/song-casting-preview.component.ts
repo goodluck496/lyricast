@@ -16,6 +16,7 @@ import { SongPageSelectService } from '../../pages/song-page/song-page-select.se
 import { LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { Ng2FittextModule } from 'ng2-fittext';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
   selector: 'lyri-song-casting-preview',
@@ -30,6 +31,7 @@ export class SongCastingPreviewComponent implements OnDestroy, AfterViewInit {
   public songPageSelectSrv = inject(SongPageSelectService);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
+  sanitizer: DomSanitizer = inject(DomSanitizer);
 
   deckRef?: Reveal.Api;
   deck?: Reveal.Api;
@@ -54,8 +56,7 @@ export class SongCastingPreviewComponent implements OnDestroy, AfterViewInit {
   initDeck(): void {
     this.initTimeoutId = setTimeout(async () => {
       try {
-        this.deckRef = new Reveal(this.elRef.nativeElement);
-        this.deck = await this.deckRef?.initialize({
+        this.deckRef = new Reveal(this.elRef.nativeElement.querySelector('.reveal'), {
           width: 400,
           height: 300,
           margin: -1,
@@ -65,6 +66,7 @@ export class SongCastingPreviewComponent implements OnDestroy, AfterViewInit {
           overview: false,
           keyboard:false,
         });
+        this.deck = await this.deckRef?.initialize();
         await this.initReveal();
         this.cdr.detectChanges()
       } catch (err) {

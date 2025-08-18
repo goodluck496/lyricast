@@ -16,11 +16,13 @@ import { map } from 'rxjs';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   [FreeSlideActionsEnum.startCasting]: (eventData: EventData) =>
-    FreeSlideActions.startCasting(eventData.payload as any),
+    FreeSlideActions[FreeSlideActionsEnum.startCasting](eventData.payload as any),
   [FreeSlideActionsEnum.castingStarted]: () =>
-    FreeSlideActions.castingStarted(),
-  [FreeSlideActionsEnum.stopCasting]: () => FreeSlideActions.stopCasting(),
-  [FreeSlideActionsEnum.pauseCasting]: () => FreeSlideActions.pauseCasting(),
+    FreeSlideActions[FreeSlideActionsEnum.castingStarted](),
+  [FreeSlideActionsEnum.slideNavigate]: (eventData) =>
+    FreeSlideActions[FreeSlideActionsEnum.slideNavigate](eventData.payload as any),
+  [FreeSlideActionsEnum.stopCasting]: () => FreeSlideActions[FreeSlideActionsEnum.stopCasting](),
+  [FreeSlideActionsEnum.pauseCasting]: () => FreeSlideActions[FreeSlideActionsEnum.pauseCasting](),
 };
 
 /**
@@ -40,7 +42,7 @@ export class FreeSlideForCastingEffects
 
   openCasting$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(FreeSlideActions.openCasting),
+      ofType(FreeSlideActions[FreeSlideActionsEnum.openCasting]),
       map((data) => {
         console.log('opencasting', data);
         return { type: FreeSlideActionsEnum.openCasting };
@@ -48,9 +50,19 @@ export class FreeSlideForCastingEffects
     )
   );
 
+  startCasting$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(FreeSlideActions[FreeSlideActionsEnum.startCasting]),
+      map((data) => {
+        console.log('start casting!', data);
+        return { type: FreeSlideActionsEnum.startCasting };
+      })
+    )
+  );
+
   stopCasting$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(FreeSlideActions.stopCasting),
+      ofType(FreeSlideActions[FreeSlideActionsEnum.stopCasting]),
       map(() => {
         return AppActions.closeWindow({
           windowType: AppWindowTypes.CASTING,

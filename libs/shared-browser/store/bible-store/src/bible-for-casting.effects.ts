@@ -150,7 +150,6 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
             }))
         ).pipe(
           tap((openedWindow) => {
-            console.log('setProcId, ', openedWindow);
             this.store.dispatch(
               AppActions.setProcId({
                 procId: openedWindow.procId,

@@ -39,3 +39,17 @@ body {
   background-color: yellow;
   color: black;
 }
+
+.hide {
+  transition: opacity .5s;
+  opacity: 0;
+}
+
+//REVEAL
+.reveal {
+  .progress {
+    color: gray;
+
+    height: 15px;
+  }
+}

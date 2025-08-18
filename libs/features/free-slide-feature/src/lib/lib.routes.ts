@@ -4,6 +4,7 @@ import { inject } from '@angular/core';
 import { provideState, Store } from '@ngrx/store';
 import {
   FreeSlideActions,
+  FreeSlideActionsEnum,
   FreeSlideCastingEffects,
   FreeSlideFeatureName,
   FreeSlideForCastingEffects,
@@ -27,7 +28,7 @@ export const freeSlideFeatureRoutes: Route[] = [
       () => {
         const store = inject(Store);
 
-        store.dispatch(FreeSlideActions.pauseCasting());
+        store.dispatch(FreeSlideActions[FreeSlideActionsEnum.pauseCasting]());
       },
     ],
     providers: [

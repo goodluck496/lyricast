@@ -3,14 +3,15 @@ import { Pages } from '@lyri-cast/common-browser';
 import { FreeSlide } from '@lyri-cast/entities';
 
 export const FreeSlideActionsEnum = {
-  openPage: 'openPage',
-  openedPage: 'openedPage',
-  openCasting: 'openCasting',
-  startCasting: 'startCasting',
-  castingStarted: 'castingStarted',
-  stopCasting: 'stopCasting',
-  pauseCasting: 'pauseCasting',
-  slideNavigate: 'slideNavigate',
+  openPage: '[FREE_SLIDE]openPage',
+  openedPage: '[FREE_SLIDE]openedPage',
+  openCasting: '[FREE_SLIDE]openCasting',
+  startCasting: '[FREE_SLIDE]startCasting',
+  castingStarted: '[FREE_SLIDE]castingStarted',
+  stopCasting: '[FREE_SLIDE]stopCasting',
+  pauseCasting: '[FREE_SLIDE]pauseCasting',
+  slideNavigate: '[FREE_SLIDE]slideNavigate',
+  selectSlide: '[FREE_SLIDE]selectSlide',
 } as const;
 
 export type FreeSlideActionsEnumKeys = keyof typeof FreeSlideActionsEnum;
@@ -40,5 +41,6 @@ export const FreeSlideActions = createActionGroup({
     [FreeSlideActionsEnum.pauseCasting]: emptyProps(),
     [FreeSlideActionsEnum.castingStarted]: emptyProps(),
     [FreeSlideActionsEnum.slideNavigate]: props<FreeSlideNavigatePayload>(),
+    [FreeSlideActionsEnum.selectSlide]: props<FreeSlide>(),
   },
 });

@@ -1,16 +1,18 @@
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
+  DestroyRef,
   inject,
   viewChild,
+  viewChildren,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
-import { FreeSlideActions } from '@lyri-cast/free-slide-store';
 import { Store } from '@ngrx/store';
 import { FreeSlide } from '@lyri-cast/entities';
-import { Actions, ofType } from '@ngrx/effects';
+import { Actions } from '@ngrx/effects';
 import { EditorComponent } from '@tinymce/tinymce-angular';
 import { Editor, EditorModule } from 'primeng/editor';
 import { FormsModule } from '@angular/forms';
@@ -21,6 +23,19 @@ import { DropdownModule } from 'primeng/dropdown';
 import Quill from 'quill';
 import QuillResizeImage from 'quill-resize-image';
 import { EditorTextChangeEvent } from 'primeng/editor/editor.interface';
+import { FreeSlideService } from './free-slide.service';
+import { CardModule } from 'primeng/card';
+import { InputTextModule } from 'primeng/inputtext';
+import { first, fromEvent, take } from 'rxjs';
+import { NgScrollbar } from 'ngx-scrollbar';
+import { PreviewSlideComponent } from '../../components/preview-slide/preview-slide.component';
+import { FreeSlideSidebarComponent } from '../../components/free-slide-sidebar/free-slide-sidebar.component';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  FreeSlideActions,
+  FreeSlideActionsEnum,
+  selectFreeSlideCastingStarted,
+} from '@lyri-cast/free-slide-store';
 
 Quill.register('modules/resize', QuillResizeImage);
 
@@ -34,14 +49,23 @@ Quill.register('modules/resize', QuillResizeImage);
     FormsModule,
     PageContainerComponent,
     DropdownModule,
+    CardModule,
+    InputTextModule,
+    NgScrollbar,
+    PreviewSlideComponent,
+    FreeSlideSidebarComponent,
   ],
   templateUrl: './free-slide.component.html',
   styleUrl: './free-slide.component.scss',
+  providers: [FreeSlideService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FreeSlideComponent implements AfterViewInit {
+  cdr = inject(ChangeDetectorRef);
   store = inject(Store);
   actions$ = inject(Actions);
+  slideService = inject(FreeSlideService);
+  destroyRef = inject(DestroyRef);
 
   editor = viewChild.required(Editor);
 
@@ -49,8 +73,15 @@ export class FreeSlideComponent implements AfterViewInit {
     plugins: 'lists link image table code help wordcount',
   };
 
-  slideText = '';
-  slideTextNew = '';
+  currentSlideId = '';
+  currentSlideIndex = 1;
+  currentSlideName = '';
+  currentSlideHtml = '';
+  /**
+   * Данное поле используется для считывания значения из редактора
+   * применять его для value редактора нельзя, будет "скакать" курсор
+   */
+  tempCurrentSlideHtml = '';
 
   quillFormats = [
     'header',
@@ -61,7 +92,6 @@ export class FreeSlideComponent implements AfterViewInit {
     'blockquote',
     'code-block',
     'list',
-    'bullet',
     'indent',
     'script',
     'color',
@@ -92,86 +122,110 @@ export class FreeSlideComponent implements AfterViewInit {
       ['link', 'image', 'video'], // ← важно: кнопка Video
     ],
     resize: {},
-    // clipboard: {
-    //   matchers: [
-    //     // При вставке любого текста запускается matcher для TEXT_NODE
-    //     [
-    //       Node.TEXT_NODE,
-    //       (node: any, delta: any) => {
-    //         const url = node.data.trim();
-    //         // Простая регулярка для разных видов YouTube-URL
-    //         const ytRegex =
-    //           /^(?:(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=|(?:https?:\/\/)?youtu\.be\/)([A-Za-z0-9_-]{11})/;
-    //         const match = ytRegex.exec(url);
-    //         if (match && match[1]) {
-    //           // Если это YouTube-ссылка, формируем embed URL
-    //           const videoId = match[1];
-    //           const embedUrl = 'https://www.youtube.com/embed/' + videoId;
-    //           // Заменяем всю вставленную ссылку iframe
-    //           const newDelta = new Delta()
-    //             .retain(delta.length())
-    //             .delete(delta.length())
-    //             .insert({ video: embedUrl });
-    //           return newDelta;
-    //         }
-    //         return delta; // если не YouTube URL, оставляем без изменений
-    //       },
-    //     ],
-    //   ],
-    // },
   };
 
-  onStartCasting() {
+  slides$ = this.slideService.slides$.asObservable();
+
+  onAddNewSlide() {
+    const newSlide = this.slideService.addSlide();
+
+    this.onSelectSlide(newSlide);
+  }
+
+  onSelectSlide(slide: FreeSlide) {
+    this.currentSlideName = slide.name;
+    this.currentSlideHtml = slide.htmlString;
+    this.tempCurrentSlideHtml = slide.htmlString;
+    this.currentSlideId = slide.id;
+    this.currentSlideIndex = slide.index;
+
+    this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.selectSlide](slide));
+
     const quill: Quill = this.editor().getQuill();
-    console.log('text', this.slideText, quill.root.innerHTML);
-    const mockSlides: FreeSlide[] = [
-      {
-        id: +new Date() + '_id',
-        groupId: '000',
-        name: 'some-name',
-        createdAtTime: +new Date(),
-        htmlString: this.slideTextNew,
-      },
-    ];
 
-    this.store.dispatch(
-      FreeSlideActions.openCasting({
-        slideId: '123',
-        slides: mockSlides,
-        fromIndex: 0,
-      })
+    if (quill) {
+      quill.focus();
+    }
+
+    this.store
+      .select(selectFreeSlideCastingStarted)
+      .pipe(take(1))
+      .subscribe((started) => {
+        if (!started) {
+          return;
+        }
+        this.store.dispatch(
+          FreeSlideActions[FreeSlideActionsEnum.slideNavigate]({
+            slide: slide,
+            index: slide.index,
+          })
+        );
+      });
+  }
+
+  onSaveSlide() {
+    this.slideService.updateSlide({
+      id: this.currentSlideId,
+      name: this.currentSlideName,
+      index: this.currentSlideIndex,
+      htmlString: this.tempCurrentSlideHtml,
+    });
+  }
+
+  onDeleteSelected() {
+    const nextSlide = this.slideService.getSlideByIndex(
+      this.currentSlideIndex + 1
     );
-    this.actions$.pipe(ofType());
+    const prevSlide = this.slideService.getSlideByIndex(
+      this.currentSlideIndex - 1
+    );
+
+    this.slideService.removeSlide(this.currentSlideId);
+
+    if (nextSlide) {
+      this.onSelectSlide(nextSlide);
+    } else if (prevSlide) {
+      this.onSelectSlide(prevSlide);
+    } else {
+      const list = Array.from(this.slideService.slidesMap.values());
+      this.onSelectSlide(list[list.length - 1]);
+    }
   }
 
-  onStopCasting() {
-    this.store.dispatch(FreeSlideActions.stopCasting());
-  }
+  onResetSlide() {
+    this.currentSlideHtml = '';
+    this.tempCurrentSlideHtml = '';
 
-  onChangeContent(data: EditorTextChangeEvent) {
-    console.log(data);
+    this.onSaveSlide();
   }
 
   ngAfterViewInit() {
+    this.slides$.pipe(first()).subscribe((slides) => {
+      const firstSlide = slides[0];
+      if (firstSlide) {
+        this.onSelectSlide(firstSlide);
+      }
+    });
     setTimeout(() => {
-      // console.log(this.editor().getQuill());
-
       const quill: Quill = this.editor().getQuill();
-      console.log('quill', quill);
+      quill.focus();
 
-      quill.on('text-change', (_delta: any, _oldContents: any, source: any) => {
-        if (source === 'user') {
-          const editorEl = quill.root;
-          let html: string = editorEl.innerHTML;
-          if (html === '<p><br></p>') {
-            html = '';
+      fromEvent(quill, 'text-change')
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(([delta, oldContent, source]) => {
+          if (source === 'user') {
+            const editorEl = quill.root;
+            let html: string = editorEl.innerHTML;
+            if (html === '<p><br></p>') {
+              html = '';
+            }
+
+            this.tempCurrentSlideHtml = html;
+
+            this.onSaveSlide();
           }
-
-          this.slideTextNew = html;
-          console.log('html?', html);
-        }
-      });
-    }, 1000);
+        });
+    }, 100);
   }
 
   protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;

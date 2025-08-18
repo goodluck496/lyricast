@@ -8,15 +8,30 @@ import {
   HostListener,
   inject,
   OnInit,
+  signal,
   viewChildren,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
-import { selectFreeSlideCastingProcess } from '@lyri-cast/free-slide-store';
-import { SONG_ACTIONS } from '@lyri-cast/song-store';
+import {
+  FreeSlideNavigatePayload,
+  FreeSlideStartCastingPayload,
+  selectFreeSlideCastingPaused,
+  selectFreeSlideCastingProcess,
+  selectFreeSlideCastingStarted,
+  selectFreeSlideNavigateState,
+} from '@lyri-cast/free-slide-store';
 import { AppActions, BridgeService, Pages } from '@lyri-cast/common-browser';
 import { filterEmpty } from '@lyri-cast/common';
-import { filter, map, Observable, tap } from 'rxjs';
+import {
+  combineLatest,
+  debounceTime,
+  filter,
+  map,
+  Observable,
+  tap,
+  withLatestFrom,
+} from 'rxjs';
 import { FreeSlide } from '@lyri-cast/entities';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
@@ -46,33 +61,92 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
   deckRef?: Reveal.Api;
 
   selectCastingProcess$ = this.store.select(selectFreeSlideCastingProcess);
+  selectCastingStarted$ = this.store.select(selectFreeSlideCastingStarted);
+  slideNavigate$ = this.store.select(selectFreeSlideNavigateState);
+  castingPaused$ = this.store.select(selectFreeSlideCastingPaused);
 
   slides$: Observable<FreeSlide[]> = this.selectCastingProcess$.pipe(
     filterEmpty(),
     map((data) => {
+      console.log('FreeSlideCastingComponent', data);
       return data.slides;
     })
   );
 
+  started = signal(false);
+  hideContent = signal(false);
+  showedSlideIndex = signal(0);
+
   fitTexts = viewChildren(Ng2FittextDirective);
 
   ngOnInit() {
-    this.selectCastingProcess$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((e) => {
-        console.log('selectCastingProcess', e);
+    console.log('FreeSlideCastingComponent ngOnInit', this);
 
-        /**
+    this.selectCastingStarted$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data) => {
+        this.hideContent.set(data);
+      });
+
+    combineLatest([
+      this.selectCastingStarted$,
+      this.selectCastingProcess$.pipe(debounceTime(300), filterEmpty()),
+      this.slideNavigate$,
+    ]).subscribe(([started, process, navigate]) => {
+      if (!started) {
+        return;
+      }
+      this.started.set(started);
+
+      if (navigate) {
+        this.navigateSlideHandler(navigate);
+        if (navigate.index !== undefined) {
+          this.showedSlideIndex.set(navigate.index);
+        }
+        console.log('navigate', navigate);
+      } else if (process) {
+        console.log('process', process);
+        this.startCastingHandler(process);
+        this.showedSlideIndex.set(process.fromIndex);
+      }
+
+      setTimeout(() => {
+        this.openIframeFullscreen();
+      }, 300);
+    });
+    /*
+    this.selectCastingProcess$
+      .pipe(
+        debounceTime(300),
+        filterEmpty(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((data) => {
+        this.startCastingHandler(data);
+        /!**
          * ХАК!!! надо рефачить
-         */
-        setTimeout(() => {
-          window.dispatchEvent(new Event('resize', {}));
-        }, 100);
+         *!/
+        // setTimeout(() => {
+        //   window.dispatchEvent(new Event('resize', {}));
+        // }, 100);
 
         setTimeout(() => {
           this.openIframeFullscreen();
         }, 1000);
-      });
+      });*/
+
+    /*  this.slideNavigate$
+        .pipe(
+          filterEmpty(),
+          withLatestFrom(this.selectCastingStarted$),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe(([data, started]) => {
+          if (started) {
+            console.log('navigate');
+            this.navigateSlideHandler(data);
+          }
+        });*/
 
     this.actions$
       .pipe(
@@ -92,6 +166,16 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       )
       .subscribe((data) => {
         console.log('-----------------open page', data);
+        this.initReveal();
+      });
+
+    this.castingPaused$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((paused) => {
+        console.log('paused???', paused);
+        if (this.started()) {
+          this.hideContent.set(paused);
+        }
       });
   }
 
@@ -129,11 +213,11 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
   }
 
   async ngAfterViewInit() {
-    // await this.initReveal();
+    await this.initReveal();
     console.log('afterViewInit');
 
     this.bridge.windowSrv.electronContext.send({
-      event: SONG_ACTIONS.openedPage,
+      event: 'OPENED_PAGE',
       payload: { state: 'after-view-init', page: Pages.CASTING },
     });
   }
@@ -148,7 +232,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // this.deckRef.layout();
+    this.deckRef.layout();
     this.updateTextSize();
   }
 
@@ -158,8 +242,39 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
     });
   }
 
+  startCastingHandler(payload: FreeSlideStartCastingPayload) {
+    if (!this.deckRef) {
+      return;
+    }
+    // this.clearSlides();
+    // await this.initReveal();
+
+    // if (payload.fromIndex !== undefined) {
+    this.deckRef.slide(undefined, payload.fromIndex);
+    // }
+
+    this.cdr.detectChanges();
+    this.updateTextSize();
+    this.hideContent.set(false);
+  }
+
+  navigateSlideHandler(payload: FreeSlideNavigatePayload) {
+    if (!this.deckRef) {
+      return;
+    }
+
+    this.deckRef.slide(undefined, payload.index);
+    this.updateTextSize();
+  }
+
+  clearSlides(): void {
+    this.deckRef?.destroy();
+
+    this.hideContent.set(true);
+  }
+
   async initReveal(): Promise<Api> {
-    this.deckRef = new Reveal(this.elRef.nativeElement);
+    /*this.deckRef = new Reveal(this.elRef.nativeElement);
 
     const deck = await this.deckRef?.initialize({
       margin: -1,
@@ -174,5 +289,24 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
     });
 
     return deck;
+  }*/
+
+    return new Promise((res, rej) => {
+      setTimeout(async () => {
+        const revealContainer =
+          this.elRef.nativeElement.querySelector('.reveal');
+        this.deckRef = new Reveal(revealContainer, {
+          margin: -1,
+          disableLayout: true,
+          transition: 'fade', //todo можно сделать событие, которое будет изменять тип переходов между слайдами
+          center: true,
+          embedded: true,
+        });
+
+        const deck = await this.deckRef?.initialize();
+
+        res(deck);
+      }, 300);
+    });
   }
 }

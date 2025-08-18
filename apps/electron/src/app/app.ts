@@ -55,8 +55,15 @@ export default class App {
     // Dereference the window object, usually you would store windows
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
+    const openedWin = App.openedWindows[type];
 
-    App.openedWindows[type].close();
+    if(openedWin) {
+      if(openedWin.isDestroyed()) {
+        return;
+      }
+      openedWin.destroy();
+    }
+
     App.openedWindows[type] = null;
   }
 
@@ -111,6 +118,16 @@ export default class App {
             payload: { processId },
           })
         );
+      } else {
+
+        Array.from(Object.entries(App.openedWindows)).forEach(([key, browserWindow]) => {
+          App.onClose(key as AppWindowTypes);
+
+          if(!browserWindow.isDestroyed() && browserWindow.destroy) {
+            browserWindow.destroy();
+          }
+        });
+
       }
     });
 
@@ -129,7 +146,7 @@ export default class App {
         .subscribe(() => {
           const winBounds = win.getBounds();
           const display = screen.getDisplayMatching(winBounds);
-          console.log('Окно теперь на дисплее:', display.id);
+          console.log('Окно теперь на дисплее: ', display.id);
         })
     );
 
@@ -216,8 +233,10 @@ export default class App {
           // App.openedWindows.MAIN.show();
           App.openedWindows.MAIN.focus();
 
-          // открываем devTools для отладки
-          App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+          if (!environment.production) {
+            // открываем devTools для отладки
+            App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+          }
 
           if (App.openedWindows.MAIN.isFocused()) {
             inFocus = true;

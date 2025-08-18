@@ -121,18 +121,20 @@ export const loggableActions = defineLoggableActions([
           '</div>',
         ].join(' ');
       };
+      const fromIndex =
+        data.fromIndex > 0 ? data.fromIndex - 1 : data.fromIndex;
       return of({
         type: HistoryType.BIBLE,
         dateTime: Date.now(),
         payload: {
-          entityId: data.content[0]?.path?.join('-'),
-          path: data.content[0]?.path,
-          key: `select-bible-verse-${data.content[0]?.number}`,
+          entityId: data.content[fromIndex]?.path?.join('-'),
+          path: data.content[fromIndex]?.path,
+          key: `select-bible-verse-${data.content[fromIndex]?.number}`,
           title: bibleTitle(),
           icon: '',
           url: ``,
           children: [],
-          currentVerse: data.content[data.fromIndex],
+          currentVerse: data.content[fromIndex],
         },
       });
     },

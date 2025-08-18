@@ -6,7 +6,6 @@
   "scripts": {
     "start": "npm-run-all -p _start:backend _start:browser _start:electron",
     "build-win": "npm-run-all -c 01__build-win 02__build-win",
-
     "noop": "",
     "01__build:browser": "npm run __generate-icons",
     "02__build:browser": "npm run _build:browser",
@@ -43,6 +42,7 @@
   },
   "private": true,
   "dependencies": {
+    "7zip-bin": "^5.2.0",
     "@actions/exec": "^1.1.1",
     "@angular/animations": "~18.2.6",
     "@angular/cdk": "~18.2.7",
@@ -84,6 +84,7 @@
     "svg-to-ts": "^12.0.0",
     "tslib": "^2.7.0",
     "typeorm": "^0.3.20",
+    "uuid": "^11.1.0",
     "xml2js": "^0.6.2",
     "zone.js": "~0.14.10"
   },
@@ -120,8 +121,8 @@
     "@swc/helpers": "~0.5.13",
     "@types/jest": "^29.5.13",
     "@types/luxon": "^3.6.2",
-    "@types/quill": "^2.0.14",
     "@types/node": "18.16.9",
+    "@types/quill": "^2.0.14",
     "@types/reveal.js": "^5.0.4",
     "@typescript-eslint/utils": "^7.18.0",
     "angular-eslint": "^18.3.1",

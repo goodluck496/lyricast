@@ -159,6 +159,10 @@ export class CastingComponent implements OnInit, AfterViewInit {
           transition: 'fade', //todo можно сделать событие, которое будет изменять тип переходов между слайдами
           center: true,
           embedded: true,
+          hideInactiveCursor: true,
+          controlsBackArrows: 'hidden',
+          controls: false,
+
         });
 
         const deck = await this.deckRef?.initialize();

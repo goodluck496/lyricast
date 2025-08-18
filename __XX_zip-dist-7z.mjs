@@ -3,6 +3,7 @@ import progress from 'progress';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { path7za } from '7zip-bin';
 
 // Конфигурация
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,15 +15,25 @@ const THREADS = 4; // Количество потоков 7-Zip
 // Проверяем наличие 7-Zip
 async function check7z() {
   try {
-    await exec('7z');
+    await exec(path7za, ['--help']);
     return true;
-  } catch {
-    console.error('7-Zip не найден! Установите его:');
-    console.log('Windows: https://www.7-zip.org/');
-    console.log('Linux: sudo apt install p7zip-full');
-    console.log('Mac: brew install p7zip');
+  } catch (error) {
+    console.error('7-Zip не запускается:', error);
     return false;
   }
+
+  //
+  // try {
+  //   await exec('7z');
+  //   return true;
+  // } catch (error) {
+  //   console.log(error);
+  //   console.error('7-Zip не найден! Установите его:');
+  //   console.log('Windows: https://www.7-zip.org/');
+  //   console.log('Linux: sudo apt install p7zip-full');
+  //   console.log('Mac: brew install p7zip');
+  //   return false;
+  // }
 }
 
 // Архивируем одну папку
@@ -50,7 +61,7 @@ async function zipFolder(folder) {
   });
 
   // Запускаем 7-Zip с прогрессом
-  await exec('7z', [
+  await exec(path7za, [
     'a',                   // Команда "добавить"
     '-mmt=' + THREADS,     // Многопоточность
     '-mx=5',               // Уровень сжатия (1-9)

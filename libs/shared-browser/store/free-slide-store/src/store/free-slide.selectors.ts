@@ -12,5 +12,7 @@ export const {
   selectFreeSlideCastingProcess,
   selectFreeSlideNavigateState,
   selectFreeSlideCastingPaused,
+  selectFreeSlideCastingStarted,
   selectFreeSlideState,
+  selectFreeSlideSelected
 } = freeSlideCastProcess;

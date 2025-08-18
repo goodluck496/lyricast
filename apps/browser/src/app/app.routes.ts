@@ -5,6 +5,14 @@ import {
 } from '@angular/router';
 import { MainComponent } from './pages/main/main.component';
 import { Pages } from '@lyri-cast/common-browser';
+import { Component } from '@angular/core';
+
+@Component({
+  standalone: true,
+  selector: 'lyri-empty-page',
+  template: ''
+})
+class EmptyPageComponent {}
 
 export const appRoutes: Route[] = [
   {
@@ -69,4 +77,8 @@ export const appRoutes: Route[] = [
     loadChildren: () =>
       import('@lyri-cast/free-slide-feature').then((c) => c.freeSlideFeatureRoutes),
   },
+
+  {path: 'EMPTY', component: EmptyPageComponent},
 ];
+
+

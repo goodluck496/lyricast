@@ -18,11 +18,11 @@ import { selectFreeSlideCastingProcess } from './free-slide.selectors';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   [FreeSlideActionsEnum.startCasting]: (eventData: EventData) =>
-    FreeSlideActions.startCasting(eventData.payload as any),
+    FreeSlideActions[FreeSlideActionsEnum.startCasting](eventData.payload as any),
   [FreeSlideActionsEnum.castingStarted]: () =>
-    FreeSlideActions.castingStarted(),
-  [FreeSlideActionsEnum.stopCasting]: () => FreeSlideActions.stopCasting(),
-  [FreeSlideActionsEnum.pauseCasting]: () => FreeSlideActions.pauseCasting(),
+    FreeSlideActions[FreeSlideActionsEnum.castingStarted](),
+  [FreeSlideActionsEnum.stopCasting]: () => FreeSlideActions[FreeSlideActionsEnum.stopCasting](),
+  [FreeSlideActionsEnum.pauseCasting]: () => FreeSlideActions[FreeSlideActionsEnum.pauseCasting](),
 };
 
 @Injectable()
@@ -37,13 +37,13 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
   private readonly base = createCastingFlow<FreeSlideState>({
     actionSource: FreeSlideActionSource,
     featureName: Pages.FREE_SLIDE_FEATURE,
-    openCastingAction: FreeSlideActions.openCasting,
-    openPageAction: FreeSlideActions.openPage,
-    startCastingAction: FreeSlideActions.startCasting,
-    castingStartedAction: FreeSlideActions.castingStarted,
-    stopCastingAction: FreeSlideActions.stopCasting,
-    pauseCastingAction: FreeSlideActions.pauseCasting,
-    slideNavigateAction: FreeSlideActions.slideNavigate,
+    openCastingAction: FreeSlideActions[FreeSlideActionsEnum.openCasting],
+    openPageAction: FreeSlideActions[FreeSlideActionsEnum.openPage],
+    startCastingAction: FreeSlideActions[FreeSlideActionsEnum.startCasting],
+    castingStartedAction: FreeSlideActions[FreeSlideActionsEnum.castingStarted],
+    stopCastingAction: FreeSlideActions[FreeSlideActionsEnum.stopCasting],
+    pauseCastingAction: FreeSlideActions[FreeSlideActionsEnum.pauseCasting],
+    slideNavigateAction: FreeSlideActions[FreeSlideActionsEnum.slideNavigate],
     selectCastingProcess: selectFreeSlideCastingProcess,
     selectOpenedWindow,
     getDisplayForCasting: () => this.settingsSrv.getDisplayForCasting(),

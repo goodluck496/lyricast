@@ -2,3 +2,5 @@
 ./complete-jsons
 /complete-jsons/
 /bibles/
+*.sps
+*.json

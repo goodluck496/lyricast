@@ -19,7 +19,7 @@ export class SongsModule {
     try {
       if (!environment.production) {
         parseSongsService.convertSourceToJson();
-        // parseSongsFromJSonService.convertSourceToJson();
+        parseSongsFromJSonService.convertSourceToJson();
       }
 
       songsService.isReady = true;

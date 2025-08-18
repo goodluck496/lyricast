@@ -19,7 +19,7 @@
     "build:backend": "npm-run-all -c 01__build:backend 02__build:backend",
     "build": "npm-run-all -c build:browser build:backend _build:electron",
     "01__build-win": "npm run build",
-    "02__build-win": "npm-run-all -c __build-win-32 __zip-dist",
+    "02__build-win": "npm-run-all -c __build-win-32 __zip-dist ||  node -e \"process.exit(0)\"",
     "noop1": "",
     "_start:backend": "nx run backend:serve",
     "_browser:serve": "nx run browser:serve",

@@ -61,35 +61,39 @@ async function zipFolder(folder) {
   });
 
   // Запускаем 7-Zip с прогрессом
-  await exec(path7za, [
-    'a',                   // Команда "добавить"
-    '-mmt=' + THREADS,     // Многопоточность
-    '-mx=5',               // Уровень сжатия (1-9)
-    '-bsp1',               // Вывод прогресса
-    '-bb3',                // Подробный вывод
-    zipPath,               // Имя архива
-    folderPath + '/*',     // Что архивируем
-  ], {
-    listeners: {
-      stdout: (data) => {
-        const output = data.toString();
-        // Парсим прогресс из вывода 7z (пример: "12%")
-        const match = output.match(/(\d+)%/);
-        if (match) bar.update(parseInt(match[1]) / 100);
-      }
+  await exec(
+    path7za,
+    [
+      'a', // Команда "добавить"
+      '-mmt=' + THREADS, // Многопоточность
+      '-mx=5', // Уровень сжатия (1-9)
+      '-bsp1', // Вывод прогресса
+      '-bb3', // Подробный вывод
+      zipPath, // Имя архива
+      folderPath + '/*', // Что архивируем
+    ],
+    {
+      listeners: {
+        stdout: (data) => {
+          const output = data.toString();
+          // Парсим прогресс из вывода 7z (пример: "12%")
+          const match = output.match(/(\d+)%/);
+          if (match) bar.update(parseInt(match[1]) / 100);
+        },
+      },
     }
-  });
+  );
 
   console.log(`Создан архив: ${zipPath}`);
 }
 
 // Основная функция
 async function main() {
-  if (!await check7z()) return;
+  if (!(await check7z())) return;
 
   if (USE_PARALLEL) {
     // Параллельная архивация
-    await Promise.all(FOLDERS_TO_ZIP.map(folder => zipFolder(folder)));
+    await Promise.all(FOLDERS_TO_ZIP.map((folder) => zipFolder(folder)));
   } else {
     // Последовательная архивация
     for (const folder of FOLDERS_TO_ZIP) {
@@ -100,4 +104,8 @@ async function main() {
   console.log('Все архивы созданы!');
 }
 
-main().catch(console.error);
+main()
+  .catch(console.error)
+  .then(() => {
+    process.exit(0);
+  });

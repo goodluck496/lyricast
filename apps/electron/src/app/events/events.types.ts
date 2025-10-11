@@ -20,3 +20,8 @@ export const ElectronAppEvents = {
   ACTIVATE: 'activate',
   GET_DISPLAYS: 'get-displays',
 } as const;
+
+//перенести в libs
+export const ElectronBibleActionEvents = {
+  GET_TRANSLATES: 'GET_TRANSLATES',
+};

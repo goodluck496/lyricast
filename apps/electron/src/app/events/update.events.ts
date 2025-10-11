@@ -4,20 +4,37 @@ import { updateServerUrl } from '../constants';
 import App from '../app';
 
 export default class UpdateEvents {
-  // initialize auto update service - most be invoked only in production
+  // Initialize auto update service - must be invoked only in production
   static initAutoUpdateService() {
-    const platform_arch =
-      platform() === 'win32' ? platform() : platform() + '_' + arch();
-    const version = app.getVersion();
-    const feed: Electron.FeedURLOptions = {
-      url: `${updateServerUrl}/update/${platform_arch}/${version}`,
-    };
+    if (App.isDevelopmentMode()) {
+      console.log('Auto-update is disabled in development mode');
+      return;
+    }
 
-    if (!App.isDevelopmentMode()) {
-      console.log('Initializing auto update service...\n');
+    try {
+      const platform_arch =
+        platform() === 'win32' ? 'win' : `${platform()}_${arch()}`;
+      const version = app.getVersion();
+
+      if (!updateServerUrl) {
+        console.error('Update server URL is not configured');
+        return;
+      }
+
+      const feed: Electron.FeedURLOptions = {
+        url: `${updateServerUrl}/update/${platform_arch}/${version}`,
+      };
+
+      console.log('Initializing auto update service...');
+      console.log('Feed URL:', feed.url);
 
       autoUpdater.setFeedURL(feed);
+
+      // Check for updates immediately and then every hour
       UpdateEvents.checkForUpdates();
+      setInterval(UpdateEvents.checkForUpdates, 60 * 60 * 1000);
+    } catch (error) {
+      console.error('Failed to initialize auto-update service:', error);
     }
   }
 

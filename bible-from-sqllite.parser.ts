@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import * as Database from 'better-sqlite3';
 import * as fs from 'fs';
 
 const DB_PATH = 'RST+.SQLite3'; // Укажи путь к файлу SQLite
@@ -27,6 +27,47 @@ function cleanText(text: string): string {
   return text.trim(); // Убираем пробелы в начале и в конце
 }
 
+// Первые 39 книг — Ветхий Завет
+function generateTestamentXml(db, testamentName: string, books: any[]) {
+  let xml = `\t<testament name="${testamentName}">\n`;
+
+  books.forEach((book, index) => {
+    // Получаем все стихи для данной книги
+    const verses = db
+      .prepare(
+        'SELECT * FROM verses WHERE book_number = ? ORDER BY chapter, verse'
+      )
+      .all(book.book_number);
+
+    // Группировка стихов по главам
+    const chapters: Record<number, { number: number; text: string }[]> = {};
+    verses.forEach(({ chapter, verse, text }: any) => {
+      if (!chapters[chapter]) {
+        chapters[chapter] = [];
+      }
+      chapters[chapter].push({ number: verse, text: cleanText(text) });
+    });
+
+    // xml += `\t\t<book number="${book.book_number / 10}" short_name="${book.short_name}" long_name="${book.long_name}">\n`;
+    xml += `\t\t<book number="${index + 1}" short_name="${
+      book.short_name
+    }" long_name="${book.long_name}">\n`;
+
+    Object.entries(chapters).forEach(([chapter, verses]) => {
+      xml += `\t\t\t<chapter number="${chapter}">\n`;
+      verses.forEach(({ number, text }) => {
+        xml += `\t\t\t\t<verse number="${number}">${text}</verse>\n`;
+      });
+      xml += `\t\t\t</chapter>\n`;
+    });
+
+    xml += `\t\t</book>\n`;
+  });
+
+  xml += `\t</testament>\n`;
+  return xml;
+}
+
 try {
   const db = new Database(DB_PATH, { fileMustExist: true });
 
@@ -46,52 +87,11 @@ try {
     (book: any, index: number) => index + 1 > OLD_TESTAMENT_BOOKS
   );
 
-  // Первые 39 книг — Ветхий Завет
-  function generateTestamentXml(testamentName: string, books: any[]) {
-    let xml = `\t<testament name="${testamentName}">\n`;
-
-    books.forEach((book, index) => {
-      // Получаем все стихи для данной книги
-      const verses = db
-        .prepare(
-          'SELECT * FROM verses WHERE book_number = ? ORDER BY chapter, verse'
-        )
-        .all(book.book_number);
-
-      // Группировка стихов по главам
-      const chapters: Record<number, { number: number; text: string }[]> = {};
-      verses.forEach(({ chapter, verse, text }: any) => {
-        if (!chapters[chapter]) {
-          chapters[chapter] = [];
-        }
-        chapters[chapter].push({ number: verse, text: cleanText(text) });
-      });
-
-      // xml += `\t\t<book number="${book.book_number / 10}" short_name="${book.short_name}" long_name="${book.long_name}">\n`;
-      xml += `\t\t<book number="${index + 1}" short_name="${
-        book.short_name
-      }" long_name="${book.long_name}">\n`;
-
-      Object.entries(chapters).forEach(([chapter, verses]) => {
-        xml += `\t\t\t<chapter number="${chapter}">\n`;
-        verses.forEach(({ number, text }) => {
-          xml += `\t\t\t\t<verse number="${number}">${text}</verse>\n`;
-        });
-        xml += `\t\t\t</chapter>\n`;
-      });
-
-      xml += `\t\t</book>\n`;
-    });
-
-    xml += `\t</testament>\n`;
-    return xml;
-  }
-
   // Генерация XML
   let xmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n`;
   xmlContent += `<bible translation="${translateName}" status="Public Domain">\n`;
-  xmlContent += generateTestamentXml('Old', oldTestamentBooks);
-  xmlContent += generateTestamentXml('New', newTestamentBooks);
+  xmlContent += generateTestamentXml(db, 'Old', oldTestamentBooks);
+  xmlContent += generateTestamentXml(db, 'New', newTestamentBooks);
   xmlContent += `</bible>`;
 
   // Сохраняем XML-файл

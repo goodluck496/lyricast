@@ -36,7 +36,7 @@
       "options": {
         "commands": [
           {
-            "command": "tsc -p apps/electron/workers/tsconfig.workers.json --watch"
+            "command": "node tools/build-workers.mjs --watch"
           },
           {
             "command": "nx run electron:serve-original"
@@ -51,8 +51,48 @@
         "buildTarget": "electron:build"
       }
     },
+    "prepare-workers": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        {
+          "projects": [
+            "songs-service",
+            "bible-service",
+            "free-slide-service"
+          ],
+          "target": "build"
+        }
+      ],
+      "options": {
+        "commands": [
+          {
+            "command": "node tools/sync-workers.mjs"
+          }
+        ]
+      }
+    },
+    "bundle-workers": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          {
+            "command": "node tools/build-workers.mjs"
+          }
+        ]
+      }
+    },
     "package": {
       "executor": "nx-electron:package",
+      "dependsOn": [
+        {
+          "projects": "self",
+          "target": "build"
+        },
+        {
+          "projects": "self",
+          "target": "bundle-workers"
+        }
+      ],
       "options": {
         "name": "electron",
         "frontendProject": "browser",

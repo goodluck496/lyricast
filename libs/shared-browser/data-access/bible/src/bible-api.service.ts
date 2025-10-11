@@ -1,6 +1,5 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { BASE_API_TOKEN } from '@lyri-cast/common';
 import {
   BibleBook,
   BibleBookShort,
@@ -11,18 +10,21 @@ import {
   BibleTranslateShort,
 } from '@lyri-cast/entities';
 import { Observable } from 'rxjs';
+import { BridgeService } from '@lyri-cast/common-browser';
 
 @Injectable({ providedIn: 'root' })
 export class BibleApiService {
-  BASE_API_TOKEN = inject(BASE_API_TOKEN);
-  API_BIBLE_TOKEN = 'bible';
+  //нужно переделать токен, чтобы была фабрика которая возвращает url зависимо от модуля
+  // можно сделать на сигналах
+  BASE_API_TOKEN = 'svc://bible'; //inject(BASE_API_TOKEN);
+  API_BIBLE_TOKEN = '';
+
+  bridge = inject(BridgeService);
 
   http = inject(HttpClient);
 
   getLanguages(): Observable<string[]> {
-    return this.http.get<string[]>(
-      `${this.BASE_API_TOKEN}/${this.API_BIBLE_TOKEN}/languages`
-    );
+    return this.http.get<string[]>(`${this.BASE_API_TOKEN}/languages`);
   }
 
   getTranslates(): Observable<BibleTranslateShort[]> {
@@ -33,7 +35,7 @@ export class BibleApiService {
     });
 
     return this.http.get<BibleTranslateShort[]>(
-      `${this.BASE_API_TOKEN}/${this.API_BIBLE_TOKEN}/translates`,
+      `${this.BASE_API_TOKEN}/translates`,
       {
         params: searchParams,
       }
@@ -51,12 +53,7 @@ export class BibleApiService {
     });
 
     return this.http.get<Array<BibleBook | BibleBookShort>>(
-      [
-        this.BASE_API_TOKEN,
-        this.API_BIBLE_TOKEN,
-        'books',
-        translate.keyForSearch,
-      ].join('/'),
+      [this.BASE_API_TOKEN, 'books', translate.keyForSearch].join('/'),
       {
         params: searchParams,
       }
@@ -70,7 +67,6 @@ export class BibleApiService {
     return this.http.get<BibleChapter[]>(
       [
         this.BASE_API_TOKEN,
-        this.API_BIBLE_TOKEN,
         'chapters',
         translate.keyForSearch,
         book.number,
@@ -86,7 +82,6 @@ export class BibleApiService {
     return this.http.get<BibleChapterSection[]>(
       [
         this.BASE_API_TOKEN,
-        this.API_BIBLE_TOKEN,
         'chapter',
         translate.keyForSearch,
         book.number,
@@ -108,12 +103,7 @@ export class BibleApiService {
     });
 
     return this.http.get<BibleSearchDto>(
-      [
-        this.BASE_API_TOKEN,
-        this.API_BIBLE_TOKEN,
-        'search',
-        translate.keyForSearch,
-      ].join('/'),
+      [this.BASE_API_TOKEN, 'search', translate.keyForSearch].join('/'),
       {
         params,
       }

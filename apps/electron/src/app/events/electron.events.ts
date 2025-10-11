@@ -33,7 +33,7 @@ ipcMain.handle(ElectronActionEvents.GET_APP_VERSION, () => {
 ipcMain.handle(
   ElectronActionEvents.OPEN_WINDOW,
   (event, args: OpenWindowArgs) => {
-    console.log(`OpenWindow event: `,event, args);
+    console.log(`OpenWindow event: `, event, args);
     if (App.openedWindows[args.type]) {
       return;
     }
@@ -128,3 +128,10 @@ ipcMain.handle(ElectronAppEvents.GET_DISPLAYS, () => {
     };
   });
 });
+
+// todo УДАЛИТЬ т.к. неудобно использовать "голые" воркеры оч сложно подключать к ним какие-то фреймворки
+//
+// const pool = new FileWorkerPool({ threads: 2 });
+// ipcMain.handle(ElectronBibleActionEvents.GET_TRANSLATES, (event, ...args) => {
+//   return pool.request({ action: 'getTranslates', payload: null });
+// });

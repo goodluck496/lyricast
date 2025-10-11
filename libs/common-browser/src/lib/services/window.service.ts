@@ -1,14 +1,21 @@
 import { Injectable } from '@angular/core';
-import { AppWindowTypes, Context, OpenWindowArgs } from '@lyri-cast/common-electron';
+import {
+  AppWindowTypes,
+  Context,
+  OpenWindowArgs,
+} from '@lyri-cast/common-electron';
 
-export const DEFAULT_CASTING_PAGE_CONFIG: Partial<OpenWindowArgs> & {type: AppWindowTypes, title: string} = {
+export const DEFAULT_CASTING_PAGE_CONFIG: Partial<OpenWindowArgs> & {
+  type: AppWindowTypes;
+  title: string;
+} = {
   type: AppWindowTypes.CASTING,
   title: 'Casting new',
   show: true,
   center: true,
   fullscreen: true,
   focusable: true,
-}
+};
 
 @Injectable({ providedIn: 'platform' })
 export class WindowService {

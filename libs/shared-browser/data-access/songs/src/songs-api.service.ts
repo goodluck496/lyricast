@@ -1,19 +1,25 @@
-import { inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { catchError, Observable, of } from 'rxjs';
-import { BASE_API_TOKEN } from '@lyri-cast/common';
-import { IShortSong, ISong, ISongBookName, ISongForSearch } from '@lyri-cast/entities';
+import {
+  IShortSong,
+  ISong,
+  ISongBookName,
+  ISongForSearch,
+} from '@lyri-cast/entities';
 
 @Injectable({ providedIn: 'root' })
 export class SongsApiService {
-  BASE_API_TOKEN = inject(BASE_API_TOKEN);
+  BASE_API_TOKEN = 'svc://'; //inject(BASE_API_TOKEN);
   API_SONGS_TOKEN = 'songs';
 
   constructor(private http: HttpClient) {}
 
   getAllSongBooks(): Observable<ISongBookName[]> {
     return this.http
-      .get<ISongBookName[]>(`${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/book-names/`)
+      .get<ISongBookName[]>(
+        `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/book-names/`
+      )
       .pipe(
         catchError((err) => {
           console.log(err);
@@ -37,7 +43,10 @@ export class SongsApiService {
     });
 
     return this.http
-      .get<ISongForSearch[]>(`${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/find/${book.fileKey}`, { params })
+      .get<ISongForSearch[]>(
+        `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/find/${book.fileKey}`,
+        { params }
+      )
       .pipe(
         catchError((err) => {
           console.log('error', err);

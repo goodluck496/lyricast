@@ -43,7 +43,6 @@ import { lyriControl } from '@lyri-cast/svg-icons/lyri-icons/lyri-control.icon';
 import { lyriStoryboard } from '@lyri-cast/svg-icons/lyri-icons/lyri-storyboard.icon';
 import { lyriSongLyrics } from '@lyri-cast/svg-icons/lyri-icons/lyri-song-lyrics.icon';
 import { lyriOpenedBook } from '@lyri-cast/svg-icons/lyri-icons/lyri-opened-book.icon';
-import { findAllMatchingNodes } from '@angular/compiler-cli/src/ngtsc/typecheck/src/comments';
 
 // import lyricSvg from '@styles/assets/icons/song-lyrics.svg';
 
@@ -119,6 +118,7 @@ export class MainComponent implements OnInit {
   ];
 
   backendReady = false;
+  protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
 
   constructor(icons: IconsService) {
     icons.registerIcons([
@@ -142,12 +142,19 @@ export class MainComponent implements OnInit {
         window.dispatchEvent(new Event('resize'));
       });
 
-    this.repeatCheckBackend().subscribe((res) => {
-      this.backendReady = !!res;
-      if (this.backendReady) {
-        this.cdr.detectChanges();
-      }
-    });
+    setTimeout(() => {
+      //заглушка, убрать по удалению бека
+      this.backendReady = true;
+      this.cdr.detectChanges();
+    }, 1000);
+
+    // убрать т.к. воркеры стартуют до открытия фронта
+    // this.repeatCheckBackend().subscribe((res) => {
+    //   this.backendReady = !!res;
+    //   if (this.backendReady) {
+    //     this.cdr.detectChanges();
+    //   }
+    // });
   }
 
   onChangeTabs(tab: any) {
@@ -168,6 +175,4 @@ export class MainComponent implements OnInit {
       first((response) => !!response) // Останавливаем на успешном ответе
     );
   }
-
-  protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
 }

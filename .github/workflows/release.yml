@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'   # запускать только при пуше тега вида v1.2.3
+
+jobs:
+  build-and-publish:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Nx apps
+        run: pnpm run build
+
+      - name: Publish Electron app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm run publish:electron

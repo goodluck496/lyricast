@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import {
-  ElectronActionEvents, ElectronAppEvents,
+  ElectronActionEvents,
+  ElectronAppEvents,
   ElectronCommonEvents,
 } from '../events/events.types';
 import {

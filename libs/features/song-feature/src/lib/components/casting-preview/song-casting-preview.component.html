@@ -7,7 +7,9 @@
   <div class="reveal">
     <div class="slides">
       <section>
-        <div fittext [maxFontSize]="29" >
+        <div fittext [maxFontSize]="25"
+             [activateOnInputEvents]="true"
+             [activateOnResize]="true">
           <div [innerHTML]="sanitizer.bypassSecurityTrustHtml(slideText) " class="slide-content"></div>
         </div>
 

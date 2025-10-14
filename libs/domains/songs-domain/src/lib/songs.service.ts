@@ -47,7 +47,7 @@ export class SongsService {
           continue;
         }
         names.push({
-          fileKey: preparedBookName,
+          fileKey: book.header.bookKey,
           humanName: book.header.title,
         });
       }

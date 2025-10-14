@@ -1,0 +1,30 @@
+@if (loading()) {
+  <p-progressSpinner class="loader"></p-progressSpinner>
+} @else {
+  <div class="dash-box__container">
+    <ng-scrollbar style="width: 100%">
+      <div class="dash-box__wrapper">
+        @for (item of showItems(); track item.searchKey; let index = $index) {
+          <div
+            class="dash-box__item"
+            [class.dash-box__item--selected]="selectedItems.has(item.searchKey)"
+            (click)="onItemClick(item)"
+          >
+            @if (dashBoxTemplates[DashBoxTemplates.ITEM]; as template) {
+              <ng-container [ngTemplateOutlet]="$any(template)"
+                            [ngTemplateOutletContext]="{$implicit: item, index: index, selected: selectedItems.has(item.searchKey), search: searchStringSig()}"
+              ></ng-container>
+            } @else {
+              {{ item.title | highliter: searchStringSig() }}
+            }
+          </div>
+        }
+
+      </div>
+
+    </ng-scrollbar>
+
+  </div>
+}
+
+

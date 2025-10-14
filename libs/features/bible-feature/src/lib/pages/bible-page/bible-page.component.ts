@@ -55,6 +55,9 @@ import {
 } from '@lyri-cast/bible-store';
 import { BibleChapterComponent } from '../../components/bible-chapter/bible-chapter.component';
 import {
+  DashBoxComponent,
+  DashBoxTemplates,
+  IUiLyriDashItem,
   IUiLyriItemInList,
   IUiLyriListItem,
   ListBoxComponent,
@@ -72,6 +75,9 @@ import { Router } from '@angular/router';
 import { Actions, ofType } from '@ngrx/effects';
 import { BibleSidebarComponent } from '../../components/bible-sidebar/bible-sidebar.component';
 import { BibleSidebarData } from '../../types';
+import { ToggleButtonModule } from 'primeng/togglebutton';
+import { SvgIconComponent } from '@lyri-cast/svg-icons';
+import { ButtonDirective } from 'primeng/button';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -88,6 +94,10 @@ import { BibleSidebarData } from '../../types';
     BibleChapterComponent,
     OverlayPanelModule,
     BibleSidebarComponent,
+    DashBoxComponent,
+    ToggleButtonModule,
+    SvgIconComponent,
+    ButtonDirective,
   ],
   templateUrl: './bible-page.component.html',
   styleUrl: './bible-page.component.scss',
@@ -134,7 +144,8 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
     );
   bibleTranslates: IUiLyriListItem<BibleTranslateShort>[] = [];
 
-  bookList$: Observable<IUiLyriItemInList<BibleBookShort>[]> = this.store
+  booksLikeList = false;
+  bookList$: Observable<IUiLyriDashItem<BibleBookShort>[]> = this.store
     .select(selectBooks)
     .pipe(
       filterEmpty(),
@@ -375,6 +386,19 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
       });
   }
 
+  onChangeBookDisplayStyle() {
+    this.booksLikeList = !this.booksLikeList;
+
+    this.store
+      .select(selectSelectedPath)
+      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+      .subscribe((path) => {
+        setTimeout(() => {
+          this.store.dispatch(BibleActions.changePath({ path }));
+        });
+      });
+  }
+
   onFocusChapter() {
     setTimeout(() => {
       this.lyriBibleChapter()?.elRef.nativeElement.focus();
@@ -423,4 +447,5 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   protected readonly BibleBookType = BibleBookType;
   protected readonly Pages = Pages;
   protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
+  protected readonly DashBoxTemplates = DashBoxTemplates;
 }

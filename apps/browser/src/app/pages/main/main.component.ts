@@ -43,6 +43,8 @@ import { lyriControl } from '@lyri-cast/svg-icons/lyri-icons/lyri-control.icon';
 import { lyriStoryboard } from '@lyri-cast/svg-icons/lyri-icons/lyri-storyboard.icon';
 import { lyriSongLyrics } from '@lyri-cast/svg-icons/lyri-icons/lyri-song-lyrics.icon';
 import { lyriOpenedBook } from '@lyri-cast/svg-icons/lyri-icons/lyri-opened-book.icon';
+import { lyriGrid } from '@lyri-cast/svg-icons/lyri-icons/lyri-grid.icon';
+import { lyriBulletList } from '@lyri-cast/svg-icons/lyri-icons/lyri-bullet-list.icon';
 
 // import lyricSvg from '@styles/assets/icons/song-lyrics.svg';
 
@@ -127,6 +129,8 @@ export class MainComponent implements OnInit {
       lyriStoryboard,
       lyriSongLyrics,
       lyriOpenedBook,
+      lyriGrid,
+      lyriBulletList
     ]);
   }
 

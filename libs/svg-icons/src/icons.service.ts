@@ -10,6 +10,8 @@ const ICON_IMPORTERS: Record<LyriIconName, () => Promise<LyriIcon | any>> = {
   song: () => import('./lyri-icons/lyri-song.icon'),
   play: () => import('./lyri-icons/lyri-play.icon'),
   stop: () => import('./lyri-icons/lyri-stop.icon'),
+  grid: () => import('./lyri-icons/lyri-grid.icon'),
+  bullet_list: () => import('./lyri-icons/lyri-bullet-list.icon'),
 };
 
 @Injectable({ providedIn: 'root' })
@@ -18,7 +20,6 @@ export class IconsService {
 
   async registerIcons(icons: LyriIcon[]): Promise<void> {
     const imports = icons.map((icon) => {
-
       return ICON_IMPORTERS[icon.name];
     });
     await Promise.all(imports).then((e) => {
@@ -26,7 +27,7 @@ export class IconsService {
         entry().then((v) => {
           const data: LyriIcon = Object.values(v)[0] as LyriIcon;
           this.registry.set(data.name, data.data);
-          console.log(data.name);
+          console.log('reg icon', data.name);
         });
       });
     });

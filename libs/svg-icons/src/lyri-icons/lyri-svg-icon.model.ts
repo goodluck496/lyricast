@@ -2,7 +2,9 @@
 
 export type LyriIconName =
   | 'bible'
+  | 'bullet_list'
   | 'control'
+  | 'grid'
   | 'opened_book'
   | 'play'
   | 'song_lyrics'

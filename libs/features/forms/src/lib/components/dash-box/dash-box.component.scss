@@ -1,0 +1,101 @@
+
+:host {
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  height: 100%;
+
+  --dash-box-item-h: 50px;
+
+  --dash-box-item-border-size: 2px;
+  --dash-box-item-border-color: transparent;
+  --dash-box-item-selected-bg: #0D99FF;
+  --dash-box-item-selected-border-color: #0D99FF;
+  --dash-box-item-hover-bg: #92cdff;
+  --dash-box-item-hover-border-color: #92cdff;
+  --dash-box-item-selected-text-color: white;
+  --dash-box-item-hover-text-color: black;
+}
+
+.loader {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.dash-box {
+
+  &__search {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: calc(var(--dash-box-item-h));
+
+    p-iconField {
+      width: 100%;
+
+      input {
+        width: 100%
+      }
+
+    }
+
+
+  }
+
+  &__clear-btn {
+    cursor: pointer;
+  }
+
+  &__container {
+    display: flex;
+    height: 100%;
+  }
+
+  &__wrapper {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  &__viewport {
+    display: flex;
+
+    width: 100%;
+    height: calc(100% - 34px);
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--dash-box-item-h);
+    max-height: var(--dash-box-item-h);
+    min-height: var(--dash-box-item-h);
+    width: calc(100% / 4);
+    cursor: pointer;
+    border-style: solid;
+    border-width: var(--dash-box-item-border-size);
+    border-color: var(--dash-box-item-border-color);
+    transition: .3s;
+
+    user-select: none;
+
+    &--selected {
+      border-color: var(--dash-box-item-selected-border-color);
+      background-color: var(--dash-box-item-selected-bg);
+      color: var(--dash-box-item-selected-text-color);
+      text-shadow: 1px 1px 10px black;
+    }
+
+    &:hover:not(.dash-box__item--selected) {
+      background-color: var(--dash-box-item-hover-bg);
+      border-color: var(--dash-box-item-hover-border-color);
+      color: var(--dash-box-item-selected-text-color);
+      text-shadow: 1px 1px 10px black;
+    }
+  }
+}

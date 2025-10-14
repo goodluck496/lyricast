@@ -55,11 +55,7 @@
       "executor": "nx:run-commands",
       "dependsOn": [
         {
-          "projects": [
-            "songs-service",
-            "bible-service",
-            "free-slide-service"
-          ],
+          "projects": "dependencies",
           "target": "build"
         }
       ],

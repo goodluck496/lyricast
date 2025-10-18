@@ -45,3 +45,5 @@ Thumbs.db
 .vercel
 assets/**/*
 .vscode/**/*
+llm-docs/**/*
+temp-scripts/**/*

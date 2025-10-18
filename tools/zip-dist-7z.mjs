@@ -5,13 +5,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { path7za } from '7zip-bin';
 
-console.log(process.cwd());
+const forLinux = process.argv.slice(2).toString().match(/linux/i);
+const forWindows = process.argv.slice(2).toString().match(/win/i);
+const forAll = process.argv.slice(2).toString().match(/all/i);
 
-return;
 // Конфигурация
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_PATH = path.join(__dirname, '..', 'dist');
-const FOLDERS_TO_ZIP = ['win-ia32-unpacked']; // Папки для архивации
+const FOLDERS_TO_ZIP = [
+  { type: 'win', name: 'win-ia32-unpacked' },
+  { type: 'linux', name: 'linux-unpacked' },
+]; // Папки для архивации
 const USE_PARALLEL = true; // Параллельная архивация
 const THREADS = 4; // Количество потоков 7-Zip
 
@@ -69,7 +73,7 @@ async function zipFolder(folder) {
     [
       'a', // Команда "добавить"
       '-mmt=' + THREADS, // Многопоточность
-      '-mx=5', // Уровень сжатия (1-9)
+      '-mx=9', // Уровень сжатия (1-9)
       '-bsp1', // Вывод прогресса
       '-bb3', // Подробный вывод
       zipPath, // Имя архива
@@ -94,12 +98,26 @@ async function zipFolder(folder) {
 async function main() {
   if (!(await check7z())) return;
 
+  const foldersToProcess = FOLDERS_TO_ZIP.filter((folder) => {
+    if (forAll) {
+      return true;
+    }
+    if (forWindows) {
+      return folder.type === 'win';
+    }
+
+    if (forLinux) {
+      return folder.type === 'linux';
+    }
+  }).map((el) => el.name);
+
   if (USE_PARALLEL) {
     // Параллельная архивация
-    await Promise.all(FOLDERS_TO_ZIP.map((folder) => zipFolder(folder)));
+
+    await Promise.all(foldersToProcess.map((folder) => zipFolder(folder)));
   } else {
     // Последовательная архивация
-    for (const folder of FOLDERS_TO_ZIP) {
+    for (const folder of foldersToProcess) {
       await zipFolder(folder);
     }
   }

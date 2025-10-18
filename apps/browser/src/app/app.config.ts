@@ -26,7 +26,6 @@ import {
   LuxonDateAdapter,
   MAT_LUXON_DATE_ADAPTER_OPTIONS,
   MatLuxonDateAdapterOptions,
-  provideLuxonDateAdapter,
 } from '@angular/material-luxon-adapter';
 import {
   DateAdapter,

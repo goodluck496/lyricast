@@ -1,0 +1,9 @@
+FROM electronuserland/builder:latest
+
+# системные пакеты для AppImage/DEB/RPM + rsync для быстрой синхронизации исходников
+RUN apt-get update && apt-get install -y \
+    libfuse2 squashfs-tools rpm fakeroot dpkg desktop-file-utils rsync \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN corepack enable
+WORKDIR /project

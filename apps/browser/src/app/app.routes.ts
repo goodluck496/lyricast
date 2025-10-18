@@ -56,8 +56,8 @@ export const appRoutes: Route[] = [
       {
         path: Pages.TEST,
         loadComponent: () =>
-          import('./pages/test-page/test-page.component').then(
-            (c) => c.TestPageComponent
+          import('./pages/test-page/test-pixi-editor3/test-pixi-editor3.component').then(
+            (c) => c.TestPixiEditorV2Component
           ),
       },
     ],

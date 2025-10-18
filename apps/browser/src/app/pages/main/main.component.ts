@@ -115,7 +115,7 @@ export class MainComponent implements OnInit {
       routerLink: ['./', Pages.TEST],
       label: PageTitlesMap.get(Pages.TEST) || Pages.TEST,
       icon: 'opened_book',
-      visible: false,
+      visible: true,
     },
   ];
 

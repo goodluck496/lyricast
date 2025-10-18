@@ -1,0 +1,433 @@
+import {
+  Application,
+  Assets,
+  Container,
+  Graphics,
+  Point,
+  Sprite,
+  Text,
+  Texture,
+} from 'pixi.js';
+import { UiTextStyles, DEFAULT_CONFIG } from './types';
+import { TextFitService } from './services/text-fit.service';
+import { NodeBase } from './core';
+
+/**
+ * Editable text node that auto-fits text into its bounding box using TextFitService.
+ * Supports list style, alignment, font family/weight, color and dynamic line height.
+ */
+export class TextNode extends NodeBase {
+  readonly type = 'text' as const;
+
+  text = 'Double-click to edit';
+  style: UiTextStyles = {
+    font: DEFAULT_CONFIG.defaults.family,
+    weight: DEFAULT_CONFIG.defaults.weight,
+    align: DEFAULT_CONFIG.defaults.align,
+    lineHeight: DEFAULT_CONFIG.defaults.lineHeight,
+    min: DEFAULT_CONFIG.defaults.textMin,
+    max: DEFAULT_CONFIG.defaults.textMax,
+    color: 0xffffff,
+    colorHex: '#ffffff',
+    list: false,
+  };
+
+  private lastCalculatedFontSize = 32;
+  /** Exposes the most recently computed font size for external consumers (e.g., overlays). */
+  get currentFontSize(): number { return this.lastCalculatedFontSize; }
+  private fitScheduled = false;
+  private readonly textDisplay = new Text({ text: '' });
+
+  constructor(private readonly app: Application, private readonly fitter: TextFitService) {
+    super();
+    this.addChild(this.textDisplay);
+    this.addChild(this.handlesContainer);
+    this.drawFrame();
+    this.drawHandles(true);
+  }
+
+  applyBoxSize(w: number, h: number): void {
+    this.w = w;
+    this.h = h;
+    this.drawFrame();
+    this.drawHandles();
+    // Recompute the best font size whenever the text box size changes
+    this.requestFit();
+  }
+
+  /**
+   * Schedule a layout pass on the next animation frame. Multiple calls within a frame coalesce.
+   */
+  requestFit() {
+    if (this.fitScheduled) return;
+    this.fitScheduled = true;
+    requestAnimationFrame(() => {
+      this.fitScheduled = false;
+      void this.layout();
+    });
+  }
+
+  /**
+   * Perform text layout and font size fitting for the current content and box size.
+   * Uses TextFitService.fitBinary to compute an optimal font size, then positions the Pixi Text.
+   */
+  async layout() {
+    const preparedText = this.style.list
+      ? this.text
+          .split(/ ?/)
+          .map((line) => (line.trim() ? `• ${line}` : ''))
+          .join('')
+      : this.text;
+
+    this.textDisplay.text = preparedText;
+
+    const size = await this.fitter.fitBinary({
+      app: this.app,
+      text: preparedText,
+      boxW: this.w,
+      boxH: this.h,
+      padding: this.padding,
+      baseStyle: { fill: this.style.color },
+      min: this.style.min,
+      max: this.style.max,
+      step: DEFAULT_CONFIG.defaults.fitStep,
+      fitMargin: DEFAULT_CONFIG.defaults.fitMargin,
+      family: this.style.font,
+      weight: this.style.weight,
+      align: this.style.align,
+      lineHeight: this.style.lineHeight,
+      hint: this.lastCalculatedFontSize,
+      window: DEFAULT_CONFIG.defaults.fitWindow,
+      deadbandSteps: DEFAULT_CONFIG.defaults.deadbandSteps,
+    });
+
+    this.lastCalculatedFontSize = size;
+
+    Object.assign(this.textDisplay.style, {
+      fontFamily: this.style.font,
+      fontWeight: this.style.weight,
+      align: this.style.align,
+      wordWrap: true,
+      breakWords: true,
+      fill: this.style.color,
+      lineHeight: size * this.style.lineHeight,
+      fontSize: size,
+      wordWrapWidth: Math.max(4, this.w - this.padding * 2),
+    });
+
+    const anchorX = this.style.align === 'center' ? 0.5 : this.style.align === 'right' ? 1 : 0;
+    (this.textDisplay).anchor?.set(anchorX, 0);
+
+    const innerW = Math.max(4, this.w - this.padding * 2);
+    const x = this.padding + innerW * anchorX;
+    const y = this.padding;
+    this.textDisplay.position.set(Math.round(x), Math.round(y));
+  }
+}
+
+// Robust texture loader utilities
+async function ensureTextureValid(tex: Texture): Promise<void> {
+  // If already valid with non-zero size, resolve immediately
+  if (tex.width > 0 && tex.height > 0) return;
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = () => { if (!settled) { settled = true; resolve(); } };
+    try {
+      const baseTex = (tex as unknown as { baseTexture?: unknown }).baseTexture as unknown;
+      const onceFn = (baseTex as { once?: (ev: string, cb: () => void) => void } | undefined)?.once;
+      onceFn?.('loaded', finish);
+      onceFn?.('error', finish);
+      const resource = (baseTex as { resource?: unknown } | undefined)?.resource as unknown;
+      const source = (resource as { source?: unknown } | undefined)?.source as unknown;
+      const img = source instanceof Image ? source : null;
+      if (img) { img.onload = finish; img.onerror = finish; }
+    } catch { /* ignore */ }
+    // Safety timeout in case events do not fire
+    setTimeout(finish, 1000);
+  });
+}
+
+async function loadTextureRobust(url: string): Promise<Texture> {
+  // 1) Try Pixi Assets pipeline
+  try {
+    const t = (await Assets.load(url)) as Texture;
+    if (t) { await ensureTextureValid(t); return t; }
+  } catch { /* continue */ }
+  // 2) Try direct Texture.from (string URL)
+  try {
+    const t = Texture.from(url);
+    if (t) { await ensureTextureValid(t); return t; }
+  } catch { /* continue */ }
+  // 3) Manual HTMLImage decode as a last resort (works great for blob:/data:)
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = url;
+    if ('decode' in img && typeof img.decode === 'function') { try { await img.decode(); } catch { /* older browsers */ } }
+    const t = Texture.from(img);
+    await ensureTextureValid(t);
+    return t;
+  } catch { /* continue */ }
+  throw new Error('Failed to load texture from URL: ' + url);
+}
+
+export class ImageNode extends NodeBase {
+  readonly type = 'image' as const;
+  sprite = new Sprite();
+
+  constructor(url?: string) {
+    super();
+    if (url) void this.setUrl(url);
+    this.drawFrame();
+    this.drawHandles(true);
+    this.addChild(this.sprite);
+    // keep handles above content
+    this.addChild(this.handlesContainer);
+  }
+
+  async setUrl(url: string) {
+    try {
+      const texture = await loadTextureRobust(url);
+      if (!texture) throw new Error('Failed to load image texture');
+      this.sprite.texture = texture;
+      this.sprite.anchor.set(0.5);
+      this.sprite.position.set(this.w / 2, this.h / 2);
+      const baseTex = (texture as unknown as { baseTexture?: unknown }).baseTexture as unknown;
+      const realW = (baseTex as { realWidth?: number } | undefined)?.realWidth;
+      const realH = (baseTex as { realHeight?: number } | undefined)?.realHeight;
+      const tw = texture.width || realW || this.w;
+      const th = texture.height || realH || this.h;
+      const scale = Math.min(this.w / Math.max(1, tw), this.h / Math.max(1, th));
+      this.sprite.scale.set(scale);
+      // keep handles above content
+      this.addChild(this.handlesContainer);
+    } catch (err) {
+      console.warn('Image load failed:', err);
+    }
+  }
+
+  applyBoxSize(w: number, h: number): void {
+    this.w = w;
+    this.h = h;
+    this.drawFrame();
+    this.drawHandles();
+    if (this.sprite.texture) {
+      const { width, height } = this.sprite.texture;
+      const scale = Math.min(this.w / width, this.h / height);
+      this.sprite.position.set(this.w / 2, this.h / 2);
+      this.sprite.scale.set(scale);
+    }
+  }
+}
+
+export class VideoNode extends NodeBase {
+  readonly type = 'video' as const;
+  sprite = new Sprite();
+
+  constructor(url?: string) {
+    super();
+    if (url) void this.setUrl(url);
+    this.drawFrame();
+    this.drawHandles(true);
+    this.addChild(this.sprite);
+    // keep handles above content
+    this.addChild(this.handlesContainer);
+  }
+
+  async setUrl(url: string) {
+    try {
+      const texture = (await Assets.load(url)) as Texture;
+      if (!texture) throw new Error('Failed to load video texture');
+      const baseTex = (texture as unknown as { baseTexture?: unknown }).baseTexture as unknown;
+      const resource = (baseTex as { resource?: unknown } | undefined)?.resource as unknown;
+      const source = (resource as { source?: unknown } | undefined)?.source as unknown;
+      const videoEl: HTMLVideoElement | null = source instanceof HTMLVideoElement ? source : null;
+      if (videoEl) { videoEl.muted = true; videoEl.loop = true; void videoEl.play(); }
+      this.sprite.texture = texture;
+      this.sprite.anchor.set(0.5);
+      this.sprite.position.set(this.w / 2, this.h / 2);
+      const tw = texture.width || this.w, th = texture.height || this.h;
+      this.sprite.scale.set(Math.min(this.w / tw, this.h / th));
+    } catch (err) {
+      // Gracefully degrade if loading fails (e.g., unsupported provider like YouTube)
+      // Keep empty sprite to avoid breaking editor; use console for diagnostics
+      console.warn('Video load failed:', err);
+    }
+  }
+
+  applyBoxSize(w: number, h: number): void {
+    this.w = w;
+    this.h = h;
+    this.drawFrame();
+    this.drawHandles();
+    if (this.sprite.texture) {
+      const { width, height } = this.sprite.texture;
+      const scale = Math.min(this.w / width, this.h / height);
+      this.sprite.position.set(this.w / 2, this.h / 2);
+      this.sprite.scale.set(scale);
+    }
+  }
+}
+
+/** IframeNode is rendered via DOM overlay (not inside Pixi). */
+export class IframeNode extends NodeBase {
+  readonly type = 'iframe' as const;
+  url = 'about:blank';
+
+  constructor(url?: string) {
+    super();
+    if (url) this.url = url;
+    this.drawFrame();
+    this.drawHandles(true);
+  }
+
+  applyBoxSize(w: number, h: number): void {
+    this.w = w;
+    this.h = h;
+    this.drawFrame();
+    this.drawHandles();
+  }
+}
+
+/**
+ * Primitive shape node capable of rendering rectangle, ellipse or 1px line.
+ * Supports fill color, stroke color and stroke width.
+ */
+export class ShapeNode extends NodeBase {
+  readonly type = 'shape' as const;
+  shape: 'rect' | 'ellipse' | 'line' = 'rect';
+  stroke = 0xffffff;
+  fill = 0x000000;
+  lineWidth = 2;
+  private shapeG = new Graphics();
+
+  constructor(kind: 'rect' | 'ellipse' | 'line' = 'rect') {
+    super();
+    this.shape = kind;
+    // insert shape graphics above the selection frame but below handles
+    this.addChild(this.shapeG);
+    this.addChild(this.handlesContainer);
+    this.redraw();
+    this.drawHandles(true);
+  }
+
+  private redraw() {
+    const graphics = this.shapeG;
+    graphics.clear();
+    if (this.shape === 'rect') {
+      graphics.roundRect(0, 0, this.w, this.h, 6)
+        .fill(this.fill)
+        .stroke({ color: this.stroke, width: this.lineWidth });
+    } else if (this.shape === 'ellipse') {
+      graphics.ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2)
+        .fill(this.fill)
+        .stroke({ color: this.stroke, width: this.lineWidth });
+    } else {
+      // Line shape: always render as 1px thick regardless of box height
+      const thickness = 1;
+      const midY = thickness / 2;
+      graphics.moveTo(0, midY).lineTo(this.w, midY)
+        .stroke({ color: this.stroke, width: thickness, cap: 'round' as const });
+    }
+  }
+
+  applyBoxSize(w: number, h: number): void {
+    this.w = w;
+    // For line shape, lock height to 1px regardless of input
+    this.h = this.shape === 'line' ? 1 : h;
+    this.redraw();
+    this.drawHandles();
+  }
+}
+
+export class GroupNode extends NodeBase {
+  readonly type = 'group' as const;
+  constructor() { super(); this.drawHandles(true); }
+  get childrenIds(): string[] {
+    return this.children.filter((c): c is NodeBase => c instanceof NodeBase).map((c) => (c as NodeBase).id);
+  }
+  applyBoxSize(w: number, h: number): void {
+    const prevW = this.w || 1;
+    const prevH = this.h || 1;
+    this.w = w; this.h = h;
+    const sx = prevW > 0 ? w / prevW : 1;
+    const sy = prevH > 0 ? h / prevH : 1;
+    // Scale children proportionally
+    for (const ch of this.children) {
+      if (ch instanceof NodeBase) {
+        ch.x *= sx; ch.y *= sy;
+        const newW = Math.max(1, ch.w * sx);
+        const newH = Math.max(1, ch.h * sy);
+        ch.applyBoxSize(newW, newH);
+        if (ch instanceof TextNode) ch.requestFit();
+      }
+    }
+    this.drawFrame(); this.drawHandles();
+  }
+}
+
+/* ========================= section: brush node ============================ */
+export class BrushNode extends NodeBase {
+  readonly type = 'brush' as const;
+  stroke = 0xffffff;
+  strokeWidth = 4;
+  private path: Point[] = [];
+  private g = new Graphics();
+
+  constructor() {
+    super();
+    this.addChild(this.g);
+    this.addChild(this.handlesContainer);
+    this.drawHandles(true);
+  }
+
+  setStyle(color: number, width: number) {
+    this.stroke = color;
+    this.strokeWidth = Math.max(1, width | 0);
+    this.redraw();
+  }
+
+  setPath(points: Point[]) {
+    this.path = points.map(p => new Point(p.x, p.y));
+    this.redraw();
+  }
+
+  private redraw() {
+    const graphics = this.g;
+    graphics.clear();
+    if (!this.path.length) return;
+    graphics.moveTo(this.path[0].x, this.path[0].y);
+    for (const point of this.path) graphics.lineTo(point.x, point.y);
+    graphics.stroke({ color: this.stroke, width: this.strokeWidth, cap: 'round' as const, join: 'round' as const });
+  }
+
+  applyBoxSize(w: number, h: number): void {
+    // scale path to new box size
+    const scaleX = this.w > 0 ? w / this.w : 1;
+    const scaleY = this.h > 0 ? h / this.h : 1;
+    this.w = w; this.h = h;
+    this.path = this.path.map(point => new Point(point.x * scaleX, point.y * scaleY));
+    this.redraw();
+    this.drawHandles();
+  }
+}
+
+
+export class BrushLayer extends Container {
+  private points: { x: number; y: number }[] = [];
+  private g = new Graphics();
+
+  constructor() { super(); this.addChild(this.g); }
+  start(x: number, y: number) { this.points = [{ x, y }]; this.redraw(); }
+  add(x: number, y: number) { this.points.push({ x, y }); this.redraw(); }
+  end() { /* no-op for now */ }
+
+  private redraw() {
+    const g = this.g;
+    g.clear();
+    if (!this.points.length) return;
+    g.moveTo(this.points[0].x, this.points[0].y);
+    for (const p of this.points) g.lineTo(p.x, p.y);
+    g.stroke({ color: 0xffffff, width: 2 });
+  }
+}

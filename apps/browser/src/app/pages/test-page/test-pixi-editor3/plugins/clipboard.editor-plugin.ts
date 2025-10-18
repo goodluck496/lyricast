@@ -1,0 +1,53 @@
+import { Injectable } from '@angular/core';
+import { EditorContext, EditorPlugin } from '../core';
+import { fromEvent } from 'rxjs';
+
+/**
+ * ClipboardPlugin listens for global paste events and routes content to the proper ADD_* command.
+ *
+ * Behavior:
+ * - If focus is inside an input/textarea or a modal dialog is open, it does nothing.
+ * - Files: image files are pasted as ADD_IMAGE with a temporary blob URL.
+ * - Strings: data:image/* data-URLs become images; URLs are routed to image/video/iframe; otherwise added as text.
+ */
+@Injectable()
+export class ClipboardPlugin implements EditorPlugin {
+  id = 'clipboard';
+  init(ctx: EditorContext): void {
+    fromEvent<ClipboardEvent>(document, 'paste').subscribe((event) => {
+      // Если открыт модальный инпут/textarea или фокус в форме — не перехватываем глобальную вставку
+      const active = document.activeElement as HTMLElement | null;
+      const focusInForm = !!active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+      const modalOpen = !!document.querySelector('[data-lyricast-dialog="true"]');
+      if (focusInForm || modalOpen) return;
+
+      const clipboard = event.clipboardData; if (!clipboard) return;
+      const items = clipboard.items;
+      for (const item of Array.from(items)) {
+        if (item.kind === 'file') {
+          const file = item.getAsFile(); if (!file) continue;
+          if (file.type.startsWith('image/')) {
+            const url = URL.createObjectURL(file);
+            ctx.bus.emit({ t: 'ADD_IMAGE', url, x: 100, y: 100 });
+          }
+        } else if (item.kind === 'string') {
+          item.getAsString((raw) => {
+            const str = raw.trim();
+            // Support base64/data-URL images pasted as text
+            if (/^data:image\//i.test(str)) {
+              ctx.bus.emit({ t: 'ADD_IMAGE', url: str, x: 120, y: 120 });
+              return;
+            }
+            if (ctx.utils.isUrl(str)) {
+              if (ctx.utils.isImageUrl(str)) ctx.bus.emit({ t: 'ADD_IMAGE', url: str, x: 120, y: 120 });
+              else if (ctx.utils.isVideoUrl(str)) ctx.bus.emit({ t: 'ADD_VIDEO', url: str });
+              else ctx.bus.emit({ t: 'ADD_IFRAME', url: str });
+            } else {
+              ctx.bus.emit({ t: 'ADD_TEXT', x: 120, y: 120, text: str });
+            }
+          });
+        }
+      }
+    });
+  }
+}

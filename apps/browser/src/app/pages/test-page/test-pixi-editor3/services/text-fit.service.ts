@@ -54,16 +54,29 @@ export class TextFitService {
     const innerH = Math.max(4, options.boxH - options.padding * 2);
     if (innerW <= 6 || innerH <= 6) return min;
 
+    // Normalize font weight into a safe string literal that Pixi expects
+    type NumericWeightString = '100'|'200'|'300'|'400'|'500'|'600'|'700'|'800'|'900';
+    type FontWeightKeyword = 'normal'|'bold'|'bolder'|'lighter';
+    type FontWeightValue = NumericWeightString | FontWeightKeyword;
+    const normalizeFontWeight = (w: string): FontWeightValue => {
+      const s = String(w).trim().toLowerCase();
+      if (s === 'normal' || s === 'bold' || s === 'bolder' || s === 'lighter') return s as FontWeightKeyword;
+      const n = Number(s);
+      const allowed: NumericWeightString[] = ['100','200','300','400','500','600','700','800','900'];
+      const nearest = Number.isFinite(n) ? String(Math.min(900, Math.max(100, Math.round(n / 100) * 100))) as NumericWeightString : '400';
+      return allowed.includes(nearest as NumericWeightString) ? (nearest as NumericWeightString) : '400';
+    };
+
     const probe = new Text({
       text,
       style: {
         fontFamily: family,
-        fontWeight: weight,
+        // Pixi expects TextStyleFontWeight as specific string tokens (or keywords).
+        fontWeight: normalizeFontWeight(weight),
         align,
         wordWrap: true,
         wordWrapWidth: innerW,
-        fill: this.utils.colorToNumber('#ffffee'),
-        ...(baseStyle ?? {}),
+        fill: (baseStyle && typeof baseStyle.fill === 'number') ? baseStyle.fill : this.utils.colorToNumber('#ffffee'),
       },
     });
     probe.visible = false;

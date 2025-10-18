@@ -1233,6 +1233,7 @@ class OverlayService {
 
     this.hostEl.appendChild(ta); this.textareaEl = ta; this.editingTextNode = node; ta.focus(); ta.select();
 
+    const done$ = new Subject<void>();
     const finish = (commit: boolean) => {
       const currentTA = this.textareaEl;
       const currentNode = this.editingTextNode;
@@ -1242,12 +1243,17 @@ class OverlayService {
       this.editingTextNode = undefined;
       this.safeRemove(currentTA || ta);
       opts?.onClose?.();
+      done$.next();
+      done$.complete();
     };
 
-    ta.addEventListener('keydown', (e) => { if (e.key === 'Escape') finish(false); if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') finish(true); });
+    fromEvent<KeyboardEvent>(ta, 'keydown').pipe(takeUntil(done$)).subscribe((e) => {
+      if (e.key === 'Escape') finish(false);
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') finish(true);
+    });
     // Не даём всплывать paste из редактора, чтобы не срабатывала глобальная вставка
-    ta.addEventListener('paste', (ev) => { ev.stopPropagation(); });
-    ta.addEventListener('blur', () => finish(true));
+    fromEvent<ClipboardEvent>(ta, 'paste').pipe(takeUntil(done$)).subscribe((ev) => ev.stopPropagation());
+    fromEvent<FocusEvent>(ta, 'blur').pipe(takeUntil(done$)).subscribe(() => finish(true));
   }
 
   private iframeForNodeId?: string;
@@ -1724,16 +1730,18 @@ class ContextMenuService {
       } as CSSStyleDeclaration);
       const h = document.createElement('div'); h.textContent = title; h.style.marginBottom = '8px'; h.style.fontWeight = '600';
       const input = document.createElement('input'); input.type = 'text'; input.placeholder = 'https://...';
-      input.addEventListener('paste', (ev) => { ev.stopPropagation(); });
+      fromEvent<ClipboardEvent>(input, 'paste').subscribe((ev) => { ev.stopPropagation(); });
       Object.assign(input.style, { width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #475569', outline: 'none', background: '#111827', color: '#e5e7eb' } as CSSStyleDeclaration);
       const row = document.createElement('div'); Object.assign(row.style, { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' } as CSSStyleDeclaration);
       const ok = document.createElement('button'); ok.textContent = 'OK'; Object.assign(ok.style, { padding: '6px 12px', borderRadius: '8px', border: '1px solid #94a3b8', cursor: 'pointer' } as CSSStyleDeclaration);
       const cancel = document.createElement('button'); cancel.textContent = 'Cancel'; Object.assign(cancel.style, { padding: '6px 12px', borderRadius: '8px', border: '1px solid #94a3b8', cursor: 'pointer' } as CSSStyleDeclaration);
-      const close = (val: string | null) => { window.removeEventListener('keydown', onKey); overlay.remove(); resolve(val?.trim() ? val.trim() : null); };
+      const closed$ = new Subject<void>();
+      const close = (val: string | null) => { closed$.next(); closed$.complete(); overlay.remove(); resolve(val?.trim() ? val.trim() : null); };
       const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(null); if (e.key === 'Enter') close(input.value); };
       ok.onclick = () => close(input.value); cancel.onclick = () => close(null);
       row.append(cancel, ok); panel.append(h, input, row); overlay.append(panel); document.body.appendChild(overlay);
-      setTimeout(() => input.focus(), 0); window.addEventListener('keydown', onKey);
+      setTimeout(() => input.focus(), 0);
+      fromEvent<KeyboardEvent>(window, 'keydown').pipe(takeUntil(closed$)).subscribe(onKey);
     });
   }
 
@@ -1753,14 +1761,16 @@ class ContextMenuService {
       boxShadow: '0 8px 20px rgba(0,0,0,0.35)'
     } as CSSStyleDeclaration);
 
+    const menuClosed$ = new Subject<void>();
     const addItem = (label: string, action: () => void) => {
       const i = document.createElement('div'); i.textContent = label;
       Object.assign(i.style, { padding: '8px 12px', cursor: 'pointer', userSelect: 'none' } as CSSStyleDeclaration);
-      i.addEventListener('mouseenter', () => i.style.background = '#1f2937');
-      i.addEventListener('mouseleave', () => i.style.background = 'transparent');
-      i.addEventListener('click', () => { action(); this.close(); });
+      fromEvent<MouseEvent>(i, 'mouseenter').pipe(takeUntil(menuClosed$)).subscribe(() => i.style.background = '#1f2937');
+      fromEvent<MouseEvent>(i, 'mouseleave').pipe(takeUntil(menuClosed$)).subscribe(() => i.style.background = 'transparent');
+      fromEvent<MouseEvent>(i, 'click').pipe(takeUntil(menuClosed$)).subscribe(() => { action(); closeLocal(); });
       el.appendChild(i);
     };
+    const closeLocal = () => { this.close(); menuClosed$.next(); menuClosed$.complete(); };
 
     addItem('Add Text', () => this.bus.emit({ t: 'ADD_TEXT', x: 100, y: 80 }));
     addItem('Add Image (URL)', async () => { const url = await this.askUrl('Image URL'); if (url) this.bus.emit({ t: 'ADD_IMAGE', url }); });
@@ -1778,10 +1788,12 @@ class ContextMenuService {
     this.host.appendChild(el); this.menuEl = el;
 
     setTimeout(() => {
-      const close = () => this.close();
-      const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-      document.addEventListener('click', close, { once: true });
-      document.addEventListener('keydown', onEsc, { once: true });
+      fromEvent<MouseEvent>(document, 'click')
+        .pipe(first(), takeUntil(menuClosed$))
+        .subscribe(() => closeLocal());
+      fromEvent<KeyboardEvent>(document, 'keydown')
+        .pipe(filter((e) => e.key === 'Escape'), first(), takeUntil(menuClosed$))
+        .subscribe(() => closeLocal());
     }, 0);
   }
 
@@ -2521,7 +2533,7 @@ export class PixiSlideEditorV2Component
       const input = document.createElement('input');
       input.type = 'text';
       input.placeholder = 'https://...';
-      input.addEventListener('paste', (ev) => {
+      fromEvent<ClipboardEvent>(input, 'paste').subscribe((ev) => {
         ev.stopPropagation();
       });
       Object.assign(input.style, {
@@ -2556,8 +2568,10 @@ export class PixiSlideEditorV2Component
         border: '1px solid #94a3b8',
         cursor: 'pointer',
       } as CSSStyleDeclaration);
+      const closed$ = new Subject<void>();
       const close = (val: string | null) => {
-        window.removeEventListener('keydown', onKey);
+        closed$.next();
+        closed$.complete();
         overlay.remove();
         resolve(val?.trim() ? val.trim() : null);
       };
@@ -2572,7 +2586,7 @@ export class PixiSlideEditorV2Component
       overlay.append(panel);
       document.body.appendChild(overlay);
       setTimeout(() => input.focus(), 0);
-      window.addEventListener('keydown', onKey);
+      fromEvent<KeyboardEvent>(window, 'keydown').pipe(takeUntil(closed$)).subscribe(onKey);
     });
   }
 

@@ -21,6 +21,7 @@ export interface EditorViewModel {
   ui: UiTextStyles;
   audioUrl?: string;
   isPlayingAudio: boolean;
+  brushActive?: boolean;
 }
 
 @Injectable()
@@ -46,6 +47,7 @@ export class EditorStore extends ComponentStore<EditorViewModel> {
         strokeWidth: 4,
       },
       isPlayingAudio: false,
+      brushActive: false,
     });
   }
 
@@ -56,6 +58,7 @@ export class EditorStore extends ComponentStore<EditorViewModel> {
   readonly ui$ = this.select((s) => s.ui);
   readonly snapEnabled$ = this.select((s) => s.snapEnabled);
   readonly guidesEnabled$ = this.select((s) => s.guidesEnabled);
+  readonly brushActive$ = this.select((s) => !!s.brushActive);
 
   /** One-shot sync snapshot without using protected get() */
   snapshot<T>(project: (s: EditorViewModel) => T): T {
@@ -85,4 +88,5 @@ export class EditorStore extends ComponentStore<EditorViewModel> {
     };
   });
   readonly reorder = this.updater<string[]>((s, order) => ({ ...s, order }));
+  readonly setBrushActive = this.updater<boolean>((s, brushActive) => ({ ...s, brushActive }));
 }

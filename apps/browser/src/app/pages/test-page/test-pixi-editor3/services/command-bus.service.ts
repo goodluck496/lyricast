@@ -36,6 +36,16 @@ export type EditorCommand =
   | { t: 'ZOOM'; z: number }
   | { t: 'SNAP'; on: boolean }
   | { t: 'GUIDES'; on: boolean }
+  | { t: 'BRING_TO_FRONT' }
+  | { t: 'SEND_TO_BACK' }
+  | { t: 'BRING_FORWARD' }
+  | { t: 'SEND_BACKWARD' }
+  | { t: 'SET_SHAPE_BACKGROUND'; url: string }
+  | { t: 'CLEAR_SHAPE_BACKGROUND' }
+  | { t: 'SET_SHAPE_FILL'; color: number }
+  | { t: 'SET_TEXT_BACKGROUND'; url: string }
+  | { t: 'CLEAR_TEXT_BACKGROUND' }
+  | { t: 'SET_TEXT_BG_COLOR'; color: number }
   | { t: 'PASTE_CLIPBOARD' };
 
 /** Simple RxJS bus that transports EditorCommand events between UI and plugins. */

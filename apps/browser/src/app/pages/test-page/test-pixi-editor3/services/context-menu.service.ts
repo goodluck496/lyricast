@@ -2,7 +2,8 @@ import { fromEvent, Subject } from 'rxjs';
 import { filter, first, takeUntil } from 'rxjs/operators';
 
 // Minimal interfaces to decouple from the monolithic file
-export interface EditorStateLike { selectedIds: string[] }
+export interface NodeStateLike { id: string; type: 'text'|'image'|'video'|'iframe'|'shape'|'group'|'brush' }
+export interface EditorStateLike { selectedIds: string[]; nodes: Record<string, NodeStateLike> }
 export interface EditorStoreLike {
   snapshot<T>(selector: (s: EditorStateLike) => T): T;
 }
@@ -74,18 +75,46 @@ export class ContextMenuService {
     };
     const closeLocal = () => { this.close(); menuClosed$.next(); menuClosed$.complete(); };
 
-    addItem('Add Text', () => this.bus.emit({ t: 'ADD_TEXT', x: 100, y: 80 }));
-    addItem('Add Image (URL)', async () => { const url = await this.askUrl('Image URL'); if (url) this.bus.emit({ t: 'ADD_IMAGE', url }); });
-    addItem('Add Video (URL)', async () => { const url = await this.askUrl('Video URL'); if (url) this.bus.emit({ t: 'ADD_VIDEO', url }); });
-    addItem('Add Iframe (URL)', async () => { const url = await this.askUrl('URL'); if (url) this.bus.emit({ t: 'ADD_IFRAME', url }); });
-    addItem('Add Rectangle', () => this.bus.emit({ t: 'ADD_SHAPE', shape: 'rect', x: 120, y: 120 }));
-    addItem('Add Ellipse', () => this.bus.emit({ t: 'ADD_SHAPE', shape: 'ellipse', x: 140, y: 140 }));
-    addItem('Add Line', () => this.bus.emit({ t: 'ADD_SHAPE', shape: 'line', x: 160, y: 160, w: 220, h: 1 }));
+    const hasSelection = (this.store.snapshot(s => s.selectedIds)?.length || 0) > 0;
+    if (!hasSelection) {
+      addItem('Add Text', () => this.bus.emit({ t: 'ADD_TEXT', x: 100, y: 80 }));
+      addItem('Add Image (URL)', async () => { const url = await this.askUrl('Image URL'); if (url) this.bus.emit({ t: 'ADD_IMAGE', url }); });
+      addItem('Add Video (URL)', async () => { const url = await this.askUrl('Video URL'); if (url) this.bus.emit({ t: 'ADD_VIDEO', url }); });
+      addItem('Add Iframe (URL)', async () => { const url = await this.askUrl('URL'); if (url) this.bus.emit({ t: 'ADD_IFRAME', url }); });
+      addItem('Add Rectangle', () => this.bus.emit({ t: 'ADD_SHAPE', shape: 'rect', x: 120, y: 120 }));
+      addItem('Add Ellipse', () => this.bus.emit({ t: 'ADD_SHAPE', shape: 'ellipse', x: 140, y: 140 }));
+      addItem('Add Line', () => this.bus.emit({ t: 'ADD_SHAPE', shape: 'line', x: 160, y: 160, w: 220, h: 1 }));
+      const sepAdd = document.createElement('div'); Object.assign(sepAdd.style, { borderTop: '1px solid #334155', margin: '6px 0' } as CSSStyleDeclaration);
+      el.appendChild(sepAdd);
+    }
 
-    addItem('Group', () => this.bus.emit({ t: 'GROUP', ids: this.store.snapshot(s => s.selectedIds) }));
-    addItem('Ungroup', () => { const id = this.store.snapshot(s => s.selectedIds)[0]; if (id) this.bus.emit({ t: 'UNGROUP', id }); });
+    const selection = this.store.snapshot(s => s.selectedIds) || [];
+    if (selection.length >= 2) {
+      addItem('Group', () => this.bus.emit({ t: 'GROUP', ids: selection }));
+    }
+    const selectedId = selection.length === 1 ? selection[0] : undefined;
+    const selectedType = selectedId ? this.store.snapshot(s => s.nodes)[selectedId]?.type : undefined;
+    const isGroup = selectedType === 'group';
+    if (isGroup) {
+      addItem('Ungroup', () => { if (selectedId) this.bus.emit({ t: 'UNGROUP', id: selectedId }); });
+    }
+    // Background actions for shapes and text
+    if (selectedType === 'shape') {
+      addItem('Set background image…', async () => { const url = await this.askUrl('Background image URL / data:'); if (url) this.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url }); });
+      addItem('Clear background', () => this.bus.emit({ t: 'CLEAR_SHAPE_BACKGROUND' }));
+    } else if (selectedType === 'text') {
+      addItem('Set background image…', async () => { const url = await this.askUrl('Background image URL / data:'); if (url) this.bus.emit({ t: 'SET_TEXT_BACKGROUND', url }); });
+      addItem('Clear background', () => this.bus.emit({ t: 'CLEAR_TEXT_BACKGROUND' }));
+    }
     addItem('Duplicate', () => this.bus.emit({ t: 'DUPLICATE' }));
     addItem('Delete', () => this.bus.emit({ t: 'DELETE' }));
+
+    // Z-index controls
+    const sep = document.createElement('div'); Object.assign(sep.style, { borderTop: '1px solid #334155', margin: '6px 0' } as CSSStyleDeclaration);
+    el.appendChild(sep);
+    const safeAdd = (label: string, action: () => void) => addItem(label, () => { if (hasSelection) action(); });
+    safeAdd('Bring forward', () => this.bus.emit({ t: 'BRING_FORWARD' }));
+    safeAdd('Send backward', () => this.bus.emit({ t: 'SEND_BACKWARD' }));
 
     this.host.appendChild(el); this.menuEl = el;
 

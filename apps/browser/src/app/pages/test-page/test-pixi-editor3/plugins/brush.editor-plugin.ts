@@ -27,6 +27,7 @@ export class BrushPlugin implements EditorPlugin {
       .subscribe(() => {
         if (this.drawing) return;
         this.drawing = true;
+        ctx.store.setBrushActive(true);
         const ui = ctx.store.snapshot((s) => s.ui);
         let startWorldPoint: Point | null = null;
 
@@ -74,6 +75,7 @@ export class BrushPlugin implements EditorPlugin {
           const node = this.tempNode;
           this.tempNode = undefined;
           this.drawing = false;
+          ctx.store.setBrushActive(false);
           const newId = node.id;
           ctx.store.addNode({ id: newId, type: 'brush', ref: node });
           this.drag.bind(node, new Subject<void>(), {

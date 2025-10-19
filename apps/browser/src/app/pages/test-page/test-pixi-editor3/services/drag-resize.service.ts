@@ -53,6 +53,8 @@ export class DragResizeService {
     ctx.utils.fromPixi<FederatedPointerEvent>(node, 'pointerdown')
       .pipe(takeUntil(destroy$))
       .subscribe((event) => {
+        // If brush mode is active, ignore node interactions so drawing works over nodes
+        if (ctx.store.snapshot(s => !!s.brushActive)) return;
         event.stopPropagation();
         ctx.overlay?.setIframeInteractive(false);
         const isMultiSelect = event.ctrlKey || (event as unknown as { metaKey?: boolean }).metaKey === true;
@@ -67,7 +69,7 @@ export class DragResizeService {
       });
 
     ctx.utils.fromPixi<FederatedPointerEvent>(node, 'pointerdown').pipe(
-      filter((event) => !this.isOnHandle(node, event)),
+      filter((event) => !this.isOnHandle(node, event) && !ctx.store.snapshot(s => !!s.brushActive)),
       map((event) => ({ start: ctx.utils.toWorldLocal(event, ctx.world), origin: { x: node.x, y: node.y } })),
       switchMap((startState) =>
         move$.pipe(
@@ -94,6 +96,9 @@ export class DragResizeService {
       ctx.bus.emit({ t: 'MOVE', id: node.id, x: position.x, y: position.y });
       ctx.overlay?.syncToNode(node);
     });
+
+    // Clear guides on pointer up to prevent lingering lines when not moving
+    up$.pipe(takeUntil(destroy$)).subscribe(() => ctx.guides.draw([]));
 
     type RotateResult = { kind: 'rotate'; rotation: number; centerX: number; centerY: number; boxW: number; boxH: number };
     type ResizeResult = { kind: 'resize'; nextX: number; nextY: number; nextW: number; nextH: number; rotation: number; anchorWorld: { x: number; y: number }; handleName: string };

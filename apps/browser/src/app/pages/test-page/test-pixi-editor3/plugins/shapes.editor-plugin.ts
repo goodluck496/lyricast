@@ -25,5 +25,41 @@ export class ShapesPlugin implements EditorPlugin {
       this.drag.bind(shapeNode, new Subject<void>(), { cfg: ctx.cfg, store: ctx.store, guides: ctx.guides, world: ctx.world, app: ctx.app, bus: ctx.bus, utils: ctx.utils, overlay: ctx.overlay });
       ctx.bus.emit({ t: 'SELECT', ids: [newId] });
     });
+
+    // Set/Clear background on selected shape(s)
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'SET_SHAPE_BACKGROUND')).subscribe(async (cmd) => {
+      const url = (cmd as Extract<EditorCommand, { t: 'SET_SHAPE_BACKGROUND' }>).url;
+      const ids = ctx.store.snapshot(s => s.selectedIds) || [];
+      const nodes = ctx.store.snapshot(s => s.nodes);
+      for (const id of ids) {
+        const ref = nodes[id]?.ref;
+        if (ref instanceof ShapeNode && ref.shape !== 'line') {
+          await ref.setBackground(url);
+        }
+      }
+    });
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'CLEAR_SHAPE_BACKGROUND')).subscribe(() => {
+      const ids = ctx.store.snapshot(s => s.selectedIds) || [];
+      const nodes = ctx.store.snapshot(s => s.nodes);
+      for (const id of ids) {
+        const ref = nodes[id]?.ref;
+        if (ref instanceof ShapeNode && ref.shape !== 'line') {
+          ref.clearBackground();
+        }
+      }
+    });
+
+    // Set fill color from current UI color
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'SET_SHAPE_FILL')).subscribe((cmd) => {
+      const color = (cmd as Extract<EditorCommand, { t: 'SET_SHAPE_FILL' }>).color >>> 0;
+      const ids = ctx.store.snapshot(s => s.selectedIds) || [];
+      const nodes = ctx.store.snapshot(s => s.nodes);
+      for (const id of ids) {
+        const ref = nodes[id]?.ref;
+        if (ref instanceof ShapeNode) {
+          ref.setFillColor(color);
+        }
+      }
+    });
   }
 }

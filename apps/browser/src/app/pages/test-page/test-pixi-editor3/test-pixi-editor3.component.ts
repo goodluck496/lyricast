@@ -1,22 +1,30 @@
 import { CommonModule } from '@angular/common';
 import {
+  ChangeDetectorRef,
   Component,
   ElementRef,
-  Inject,
-  InjectionToken,
+  inject,
+  NgZone,
   OnDestroy,
   OnInit,
   ViewChild,
-  inject,
-  NgZone,
-  ChangeDetectorRef,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Application, Container, TilingSprite, Texture, FederatedPointerEvent, Point } from 'pixi.js';
-import { EDITOR_CONFIG, EditorConfig, DEFAULT_CONFIG } from './types';
+import {
+  Application,
+  Container,
+  FederatedPointerEvent,
+  Point,
+  Texture,
+  TilingSprite,
+} from 'pixi.js';
+import { DEFAULT_CONFIG, EDITOR_CONFIG } from './types';
 import { EDITOR_PLUGINS, EditorContext, EditorPlugin, NodeBase } from './core';
 import { EditorStore } from './services/editor-store.service';
-import { CommandBusService, EditorCommand } from './services/command-bus.service';
+import {
+  CommandBusService,
+  EditorCommand,
+} from './services/command-bus.service';
 import { EditorUtilsService } from './services/editor-utils.service';
 import { TextFitService } from './services/text-fit.service';
 import { DialogService } from './services/dialog.service';
@@ -35,7 +43,15 @@ import {
 import { fromEvent, Subject } from 'rxjs';
 import { ContextMenuService } from './services/context-menu.service';
 import { auditTime, filter, takeUntil, tap } from 'rxjs/operators';
-import { BrushNode, GroupNode, IframeNode, ImageNode, ShapeNode, TextNode, VideoNode } from './nodes';
+import {
+  BrushNode,
+  GroupNode,
+  IframeNode,
+  ImageNode,
+  ShapeNode,
+  TextNode,
+  VideoNode,
+} from './nodes';
 
 type WorldContainer = Container & { app: Application };
 
@@ -46,7 +62,12 @@ type WorldContainer = Container & { app: Application };
   template: `
     <ng-container *ngIf="vm$ | async as vm">
       <div class="toolbar">
-        <button (click)="emit({ t: 'ADD_TEXT', x: 100, y: 80 })">Text</button>
+        <button
+          (click)="emit({ t: 'ADD_TEXT', x: 100, y: 80 })"
+          [class.active]="selectedKind === 'text'"
+        >
+          Text
+        </button>
         <button (click)="onImageUrl()">Image</button>
         <button (click)="onVideoUrl()">Video</button>
         <button (click)="onIframeUrl()">Iframe</button>
@@ -76,7 +97,26 @@ type WorldContainer = Container & { app: Application };
         >
           Line
         </button>
-        <button (click)="emit({ t: 'START_BRUSH' })">Brush</button>
+        <button
+          (click)="emit({ t: 'START_BRUSH' })"
+          [class.active]="brushActive"
+        >
+          Brush
+        </button>
+        <span class="sep"></span>
+
+        <button (click)="onSetBackground()" [disabled]="!canSetBg">
+          BG Image…
+        </button>
+        <button (click)="onClearBackground()" [disabled]="!canSetBg">
+          Clear BG
+        </button>
+        <button
+          (click)="onApplyBgFill()"
+          [disabled]="!(selectedKind === 'shape' || selectedKind === 'text')"
+        >
+          Fill = Color
+        </button>
         <span class="sep"></span>
 
         <button
@@ -85,10 +125,7 @@ type WorldContainer = Container & { app: Application };
         >
           Group
         </button>
-        <button
-          (click)="onUngroup()"
-          [disabled]="(vm.selectedIds?.length || 0) !== 1"
-        >
+        <button (click)="onUngroup()" [disabled]="selectedKind !== 'group'">
           Ungroup
         </button>
         <button
@@ -106,7 +143,7 @@ type WorldContainer = Container & { app: Application };
         <span class="sep"></span>
 
         <label
-        >Zoom
+          >Zoom
           <input
             type="range"
             min="0.25"
@@ -135,7 +172,7 @@ type WorldContainer = Container & { app: Application };
 
         <span class="sep"></span>
         <label
-        >Font
+          >Font
           <select
             [ngModel]="vm.ui.font"
             (ngModelChange)="
@@ -150,7 +187,7 @@ type WorldContainer = Container & { app: Application };
           </select>
         </label>
         <label
-        >Weight
+          >Weight
           <select
             [ngModel]="vm.ui.weight"
             (ngModelChange)="
@@ -165,7 +202,7 @@ type WorldContainer = Container & { app: Application };
           </select>
         </label>
         <label
-        >Color
+          >Color
           <input
             type="color"
             [ngModel]="vm.ui.colorHex"
@@ -182,11 +219,13 @@ type WorldContainer = Container & { app: Application };
             max="60"
             step="1"
             [ngModel]="vm.ui.strokeWidth"
-            (ngModelChange)="emit({ t: 'APPLY_STYLE', patch: { strokeWidth: +$event } })"
+            (ngModelChange)="
+              emit({ t: 'APPLY_STYLE', patch: { strokeWidth: +$event } })
+            "
           />
         </label>
         <label
-        >Align
+          >Align
           <select
             [ngModel]="vm.ui.align"
             (ngModelChange)="
@@ -199,7 +238,7 @@ type WorldContainer = Container & { app: Application };
           </select>
         </label>
         <label
-        >Line
+          >Line
           <input
             type="range"
             min="1"
@@ -212,7 +251,7 @@ type WorldContainer = Container & { app: Application };
           />
         </label>
         <label
-        >Min
+          >Min
           <input
             type="number"
             min="6"
@@ -225,7 +264,7 @@ type WorldContainer = Container & { app: Application };
           />
         </label>
         <label
-        >Max
+          >Max
           <input
             type="number"
             min="10"
@@ -247,9 +286,7 @@ type WorldContainer = Container & { app: Application };
           />
           Bulleted
         </label>
-
       </div>
-
     </ng-container>
     <div class="host" #host (contextmenu)="onContextMenu($event)"></div>
   `,
@@ -300,6 +337,10 @@ type WorldContainer = Container & { app: Application };
         cursor: pointer;
         color: black;
       }
+      button.active {
+        background: #eef2ff;
+        border-color: #a5b4fc;
+      }
       label {
         display: inline-flex;
         align-items: center;
@@ -325,18 +366,55 @@ type WorldContainer = Container & { app: Application };
     ClipboardPlugin,
     TextFitService,
     // Multi providers for EDITOR_PLUGINS token
-    { provide: EDITOR_PLUGINS, useFactory: () => inject(TextPlugin) as EditorPlugin, multi: true },
-    { provide: EDITOR_PLUGINS, useFactory: () => inject(MediaPlugin) as EditorPlugin, multi: true },
-    { provide: EDITOR_PLUGINS, useFactory: () => inject(IframePlugin) as EditorPlugin, multi: true },
-    { provide: EDITOR_PLUGINS, useFactory: () => inject(ShapesPlugin) as EditorPlugin, multi: true },
-    { provide: EDITOR_PLUGINS, useFactory: () => inject(BrushPlugin) as EditorPlugin, multi: true },
-    { provide: EDITOR_PLUGINS, useFactory: () => inject(GroupingPlugin) as EditorPlugin, multi: true },
-    { provide: EDITOR_PLUGINS, useFactory: () => inject(ClipboardPlugin) as EditorPlugin, multi: true },
-
+    {
+      provide: EDITOR_PLUGINS,
+      useFactory: () => inject(TextPlugin) as EditorPlugin,
+      multi: true,
+    },
+    {
+      provide: EDITOR_PLUGINS,
+      useFactory: () => inject(MediaPlugin) as EditorPlugin,
+      multi: true,
+    },
+    {
+      provide: EDITOR_PLUGINS,
+      useFactory: () => inject(IframePlugin) as EditorPlugin,
+      multi: true,
+    },
+    {
+      provide: EDITOR_PLUGINS,
+      useFactory: () => inject(ShapesPlugin) as EditorPlugin,
+      multi: true,
+    },
+    {
+      provide: EDITOR_PLUGINS,
+      useFactory: () => inject(BrushPlugin) as EditorPlugin,
+      multi: true,
+    },
+    {
+      provide: EDITOR_PLUGINS,
+      useFactory: () => inject(GroupingPlugin) as EditorPlugin,
+      multi: true,
+    },
+    {
+      provide: EDITOR_PLUGINS,
+      useFactory: () => inject(ClipboardPlugin) as EditorPlugin,
+      multi: true,
+    },
   ],
 })
 export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   @ViewChild('host', { static: true }) hostRef!: ElementRef<HTMLDivElement>;
+  selectedKind?:
+    | 'text'
+    | 'image'
+    | 'video'
+    | 'iframe'
+    | 'shape'
+    | 'group'
+    | 'brush';
+  brushActive = false;
+  canSetBg = false;
 
   readonly cfg = inject(EDITOR_CONFIG);
   readonly store = inject(EditorStore);
@@ -365,6 +443,11 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   ngOnInit() {}
   ngAfterViewInit(): void {
     void this.initPixi();
+    // track brush active state for toolbar button highlight
+    this.store.brushActive$.pipe(takeUntil(this.destroy$)).subscribe((v) => {
+      this.brushActive = v;
+      this.cdr.markForCheck();
+    });
   }
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -418,7 +501,10 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         filter((e) => e.target === this.app.stage),
         takeUntil(this.destroy$)
       )
-      .subscribe(() => { this.overlay.commitAndCloseTextarea(); this.bus.emit({ t: 'SELECT', ids: [] }); });
+      .subscribe(() => {
+        this.overlay.commitAndCloseTextarea();
+        this.bus.emit({ t: 'SELECT', ids: [] });
+      });
 
     // Context menu at cursor (RxJS)
     const host = this.hostRef.nativeElement as HTMLDivElement;
@@ -426,17 +512,47 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((ev) => {
         ev.preventDefault();
+        // Try to select the node under cursor before opening menu
+        const hostRect = host.getBoundingClientRect();
+        const px = ev.clientX - hostRect.left;
+        const py = ev.clientY - hostRect.top;
+        const nodesUnderCursor: NodeBase[] = [];
+        for (let i = 0; i < this.world.children.length; i++) {
+          const c = this.world.children[i];
+          if (c instanceof NodeBase) {
+            const b = c.getBounds();
+            if (
+              px >= b.x &&
+              px <= b.x + b.width &&
+              py >= b.y &&
+              py <= b.y + b.height
+            ) {
+              nodesUnderCursor.push(c);
+            }
+          }
+        }
+        if (nodesUnderCursor.length) {
+          // choose the topmost by world z-order (last among matched in children traversal)
+          const topmost = nodesUnderCursor[nodesUnderCursor.length - 1];
+          const sel = this.store.snapshot((s) => s.selectedIds);
+          if (!sel.includes(topmost.id)) {
+            this.bus.emit({ t: 'SELECT', ids: [topmost.id] });
+          }
+        }
         // If an iframe is selected and the right-click is inside it, enable interaction instead of opening menu
         const selectedId = this.store.snapshot((s) => s.selectedIds)[0];
         if (selectedId) {
-          const ref = this.store.snapshot((s) => s.nodes)[selectedId]?.ref as NodeBase;
+          const ref = this.store.snapshot((s) => s.nodes)[selectedId]
+            ?.ref as NodeBase;
           if (ref instanceof IframeNode) {
             const b = ref.getBounds();
-            const hostRect = host.getBoundingClientRect();
-            const x = ev.clientX - hostRect.left;
-            const y = ev.clientY - hostRect.top;
             const m = 10; // same inset as overlay
-            if (x >= b.x + m && x <= b.x + b.width - m && y >= b.y + m && y <= b.y + b.height - m) {
+            if (
+              px >= b.x + m &&
+              px <= b.x + b.width - m &&
+              py >= b.y + m &&
+              py <= b.y + b.height - m
+            ) {
               this.overlay.attachIframe(ref);
               this.overlay.setIframeInteractive(true);
               return; // do not open context menu
@@ -462,8 +578,14 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           this.bus.emit({ t: 'SELECT', ids: topLevelIds });
           return;
         }
-        if (ev.key === 'Delete' || ev.key === 'Backspace') { ev.preventDefault(); this.bus.emit({ t: 'DELETE' }); }
-        if (ev.key === 'Escape') { ev.preventDefault(); this.bus.emit({ t: 'SELECT', ids: [] }); }
+        if (ev.key === 'Delete' || ev.key === 'Backspace') {
+          ev.preventDefault();
+          this.bus.emit({ t: 'DELETE' });
+        }
+        if (ev.key === 'Escape') {
+          ev.preventDefault();
+          this.bus.emit({ t: 'SELECT', ids: [] });
+        }
       });
 
     // Keep grid size on resize
@@ -491,19 +613,45 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           }
         }
 
+        // Clear guides if nothing is selected
+        if (!c.ids || c.ids.length === 0) {
+          this.guides.draw([]);
+        }
+
         // Update UI toolbar to reflect selected node(s)
         const updateUIFromSelection = () => {
           const ids = c.ids || [];
+          // update selectedKind for toolbar highlighting
+          this.selectedKind = undefined;
           if (!ids.length) return;
           const firstId = ids[0];
-          const ref = this.store.snapshot((s) => s.nodes)[firstId]?.ref as NodeBase | undefined;
+          const ref = this.store.snapshot((s) => s.nodes)[firstId]?.ref as
+            | NodeBase
+            | undefined;
+          if (ref instanceof TextNode) this.selectedKind = 'text';
+          else if (ref instanceof ImageNode) this.selectedKind = 'image';
+          else if (ref instanceof VideoNode) this.selectedKind = 'video';
+          else if (ref instanceof IframeNode) this.selectedKind = 'iframe';
+          else if (ref instanceof ShapeNode) this.selectedKind = 'shape';
+          else if (ref instanceof GroupNode) this.selectedKind = 'group';
+          else if (ref instanceof BrushNode) this.selectedKind = 'brush';
+          // enable/disable background buttons
+          this.canSetBg = !!(
+            ref &&
+            ((ref instanceof ShapeNode &&
+              (ref as ShapeNode).shape !== 'line') ||
+              ref instanceof TextNode)
+          );
           const pickTextFrom = (node?: NodeBase): TextNode | undefined => {
             if (!node) return undefined;
             if (node instanceof TextNode) return node;
             if (node instanceof GroupNode) {
               for (const ch of node.children) {
                 if (ch instanceof TextNode) return ch;
-                if (ch instanceof GroupNode) { const found = pickTextFrom(ch); if (found) return found; }
+                if (ch instanceof GroupNode) {
+                  const found = pickTextFrom(ch);
+                  if (found) return found;
+                }
               }
             }
             return undefined;
@@ -529,7 +677,10 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             });
           } else if (ref instanceof ShapeNode) {
             const sn = ref as ShapeNode;
-            const sw = sn.shape === 'line' ? 1 : (this.store.snapshot(s=>s.ui).strokeWidth || 4);
+            const sw =
+              sn.shape === 'line'
+                ? 1
+                : this.store.snapshot((s) => s.ui).strokeWidth || 4;
             this.store.setUI({
               color: sn.stroke,
               colorHex: this.utils.numberToHex(sn.stroke),
@@ -542,7 +693,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         // For iframe nodes: do not recreate/detach on selection changes; just ensure it's attached and non-interactive
         const selectedId = c.ids?.length === 1 ? c.ids[0] : undefined;
         if (selectedId) {
-          const ref = this.store.snapshot((s) => s.nodes)[selectedId]?.ref as NodeBase;
+          const ref = this.store.snapshot((s) => s.nodes)[selectedId]
+            ?.ref as NodeBase;
           if (ref instanceof IframeNode) {
             this.overlay.attachIframe(ref);
             this.overlay.setIframeInteractive(false);
@@ -570,10 +722,18 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     });
 
     this.bus.commands$
-      .pipe(filter((c): c is Extract<EditorCommand, { t: 'SNAP' }> => c.t === 'SNAP'))
+      .pipe(
+        filter(
+          (c): c is Extract<EditorCommand, { t: 'SNAP' }> => c.t === 'SNAP'
+        )
+      )
       .subscribe((cmd) => this.store.setSnap(cmd.on));
     this.bus.commands$
-      .pipe(filter((c): c is Extract<EditorCommand, { t: 'GUIDES' }> => c.t === 'GUIDES'))
+      .pipe(
+        filter(
+          (c): c is Extract<EditorCommand, { t: 'GUIDES' }> => c.t === 'GUIDES'
+        )
+      )
       .subscribe((cmd) => {
         const on = cmd.on;
         this.store.setGuides(on);
@@ -587,7 +747,9 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       for (const id of ids) {
         const ref = nodes[id]?.ref;
         if (ref) {
-          if (ref instanceof IframeNode) { this.overlay.detachIframe(); }
+          if (ref instanceof IframeNode) {
+            this.overlay.detachIframe();
+          }
           this.world.removeChild(ref);
           // Container.destroy supports options; ensure children are destroyed
           ref.destroy({ children: true });
@@ -612,12 +774,93 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           clone.x = ref.x + 24;
           clone.y = ref.y + 24;
           this.world.addChild(clone);
-          this.store.addNode({ id: clone.id, type: this.getNodeType(clone), ref: clone });
-          this.drag.bind(clone, new Subject<void>(), { cfg: this.cfg, store: this.store, guides: this.guides, world: this.world, app: this.app, bus: this.bus, utils: this.utils, overlay: this.overlay });
+          this.store.addNode({
+            id: clone.id,
+            type: this.getNodeType(clone),
+            ref: clone,
+          });
+          this.drag.bind(clone, new Subject<void>(), {
+            cfg: this.cfg,
+            store: this.store,
+            guides: this.guides,
+            world: this.world,
+            app: this.app,
+            bus: this.bus,
+            utils: this.utils,
+            overlay: this.overlay,
+          });
           newIds.push(clone.id);
         }
         if (newIds.length) this.bus.emit({ t: 'SELECT', ids: newIds });
       });
+
+    // Z-index commands: reorder selected nodes among top-level NodeBase children
+    const reorder = (mode: 'front' | 'back' | 'forward' | 'backward') => {
+      const selected = this.store.snapshot((s) => s.selectedIds) || [];
+      if (!selected.length) return;
+      const children = this.world.children;
+      const nodeChildren = children.filter(
+        (c): c is NodeBase => c instanceof NodeBase
+      );
+      if (!nodeChildren.length) return;
+      const indexOfInWorld = (n: NodeBase) => children.indexOf(n);
+      const firstWorldIndex = indexOfInWorld(nodeChildren[0]);
+      const lastWorldIndex = indexOfInWorld(
+        nodeChildren[nodeChildren.length - 1]
+      );
+
+      const isSelected = new Set(selected);
+      const selectedNodes = nodeChildren.filter((n) => isSelected.has(n.id));
+      if (!selectedNodes.length) return;
+
+      const moveToWorldIndex = (n: NodeBase, worldIndex: number) => {
+        const clamped = Math.max(0, Math.min(children.length - 1, worldIndex));
+        if (children.indexOf(n) !== clamped)
+          this.world.setChildIndex(n, clamped);
+      };
+
+      if (mode === 'front') {
+        // Keep relative order: process top-to-bottom order
+        let idx = lastWorldIndex;
+        for (const n of selectedNodes) {
+          moveToWorldIndex(n, idx);
+          idx++;
+        }
+      } else if (mode === 'back') {
+        let idx = firstWorldIndex;
+        for (const n of selectedNodes) {
+          moveToWorldIndex(n, idx);
+          idx++;
+        }
+      } else if (mode === 'forward' || mode === 'backward') {
+        const step = mode === 'forward' ? +1 : -1;
+        // For stable move, sort by current world index accordingly
+        const sorted = [...selectedNodes].sort(
+          (a, b) => indexOfInWorld(a) - indexOfInWorld(b)
+        );
+        const list = step > 0 ? sorted.reverse() : sorted; // moving forward: start from topmost
+        for (const n of list) {
+          const cur = indexOfInWorld(n);
+          const target = cur + step;
+          // Only swap if the neighbor is a NodeBase; otherwise skip
+          const neighbor = children[target];
+          if (neighbor instanceof NodeBase) moveToWorldIndex(n, target);
+        }
+      }
+    };
+
+    this.bus.commands$
+      .pipe(filter((c) => c.t === 'BRING_TO_FRONT'))
+      .subscribe(() => reorder('front'));
+    this.bus.commands$
+      .pipe(filter((c) => c.t === 'SEND_TO_BACK'))
+      .subscribe(() => reorder('back'));
+    this.bus.commands$
+      .pipe(filter((c) => c.t === 'BRING_FORWARD'))
+      .subscribe(() => reorder('forward'));
+    this.bus.commands$
+      .pipe(filter((c) => c.t === 'SEND_BACKWARD'))
+      .subscribe(() => reorder('backward'));
 
     // Initialize plugins
     const ctx: EditorContext = {
@@ -666,7 +909,9 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     return Texture.from(cvs);
   }
 
-  private getNodeType(n: NodeBase): 'text' | 'image' | 'video' | 'iframe' | 'shape' | 'group' | 'brush' {
+  private getNodeType(
+    n: NodeBase
+  ): 'text' | 'image' | 'video' | 'iframe' | 'shape' | 'group' | 'brush' {
     if (n instanceof TextNode) return 'text';
     if (n instanceof ImageNode) return 'image';
     if (n instanceof VideoNode) return 'video';
@@ -721,7 +966,9 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         if (!(ch instanceof NodeBase)) continue;
         const c = this.cloneNode(ch);
         if (!c) continue;
-        c.x = ch.x; c.y = ch.y; c.eventMode = 'none';
+        c.x = ch.x;
+        c.y = ch.y;
+        c.eventMode = 'none';
         g.addChild(c);
         childClones.push(c);
       }
@@ -743,7 +990,9 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       // copy path from internal BrushNode state; TypeScript doesn't expose it, so we use a typed view
       type HasPath = { path?: Point[] };
       const raw = src as unknown as HasPath; // specific structural type cast instead of any
-      const pts: Point[] = (raw.path ?? []).map((p: Point) => new Point(p.x, p.y));
+      const pts: Point[] = (raw.path ?? []).map(
+        (p: Point) => new Point(p.x, p.y)
+      );
       n.setPath(pts);
       return n;
     }
@@ -753,7 +1002,6 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   emit(cmd: EditorCommand) {
     this.bus.emit(cmd);
   }
-
 
   async onImageUrl() {
     const url = await this.dialog.askUrl('Image URL');
@@ -772,11 +1020,42 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     if (id) this.emit({ t: 'UNGROUP', id });
   }
 
+  async onSetBackground() {
+    const id = this.store.snapshot((s) => s.selectedIds)[0];
+    if (!id) return;
+    const url = await this.dialog.askUrl('Background image URL / data:');
+    if (url) this.emit({ t: 'SET_TEXT_BACKGROUND', url });
+  }
+
+  onClearBackground() {
+    this.emit({ t: 'CLEAR_TEXT_BACKGROUND' });
+  }
+  onApplyBgFill() {
+    const color = this.store.snapshot((s) => s.ui).color || 0x000000;
+    this.emit({ t: 'SET_TEXT_BG_COLOR', color });
+  }
+
+  async onSetShapeBackground() {
+    const id = this.store.snapshot((s) => s.selectedIds)[0];
+    if (!id) return;
+    const url = await this.dialog.askUrl('Background image URL / data:');
+    if (url) this.emit({ t: 'SET_SHAPE_BACKGROUND', url });
+  }
+  onApplyShapeFill() {
+    const color = this.store.snapshot((s) => s.ui).color || 0x000000;
+    this.emit({ t: 'SET_SHAPE_FILL', color });
+  }
+
   onContextMenu(e: MouseEvent) {
     e.preventDefault();
     this.ctxMenu?.open(e.clientX, e.clientY);
   }
 }
 
-@Component({ selector: 'lyri-test-pixi-editor-v2', standalone: true, imports: [CommonModule, PixiSlideEditorV2Component], template: `<lyri-pixi-slide-editor-v2/>` })
+@Component({
+  selector: 'lyri-test-pixi-editor-v2',
+  standalone: true,
+  imports: [CommonModule, PixiSlideEditorV2Component],
+  template: `<lyri-pixi-slide-editor-v2 />`,
+})
 export class TestPixiEditorV2Component {}

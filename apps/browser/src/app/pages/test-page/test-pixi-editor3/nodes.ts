@@ -38,8 +38,15 @@ export class TextNode extends NodeBase {
   private fitScheduled = false;
   private readonly textDisplay = new Text({ text: '' });
 
+  // Background: either solid fill via Graphics, or image via Sprite scaled to cover
+  private bgFillColor: number | null = null;
+  private readonly bgG = new Graphics();
+  private bgSprite?: Sprite;
+
   constructor(private readonly app: Application, private readonly fitter: TextFitService) {
     super();
+    // Rendering order: background (solid/image) -> text -> handles
+    this.addChild(this.bgG);
     this.addChild(this.textDisplay);
     this.addChild(this.handlesContainer);
     this.drawFrame();
@@ -50,9 +57,66 @@ export class TextNode extends NodeBase {
     this.w = w;
     this.h = h;
     this.drawFrame();
+    this.updateBackgroundLayout();
     this.drawHandles();
     // Recompute the best font size whenever the text box size changes
     this.requestFit();
+  }
+
+  /** Set solid background color behind text */
+  setBackgroundFill(color: number | null) {
+    this.bgFillColor = color == null ? null : (color >>> 0);
+    this.redrawBackground();
+  }
+
+  /** Apply an image background (URL/blob/data). */
+  async setBackground(url: string) {
+    try {
+      const tex = await loadTextureRobust(url);
+      if (!this.bgSprite) {
+        this.bgSprite = new Sprite(tex);
+        this.bgSprite.anchor.set(0.5);
+        this.bgSprite.position.set(this.w / 2, this.h / 2);
+        this.addChildAt(this.bgSprite, Math.max(0, this.getChildIndex(this.textDisplay) - 1));
+      } else {
+        this.bgSprite.texture = tex;
+      }
+      this.updateBackgroundLayout();
+      this.redrawBackground();
+    } catch (e) {
+      console.warn('Failed to set text background:', e);
+    }
+  }
+
+  /** Remove image background */
+  clearBackground() {
+    if (this.bgSprite) { this.bgSprite.destroy(); this.bgSprite = undefined; }
+    this.redrawBackground();
+  }
+
+  private updateBackgroundLayout() {
+    if (this.bgSprite) {
+      const tex = this.bgSprite.texture;
+      const tw = Math.max(1, tex.width);
+      const th = Math.max(1, tex.height);
+      const scale = Math.max(this.w / tw, this.h / th); // cover
+      this.bgSprite.scale.set(scale);
+      this.bgSprite.position.set(this.w / 2, this.h / 2);
+    }
+    this.redrawBackground();
+  }
+
+  private redrawBackground() {
+    // Solid fill
+    this.bgG.clear();
+    if (this.bgFillColor != null) {
+      this.bgG.roundRect(0, 0, this.w, this.h, 6).fill(this.bgFillColor);
+    }
+    // Ensure z-order: bgG and bgSprite behind text
+    if (this.children?.length) {
+      // keep handles last
+      this.addChild(this.handlesContainer);
+    }
   }
 
   /**
@@ -300,27 +364,95 @@ export class ShapeNode extends NodeBase {
   fill = 0x000000;
   lineWidth = 2;
   private shapeG = new Graphics();
+  // Optional background sprite masked by the shape for image fills
+  private bgSprite?: Sprite;
+  private maskG?: Graphics;
 
   constructor(kind: 'rect' | 'ellipse' | 'line' = 'rect') {
     super();
     this.shape = kind;
-    // insert shape graphics above the selection frame but below handles
+    // Insert order: background sprite (if any) -> shape graphics (stroke/fallback fill) -> handles
+    // Start with shape graphics
     this.addChild(this.shapeG);
     this.addChild(this.handlesContainer);
     this.redraw();
     this.drawHandles(true);
   }
 
+  /** Set solid fill color for the shape (used when no background image is set). */
+  setFillColor(color: number) {
+    this.fill = color >>> 0;
+    this.redraw();
+  }
+
+  /** Apply a background image by URL/data/blob. Only works for rect/ellipse. */
+  async setBackground(url: string) {
+    if (this.shape === 'line') return; // not supported for open line
+    try {
+      const tex = await loadTextureRobust(url);
+      if (!this.bgSprite) {
+        this.bgSprite = new Sprite(tex);
+        this.bgSprite.anchor.set(0.5);
+        this.bgSprite.position.set(this.w / 2, this.h / 2);
+        // ensure background is behind the stroke graphics
+        this.addChildAt(this.bgSprite, Math.max(0, this.getChildIndex(this.shapeG)));
+      } else {
+        this.bgSprite.texture = tex;
+      }
+      // Mask setup/update
+      if (!this.maskG) {
+        this.maskG = new Graphics();
+        this.addChildAt(this.maskG, this.getChildIndex(this.shapeG));
+        this.bgSprite.mask = this.maskG;
+      }
+      this.updateBackgroundLayout();
+      this.redraw();
+    } catch (e) {
+      console.warn('Failed to set background:', e);
+    }
+  }
+
+  /** Remove background image and mask, falling back to solid fill. */
+  clearBackground() {
+    if (this.bgSprite) { this.bgSprite.destroy(); this.bgSprite = undefined; }
+    if (this.maskG) { this.maskG.destroy(); this.maskG = undefined; }
+    this.redraw();
+  }
+
+  /** Update bg sprite scale/position and mask shape to current box. */
+  private updateBackgroundLayout() {
+    if (!this.bgSprite) return;
+    // scale image to cover the shape bounds
+    const tex = this.bgSprite.texture;
+    const tw = Math.max(1, tex.width);
+    const th = Math.max(1, tex.height);
+    const scale = Math.max(this.w / tw, this.h / th); // cover
+    this.bgSprite.scale.set(scale);
+    this.bgSprite.position.set(this.w / 2, this.h / 2);
+
+    // (re)draw mask to the shape path
+    if (this.maskG) {
+      const m = this.maskG;
+      m.clear();
+      if (this.shape === 'rect') {
+        m.roundRect(0, 0, this.w, this.h, 6).fill(0xffffff);
+      } else if (this.shape === 'ellipse') {
+        m.ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2).fill(0xffffff);
+      }
+    }
+  }
+
   private redraw() {
     const graphics = this.shapeG;
     graphics.clear();
     if (this.shape === 'rect') {
+      // If background image exists, skip solid fill and only draw stroke on top
+      if (!this.bgSprite) graphics.roundRect(0, 0, this.w, this.h, 6).fill(this.fill);
       graphics.roundRect(0, 0, this.w, this.h, 6)
-        .fill(this.fill)
         .stroke({ color: this.stroke, width: this.lineWidth });
     } else if (this.shape === 'ellipse') {
+      if (!this.bgSprite) graphics.ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2).fill(this.fill);
       graphics.ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2)
-        .fill(this.fill)
         .stroke({ color: this.stroke, width: this.lineWidth });
     } else {
       // Line shape: always render as 1px thick regardless of box height
@@ -329,12 +461,14 @@ export class ShapeNode extends NodeBase {
       graphics.moveTo(0, midY).lineTo(this.w, midY)
         .stroke({ color: this.stroke, width: thickness, cap: 'round' as const });
     }
+    this.updateBackgroundLayout();
   }
 
   applyBoxSize(w: number, h: number): void {
     this.w = w;
     // For line shape, lock height to 1px regardless of input
     this.h = this.shape === 'line' ? 1 : h;
+    this.updateBackgroundLayout();
     this.redraw();
     this.drawHandles();
   }

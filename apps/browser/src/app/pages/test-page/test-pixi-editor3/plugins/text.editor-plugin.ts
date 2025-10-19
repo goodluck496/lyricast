@@ -104,5 +104,33 @@ export class TextPlugin implements EditorPlugin {
       }
       ctx.store.setUI(patch);
     });
+
+    // Text background commands
+    const applyToSelection = (fn: (node: TextNode) => void) => {
+      const selectedIds = ctx.store.snapshot((s) => s.selectedIds);
+      const nodeMap = ctx.store.snapshot((s) => s.nodes);
+      const visit = (n: NodeBase) => {
+        if (n instanceof TextNode) fn(n);
+        else if (n instanceof GroupNode) {
+          for (const ch of n.children) if (ch instanceof NodeBase) visit(ch);
+        }
+      };
+      for (const id of selectedIds) {
+        const n = nodeMap[id]?.ref as NodeBase | undefined;
+        if (n) visit(n);
+      }
+    };
+
+    ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_TEXT_BACKGROUND')).subscribe((cmd) => {
+      const url = (cmd as Extract<EditorCommand, { t: 'SET_TEXT_BACKGROUND' }>).url;
+      applyToSelection((t) => { void t.setBackground(url); });
+    });
+    ctx.bus.commands$.pipe(filter((c) => c.t === 'CLEAR_TEXT_BACKGROUND')).subscribe(() => {
+      applyToSelection((t) => t.clearBackground());
+    });
+    ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_TEXT_BG_COLOR')).subscribe((cmd) => {
+      const color = (cmd as Extract<EditorCommand, { t: 'SET_TEXT_BG_COLOR' }>).color >>> 0;
+      applyToSelection((t) => t.setBackgroundFill(color));
+    });
   }
 }

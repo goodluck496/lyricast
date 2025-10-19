@@ -28,19 +28,47 @@ export class ClipboardPlugin implements EditorPlugin {
           const file = item.getAsFile(); if (!file) continue;
           if (file.type.startsWith('image/')) {
             const url = URL.createObjectURL(file);
-            ctx.bus.emit({ t: 'ADD_IMAGE', url, x: 100, y: 100 });
+            const sel = ctx.store.snapshot(s => s.selectedIds) || [];
+            const nodes = ctx.store.snapshot(s => s.nodes);
+            const hasTextSel = sel.some(id => nodes[id]?.type === 'text');
+            const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
+            if (hasTextSel) {
+              ctx.bus.emit({ t: 'SET_TEXT_BACKGROUND', url });
+            } else if (hasShapeSel) {
+              ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url });
+            } else {
+              ctx.bus.emit({ t: 'ADD_IMAGE', url, x: 100, y: 100 });
+            }
           }
         } else if (item.kind === 'string') {
           item.getAsString((raw) => {
             const str = raw.trim();
             // Support base64/data-URL images pasted as text
             if (/^data:image\//i.test(str)) {
-              ctx.bus.emit({ t: 'ADD_IMAGE', url: str, x: 120, y: 120 });
+              const sel = ctx.store.snapshot(s => s.selectedIds) || [];
+              const nodes = ctx.store.snapshot(s => s.nodes);
+              const hasTextSel = sel.some(id => nodes[id]?.type === 'text');
+              const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
+              if (hasTextSel) {
+                ctx.bus.emit({ t: 'SET_TEXT_BACKGROUND', url: str });
+              } else if (hasShapeSel) {
+                ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url: str });
+              } else {
+                ctx.bus.emit({ t: 'ADD_IMAGE', url: str, x: 120, y: 120 });
+              }
               return;
             }
             if (ctx.utils.isUrl(str)) {
-              if (ctx.utils.isImageUrl(str)) ctx.bus.emit({ t: 'ADD_IMAGE', url: str, x: 120, y: 120 });
-              else if (ctx.utils.isVideoUrl(str)) ctx.bus.emit({ t: 'ADD_VIDEO', url: str });
+              if (ctx.utils.isImageUrl(str)) {
+                const sel = ctx.store.snapshot(s => s.selectedIds) || [];
+                const nodes = ctx.store.snapshot(s => s.nodes);
+                const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
+                if (hasShapeSel) {
+                  ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url: str });
+                } else {
+                  ctx.bus.emit({ t: 'ADD_IMAGE', url: str, x: 120, y: 120 });
+                }
+              } else if (ctx.utils.isVideoUrl(str)) ctx.bus.emit({ t: 'ADD_VIDEO', url: str });
               else ctx.bus.emit({ t: 'ADD_IFRAME', url: str });
             } else {
               ctx.bus.emit({ t: 'ADD_TEXT', x: 120, y: 120, text: str });

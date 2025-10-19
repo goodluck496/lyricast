@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { EditorContext, EditorPlugin } from '../core';
 import { filter } from 'rxjs/operators';
 import { EditorCommand } from '../services/command-bus.service';
+import { AddNodeCommand } from '../services/history-commands';
 import { Subject } from 'rxjs';
 import { FederatedPointerEvent } from 'pixi.js';
 import { DragResizeService } from '../services/drag-resize.service';
@@ -29,11 +30,25 @@ export class MediaPlugin implements EditorPlugin {
       imageNode.x = addImage.x ?? 120;
       imageNode.y = addImage.y ?? 100;
       imageNode.applyBoxSize(addImage.w ?? 400, addImage.h ?? 300);
-      ctx.world.addChild(imageNode);
-      const newId = imageNode.id;
-      ctx.store.addNode({ id: newId, type: 'image', ref: imageNode });
-      this.drag.bind(imageNode, new Subject<void>(), { cfg: ctx.cfg, store: ctx.store, guides: ctx.guides, world: ctx.world, app: ctx.app, bus: ctx.bus, utils: ctx.utils, overlay: ctx.overlay });
-      ctx.bus.emit({ t: 'SELECT', ids: [newId] });
+      
+      const nodeState = { id: imageNode.id, type: 'image' as const, ref: imageNode };
+      
+      // Выполняем команду добавления через историю
+      const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
+      ctx.history.execute(command);
+      
+      this.drag.bind(imageNode, new Subject<void>(), { 
+        cfg: ctx.cfg, 
+        store: ctx.store, 
+        guides: ctx.guides, 
+        world: ctx.world, 
+        app: ctx.app, 
+        bus: ctx.bus, 
+        utils: ctx.utils, 
+        overlay: ctx.overlay,
+        history: ctx.history
+      });
+      ctx.bus.emit({ t: 'SELECT', ids: [imageNode.id] });
     });
 
     // ADD_VIDEO
@@ -78,26 +93,54 @@ export class MediaPlugin implements EditorPlugin {
         iframeNode.x = addVideo.x ?? 180;
         iframeNode.y = addVideo.y ?? 160;
         iframeNode.applyBoxSize(addVideo.w ?? 640, addVideo.h ?? 360);
-        ctx.world.addChild(iframeNode);
-        const newId = iframeNode.id;
-        ctx.store.addNode({ id: newId, type: 'iframe', ref: iframeNode });
-        this.drag.bind(iframeNode, new Subject<void>(), { cfg: ctx.cfg, store: ctx.store, guides: ctx.guides, world: ctx.world, app: ctx.app, bus: ctx.bus, utils: ctx.utils, overlay: ctx.overlay });
+        
+        const nodeState = { id: iframeNode.id, type: 'iframe' as const, ref: iframeNode };
+        
+        // Выполняем команду добавления через историю
+        const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
+        ctx.history.execute(command);
+        
+        this.drag.bind(iframeNode, new Subject<void>(), { 
+          cfg: ctx.cfg, 
+          store: ctx.store, 
+          guides: ctx.guides, 
+          world: ctx.world, 
+          app: ctx.app, 
+          bus: ctx.bus, 
+          utils: ctx.utils, 
+          overlay: ctx.overlay,
+          history: ctx.history
+        });
         ctx.overlay.attachIframe(iframeNode);
         // enable temporary interaction with double-click
         ctx.utils
           .fromPixi<FederatedPointerEvent>(iframeNode, 'pointertap')
           .pipe(filter((evt) => evt.detail >= 2))
           .subscribe(() => ctx.overlay.setIframeInteractive(true));
-        ctx.bus.emit({ t: 'SELECT', ids: [newId] });
+        ctx.bus.emit({ t: 'SELECT', ids: [iframeNode.id] });
       } else {
         const videoNode = new VideoNode(addVideo.url);
         videoNode.x = addVideo.x ?? 160;
         videoNode.y = addVideo.y ?? 140;
         videoNode.applyBoxSize(addVideo.w ?? 480, addVideo.h ?? 320);
-        ctx.world.addChild(videoNode);
-        const newId = videoNode.id;
-        ctx.store.addNode({ id: newId, type: 'video', ref: videoNode });
-        this.drag.bind(videoNode, new Subject<void>(), { cfg: ctx.cfg, store: ctx.store, guides: ctx.guides, world: ctx.world, app: ctx.app, bus: ctx.bus, utils: ctx.utils, overlay: ctx.overlay });
+        
+        const nodeState = { id: videoNode.id, type: 'video' as const, ref: videoNode };
+        
+        // Выполняем команду добавления через историю
+        const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
+        ctx.history.execute(command);
+        
+        this.drag.bind(videoNode, new Subject<void>(), { 
+          cfg: ctx.cfg, 
+          store: ctx.store, 
+          guides: ctx.guides, 
+          world: ctx.world, 
+          app: ctx.app, 
+          bus: ctx.bus, 
+          utils: ctx.utils, 
+          overlay: ctx.overlay,
+          history: ctx.history
+        });
         // double-click to toggle play/pause if underlying HTMLVideoElement is present
         ctx.utils
           .fromPixi<FederatedPointerEvent>(videoNode, 'pointertap')
@@ -118,7 +161,9 @@ export class MediaPlugin implements EditorPlugin {
               }
             }
           });
-        ctx.bus.emit({ t: 'SELECT', ids: [newId] });
+
+          ctx.bus.emit({ t: 'SELECT', ids: [nodeState.id] });
+        // ctx.bus.emit({ t: 'SELECT', ids: [newId] });
       }
     });
 

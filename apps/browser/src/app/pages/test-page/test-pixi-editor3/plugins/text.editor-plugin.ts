@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { EditorContext, EditorPlugin, NodeBase } from '../core';
 import { filter } from 'rxjs/operators';
 import { EditorCommand } from '../services/command-bus.service';
+import { AddNodeCommand } from '../services/history-commands';
 import { Subject } from 'rxjs';
 import { FederatedPointerEvent } from 'pixi.js';
 import { TextFitService } from '../services/text-fit.service';
@@ -32,12 +33,15 @@ export class TextPlugin implements EditorPlugin {
       textNode.y = addText.y ?? 80;
       textNode.applyBoxSize(addText.w ?? 600, addText.h ?? 240);
       textNode.text = addText.text ?? 'New text';
-      ctx.world.addChild(textNode);
       void textNode.layout();
 
-      const newId = textNode.id;
-      ctx.store.addNode({ id: newId, type: 'text', ref: textNode });
-      ctx.bus.emit({ t: 'SELECT', ids: [newId] });
+      const nodeState = { id: textNode.id, type: 'text' as const, ref: textNode };
+      
+      // Выполняем команду добавления через историю
+      const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
+      ctx.history.execute(command);
+      
+      ctx.bus.emit({ t: 'SELECT', ids: [textNode.id] });
       ctx.guides.draw([]);
 
       const destroy$ = new Subject<void>();
@@ -50,6 +54,7 @@ export class TextPlugin implements EditorPlugin {
         bus: ctx.bus,
         utils: ctx.utils,
         overlay: ctx.overlay,
+        history: ctx.history,
       });
 
       // Double-click to edit in an overlay textarea

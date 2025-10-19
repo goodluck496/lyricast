@@ -21,7 +21,7 @@ import {
 } from 'pixi.js';
 import { DEFAULT_CONFIG, EDITOR_CONFIG } from './types';
 import { EDITOR_PLUGINS, EditorContext, EditorPlugin, NodeBase } from './core';
-import { EditorStore } from './services/editor-store.service';
+import { EditorStore, NodeState } from './services/editor-store.service';
 import {
   CommandBusService,
   EditorCommand,
@@ -31,6 +31,12 @@ import { TextFitService } from './services/text-fit.service';
 import { DialogService } from './services/dialog.service';
 import { DragResizeService } from './services/drag-resize.service';
 import { OverlayService } from './services/overlay.service';
+import { HistoryService } from './services/history.service';
+import { 
+  RemoveNodeCommand, 
+  DuplicateNodesCommand, 
+  BatchCommand 
+} from './services/history-commands';
 import { GuideLayer } from './guides';
 import {
   BrushPlugin,
@@ -122,7 +128,7 @@ type WorldContainer = Container & { app: Application };
 
         <button
           (click)="emit({ t: 'GROUP', ids: vm.selectedIds })"
-          [disabled]="(vm.selectedIds?.length || 0) < 2"
+          [disabled]="(vm.selectedIds.length || 0) < 2"
         >
           Group
         </button>
@@ -131,15 +137,31 @@ type WorldContainer = Container & { app: Application };
         </button>
         <button
           (click)="emit({ t: 'DUPLICATE' })"
-          [disabled]="!vm.selectedIds?.length"
+          [disabled]="!vm.selectedIds.length"
         >
           Duplicate
         </button>
         <button
           (click)="emit({ t: 'DELETE' })"
-          [disabled]="!vm.selectedIds?.length"
+          [disabled]="!vm.selectedIds.length"
         >
           Delete
+        </button>
+        <span class="sep"></span>
+
+        <button
+          (click)="onUndo()"
+          [disabled]="!(canUndo$ | async)"
+          title="Undo (Ctrl+Z)"
+        >
+          ↶ Undo
+        </button>
+        <button
+          (click)="onRedo()"
+          [disabled]="!(canRedo$ | async)"
+          title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
+        >
+          ↷ Redo
         </button>
         <span class="sep"></span>
 
@@ -373,55 +395,48 @@ type WorldContainer = Container & { app: Application };
   ],
   providers: [
     { provide: EDITOR_CONFIG, useValue: DEFAULT_CONFIG },
-    EditorUtilsService,
-    CommandBusService,
     EditorStore,
+    CommandBusService,
+    EditorUtilsService,
     TextFitService,
-    DialogService,
     DragResizeService,
+    DialogService,
     OverlayService,
-    TextPlugin,
-    MediaPlugin,
-    IframePlugin,
-    ShapesPlugin,
-    BrushPlugin,
-    GroupingPlugin,
-    ClipboardPlugin,
-    TextFitService,
+    HistoryService,
     // Multi providers for EDITOR_PLUGINS token
     {
       provide: EDITOR_PLUGINS,
-      useFactory: () => inject(TextPlugin) as EditorPlugin,
+      useClass: TextPlugin,
       multi: true,
     },
     {
       provide: EDITOR_PLUGINS,
-      useFactory: () => inject(MediaPlugin) as EditorPlugin,
+      useClass: MediaPlugin,
       multi: true,
     },
     {
       provide: EDITOR_PLUGINS,
-      useFactory: () => inject(IframePlugin) as EditorPlugin,
+      useClass: IframePlugin,
       multi: true,
     },
     {
       provide: EDITOR_PLUGINS,
-      useFactory: () => inject(ShapesPlugin) as EditorPlugin,
+      useClass: ShapesPlugin,
       multi: true,
     },
     {
       provide: EDITOR_PLUGINS,
-      useFactory: () => inject(BrushPlugin) as EditorPlugin,
+      useClass: BrushPlugin,
       multi: true,
     },
     {
       provide: EDITOR_PLUGINS,
-      useFactory: () => inject(GroupingPlugin) as EditorPlugin,
+      useClass: GroupingPlugin,
       multi: true,
     },
     {
       provide: EDITOR_PLUGINS,
-      useFactory: () => inject(ClipboardPlugin) as EditorPlugin,
+      useClass: ClipboardPlugin,
       multi: true,
     },
   ],
@@ -445,6 +460,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   readonly bus = inject(CommandBusService);
   readonly utils = inject(EditorUtilsService);
   readonly overlay = inject(OverlayService);
+  readonly history = inject(HistoryService);
   private readonly zone = inject(NgZone);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -461,6 +477,10 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   private plugins = inject(EDITOR_PLUGINS);
 
   vm$ = this.store.select((state) => state);
+  
+  // History observables для кнопок Undo/Redo
+  canUndo$ = this.history.canUndo$;
+  canRedo$ = this.history.canRedo$;
 
   private destroy$ = new Subject<void>();
   private ctxMenu?: ContextMenuService;
@@ -587,13 +607,31 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         this.ctxMenu?.open(event.clientX, event.clientY);
       });
 
-    // Hotkeys: Delete to remove, Esc to deselect (when not typing in inputs)
+    // Hotkeys: Delete to remove, Esc to deselect, Undo/Redo (when not typing in inputs)
     fromEvent<KeyboardEvent>(window, 'keydown')
       .pipe(takeUntil(this.destroy$))
       .subscribe((event) => {
         const tagName = (event.target as HTMLElement | null)?.tagName;
         const isEditable = (event.target as HTMLElement | null)?.isContentEditable;
         if (tagName === 'INPUT' || tagName === 'TEXTAREA' || isEditable) return;
+        
+        // Undo: Ctrl/Cmd + Z
+        if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+          event.preventDefault();
+          this.history.undo();
+          return;
+        }
+        
+        // Redo: Ctrl/Cmd + Shift + Z или Ctrl/Cmd + Y
+        if ((event.ctrlKey || event.metaKey) && (
+          (event.key === 'z' && event.shiftKey) || 
+          event.key === 'y'
+        )) {
+          event.preventDefault();
+          this.history.redo();
+          return;
+        }
+        
         // Select all: Ctrl/Cmd + A using layout-agnostic code
         if ((event.ctrlKey || event.metaKey) && event.code === 'KeyA') {
           event.preventDefault();
@@ -623,7 +661,10 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
 
     // Global command handlers
     this.bus.commands$
-      .pipe(filter((command) => command.t === 'SELECT'))
+      .pipe(
+        filter((command) => command.t === 'SELECT'),
+        takeUntil(this.destroy$)
+      )
       .subscribe((cmd) => {
         const selectCommand = cmd as Extract<EditorCommand, { t: 'SELECT' }>;
         this.store.setSelection(selectCommand.ids);
@@ -736,7 +777,12 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       });
 
-    this.bus.commands$.pipe(filter((command) => command.t === 'ZOOM')).subscribe((cmd) => {
+    this.bus.commands$
+      .pipe(
+        filter((command) => command.t === 'ZOOM'),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((cmd) => {
       const zoomCommand = cmd as Extract<EditorCommand, { t: 'ZOOM' }>;
       this.store.setZoom(zoomCommand.z);
       this.world.scale.set(zoomCommand.z);
@@ -753,14 +799,16 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       .pipe(
         filter(
           (command): command is Extract<EditorCommand, { t: 'SNAP' }> => command.t === 'SNAP'
-        )
+        ),
+        takeUntil(this.destroy$)
       )
       .subscribe((cmd) => this.store.setSnap(cmd.on));
     this.bus.commands$
       .pipe(
         filter(
           (command): command is Extract<EditorCommand, { t: 'GUIDES' }> => command.t === 'GUIDES'
-        )
+        ),
+        takeUntil(this.destroy$)
       )
       .subscribe((cmd) => {
         const isEnabled = cmd.on;
@@ -769,30 +817,60 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         this.guides.draw([]);
       });
 
-    this.bus.commands$.pipe(filter((command) => command.t === 'DELETE')).subscribe(() => {
+    this.bus.commands$
+      .pipe(
+        filter((command) => command.t === 'DELETE'),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
       const selectedIds = this.store.snapshot((state) => state.selectedIds);
       const allNodes = this.store.snapshot((state) => state.nodes);
+      
+      // Создаём батч-команду для удаления всех выделенных узлов
+      const removeCommands: RemoveNodeCommand[] = [];
+      
       for (const nodeId of selectedIds) {
-        const nodeRef = allNodes[nodeId]?.ref;
-        if (nodeRef) {
-          if (nodeRef instanceof IframeNode) {
-            this.overlay.detachIframe();
-          }
-          this.world.removeChild(nodeRef);
-          // Container.destroy supports options; ensure children are destroyed
-          nodeRef.destroy({ children: true });
+        const nodeState = allNodes[nodeId];
+        if (nodeState) {
+          const worldIndex = this.world.children.indexOf(nodeState.ref);
+          const command = new RemoveNodeCommand(
+            nodeState,
+            this.world,
+            this.store,
+            worldIndex
+          );
+          removeCommands.push(command);
         }
-        this.store.removeNode(nodeId);
       }
-      this.bus.emit({ t: 'SELECT', ids: [] });
+      
+      if (removeCommands.length > 0) {
+        // Выполняем батч-команду через историю
+        const batchCommand = new BatchCommand(
+          removeCommands,
+          `Удалить узлы (${removeCommands.length})`
+        );
+        this.history.execute(batchCommand);
+        
+        // Очищаем iframe overlay если был удалён iframe
+        if (selectedIds.some(id => allNodes[id]?.ref instanceof IframeNode)) {
+          this.overlay.detachIframe();
+        }
+        
+        // Очищаем выделение
+        this.bus.emit({ t: 'SELECT', ids: [] });
+      }
     });
 
     this.bus.commands$
-      .pipe(filter((command) => command.t === 'DUPLICATE'))
+      .pipe(
+        filter((command) => command.t === 'DUPLICATE'),
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => {
         const selectedIds = this.store.snapshot((state) => state.selectedIds);
         const allNodes = this.store.snapshot((state) => state.nodes);
-        const newIds: string[] = [];
+        const addedNodes: NodeState[] = [];
+        
         for (const nodeId of selectedIds) {
           const nodeState = allNodes[nodeId];
           if (!nodeState) continue;
@@ -801,12 +879,15 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           if (!clonedNode) continue;
           clonedNode.x = originalNode.x + 24;
           clonedNode.y = originalNode.y + 24;
-          this.world.addChild(clonedNode);
-          this.store.addNode({
+          
+          // Создаём состояние для нового узла
+          const newNodeState: NodeState = {
             id: clonedNode.id,
             type: this.getNodeType(clonedNode),
             ref: clonedNode,
-          });
+          };
+          
+          // Привязываем drag-resize
           this.drag.bind(clonedNode, new Subject<void>(), {
             cfg: this.cfg,
             store: this.store,
@@ -816,10 +897,22 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             bus: this.bus,
             utils: this.utils,
             overlay: this.overlay,
+            history: this.history,
           });
-          newIds.push(clonedNode.id);
+          
+          addedNodes.push(newNodeState);
         }
-        if (newIds.length) this.bus.emit({ t: 'SELECT', ids: newIds });
+        
+        if (addedNodes.length > 0) {
+          // Выполняем команду дублирования через историю
+          const command = new DuplicateNodesCommand(
+            addedNodes,
+            this.world,
+            this.store,
+            this.bus
+          );
+          this.history.execute(command);
+        }
       });
 
     // Z-index commands: reorder selected nodes among top-level NodeBase children
@@ -878,21 +971,36 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     };
 
     this.bus.commands$
-      .pipe(filter((command) => command.t === 'BRING_TO_FRONT'))
+      .pipe(
+        filter((command) => command.t === 'BRING_TO_FRONT'),
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => reorder('front'));
     this.bus.commands$
-      .pipe(filter((command) => command.t === 'SEND_TO_BACK'))
+      .pipe(
+        filter((command) => command.t === 'SEND_TO_BACK'),
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => reorder('back'));
     this.bus.commands$
-      .pipe(filter((command) => command.t === 'BRING_FORWARD'))
+      .pipe(
+        filter((command) => command.t === 'BRING_FORWARD'),
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => reorder('forward'));
     this.bus.commands$
-      .pipe(filter((command) => command.t === 'SEND_BACKWARD'))
+      .pipe(
+        filter((command) => command.t === 'SEND_BACKWARD'),
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => reorder('backward'));
 
     // Enable iframe/video interactive mode
     this.bus.commands$
-      .pipe(filter((command) => command.t === 'ENABLE_IFRAME_INTERACTIVE'))
+      .pipe(
+        filter((command) => command.t === 'ENABLE_IFRAME_INTERACTIVE'),
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => {
         const selectedId = this.store.snapshot((state) => state.selectedIds)[0];
         if (!selectedId) return;
@@ -913,8 +1021,9 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       overlay: this.overlay,
       guides: this.guides,
       cfg: this.cfg,
+      history: this.history,
     };
-    this.plugins.forEach((p) => p.init(ctx));
+    this.plugins.forEach((plugin) => plugin.init(ctx));
 
     // Demo nodes (optional)
     this.bus.emit({
@@ -1042,6 +1151,20 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
 
   emit(cmd: EditorCommand) {
     this.bus.emit(cmd);
+  }
+
+  /**
+   * Отменяет последнее действие в истории.
+   */
+  onUndo() {
+    this.history.undo();
+  }
+
+  /**
+   * Повторяет отменённое действие.
+   */
+  onRedo() {
+    this.history.redo();
   }
 
   async onImageUrl() {

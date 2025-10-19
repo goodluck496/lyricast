@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { EditorContext, EditorPlugin } from '../core';
 import { filter } from 'rxjs/operators';
 import { EditorCommand } from '../services/command-bus.service';
+import { AddNodeCommand } from '../services/history-commands';
 import { IframeNode } from '../nodes';
 import { Subject } from 'rxjs';
 import { FederatedPointerEvent } from 'pixi.js';
@@ -45,16 +46,33 @@ export class IframePlugin implements EditorPlugin {
       };
       const embedUrl = isYouTube ? toYouTubeEmbed(addIframe.url) : isVimeo ? toVimeoEmbed(addIframe.url) : addIframe.url;
       const node = new IframeNode(embedUrl);
-      node.x = addIframe.x ?? 180; node.y = addIframe.y ?? 160; node.applyBoxSize(addIframe.w ?? 640, addIframe.h ?? 360);
-      ctx.world.addChild(node);
-      const id = node.id; ctx.store.addNode({ id, type: 'iframe', ref: node });
-      this.drag.bind(node, new Subject<void>(), { cfg: ctx.cfg, store: ctx.store, guides: ctx.guides, world: ctx.world, app: ctx.app, bus: ctx.bus, utils: ctx.utils, overlay: ctx.overlay });
+      node.x = addIframe.x ?? 180; 
+      node.y = addIframe.y ?? 160; 
+      node.applyBoxSize(addIframe.w ?? 640, addIframe.h ?? 360);
+      
+      const nodeState = { id: node.id, type: 'iframe' as const, ref: node };
+      
+      // Выполняем команду добавления через историю
+      const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
+      ctx.history.execute(command);
+      
+      this.drag.bind(node, new Subject<void>(), { 
+        cfg: ctx.cfg, 
+        store: ctx.store, 
+        guides: ctx.guides, 
+        world: ctx.world, 
+        app: ctx.app, 
+        bus: ctx.bus, 
+        utils: ctx.utils, 
+        overlay: ctx.overlay,
+        history: ctx.history
+      });
       ctx.overlay.attachIframe(node);
       // enable temporary interaction with double-click
       ctx.utils.fromPixi<FederatedPointerEvent>(node, 'pointertap')
         .pipe(filter((evt) => evt.detail >= 2))
         .subscribe(() => ctx.overlay.setIframeInteractive(true));
-      ctx.bus.emit({ t: 'SELECT', ids: [id] });
+      ctx.bus.emit({ t: 'SELECT', ids: [node.id] });
     });
   }
 }

@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { fromEvent, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { EditorStore } from './editor-store.service';
+import { HistoryService } from './history.service';
+import { ChangeTextCommand } from './history-commands';
 import { INLINE_TEXTAREA_MAX_FONT_PX } from '../types';
 import { TextNode, IframeNode, VideoNode } from '../nodes';
 import { NodeBase } from '../core';
@@ -12,7 +14,10 @@ export class OverlayService {
   private textareaEl?: HTMLTextAreaElement;
   private iframeEl?: HTMLIFrameElement;
 
-  constructor(private readonly store: EditorStore) {}
+  constructor(
+    private readonly store: EditorStore,
+    private readonly history: HistoryService
+  ) {}
 
   setHost(element: HTMLDivElement) { this.hostEl = element; }
 
@@ -29,6 +34,7 @@ export class OverlayService {
   }
 
   private editingTextNode?: TextNode;
+  private originalText?: string;
 
   attachTextarea(node: TextNode, opts?: { onClose?: () => void }) {
     if (!this.hostEl) return;
@@ -36,6 +42,9 @@ export class OverlayService {
     const bounds = node.getBounds();
     const ta = document.createElement('textarea');
     ta.value = node.text;
+    
+    // Сохраняем оригинальный текст для истории
+    this.originalText = node.text;
 
     const scaleY = bounds.height / node.h;
     const deg = (node.rotation || 0) * 180 / Math.PI;
@@ -62,9 +71,23 @@ export class OverlayService {
     const finish = (commit: boolean) => {
       const currentTA = this.textareaEl;
       const currentNode = this.editingTextNode;
-      if (commit && currentNode && currentTA) { currentNode.text = currentTA.value; currentNode.requestFit(); }
+      const originalText = this.originalText;
+      
+      if (commit && currentNode && currentTA) { 
+        const newText = currentTA.value;
+        currentNode.text = newText; 
+        currentNode.requestFit();
+        
+        // Сохраняем изменение текста в историю, если текст действительно изменился
+        if (originalText !== undefined && originalText !== newText) {
+          const command = new ChangeTextCommand(currentNode, originalText, newText);
+          this.history.execute(command);
+        }
+      }
+      
       this.textareaEl = undefined;
       this.editingTextNode = undefined;
+      this.originalText = undefined;
       this.safeRemove(currentTA || ta);
       opts?.onClose?.();
       done$.next();
@@ -112,10 +135,25 @@ export class OverlayService {
   commitAndCloseTextarea() {
     const ta = this.textareaEl;
     const node = this.editingTextNode;
+    const originalText = this.originalText;
+    
     if (!ta) return;
-    if (node) { node.text = ta.value; node.requestFit(); }
+    
+    if (node) { 
+      const newText = ta.value;
+      node.text = newText; 
+      node.requestFit();
+      
+      // Сохраняем изменение текста в историю, если текст действительно изменился
+      if (originalText !== undefined && originalText !== newText) {
+        const command = new ChangeTextCommand(node, originalText, newText);
+        this.history.execute(command);
+      }
+    }
+    
     this.textareaEl = undefined;
     this.editingTextNode = undefined;
+    this.originalText = undefined;
     this.safeRemove(ta);
   }
 

@@ -4,6 +4,8 @@ import { merge, Subject } from 'rxjs';
 import { auditTime, filter, map, switchMap, takeUntil, tap } from 'rxjs/operators';
 import { EditorConfig } from '../types';
 import { EditorStore } from './editor-store.service';
+import { HistoryService } from './history.service';
+import { MoveNodeCommand, ResizeNodeCommand, RotateNodeCommand } from './history-commands';
 import { GuideLayer } from '../guides';
 import { CommandBusService } from './command-bus.service';
 import { EditorUtilsService } from './editor-utils.service';
@@ -37,6 +39,7 @@ export class DragResizeService {
       bus: CommandBusService;
       utils: EditorUtilsService;
       overlay?: OverlayService;
+      history?: HistoryService;
     }
   ) {
     node.eventMode = 'static';
@@ -85,9 +88,23 @@ export class DragResizeService {
             }
             const snapped = ctx.guides.snap(node, nextX, nextY, node.w, node.h);
             ctx.guides.draw(snapped.lines);
-            return { x: snapped.x, y: snapped.y };
+            return { x: snapped.x, y: snapped.y, startX: startState.origin.x, startY: startState.origin.y };
           }),
-          takeUntil(up$),
+          takeUntil(up$.pipe(tap(() => {
+            // При завершении перемещения сохраняем команду в историю
+            const finalX = node.x;
+            const finalY = node.y;
+            if (ctx.history && (finalX !== startState.origin.x || finalY !== startState.origin.y)) {
+              const command = new MoveNodeCommand(
+                node,
+                startState.origin.x,
+                startState.origin.y,
+                finalX,
+                finalY
+              );
+              ctx.history.execute(command);
+            }
+          }))),
         )
       ),
       takeUntil(destroy$)
@@ -102,12 +119,18 @@ export class DragResizeService {
 
     type RotateResult = { kind: 'rotate'; rotation: number; centerX: number; centerY: number; boxW: number; boxH: number };
     type ResizeResult = { kind: 'resize'; nextX: number; nextY: number; nextW: number; nextH: number; rotation: number; anchorWorld: { x: number; y: number }; handleName: string };
+    type StartState = { 
+      handleName: string; 
+      start: { x: number; y: number }; 
+      begin: { x: number; y: number; w: number; h: number; rotation: number }; 
+      anchorWorld: { x: number; y: number } 
+    };
 
     Object.entries(node.handleRects).forEach(([handleName, handleGraphic]) => {
       if (!handleGraphic) return;
       ctx.utils.fromPixi<FederatedPointerEvent>(handleGraphic, 'pointerdown').pipe(
         tap((event) => event.stopPropagation()),
-        map((event) => {
+        map((event): StartState => {
           const startPoint = ctx.utils.toWorldLocal(event, ctx.world);
           const begin = { x: node.x, y: node.y, w: node.w, h: node.h, rotation: node.rotation };
           const handleKey = handleName as string;
@@ -148,18 +171,55 @@ export class DragResizeService {
               }
               const minW = 80; const minH = 40;
               let nextX = startState.begin.x; let nextY = startState.begin.y; let nextW = startState.begin.w; let nextH = startState.begin.h;
-              if ((startState as { handleName: string }).handleName.includes('e')) nextW = Math.max(minW, worldPoint.x - startState.begin.x);
-              if ((startState as { handleName: string }).handleName.includes('s')) nextH = Math.max(minH, worldPoint.y - startState.begin.y);
-              if ((startState as { handleName: string }).handleName.includes('w')) { const px = Math.min(startState.begin.x + startState.begin.w - minW, worldPoint.x); nextW = Math.max(minW, startState.begin.x + startState.begin.w - px); nextX = px; }
-              if ((startState as { handleName: string }).handleName.includes('n')) { const py = Math.min(startState.begin.y + startState.begin.h - minH, worldPoint.y); nextH = Math.max(minH, startState.begin.y + startState.begin.h - py); nextY = py; }
+              if (startState.handleName.includes('e')) nextW = Math.max(minW, worldPoint.x - startState.begin.x);
+              if (startState.handleName.includes('s')) nextH = Math.max(minH, worldPoint.y - startState.begin.y);
+              if (startState.handleName.includes('w')) { const px = Math.min(startState.begin.x + startState.begin.w - minW, worldPoint.x); nextW = Math.max(minW, startState.begin.x + startState.begin.w - px); nextX = px; }
+              if (startState.handleName.includes('n')) { const py = Math.min(startState.begin.y + startState.begin.h - minH, worldPoint.y); nextH = Math.max(minH, startState.begin.y + startState.begin.h - py); nextY = py; }
               const snapEnabled = ctx.store.snapshot(s => s.snapEnabled);
               if (node.snap && snapEnabled) { nextW = ctx.utils.snap(nextW, ctx.cfg.resizeSnap); nextH = ctx.utils.snap(nextH, ctx.cfg.resizeSnap); nextX = ctx.utils.snap(nextX, ctx.cfg.resizeSnap); nextY = ctx.utils.snap(nextY, ctx.cfg.resizeSnap); }
               const snapped = ctx.guides.snap(node, nextX, nextY, nextW, nextH);
               ctx.guides.draw(snapped.lines);
-              const result: ResizeResult = { kind: 'resize', nextX: snapped.x, nextY: snapped.y, nextW, nextH, rotation: startState.begin.rotation, anchorWorld: (startState as { anchorWorld: {x:number;y:number} }).anchorWorld, handleName: (startState as { handleName: string }).handleName };
+              const result: ResizeResult = { kind: 'resize', nextX: snapped.x, nextY: snapped.y, nextW, nextH, rotation: startState.begin.rotation, anchorWorld: startState.anchorWorld, handleName: startState.handleName };
               return result;
             }),
-            takeUntil(up$),
+            takeUntil(up$.pipe(tap(() => {
+              // При завершении resize/rotate сохраняем команду в историю
+              if (ctx.history) {
+                if (startState.handleName === 'rot') {
+                  // Сохраняем команду поворота
+                  const finalRotation = node.rotation;
+                  if (finalRotation !== startState.begin.rotation) {
+                    const command = new RotateNodeCommand(
+                      node,
+                      startState.begin.rotation,
+                      finalRotation
+                    );
+                    ctx.history.execute(command);
+                  }
+                } else {
+                  // Сохраняем команду изменения размера
+                  const finalX = node.x;
+                  const finalY = node.y;
+                  const finalW = node.w;
+                  const finalH = node.h;
+                  if (finalX !== startState.begin.x || finalY !== startState.begin.y || 
+                      finalW !== startState.begin.w || finalH !== startState.begin.h) {
+                    const command = new ResizeNodeCommand(
+                      node,
+                      startState.begin.w,
+                      startState.begin.h,
+                      startState.begin.x,
+                      startState.begin.y,
+                      finalW,
+                      finalH,
+                      finalX,
+                      finalY
+                    );
+                    ctx.history.execute(command);
+                  }
+                }
+              }
+            }))),
           )
         ),
         takeUntil(destroy$)

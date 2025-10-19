@@ -3,6 +3,7 @@ import { Application, Container, Graphics, Rectangle } from 'pixi.js';
 import { EditorStore } from './services/editor-store.service';
 import { CommandBusService } from './services/command-bus.service';
 import { EditorUtilsService } from './services/editor-utils.service';
+import { HistoryService } from './services/history.service';
 import { EditorConfig } from './types';
 import { OverlayService } from './services/overlay.service';
 import { GuideLayer } from './guides';
@@ -72,6 +73,9 @@ export interface EditorContext {
   
   /** Конфигурация редактора */
   cfg: EditorConfig;
+  
+  /** Сервис управления историей изменений (Undo/Redo) */
+  history: HistoryService;
 }
 
 /**

@@ -3,7 +3,7 @@ import { fromEvent, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { EditorStore } from './editor-store.service';
 import { INLINE_TEXTAREA_MAX_FONT_PX } from '../types';
-import { TextNode, IframeNode } from '../nodes';
+import { TextNode, IframeNode, VideoNode } from '../nodes';
 import { NodeBase } from '../core';
 
 @Injectable()
@@ -81,7 +81,7 @@ export class OverlayService {
 
   private iframeForNodeId?: string;
 
-  attachIframe(node: IframeNode) {
+  attachIframe(node: IframeNode | VideoNode) {
     if (!this.hostEl) return;
     const b = node.getBounds();
     if (this.iframeEl && this.iframeForNodeId === node.id) {

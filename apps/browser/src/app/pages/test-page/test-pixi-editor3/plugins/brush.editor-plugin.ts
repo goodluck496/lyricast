@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { EditorContext, EditorPlugin } from '../core';
+import { EditorContext, EditorPlugin, NodeBase } from '../core';
 import { filter } from 'rxjs/operators';
-import { BrushNode } from '../nodes';
+import { BrushNode, GroupNode } from '../nodes';
 import { Subject } from 'rxjs';
 import { DragResizeService } from '../services/drag-resize.service';
 import { FederatedPointerEvent, Point } from 'pixi.js';
@@ -102,5 +102,30 @@ export class BrushPlugin implements EditorPlugin {
         ctx.app.stage.on('pointerup', onUp);
         (ctx.app.canvas as unknown as { style?: CSSStyleDeclaration }).style!.cursor = 'crosshair';
       });
+
+    // Обработка команд для фона brush-элементов
+    const applyToSelection = (fn: (node: BrushNode) => void) => {
+      const selectedIds = ctx.store.snapshot((s) => s.selectedIds);
+      const nodeMap = ctx.store.snapshot((s) => s.nodes);
+      const visit = (n: NodeBase) => {
+        if (n instanceof BrushNode) fn(n);
+        else if (n instanceof GroupNode) {
+          for (const ch of n.children) if (ch instanceof NodeBase) visit(ch);
+        }
+      };
+      for (const id of selectedIds) {
+        const n = nodeMap[id]?.ref as NodeBase | undefined;
+        if (n) visit(n);
+      }
+    };
+
+    ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_BRUSH_BACKGROUND')).subscribe((cmd) => {
+      const url = (cmd as Extract<import('../services/command-bus.service').EditorCommand, { t: 'SET_BRUSH_BACKGROUND' }>).url;
+      applyToSelection((b) => { void b.setBackground(url); });
+    });
+    
+    ctx.bus.commands$.pipe(filter((c) => c.t === 'CLEAR_BRUSH_BACKGROUND')).subscribe(() => {
+      applyToSelection((b) => b.clearBackground());
+    });
   }
 }

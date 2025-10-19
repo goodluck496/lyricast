@@ -23,36 +23,52 @@ export class ClipboardPlugin implements EditorPlugin {
 
       const clipboard = event.clipboardData; if (!clipboard) return;
       const items = clipboard.items;
+      let imageProcessed = false; // Флаг для отслеживания обработки изображения
       for (const item of Array.from(items)) {
         if (item.kind === 'file') {
           const file = item.getAsFile(); if (!file) continue;
           if (file.type.startsWith('image/')) {
+            imageProcessed = true; // Отмечаем, что изображение обработано
             const url = URL.createObjectURL(file);
             const sel = ctx.store.snapshot(s => s.selectedIds) || [];
             const nodes = ctx.store.snapshot(s => s.nodes);
             const hasTextSel = sel.some(id => nodes[id]?.type === 'text');
             const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
+            const hasBrushSel = sel.some(id => nodes[id]?.type === 'brush');
             if (hasTextSel) {
               ctx.bus.emit({ t: 'SET_TEXT_BACKGROUND', url });
             } else if (hasShapeSel) {
               ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url });
+            } else if (hasBrushSel) {
+              ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', url });
             } else {
               ctx.bus.emit({ t: 'ADD_IMAGE', url, x: 100, y: 100 });
             }
           }
         } else if (item.kind === 'string') {
           item.getAsString((raw) => {
+            // Если изображение уже обработано, игнорируем HTML/текст из буфера
+            if (imageProcessed) return;
+            
             const str = raw.trim();
+            // Игнорируем HTML-фрагменты с изображениями (они приходят вместе с file)
+            if (/^<html>|<!--StartFragment-->/.test(str) && /<img\s+src=/.test(str)) {
+              return;
+            }
+            
             // Support base64/data-URL images pasted as text
             if (/^data:image\//i.test(str)) {
               const sel = ctx.store.snapshot(s => s.selectedIds) || [];
               const nodes = ctx.store.snapshot(s => s.nodes);
               const hasTextSel = sel.some(id => nodes[id]?.type === 'text');
               const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
+              const hasBrushSel = sel.some(id => nodes[id]?.type === 'brush');
               if (hasTextSel) {
                 ctx.bus.emit({ t: 'SET_TEXT_BACKGROUND', url: str });
               } else if (hasShapeSel) {
                 ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url: str });
+              } else if (hasBrushSel) {
+                ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', url: str });
               } else {
                 ctx.bus.emit({ t: 'ADD_IMAGE', url: str, x: 120, y: 120 });
               }
@@ -63,8 +79,11 @@ export class ClipboardPlugin implements EditorPlugin {
                 const sel = ctx.store.snapshot(s => s.selectedIds) || [];
                 const nodes = ctx.store.snapshot(s => s.nodes);
                 const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
+                const hasBrushSel = sel.some(id => nodes[id]?.type === 'brush');
                 if (hasShapeSel) {
                   ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url: str });
+                } else if (hasBrushSel) {
+                  ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', url: str });
                 } else {
                   ctx.bus.emit({ t: 'ADD_IMAGE', url: str, x: 120, y: 120 });
                 }

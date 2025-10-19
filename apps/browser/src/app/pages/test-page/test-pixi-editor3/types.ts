@@ -1,44 +1,163 @@
 import { InjectionToken } from '@angular/core';
+import { TextAlign } from './enums';
 
-// Shared editor UI types and DI tokens extracted from the monolithic component
-export type Align = 'left' | 'center' | 'right';
+/**
+ * Типы и токены для конфигурации редактора PixiJS.
+ * 
+ * Этот файл содержит интерфейсы для настройки редактора,
+ * стилей текста и DI-токены для Angular.
+ */
 
+/**
+ * Псевдоним для обратной совместимости.
+ * @deprecated Используйте TextAlign из enums.ts
+ */
+export type Align = TextAlign;
+
+/**
+ * Стили текста для UI-контролов редактора.
+ * 
+ * Этот интерфейс описывает все параметры стилизации текста,
+ * которые могут быть изменены через панель инструментов.
+ */
 export interface UiTextStyles {
+  /** Семейство шрифтов (например, 'Inter, system-ui, sans-serif') */
   font: string;
+  
+  /** Насыщенность шрифта (например, '400', '600', '700') */
   weight: string;
-  color: number;       // Pixi fill (0xffffff)
-  colorHex: string;    // UI control mirror ("#ffffff")
-  align: Align;
-  lineHeight: number;  // multiplier relative to font size
-  min: number;         // min font size
-  max: number;         // max font size
-  list: boolean;       // render as bulleted list
-  strokeWidth?: number; // used by brush/line shapes
+  
+  /** Цвет заливки в формате Pixi.js (например, 0xffffff для белого) */
+  color: number;
+  
+  /** Цвет в HEX-формате для HTML input[type=color] (например, '#ffffff') */
+  colorHex: string;
+  
+  /** Горизонтальное выравнивание текста */
+  align: TextAlign;
+  
+  /** Множитель межстрочного интервала относительно размера шрифта (например, 1.2) */
+  lineHeight: number;
+  
+  /** Минимальный размер шрифта в пикселях */
+  min: number;
+  
+  /** Максимальный размер шрифта в пикселях */
+  max: number;
+  
+  /** Отображать текст как маркированный список (добавляет '•' перед каждой строкой) */
+  list: boolean;
+  
+  /** Ширина обводки для кисти и линий (опционально) */
+  strokeWidth?: number;
 }
 
+/**
+ * Конфигурация сетки редактора.
+ */
+export interface GridConfig {
+  /** Размер ячейки сетки в пикселях */
+  size: number;
+  
+  /** Толщина линий сетки в пикселях */
+  line: number;
+  
+  /** Цвет линий сетки в HEX-формате */
+  color: string;
+  
+  /** Прозрачность линий сетки (0-1) */
+  alpha: number;
+}
+
+/**
+ * Конфигурация направляющих линий (guides).
+ */
+export interface GuidesConfig {
+  /** Включены ли направляющие по умолчанию */
+  enabled: boolean;
+  
+  /** Порог привязки к направляющим в пикселях */
+  threshold: number;
+  
+  /** Цвет направляющих линий в HEX-формате */
+  color: string;
+  
+  /** Прозрачность направляющих линий (0-1) */
+  alpha: number;
+}
+
+/**
+ * Настройки по умолчанию для текстовых узлов.
+ */
+export interface TextDefaults {
+  /** Минимальный размер шрифта по умолчанию */
+  textMin: number;
+  
+  /** Максимальный размер шрифта по умолчанию */
+  textMax: number;
+  
+  /** Семейство шрифтов по умолчанию */
+  family: string;
+  
+  /** Насыщенность шрифта по умолчанию */
+  weight: string;
+  
+  /** Выравнивание текста по умолчанию */
+  align: TextAlign;
+  
+  /** Межстрочный интервал по умолчанию */
+  lineHeight: number;
+  
+  /** Шаг изменения размера шрифта при подборе (в пикселях) */
+  fitStep: number;
+  
+  /** Отступ от краев блока при подборе размера (в пикселях) */
+  fitMargin: number;
+  
+  /** Окно поиска оптимального размера шрифта (в пикселях) */
+  fitWindow: number;
+  
+  /** Количество шагов мертвой зоны для стабилизации подбора */
+  deadbandSteps: number;
+}
+
+/**
+ * Основная конфигурация редактора.
+ * 
+ * Содержит все настройки для работы редактора: цвета, сетку,
+ * привязку, направляющие и параметры по умолчанию.
+ */
 export interface EditorConfig {
+  /** Цвет фона canvas в HEX-формате */
   background: string;
-  grid: { size: number; line: number; color: string; alpha: number };
+  
+  /** Настройки сетки */
+  grid: GridConfig;
+  
+  /** Шаг привязки при перемещении узлов (в пикселях) */
   dragSnap: number;
+  
+  /** Шаг привязки при изменении размера узлов (в пикселях) */
   resizeSnap: number;
-  guides: { enabled: boolean; threshold: number; color: string; alpha: number };
-  defaults: {
-    textMin: number;
-    textMax: number;
-    family: string;
-    weight: string;
-    align: Align;
-    lineHeight: number;
-    fitStep: number;
-    fitMargin: number;
-    fitWindow: number;
-    deadbandSteps: number;
-  };
+  
+  /** Настройки направляющих линий */
+  guides: GuidesConfig;
+  
+  /** Настройки по умолчанию для текстовых узлов */
+  defaults: TextDefaults;
 }
 
+/**
+ * DI-токен для внедрения конфигурации редактора в Angular-сервисы.
+ */
 export const EDITOR_CONFIG = new InjectionToken<EditorConfig>('EDITOR_CONFIG');
 
-// Default editor configuration extracted from the component for reuse across sub-files
+/**
+ * Конфигурация редактора по умолчанию.
+ * 
+ * Эти значения используются при инициализации редактора,
+ * если не предоставлена пользовательская конфигурация.
+ */
 export const DEFAULT_CONFIG: EditorConfig = {
   background: '#000000',
   grid: { size: 20, line: 1, color: '#ffffff', alpha: 0.08 },
@@ -59,5 +178,10 @@ export const DEFAULT_CONFIG: EditorConfig = {
   },
 };
 
-// Max font size for inline textarea editor (px). Change here to adjust globally.
+/**
+ * Максимальный размер шрифта для встроенного textarea-редактора (в пикселях).
+ * 
+ * Это значение ограничивает размер шрифта в overlay-редакторе,
+ * чтобы обеспечить удобство редактирования независимо от размера текста на canvas.
+ */
 export const INLINE_TEXTAREA_MAX_FONT_PX = 16;

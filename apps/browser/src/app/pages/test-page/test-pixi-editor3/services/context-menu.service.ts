@@ -106,15 +106,22 @@ export class ContextMenuService {
       addItem('Set background image…', async () => { const url = await this.askUrl('Background image URL / data:'); if (url) this.bus.emit({ t: 'SET_TEXT_BACKGROUND', url }); });
       addItem('Clear background', () => this.bus.emit({ t: 'CLEAR_TEXT_BACKGROUND' }));
     }
-    addItem('Duplicate', () => this.bus.emit({ t: 'DUPLICATE' }));
-    addItem('Delete', () => this.bus.emit({ t: 'DELETE' }));
+    // Interactive mode for iframe and video
+    if (selectedType === 'iframe' || selectedType === 'video') {
+      addItem('🎬 Enable interaction', () => this.bus.emit({ t: 'ENABLE_IFRAME_INTERACTIVE' }));
+    }
+    
+    // Actions for selected elements only
+    if (hasSelection) {
+      addItem('Duplicate', () => this.bus.emit({ t: 'DUPLICATE' }));
+      addItem('Delete', () => this.bus.emit({ t: 'DELETE' }));
 
-    // Z-index controls
-    const sep = document.createElement('div'); Object.assign(sep.style, { borderTop: '1px solid #334155', margin: '6px 0' } as CSSStyleDeclaration);
-    el.appendChild(sep);
-    const safeAdd = (label: string, action: () => void) => addItem(label, () => { if (hasSelection) action(); });
-    safeAdd('Bring forward', () => this.bus.emit({ t: 'BRING_FORWARD' }));
-    safeAdd('Send backward', () => this.bus.emit({ t: 'SEND_BACKWARD' }));
+      // Z-index controls
+      const sep = document.createElement('div'); Object.assign(sep.style, { borderTop: '1px solid #334155', margin: '6px 0' } as CSSStyleDeclaration);
+      el.appendChild(sep);
+      addItem('Bring forward', () => this.bus.emit({ t: 'BRING_FORWARD' }));
+      addItem('Send backward', () => this.bus.emit({ t: 'SEND_BACKWARD' }));
+    }
 
     this.host.appendChild(el); this.menuEl = el;
 

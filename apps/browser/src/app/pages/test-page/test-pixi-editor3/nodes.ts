@@ -42,6 +42,7 @@ export class TextNode extends NodeBase {
   private bgFillColor: number | null = null;
   private readonly bgG = new Graphics();
   private bgSprite?: Sprite;
+  private maskG?: Graphics;
 
   constructor(private readonly app: Application, private readonly fitter: TextFitService) {
     super();
@@ -54,8 +55,11 @@ export class TextNode extends NodeBase {
   }
 
   applyBoxSize(w: number, h: number): void {
-    this.w = w;
-    this.h = h;
+    // Минимальный размер блока = минимальный размер шрифта + padding * 2
+    // Это гарантирует, что текст не выйдет за границы блока
+    const minSize = this.style.min + this.padding * 2;
+    this.w = Math.max(minSize, w);
+    this.h = Math.max(minSize, h);
     this.drawFrame();
     this.updateBackgroundLayout();
     this.drawHandles();
@@ -66,6 +70,15 @@ export class TextNode extends NodeBase {
   /** Set solid background color behind text */
   setBackgroundFill(color: number | null) {
     this.bgFillColor = color == null ? null : (color >>> 0);
+    // Если устанавливаем цвет, очищаем фоновое изображение
+    if (this.bgFillColor != null && this.bgSprite) {
+      this.bgSprite.destroy();
+      this.bgSprite = undefined;
+      if (this.maskG) {
+        this.maskG.destroy();
+        this.maskG = undefined;
+      }
+    }
     this.redrawBackground();
   }
 
@@ -73,6 +86,9 @@ export class TextNode extends NodeBase {
   async setBackground(url: string) {
     try {
       const tex = await loadTextureRobust(url);
+      // Если устанавливаем изображение, очищаем цветной фон
+      this.bgFillColor = null;
+      
       if (!this.bgSprite) {
         this.bgSprite = new Sprite(tex);
         this.bgSprite.anchor.set(0.5);
@@ -80,6 +96,12 @@ export class TextNode extends NodeBase {
         this.addChildAt(this.bgSprite, Math.max(0, this.getChildIndex(this.textDisplay) - 1));
       } else {
         this.bgSprite.texture = tex;
+      }
+      // Создаём маску для ограничения изображения границами блока
+      if (!this.maskG) {
+        this.maskG = new Graphics();
+        this.addChildAt(this.maskG, this.getChildIndex(this.textDisplay));
+        this.bgSprite.mask = this.maskG;
       }
       this.updateBackgroundLayout();
       this.redrawBackground();
@@ -91,6 +113,7 @@ export class TextNode extends NodeBase {
   /** Remove image background */
   clearBackground() {
     if (this.bgSprite) { this.bgSprite.destroy(); this.bgSprite = undefined; }
+    if (this.maskG) { this.maskG.destroy(); this.maskG = undefined; }
     this.redrawBackground();
   }
 
@@ -102,6 +125,11 @@ export class TextNode extends NodeBase {
       const scale = Math.max(this.w / tw, this.h / th); // cover
       this.bgSprite.scale.set(scale);
       this.bgSprite.position.set(this.w / 2, this.h / 2);
+    }
+    // Обновляем маску под новые размеры блока
+    if (this.maskG) {
+      this.maskG.clear();
+      this.maskG.roundRect(0, 0, this.w, this.h, 6).fill(0xffffff);
     }
     this.redrawBackground();
   }
@@ -287,6 +315,7 @@ export class ImageNode extends NodeBase {
 export class VideoNode extends NodeBase {
   readonly type = 'video' as const;
   sprite = new Sprite();
+  url = '';
 
   constructor(url?: string) {
     super();
@@ -299,6 +328,7 @@ export class VideoNode extends NodeBase {
   }
 
   async setUrl(url: string) {
+    this.url = url;
     try {
       const texture = (await Assets.load(url)) as Texture;
       if (!texture) throw new Error('Failed to load video texture');
@@ -382,6 +412,15 @@ export class ShapeNode extends NodeBase {
   /** Set solid fill color for the shape (used when no background image is set). */
   setFillColor(color: number) {
     this.fill = color >>> 0;
+    // Если устанавливаем цвет заливки, очищаем фоновое изображение
+    if (this.bgSprite) {
+      this.bgSprite.destroy();
+      this.bgSprite = undefined;
+      if (this.maskG) {
+        this.maskG.destroy();
+        this.maskG = undefined;
+      }
+    }
     this.redraw();
   }
 
@@ -468,7 +507,6 @@ export class ShapeNode extends NodeBase {
     this.w = w;
     // For line shape, lock height to 1px regardless of input
     this.h = this.shape === 'line' ? 1 : h;
-    this.updateBackgroundLayout();
     this.redraw();
     this.drawHandles();
   }
@@ -507,6 +545,9 @@ export class BrushNode extends NodeBase {
   strokeWidth = 4;
   private path: Point[] = [];
   private g = new Graphics();
+  // Background support for closed paths
+  private bgSprite?: Sprite;
+  private maskG?: Graphics;
 
   constructor() {
     super();
@@ -523,7 +564,77 @@ export class BrushNode extends NodeBase {
 
   setPath(points: Point[]) {
     this.path = points.map(p => new Point(p.x, p.y));
+    this.updateBackgroundLayout();
     this.redraw();
+  }
+
+  /** Проверяет, является ли путь замкнутым (расстояние между первой и последней точкой < 10px) */
+  isPathClosed(): boolean {
+    if (this.path.length < 3) return false;
+    const first = this.path[0];
+    const last = this.path[this.path.length - 1];
+    const dist = Math.sqrt((last.x - first.x) ** 2 + (last.y - first.y) ** 2);
+    return dist < 10;
+  }
+
+  /** Установить фоновое изображение (работает только для замкнутых путей) */
+  async setBackground(url: string) {
+    if (!this.isPathClosed()) {
+      console.warn('Cannot set background: path is not closed');
+      return;
+    }
+    try {
+      const tex = await loadTextureRobust(url);
+      if (!this.bgSprite) {
+        this.bgSprite = new Sprite(tex);
+        this.bgSprite.anchor.set(0.5);
+        this.bgSprite.position.set(this.w / 2, this.h / 2);
+        // Добавляем спрайт позади линии
+        this.addChildAt(this.bgSprite, Math.max(0, this.getChildIndex(this.g)));
+      } else {
+        this.bgSprite.texture = tex;
+      }
+      // Создаём маску из пути
+      if (!this.maskG) {
+        this.maskG = new Graphics();
+        this.addChildAt(this.maskG, this.getChildIndex(this.g));
+        this.bgSprite.mask = this.maskG;
+      }
+      this.updateBackgroundLayout();
+    } catch (e) {
+      console.warn('Failed to set brush background:', e);
+    }
+  }
+
+  /** Очистить фоновое изображение */
+  clearBackground() {
+    if (this.bgSprite) { this.bgSprite.destroy(); this.bgSprite = undefined; }
+    if (this.maskG) { this.maskG.destroy(); this.maskG = undefined; }
+  }
+
+  /** Обновить фон и маску */
+  private updateBackgroundLayout() {
+    if (this.bgSprite) {
+      const tex = this.bgSprite.texture;
+      const tw = Math.max(1, tex.width);
+      const th = Math.max(1, tex.height);
+      const scale = Math.max(this.w / tw, this.h / th); // cover
+      this.bgSprite.scale.set(scale);
+      this.bgSprite.position.set(this.w / 2, this.h / 2);
+    }
+    // Обновляем маску по форме пути
+    if (this.maskG && this.path.length > 0) {
+      this.maskG.clear();
+      this.maskG.moveTo(this.path[0].x, this.path[0].y);
+      for (const point of this.path) {
+        this.maskG.lineTo(point.x, point.y);
+      }
+      // Замыкаем путь для fill
+      if (this.isPathClosed()) {
+        this.maskG.closePath();
+      }
+      this.maskG.fill(0xffffff);
+    }
   }
 
   private redraw() {
@@ -541,6 +652,7 @@ export class BrushNode extends NodeBase {
     const scaleY = this.h > 0 ? h / this.h : 1;
     this.w = w; this.h = h;
     this.path = this.path.map(point => new Point(point.x * scaleX, point.y * scaleY));
+    this.updateBackgroundLayout();
     this.redraw();
     this.drawHandles();
   }

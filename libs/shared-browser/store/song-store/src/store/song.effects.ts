@@ -110,9 +110,7 @@ export class SongsPageEffects implements BaseEffectsWithBridgeInterface {
         }
 
         this.store.dispatch(
-          SongActions.startCasting({
-            ...data,
-          })
+          SongActions.startCasting(data)
         );
         return { type: SONG_ACTIONS.startCasting };
       })

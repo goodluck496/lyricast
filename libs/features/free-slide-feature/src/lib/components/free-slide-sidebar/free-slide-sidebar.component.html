@@ -16,7 +16,7 @@
     }
 
     <div class="flex">
-      <button pButton severity="danger" [disabled]="windowHasClose$ | async" (click)="onStopCasting()">Закрыть</button>
+      <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false" (click)="onStopCasting()">Закрыть</button>
     </div>
   </div>
 

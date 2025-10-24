@@ -84,7 +84,6 @@ function createBridgeEffect<A extends ActionCreator>({
 }
 
 function createOpenCastingEffect<State>({
-  startCastingAction,
   actions$,
   openCastingAction,
   openPageAction,
@@ -94,7 +93,6 @@ function createOpenCastingEffect<State>({
   bridge,
   store,
   featureName,
-  selectCastingProcess,
 }: CastingFlowOptions<State>) {
   const castingPath = { path: [featureName, 'casting'] };
 
@@ -104,15 +102,7 @@ function createOpenCastingEffect<State>({
       withLatestFrom(store.select(selectOpenedWindow)),
       switchMap(([, windowData]) => {
         if (windowData) {
-          store.dispatch(openPageAction(castingPath) as Action);
-
-          return of(EMPTY).pipe(
-            withLatestFrom(store.select(selectCastingProcess)),
-            tap(([, casting]) =>
-              console.log('send start action1', casting)
-            ),
-            map(([, casting]) => startCastingAction(casting) as Action)
-          );
+          return of(openPageAction(castingPath) as Action);
         }
 
         return getDisplayForCasting().pipe(
@@ -136,23 +126,7 @@ function createOpenCastingEffect<State>({
               filter(
                 (event) => !!event && event.event === APP_COMMON_ACTIONS.appInit
               ),
-              map(() => openPageAction(castingPath) as Action),
-              switchMap((action) => {
-                // теперь отправим экшен, затем начнем слушать openedPage
-                return concat(
-                  of(action),
-                  bridge.queueEvents.pipe(
-                    filter(
-                      (event) => event?.event === APP_COMMON_ACTIONS.openedPage
-                    ),
-                    withLatestFrom(store.select(selectCastingProcess)),
-                    tap(([, casting]) =>
-                      console.log('send start action', casting)
-                    ),
-                    map(([, casting]) => startCastingAction(casting) as Action)
-                  )
-                );
-              })
+              map(() => openPageAction(castingPath) as Action)
             )
           )
         );
@@ -171,7 +145,9 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     slideNavigateAction,
     bridge,
     actions$,
-    actionSource
+    actionSource,
+    store,
+    selectCastingProcess
   } = options;
 
   const openCasting$ = createOpenCastingEffect(options);
@@ -184,6 +160,24 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
         bridge.send(APP_COMMON_ACTIONS.openPage, data);
       }),
       map(() => ({ type: '[CastingFlow] openPage sent' }))
+    )
+  );
+
+  // Добавляем эффект для обработки openedPage, как в прямой реализации
+  const onOpenedPage$ = createEffect(() =>
+    actions$.pipe(
+      ofType(openPageAction),
+      switchMap(() => bridge.queueEvents),
+      withLatestFrom(store.select(selectCastingProcess)),
+      filter(
+        ([event]) => !!event && event.event === APP_COMMON_ACTIONS.openedPage
+      ),
+      map(([, data]) => {
+        if (!data) {
+          return pauseCastingAction() as Action;
+        }
+        return startCastingAction(data) as Action;
+      })
     )
   );
 
@@ -234,6 +228,7 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
   return {
     openCasting$,
     onOpenPage$,
+    onOpenedPage$,
     startCastingTrigger$,
     pauseCasting$,
     stopCasting$,

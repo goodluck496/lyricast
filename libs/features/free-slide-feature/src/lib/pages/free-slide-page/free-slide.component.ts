@@ -200,6 +200,9 @@ export class FreeSlideComponent implements AfterViewInit {
   }
 
   ngAfterViewInit() {
+    // Сброс состояния кастинга при инициализации free-slide фичи
+    this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
+    
     this.slides$.pipe(first()).subscribe((slides) => {
       const firstSlide = slides[0];
       if (firstSlide) {

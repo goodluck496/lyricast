@@ -15,7 +15,8 @@ import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { Store } from '@ngrx/store';
 import { Actions } from '@ngrx/effects';
 import { map, take } from 'rxjs';
-import { selectOpenedWindow, SidebarService } from '@lyri-cast/common-browser';
+import { selectOpenedWindow, SidebarService, AppActions } from '@lyri-cast/common-browser';
+import { AppWindowTypes } from '@lyri-cast/common-electron';
 
 import { SvgIconComponent } from '@lyri-cast/svg-icons';
 import { FreeSlideCastingPreviewComponent } from '../casting-preview/free-slide-casting-preview.component';
@@ -53,9 +54,14 @@ export class FreeSlideSidebarComponent {
   private readonly sidebarService = inject<SidebarService<any>>(SidebarService);
   private slideService = inject(FreeSlideService);
 
-  windowHasClose$ = this.store
+  openedCastingWindow$ = this.store
     .select(selectOpenedWindow)
-    .pipe(map((data) => !data));
+    .pipe(
+      map((e) => {
+        console.log('openedCastingWindow$', e, !!e);
+        return !!e;
+      })
+    );
   castingIsPaused$ = this.store.select(selectFreeSlideCastingPaused);
 
   onStartCasting() {
@@ -106,7 +112,12 @@ export class FreeSlideSidebarComponent {
   }
 
   onStopCasting() {
+    console.log('onStopCasting called');
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
+    // Закрываем окно кастинга
+    this.store.dispatch(AppActions.closeWindow({
+      windowType: AppWindowTypes.CASTING,
+    }));
   }
 
   onPauseCasting() {

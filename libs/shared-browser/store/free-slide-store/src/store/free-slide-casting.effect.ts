@@ -11,10 +11,11 @@ import {
   SettingsService,
   WindowService,
 } from '@lyri-cast/common-browser';
-import { Actions } from '@ngrx/effects';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { FreeSlideActions, FreeSlideActionsEnum, FreeSlideActionSource } from './free-slide.actions';
 import { EventData } from '@lyri-cast/common-electron';
 import { selectFreeSlideCastingProcess } from './free-slide.selectors';
+import { map } from 'rxjs';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   [FreeSlideActionsEnum.startCasting]: (eventData: EventData) =>
@@ -55,10 +56,15 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
 
   openCasting$ = this.base.openCasting$;
   onOpenPage$ = this.base.onOpenPage$;
+  onOpenedPage$ = this.base.onOpenedPage$;
   startCastingTrigger$ = this.base.startCastingTrigger$;
   pauseCasting$ = this.base.pauseCasting$;
   stopCasting$ = this.base.stopCasting$;
   castingStarted$ = this.base.castingStarted$;
   slideNavigate$ = this.base.slideNavigate$;
+
+
+
+
 
 }

@@ -6,7 +6,7 @@
   width: 100%;
   height: 100%;
 
-  --dash-box-item-h: 50px;
+  --dash-box-item-h: 54px;
 
   --dash-box-item-border-size: 2px;
   --dash-box-item-border-color: transparent;
@@ -75,7 +75,7 @@
     height: var(--dash-box-item-h);
     max-height: var(--dash-box-item-h);
     min-height: var(--dash-box-item-h);
-    width: calc(100% / 4);
+    width: calc(100% / 5);
     cursor: pointer;
     border-style: solid;
     border-width: var(--dash-box-item-border-size);

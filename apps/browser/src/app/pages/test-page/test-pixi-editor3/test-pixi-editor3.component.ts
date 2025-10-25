@@ -20,7 +20,7 @@ import {
   TilingSprite,
 } from 'pixi.js';
 import { DEFAULT_CONFIG, EDITOR_CONFIG } from './types';
-import { EDITOR_PLUGINS, EditorContext, EditorPlugin, NodeBase } from './core';
+import { EDITOR_PLUGINS, EditorContext, NodeBase } from './core';
 import { EditorStore, NodeState } from './services/editor-store.service';
 import {
   CommandBusService,
@@ -33,9 +33,9 @@ import { DragResizeService } from './services/drag-resize.service';
 import { OverlayService } from './services/overlay.service';
 import { HistoryService } from './services/history.service';
 import {
-  RemoveNodeCommand,
-  DuplicateNodesCommand,
   BatchCommand,
+  DuplicateNodesCommand,
+  RemoveNodeCommand,
 } from './services/history-commands';
 import { GuideLayer } from './guides';
 import {
@@ -59,6 +59,7 @@ import {
   TextNode,
   VideoNode,
 } from './nodes';
+import { HTML_EDITOR_COMPONENT, HtmlEditorComponent } from '@lyri-cast/form';
 
 type WorldContainer = Container & { app: Application };
 
@@ -321,19 +322,24 @@ type WorldContainer = Container & { app: Application };
             "
           />
         </label>
-        <label>
-          <input
-            type="checkbox"
-            [ngModel]="vm.ui.list"
-            (ngModelChange)="
-              emit({ t: 'APPLY_STYLE', patch: { list: !!$event } })
-            "
-          />
-          Bulleted
-        </label>
+        <!--        <label>-->
+        <!--          <input-->
+        <!--            type="checkbox"-->
+        <!--            [ngModel]="vm.ui.list"-->
+        <!--            (ngModelChange)="-->
+        <!--              emit({ t: 'APPLY_STYLE', patch: { list: !!$event } })-->
+        <!--            "-->
+        <!--          />-->
+        <!--          Bulleted-->
+        <!--        </label>-->
       </div>
     </ng-container>
-    <div class="host" #host (contextmenu)="onContextMenu($event)"></div>
+    <div
+      class="host"
+      tabindex="0"
+      #host
+      (contextmenu)="onContextMenu($event)"
+    ></div>
   `,
   styles: [
     `
@@ -439,6 +445,7 @@ type WorldContainer = Container & { app: Application };
       useClass: ClipboardPlugin,
       multi: true,
     },
+    { provide: HTML_EDITOR_COMPONENT, useValue: HtmlEditorComponent },
   ],
 })
 export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
@@ -545,7 +552,14 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       .fromPixi<FederatedPointerEvent>(this.app.stage, 'pointerdown')
       .pipe(
         tap((event) => event.preventDefault()),
-        filter((event) => event.target === this.app.stage),
+        filter((event) => {
+          /**
+           * Нужно для корректного отрабатывания событий возможных вложенных элементов в ноды
+           * например html редактор в textNode
+           */
+          return !(event.target instanceof NodeBase);
+          // return event.target === this.app.stage
+        }),
         takeUntil(this.destroy$)
       )
       .subscribe(() => {
@@ -740,7 +754,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
               lineHeight: textNode.style.lineHeight,
               min: textNode.style.min,
               max: textNode.style.max,
-              list: textNode.style.list,
+              // list: textNode.style.list,
             });
           } else if (nodeRef instanceof BrushNode) {
             this.store.setUI({
@@ -1053,7 +1067,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       t: 'ADD_TEXT',
       x: 120,
       y: 100,
-      text: 'Благодать <h1>ТВОЯ</h1>, как река, Наполняет сердце моё…',
+      text: 'Благодать твоя, как река, Наполняет сердце моё…',
     });
     this.bus.emit({
       t: 'ADD_TEXT',
@@ -1100,7 +1114,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   private cloneNode(src: NodeBase): NodeBase | null {
     if (src instanceof TextNode) {
       const n = new TextNode(this.app, this.textFit);
-      n.text = src.text;
+      n.textHtml = src.textHtml;
       n.style = { ...src.style };
       n.applyBoxSize(src.w, src.h);
       n.requestFit();

@@ -1,0 +1,12 @@
+<div class="rto-root" #root>
+  <p-editor
+    #editor
+    [(ngModel)]="model"
+    (onInit)="onReady()"
+    (onTextChange)="emitChange()"
+    (onSelectionChange)="onSelectionChange($event)"
+    [formats]="quillFormats"
+    [modules]="quillModules"
+    class="editor"
+  ></p-editor>
+</div>

@@ -50,7 +50,6 @@ export class PreviewSlideComponent {
         return;
       }
       this.slideText = slide.htmlString;
-      console.log('select?',slide);
 
       // await this.initDeck();
       await this.initReveal();

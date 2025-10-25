@@ -1,4 +1,4 @@
-import { Application, Assets, Container, Graphics, HTMLText, Point, Sprite, Texture } from 'pixi.js';
+import { Application, Assets, Container, Graphics, HTMLText, Text,  Point, Sprite, Texture } from 'pixi.js';
 import { DEFAULT_CONFIG, UiTextStyles } from './types';
 import { TextFitService } from './services/text-fit.service';
 import { NodeBase } from './core';
@@ -10,7 +10,7 @@ import { NodeBase } from './core';
 export class TextNode extends NodeBase {
   readonly type = 'text' as const;
 
-  text = 'Double-click to edit';
+  textHtml = 'Double-click to edit';
   style: UiTextStyles = {
     font: DEFAULT_CONFIG.defaults.family,
     weight: DEFAULT_CONFIG.defaults.weight,
@@ -20,7 +20,6 @@ export class TextNode extends NodeBase {
     max: DEFAULT_CONFIG.defaults.textMax,
     color: 0xffffff,
     colorHex: '#ffffff',
-    list: false,
   };
 
   private lastCalculatedFontSize = 32;
@@ -169,18 +168,11 @@ export class TextNode extends NodeBase {
    * Uses TextFitService.fitBinary to compute an optimal font size, then positions the Pixi Text.
    */
   async layout() {
-    const preparedText = this.style.list
-      ? this.text
-          .split(/ ?/)
-          .map((line) => (line.trim() ? `• ${line}` : ''))
-          .join('')
-      : this.text;
-
-    this.textDisplay.text = preparedText;
+    this.textDisplay.text = this.textHtml;
 
     const size = await this.fitter.fitBinary({
       app: this.app,
-      text: preparedText,
+      text: this.textHtml,
       boxW: this.w,
       boxH: this.h,
       padding: this.padding,

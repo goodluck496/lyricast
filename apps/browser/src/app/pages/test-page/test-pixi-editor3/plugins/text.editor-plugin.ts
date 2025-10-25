@@ -32,15 +32,15 @@ export class TextPlugin implements EditorPlugin {
       textNode.x = addText.x ?? 80;
       textNode.y = addText.y ?? 80;
       textNode.applyBoxSize(addText.w ?? 600, addText.h ?? 240);
-      textNode.text = addText.text ?? 'New text';
+      textNode.textHtml = addText.text ?? 'New text';
       void textNode.layout();
 
       const nodeState = { id: textNode.id, type: 'text' as const, ref: textNode };
-      
+
       // Выполняем команду добавления через историю
       const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
       ctx.history.execute(command);
-      
+
       ctx.bus.emit({ t: 'SELECT', ids: [textNode.id] });
       ctx.guides.draw([]);
 
@@ -78,7 +78,7 @@ export class TextPlugin implements EditorPlugin {
           if (typeof patch.max === 'number') node.style.max = patch.max;
           if (patch.align) node.style.align = patch.align as Align;
           if (typeof patch.lineHeight === 'number') node.style.lineHeight = patch.lineHeight;
-          if (patch.list != null) node.style.list = !!patch.list;
+          // if (patch.list != null) node.style.list = !!patch.list;
           if (patch.colorHex) {
             node.style.color = ctx.utils.colorToNumber(patch.colorHex);
             node.style.colorHex = patch.colorHex;

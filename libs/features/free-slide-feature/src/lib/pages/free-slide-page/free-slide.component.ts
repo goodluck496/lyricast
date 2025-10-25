@@ -6,7 +6,6 @@ import {
   DestroyRef,
   inject,
   viewChild,
-  viewChildren,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
@@ -22,7 +21,6 @@ import { DropdownModule } from 'primeng/dropdown';
 
 import Quill from 'quill';
 import QuillResizeImage from 'quill-resize-image';
-import { EditorTextChangeEvent } from 'primeng/editor/editor.interface';
 import { FreeSlideService } from './free-slide.service';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
@@ -36,6 +34,7 @@ import {
   FreeSlideActionsEnum,
   selectFreeSlideCastingStarted,
 } from '@lyri-cast/free-slide-store';
+import { HTML_EDITOR_COMPONENT, HtmlEditorComponent } from '@lyri-cast/form';
 
 Quill.register('modules/resize', QuillResizeImage);
 
@@ -57,7 +56,10 @@ Quill.register('modules/resize', QuillResizeImage);
   ],
   templateUrl: './free-slide.component.html',
   styleUrl: './free-slide.component.scss',
-  providers: [FreeSlideService],
+  providers: [
+    FreeSlideService,
+    { provide: HTML_EDITOR_COMPONENT, useValue: HtmlEditorComponent },
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FreeSlideComponent implements AfterViewInit {
@@ -139,7 +141,9 @@ export class FreeSlideComponent implements AfterViewInit {
     this.currentSlideId = slide.id;
     this.currentSlideIndex = slide.index;
 
-    this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.selectSlide](slide));
+    this.store.dispatch(
+      FreeSlideActions[FreeSlideActionsEnum.selectSlide](slide)
+    );
 
     const quill: Quill = this.editor().getQuill();
 
@@ -202,7 +206,7 @@ export class FreeSlideComponent implements AfterViewInit {
   ngAfterViewInit() {
     // Сброс состояния кастинга при инициализации free-slide фичи
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
-    
+
     this.slides$.pipe(first()).subscribe((slides) => {
       const firstSlide = slides[0];
       if (firstSlide) {

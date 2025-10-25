@@ -32,10 +32,10 @@ import { DialogService } from './services/dialog.service';
 import { DragResizeService } from './services/drag-resize.service';
 import { OverlayService } from './services/overlay.service';
 import { HistoryService } from './services/history.service';
-import { 
-  RemoveNodeCommand, 
-  DuplicateNodesCommand, 
-  BatchCommand 
+import {
+  RemoveNodeCommand,
+  DuplicateNodesCommand,
+  BatchCommand,
 } from './services/history-commands';
 import { GuideLayer } from './guides';
 import {
@@ -477,7 +477,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   private plugins = inject(EDITOR_PLUGINS);
 
   vm$ = this.store.select((state) => state);
-  
+
   // History observables для кнопок Undo/Redo
   canUndo$ = this.history.canUndo$;
   canRedo$ = this.history.canRedo$;
@@ -489,10 +489,12 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   ngAfterViewInit(): void {
     void this.initPixi();
     // track brush active state for toolbar button highlight
-    this.store.brushActive$.pipe(takeUntil(this.destroy$)).subscribe((isActive) => {
-      this.brushActive = isActive;
-      this.cdr.markForCheck();
-    });
+    this.store.brushActive$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((isActive) => {
+        this.brushActive = isActive;
+        this.cdr.markForCheck();
+      });
   }
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -587,8 +589,9 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         // If an iframe/video is selected and the right-click is inside it, enable interaction instead of opening menu
         const selectedId = this.store.snapshot((state) => state.selectedIds)[0];
         if (selectedId) {
-          const nodeRef = this.store.snapshot((state) => state.nodes)[selectedId]
-            ?.ref as NodeBase;
+          const nodeRef = this.store.snapshot((state) => state.nodes)[
+            selectedId
+          ]?.ref as NodeBase;
           if (nodeRef instanceof IframeNode || nodeRef instanceof VideoNode) {
             const bounds = nodeRef.getBounds();
             const margin = 10; // same inset as overlay
@@ -612,26 +615,31 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((event) => {
         const tagName = (event.target as HTMLElement | null)?.tagName;
-        const isEditable = (event.target as HTMLElement | null)?.isContentEditable;
+        const isEditable = (event.target as HTMLElement | null)
+          ?.isContentEditable;
         if (tagName === 'INPUT' || tagName === 'TEXTAREA' || isEditable) return;
-        
+
         // Undo: Ctrl/Cmd + Z
-        if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === 'z' &&
+          !event.shiftKey
+        ) {
           event.preventDefault();
           this.history.undo();
           return;
         }
-        
+
         // Redo: Ctrl/Cmd + Shift + Z или Ctrl/Cmd + Y
-        if ((event.ctrlKey || event.metaKey) && (
-          (event.key === 'z' && event.shiftKey) || 
-          event.key === 'y'
-        )) {
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          ((event.key === 'z' && event.shiftKey) || event.key === 'y')
+        ) {
           event.preventDefault();
           this.history.redo();
           return;
         }
-        
+
         // Select all: Ctrl/Cmd + A using layout-agnostic code
         if ((event.ctrlKey || event.metaKey) && event.code === 'KeyA') {
           event.preventDefault();
@@ -691,9 +699,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           this.selectedKind = undefined;
           if (!selectedIds.length) return;
           const firstId = selectedIds[0];
-          const nodeRef = this.store.snapshot((state) => state.nodes)[firstId]?.ref as
-            | NodeBase
-            | undefined;
+          const nodeRef = this.store.snapshot((state) => state.nodes)[firstId]
+            ?.ref as NodeBase | undefined;
           if (nodeRef instanceof TextNode) this.selectedKind = 'text';
           else if (nodeRef instanceof ImageNode) this.selectedKind = 'image';
           else if (nodeRef instanceof VideoNode) this.selectedKind = 'video';
@@ -758,9 +765,12 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
 
         // For iframe/video nodes: attach but keep non-interactive for drag/resize
         // Double-click or right-click inside will enable interaction
-        const selectedId = selectCommand.ids?.length === 1 ? selectCommand.ids[0] : undefined;
+        const selectedId =
+          selectCommand.ids?.length === 1 ? selectCommand.ids[0] : undefined;
         if (selectedId) {
-          const nodeRef = this.store.snapshot((state) => state.nodes)[selectedId]?.ref as NodeBase;
+          const nodeRef = this.store.snapshot((state) => state.nodes)[
+            selectedId
+          ]?.ref as NodeBase;
           if (nodeRef instanceof IframeNode || nodeRef instanceof VideoNode) {
             this.overlay.attachIframe(nodeRef);
             // Оставляем неинтерактивным для перемещения/изменения размера
@@ -783,22 +793,25 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe((cmd) => {
-      const zoomCommand = cmd as Extract<EditorCommand, { t: 'ZOOM' }>;
-      this.store.setZoom(zoomCommand.z);
-      this.world.scale.set(zoomCommand.z);
-      this.guides.draw([]);
-      this.updateSceneBounds(); // Обновляем границы при изменении zoom
-      const selectedId = this.store.snapshot((state) => state.selectedIds)[0];
-      if (selectedId) {
-        const nodeRef = this.store.snapshot((state) => state.nodes)[selectedId]?.ref as NodeBase;
-        if (nodeRef) this.overlay.syncToNode(nodeRef);
-      }
-    });
+        const zoomCommand = cmd as Extract<EditorCommand, { t: 'ZOOM' }>;
+        this.store.setZoom(zoomCommand.z);
+        this.world.scale.set(zoomCommand.z);
+        this.guides.draw([]);
+        this.updateSceneBounds(); // Обновляем границы при изменении zoom
+        const selectedId = this.store.snapshot((state) => state.selectedIds)[0];
+        if (selectedId) {
+          const nodeRef = this.store.snapshot((state) => state.nodes)[
+            selectedId
+          ]?.ref as NodeBase;
+          if (nodeRef) this.overlay.syncToNode(nodeRef);
+        }
+      });
 
     this.bus.commands$
       .pipe(
         filter(
-          (command): command is Extract<EditorCommand, { t: 'SNAP' }> => command.t === 'SNAP'
+          (command): command is Extract<EditorCommand, { t: 'SNAP' }> =>
+            command.t === 'SNAP'
         ),
         takeUntil(this.destroy$)
       )
@@ -806,7 +819,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     this.bus.commands$
       .pipe(
         filter(
-          (command): command is Extract<EditorCommand, { t: 'GUIDES' }> => command.t === 'GUIDES'
+          (command): command is Extract<EditorCommand, { t: 'GUIDES' }> =>
+            command.t === 'GUIDES'
         ),
         takeUntil(this.destroy$)
       )
@@ -823,43 +837,45 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe(() => {
-      const selectedIds = this.store.snapshot((state) => state.selectedIds);
-      const allNodes = this.store.snapshot((state) => state.nodes);
-      
-      // Создаём батч-команду для удаления всех выделенных узлов
-      const removeCommands: RemoveNodeCommand[] = [];
-      
-      for (const nodeId of selectedIds) {
-        const nodeState = allNodes[nodeId];
-        if (nodeState) {
-          const worldIndex = this.world.children.indexOf(nodeState.ref);
-          const command = new RemoveNodeCommand(
-            nodeState,
-            this.world,
-            this.store,
-            worldIndex
+        const selectedIds = this.store.snapshot((state) => state.selectedIds);
+        const allNodes = this.store.snapshot((state) => state.nodes);
+
+        // Создаём батч-команду для удаления всех выделенных узлов
+        const removeCommands: RemoveNodeCommand[] = [];
+
+        for (const nodeId of selectedIds) {
+          const nodeState = allNodes[nodeId];
+          if (nodeState) {
+            const worldIndex = this.world.children.indexOf(nodeState.ref);
+            const command = new RemoveNodeCommand(
+              nodeState,
+              this.world,
+              this.store,
+              worldIndex
+            );
+            removeCommands.push(command);
+          }
+        }
+
+        if (removeCommands.length > 0) {
+          // Выполняем батч-команду через историю
+          const batchCommand = new BatchCommand(
+            removeCommands,
+            `Удалить узлы (${removeCommands.length})`
           );
-          removeCommands.push(command);
+          this.history.execute(batchCommand);
+
+          // Очищаем iframe overlay если был удалён iframe
+          if (
+            selectedIds.some((id) => allNodes[id]?.ref instanceof IframeNode)
+          ) {
+            this.overlay.detachIframe();
+          }
+
+          // Очищаем выделение
+          this.bus.emit({ t: 'SELECT', ids: [] });
         }
-      }
-      
-      if (removeCommands.length > 0) {
-        // Выполняем батч-команду через историю
-        const batchCommand = new BatchCommand(
-          removeCommands,
-          `Удалить узлы (${removeCommands.length})`
-        );
-        this.history.execute(batchCommand);
-        
-        // Очищаем iframe overlay если был удалён iframe
-        if (selectedIds.some(id => allNodes[id]?.ref instanceof IframeNode)) {
-          this.overlay.detachIframe();
-        }
-        
-        // Очищаем выделение
-        this.bus.emit({ t: 'SELECT', ids: [] });
-      }
-    });
+      });
 
     this.bus.commands$
       .pipe(
@@ -870,7 +886,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         const selectedIds = this.store.snapshot((state) => state.selectedIds);
         const allNodes = this.store.snapshot((state) => state.nodes);
         const addedNodes: NodeState[] = [];
-        
+
         for (const nodeId of selectedIds) {
           const nodeState = allNodes[nodeId];
           if (!nodeState) continue;
@@ -879,14 +895,14 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           if (!clonedNode) continue;
           clonedNode.x = originalNode.x + 24;
           clonedNode.y = originalNode.y + 24;
-          
+
           // Создаём состояние для нового узла
           const newNodeState: NodeState = {
             id: clonedNode.id,
             type: this.getNodeType(clonedNode),
             ref: clonedNode,
           };
-          
+
           // Привязываем drag-resize
           this.drag.bind(clonedNode, new Subject<void>(), {
             cfg: this.cfg,
@@ -899,10 +915,10 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             overlay: this.overlay,
             history: this.history,
           });
-          
+
           addedNodes.push(newNodeState);
         }
-        
+
         if (addedNodes.length > 0) {
           // Выполняем команду дублирования через историю
           const command = new DuplicateNodesCommand(
@@ -917,7 +933,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
 
     // Z-index commands: reorder selected nodes among top-level NodeBase children
     const reorder = (mode: 'front' | 'back' | 'forward' | 'backward') => {
-      const selectedIds = this.store.snapshot((state) => state.selectedIds) || [];
+      const selectedIds =
+        this.store.snapshot((state) => state.selectedIds) || [];
       if (!selectedIds.length) return;
       const worldChildren = this.world.children;
       const nodeChildren = worldChildren.filter(
@@ -931,11 +948,16 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       );
 
       const selectedSet = new Set(selectedIds);
-      const selectedNodes = nodeChildren.filter((node) => selectedSet.has(node.id));
+      const selectedNodes = nodeChildren.filter((node) =>
+        selectedSet.has(node.id)
+      );
       if (!selectedNodes.length) return;
 
       const moveToWorldIndex = (node: NodeBase, worldIndex: number) => {
-        const clampedIndex = Math.max(0, Math.min(worldChildren.length - 1, worldIndex));
+        const clampedIndex = Math.max(
+          0,
+          Math.min(worldChildren.length - 1, worldIndex)
+        );
         if (worldChildren.indexOf(node) !== clampedIndex)
           this.world.setChildIndex(node, clampedIndex);
       };
@@ -1004,7 +1026,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       .subscribe(() => {
         const selectedId = this.store.snapshot((state) => state.selectedIds)[0];
         if (!selectedId) return;
-        const nodeRef = this.store.snapshot((state) => state.nodes)[selectedId]?.ref as NodeBase;
+        const nodeRef = this.store.snapshot((state) => state.nodes)[selectedId]
+          ?.ref as NodeBase;
         if (nodeRef instanceof IframeNode || nodeRef instanceof VideoNode) {
           this.overlay.attachIframe(nodeRef);
           this.overlay.setIframeInteractive(true);
@@ -1030,7 +1053,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       t: 'ADD_TEXT',
       x: 120,
       y: 100,
-      text: 'Благодать Твоя, как река, Наполняет сердце моё…',
+      text: 'Благодать <h1>ТВОЯ</h1>, как река, Наполняет сердце моё…',
     });
     this.bus.emit({
       t: 'ADD_TEXT',
@@ -1218,8 +1241,9 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   onToggleIframeInteractive() {
     const selectedId = this.store.snapshot((s) => s.selectedIds)[0];
     if (!selectedId) return;
-    
-    const ref = this.store.snapshot((s) => s.nodes)[selectedId]?.ref as NodeBase;
+
+    const ref = this.store.snapshot((s) => s.nodes)[selectedId]
+      ?.ref as NodeBase;
     if (ref instanceof IframeNode || ref instanceof VideoNode) {
       this.overlay.attachIframe(ref);
       this.overlay.setIframeInteractive(true);
@@ -1239,17 +1263,17 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     // Создаём контейнер для границ
     const bounds = new Container();
     const g = new Graphics();
-    
+
     // Определяем размеры сцены на основе соотношения сторон
     const canvasWidth = this.app.renderer.width;
     const canvasHeight = this.app.renderer.height;
-    
+
     // Учитываем текущий zoom и позицию world
     const zoom = this.store.snapshot((s) => s.zoom);
-    
+
     let sceneWidth: number;
     let sceneHeight: number;
-    
+
     if (this.aspectRatio === '16:9') {
       // Вычисляем размеры для 16:9
       const ratio = 16 / 9;
@@ -1262,7 +1286,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         sceneWidth = (canvasWidth * 0.9) / zoom; // 90% ширины canvas с учетом zoom
         sceneHeight = sceneWidth / ratio;
       }
-    } else { // 4:3
+    } else {
+      // 4:3
       const ratio = 4 / 3;
       if (canvasWidth / canvasHeight > ratio) {
         sceneHeight = (canvasHeight * 0.9) / zoom;
@@ -1272,50 +1297,50 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         sceneHeight = sceneWidth / ratio;
       }
     }
-    
+
     // Центрируем сцену относительно видимой области world
     const x = (canvasWidth / zoom - sceneWidth) / 2;
     const y = (canvasHeight / zoom - sceneHeight) / 2;
-    
+
     // Рисуем границы (пунктирная линия)
     g.setStrokeStyle({ width: 2 / zoom, color: 0xff6b6b, alpha: 0.8 });
-    
+
     // Рисуем прямоугольник границ
     const dashLength = 10 / zoom;
     const gapLength = 5 / zoom;
-    
+
     // Верхняя линия
     for (let i = 0; i < sceneWidth; i += dashLength + gapLength) {
       const len = Math.min(dashLength, sceneWidth - i);
       g.moveTo(x + i, y);
       g.lineTo(x + i + len, y);
     }
-    
+
     // Правая линия
     for (let i = 0; i < sceneHeight; i += dashLength + gapLength) {
       const len = Math.min(dashLength, sceneHeight - i);
       g.moveTo(x + sceneWidth, y + i);
       g.lineTo(x + sceneWidth, y + i + len);
     }
-    
+
     // Нижняя линия
     for (let i = 0; i < sceneWidth; i += dashLength + gapLength) {
       const len = Math.min(dashLength, sceneWidth - i);
       g.moveTo(x + sceneWidth - i, y + sceneHeight);
       g.lineTo(x + sceneWidth - i - len, y + sceneHeight);
     }
-    
+
     // Левая линия
     for (let i = 0; i < sceneHeight; i += dashLength + gapLength) {
       const len = Math.min(dashLength, sceneHeight - i);
       g.moveTo(x, y + sceneHeight - i);
       g.lineTo(x, y + sceneHeight - i - len);
     }
-    
+
     g.stroke();
-    
+
     bounds.addChild(g);
-    
+
     this.sceneBounds = bounds;
     // Добавляем границы поверх всего, но под handles
     this.world.addChild(bounds);

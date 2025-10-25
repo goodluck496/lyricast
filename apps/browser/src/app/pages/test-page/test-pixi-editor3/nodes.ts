@@ -1,14 +1,5 @@
-import {
-  Application,
-  Assets,
-  Container,
-  Graphics,
-  Point,
-  Sprite,
-  Text,
-  Texture,
-} from 'pixi.js';
-import { UiTextStyles, DEFAULT_CONFIG } from './types';
+import { Application, Assets, Container, Graphics, HTMLText, Point, Sprite, Texture } from 'pixi.js';
+import { DEFAULT_CONFIG, UiTextStyles } from './types';
 import { TextFitService } from './services/text-fit.service';
 import { NodeBase } from './core';
 
@@ -34,9 +25,11 @@ export class TextNode extends NodeBase {
 
   private lastCalculatedFontSize = 32;
   /** Exposes the most recently computed font size for external consumers (e.g., overlays). */
-  get currentFontSize(): number { return this.lastCalculatedFontSize; }
+  get currentFontSize(): number {
+    return this.lastCalculatedFontSize;
+  }
   private fitScheduled = false;
-  private readonly textDisplay = new Text({ text: '' });
+  private readonly textDisplay = new HTMLText({ text: '' });
 
   // Background: either solid fill via Graphics, or image via Sprite scaled to cover
   private bgFillColor: number | null = null;
@@ -44,7 +37,10 @@ export class TextNode extends NodeBase {
   private bgSprite?: Sprite;
   private maskG?: Graphics;
 
-  constructor(private readonly app: Application, private readonly fitter: TextFitService) {
+  constructor(
+    private readonly app: Application,
+    private readonly fitter: TextFitService
+  ) {
     super();
     // Rendering order: background (solid/image) -> text -> handles
     this.addChild(this.bgG);
@@ -69,7 +65,7 @@ export class TextNode extends NodeBase {
 
   /** Set solid background color behind text */
   setBackgroundFill(color: number | null) {
-    this.bgFillColor = color == null ? null : (color >>> 0);
+    this.bgFillColor = color == null ? null : color >>> 0;
     // Если устанавливаем цвет, очищаем фоновое изображение
     if (this.bgFillColor != null && this.bgSprite) {
       this.bgSprite.destroy();
@@ -88,12 +84,15 @@ export class TextNode extends NodeBase {
       const tex = await loadTextureRobust(url);
       // Если устанавливаем изображение, очищаем цветной фон
       this.bgFillColor = null;
-      
+
       if (!this.bgSprite) {
         this.bgSprite = new Sprite(tex);
         this.bgSprite.anchor.set(0.5);
         this.bgSprite.position.set(this.w / 2, this.h / 2);
-        this.addChildAt(this.bgSprite, Math.max(0, this.getChildIndex(this.textDisplay) - 1));
+        this.addChildAt(
+          this.bgSprite,
+          Math.max(0, this.getChildIndex(this.textDisplay) - 1)
+        );
       } else {
         this.bgSprite.texture = tex;
       }
@@ -112,8 +111,14 @@ export class TextNode extends NodeBase {
 
   /** Remove image background */
   clearBackground() {
-    if (this.bgSprite) { this.bgSprite.destroy(); this.bgSprite = undefined; }
-    if (this.maskG) { this.maskG.destroy(); this.maskG = undefined; }
+    if (this.bgSprite) {
+      this.bgSprite.destroy();
+      this.bgSprite = undefined;
+    }
+    if (this.maskG) {
+      this.maskG.destroy();
+      this.maskG = undefined;
+    }
     this.redrawBackground();
   }
 
@@ -207,8 +212,13 @@ export class TextNode extends NodeBase {
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
     });
 
-    const anchorX = this.style.align === 'center' ? 0.5 : this.style.align === 'right' ? 1 : 0;
-    (this.textDisplay).anchor?.set(anchorX, 0);
+    const anchorX =
+      this.style.align === 'center'
+        ? 0.5
+        : this.style.align === 'right'
+        ? 1
+        : 0;
+    this.textDisplay.anchor?.set(anchorX, 0);
 
     const innerW = Math.max(4, this.w - this.padding * 2);
     const x = this.padding + innerW * anchorX;
@@ -223,17 +233,32 @@ async function ensureTextureValid(tex: Texture): Promise<void> {
   if (tex.width > 0 && tex.height > 0) return;
   await new Promise<void>((resolve) => {
     let settled = false;
-    const finish = () => { if (!settled) { settled = true; resolve(); } };
+    const finish = () => {
+      if (!settled) {
+        settled = true;
+        resolve();
+      }
+    };
     try {
-      const baseTex = (tex as unknown as { baseTexture?: unknown }).baseTexture as unknown;
-      const onceFn = (baseTex as { once?: (ev: string, cb: () => void) => void } | undefined)?.once;
+      const baseTex = (tex as unknown as { baseTexture?: unknown })
+        .baseTexture as unknown;
+      const onceFn = (
+        baseTex as { once?: (ev: string, cb: () => void) => void } | undefined
+      )?.once;
       onceFn?.('loaded', finish);
       onceFn?.('error', finish);
-      const resource = (baseTex as { resource?: unknown } | undefined)?.resource as unknown;
-      const source = (resource as { source?: unknown } | undefined)?.source as unknown;
+      const resource = (baseTex as { resource?: unknown } | undefined)
+        ?.resource as unknown;
+      const source = (resource as { source?: unknown } | undefined)
+        ?.source as unknown;
       const img = source instanceof Image ? source : null;
-      if (img) { img.onload = finish; img.onerror = finish; }
-    } catch { /* ignore */ }
+      if (img) {
+        img.onload = finish;
+        img.onerror = finish;
+      }
+    } catch {
+      /* ignore */
+    }
     // Safety timeout in case events do not fire
     setTimeout(finish, 1000);
   });
@@ -243,23 +268,41 @@ async function loadTextureRobust(url: string): Promise<Texture> {
   // 1) Try Pixi Assets pipeline
   try {
     const t = (await Assets.load(url)) as Texture;
-    if (t) { await ensureTextureValid(t); return t; }
-  } catch { /* continue */ }
+    if (t) {
+      await ensureTextureValid(t);
+      return t;
+    }
+  } catch {
+    /* continue */
+  }
   // 2) Try direct Texture.from (string URL)
   try {
     const t = Texture.from(url);
-    if (t) { await ensureTextureValid(t); return t; }
-  } catch { /* continue */ }
+    if (t) {
+      await ensureTextureValid(t);
+      return t;
+    }
+  } catch {
+    /* continue */
+  }
   // 3) Manual HTMLImage decode as a last resort (works great for blob:/data:)
   try {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.src = url;
-    if ('decode' in img && typeof img.decode === 'function') { try { await img.decode(); } catch { /* older browsers */ } }
+    if ('decode' in img && typeof img.decode === 'function') {
+      try {
+        await img.decode();
+      } catch {
+        /* older browsers */
+      }
+    }
     const t = Texture.from(img);
     await ensureTextureValid(t);
     return t;
-  } catch { /* continue */ }
+  } catch {
+    /* continue */
+  }
   throw new Error('Failed to load texture from URL: ' + url);
 }
 
@@ -284,12 +327,17 @@ export class ImageNode extends NodeBase {
       this.sprite.texture = texture;
       this.sprite.anchor.set(0.5);
       this.sprite.position.set(this.w / 2, this.h / 2);
-      const baseTex = (texture as unknown as { baseTexture?: unknown }).baseTexture as unknown;
+      const baseTex = (texture as unknown as { baseTexture?: unknown })
+        .baseTexture as unknown;
       const realW = (baseTex as { realWidth?: number } | undefined)?.realWidth;
-      const realH = (baseTex as { realHeight?: number } | undefined)?.realHeight;
+      const realH = (baseTex as { realHeight?: number } | undefined)
+        ?.realHeight;
       const tw = texture.width || realW || this.w;
       const th = texture.height || realH || this.h;
-      const scale = Math.min(this.w / Math.max(1, tw), this.h / Math.max(1, th));
+      const scale = Math.min(
+        this.w / Math.max(1, tw),
+        this.h / Math.max(1, th)
+      );
       this.sprite.scale.set(scale);
       // keep handles above content
       this.addChild(this.handlesContainer);
@@ -332,15 +380,24 @@ export class VideoNode extends NodeBase {
     try {
       const texture = (await Assets.load(url)) as Texture;
       if (!texture) throw new Error('Failed to load video texture');
-      const baseTex = (texture as unknown as { baseTexture?: unknown }).baseTexture as unknown;
-      const resource = (baseTex as { resource?: unknown } | undefined)?.resource as unknown;
-      const source = (resource as { source?: unknown } | undefined)?.source as unknown;
-      const videoEl: HTMLVideoElement | null = source instanceof HTMLVideoElement ? source : null;
-      if (videoEl) { videoEl.muted = true; videoEl.loop = true; void videoEl.play(); }
+      const baseTex = (texture as unknown as { baseTexture?: unknown })
+        .baseTexture as unknown;
+      const resource = (baseTex as { resource?: unknown } | undefined)
+        ?.resource as unknown;
+      const source = (resource as { source?: unknown } | undefined)
+        ?.source as unknown;
+      const videoEl: HTMLVideoElement | null =
+        source instanceof HTMLVideoElement ? source : null;
+      if (videoEl) {
+        videoEl.muted = true;
+        videoEl.loop = true;
+        void videoEl.play();
+      }
       this.sprite.texture = texture;
       this.sprite.anchor.set(0.5);
       this.sprite.position.set(this.w / 2, this.h / 2);
-      const tw = texture.width || this.w, th = texture.height || this.h;
+      const tw = texture.width || this.w,
+        th = texture.height || this.h;
       this.sprite.scale.set(Math.min(this.w / tw, this.h / th));
     } catch (err) {
       // Gracefully degrade if loading fails (e.g., unsupported provider like YouTube)
@@ -434,7 +491,10 @@ export class ShapeNode extends NodeBase {
         this.bgSprite.anchor.set(0.5);
         this.bgSprite.position.set(this.w / 2, this.h / 2);
         // ensure background is behind the stroke graphics
-        this.addChildAt(this.bgSprite, Math.max(0, this.getChildIndex(this.shapeG)));
+        this.addChildAt(
+          this.bgSprite,
+          Math.max(0, this.getChildIndex(this.shapeG))
+        );
       } else {
         this.bgSprite.texture = tex;
       }
@@ -453,8 +513,14 @@ export class ShapeNode extends NodeBase {
 
   /** Remove background image and mask, falling back to solid fill. */
   clearBackground() {
-    if (this.bgSprite) { this.bgSprite.destroy(); this.bgSprite = undefined; }
-    if (this.maskG) { this.maskG.destroy(); this.maskG = undefined; }
+    if (this.bgSprite) {
+      this.bgSprite.destroy();
+      this.bgSprite = undefined;
+    }
+    if (this.maskG) {
+      this.maskG.destroy();
+      this.maskG = undefined;
+    }
     this.redraw();
   }
 
@@ -476,7 +542,9 @@ export class ShapeNode extends NodeBase {
       if (this.shape === 'rect') {
         m.roundRect(0, 0, this.w, this.h, 6).fill(0xffffff);
       } else if (this.shape === 'ellipse') {
-        m.ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2).fill(0xffffff);
+        m.ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2).fill(
+          0xffffff
+        );
       }
     }
   }
@@ -486,19 +554,31 @@ export class ShapeNode extends NodeBase {
     graphics.clear();
     if (this.shape === 'rect') {
       // If background image exists, skip solid fill and only draw stroke on top
-      if (!this.bgSprite) graphics.roundRect(0, 0, this.w, this.h, 6).fill(this.fill);
-      graphics.roundRect(0, 0, this.w, this.h, 6)
+      if (!this.bgSprite)
+        graphics.roundRect(0, 0, this.w, this.h, 6).fill(this.fill);
+      graphics
+        .roundRect(0, 0, this.w, this.h, 6)
         .stroke({ color: this.stroke, width: this.lineWidth });
     } else if (this.shape === 'ellipse') {
-      if (!this.bgSprite) graphics.ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2).fill(this.fill);
-      graphics.ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2)
+      if (!this.bgSprite)
+        graphics
+          .ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2)
+          .fill(this.fill);
+      graphics
+        .ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2)
         .stroke({ color: this.stroke, width: this.lineWidth });
     } else {
       // Line shape: always render as 1px thick regardless of box height
       const thickness = 1;
       const midY = thickness / 2;
-      graphics.moveTo(0, midY).lineTo(this.w, midY)
-        .stroke({ color: this.stroke, width: thickness, cap: 'round' as const });
+      graphics
+        .moveTo(0, midY)
+        .lineTo(this.w, midY)
+        .stroke({
+          color: this.stroke,
+          width: thickness,
+          cap: 'round' as const,
+        });
     }
     this.updateBackgroundLayout();
   }
@@ -514,27 +594,35 @@ export class ShapeNode extends NodeBase {
 
 export class GroupNode extends NodeBase {
   readonly type = 'group' as const;
-  constructor() { super(); this.drawHandles(true); }
+  constructor() {
+    super();
+    this.drawHandles(true);
+  }
   get childrenIds(): string[] {
-    return this.children.filter((c): c is NodeBase => c instanceof NodeBase).map((c) => (c as NodeBase).id);
+    return this.children
+      .filter((c): c is NodeBase => c instanceof NodeBase)
+      .map((c) => (c as NodeBase).id);
   }
   applyBoxSize(w: number, h: number): void {
     const prevW = this.w || 1;
     const prevH = this.h || 1;
-    this.w = w; this.h = h;
+    this.w = w;
+    this.h = h;
     const sx = prevW > 0 ? w / prevW : 1;
     const sy = prevH > 0 ? h / prevH : 1;
     // Scale children proportionally
     for (const ch of this.children) {
       if (ch instanceof NodeBase) {
-        ch.x *= sx; ch.y *= sy;
+        ch.x *= sx;
+        ch.y *= sy;
         const newW = Math.max(1, ch.w * sx);
         const newH = Math.max(1, ch.h * sy);
         ch.applyBoxSize(newW, newH);
         if (ch instanceof TextNode) ch.requestFit();
       }
     }
-    this.drawFrame(); this.drawHandles();
+    this.drawFrame();
+    this.drawHandles();
   }
 }
 
@@ -563,7 +651,7 @@ export class BrushNode extends NodeBase {
   }
 
   setPath(points: Point[]) {
-    this.path = points.map(p => new Point(p.x, p.y));
+    this.path = points.map((p) => new Point(p.x, p.y));
     this.updateBackgroundLayout();
     this.redraw();
   }
@@ -608,8 +696,14 @@ export class BrushNode extends NodeBase {
 
   /** Очистить фоновое изображение */
   clearBackground() {
-    if (this.bgSprite) { this.bgSprite.destroy(); this.bgSprite = undefined; }
-    if (this.maskG) { this.maskG.destroy(); this.maskG = undefined; }
+    if (this.bgSprite) {
+      this.bgSprite.destroy();
+      this.bgSprite = undefined;
+    }
+    if (this.maskG) {
+      this.maskG.destroy();
+      this.maskG = undefined;
+    }
   }
 
   /** Обновить фон и маску */
@@ -643,30 +737,48 @@ export class BrushNode extends NodeBase {
     if (!this.path.length) return;
     graphics.moveTo(this.path[0].x, this.path[0].y);
     for (const point of this.path) graphics.lineTo(point.x, point.y);
-    graphics.stroke({ color: this.stroke, width: this.strokeWidth, cap: 'round' as const, join: 'round' as const });
+    graphics.stroke({
+      color: this.stroke,
+      width: this.strokeWidth,
+      cap: 'round' as const,
+      join: 'round' as const,
+    });
   }
 
   applyBoxSize(w: number, h: number): void {
     // scale path to new box size
     const scaleX = this.w > 0 ? w / this.w : 1;
     const scaleY = this.h > 0 ? h / this.h : 1;
-    this.w = w; this.h = h;
-    this.path = this.path.map(point => new Point(point.x * scaleX, point.y * scaleY));
+    this.w = w;
+    this.h = h;
+    this.path = this.path.map(
+      (point) => new Point(point.x * scaleX, point.y * scaleY)
+    );
     this.updateBackgroundLayout();
     this.redraw();
     this.drawHandles();
   }
 }
 
-
 export class BrushLayer extends Container {
   private points: { x: number; y: number }[] = [];
   private g = new Graphics();
 
-  constructor() { super(); this.addChild(this.g); }
-  start(x: number, y: number) { this.points = [{ x, y }]; this.redraw(); }
-  add(x: number, y: number) { this.points.push({ x, y }); this.redraw(); }
-  end() { /* no-op for now */ }
+  constructor() {
+    super();
+    this.addChild(this.g);
+  }
+  start(x: number, y: number) {
+    this.points = [{ x, y }];
+    this.redraw();
+  }
+  add(x: number, y: number) {
+    this.points.push({ x, y });
+    this.redraw();
+  }
+  end() {
+    /* no-op for now */
+  }
 
   private redraw() {
     const g = this.g;

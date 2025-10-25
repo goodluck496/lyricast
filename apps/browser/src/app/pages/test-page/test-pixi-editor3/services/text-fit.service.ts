@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@angular/core';
-import { Application, Text } from 'pixi.js';
+import { Application, HTMLText } from 'pixi.js';
 import { Align, EDITOR_CONFIG, EditorConfig } from '../types';
 import { EditorUtilsService } from './editor-utils.service';
 
@@ -11,7 +11,7 @@ import { EditorUtilsService } from './editor-utils.service';
 export class TextFitService {
   constructor(
     private readonly utils: EditorUtilsService,
-    @Inject(EDITOR_CONFIG) private readonly cfg: EditorConfig,
+    @Inject(EDITOR_CONFIG) private readonly cfg: EditorConfig
   ) {}
 
   async fitBinary(options: {
@@ -55,19 +55,45 @@ export class TextFitService {
     if (innerW <= 6 || innerH <= 6) return min;
 
     // Normalize font weight into a safe string literal that Pixi expects
-    type NumericWeightString = '100'|'200'|'300'|'400'|'500'|'600'|'700'|'800'|'900';
-    type FontWeightKeyword = 'normal'|'bold'|'bolder'|'lighter';
+    type NumericWeightString =
+      | '100'
+      | '200'
+      | '300'
+      | '400'
+      | '500'
+      | '600'
+      | '700'
+      | '800'
+      | '900';
+    type FontWeightKeyword = 'normal' | 'bold' | 'bolder' | 'lighter';
     type FontWeightValue = NumericWeightString | FontWeightKeyword;
     const normalizeFontWeight = (w: string): FontWeightValue => {
       const s = String(w).trim().toLowerCase();
-      if (s === 'normal' || s === 'bold' || s === 'bolder' || s === 'lighter') return s as FontWeightKeyword;
+      if (s === 'normal' || s === 'bold' || s === 'bolder' || s === 'lighter')
+        return s as FontWeightKeyword;
       const n = Number(s);
-      const allowed: NumericWeightString[] = ['100','200','300','400','500','600','700','800','900'];
-      const nearest = Number.isFinite(n) ? String(Math.min(900, Math.max(100, Math.round(n / 100) * 100))) as NumericWeightString : '400';
-      return allowed.includes(nearest as NumericWeightString) ? (nearest as NumericWeightString) : '400';
+      const allowed: NumericWeightString[] = [
+        '100',
+        '200',
+        '300',
+        '400',
+        '500',
+        '600',
+        '700',
+        '800',
+        '900',
+      ];
+      const nearest = Number.isFinite(n)
+        ? (String(
+            Math.min(900, Math.max(100, Math.round(n / 100) * 100))
+          ) as NumericWeightString)
+        : '400';
+      return allowed.includes(nearest as NumericWeightString)
+        ? (nearest as NumericWeightString)
+        : '400';
     };
 
-    const probe = new Text({
+    const probe = new HTMLText({
       text,
       style: {
         fontFamily: family,
@@ -76,14 +102,23 @@ export class TextFitService {
         align,
         wordWrap: true,
         wordWrapWidth: innerW,
-        fill: (baseStyle && typeof baseStyle.fill === 'number') ? baseStyle.fill : this.utils.colorToNumber('#ffffee'),
+        fill:
+          baseStyle && typeof baseStyle.fill === 'number'
+            ? baseStyle.fill
+            : this.utils.colorToNumber('#ffffee'),
       },
     });
     probe.visible = false;
     app.stage.addChild(probe);
 
     const setStyle = (fs: number) => {
-      type MutableTextStyle = { fontSize: number; lineHeight: number; wordWrap: boolean; breakWords: boolean; wordWrapWidth: number };
+      type MutableTextStyle = {
+        fontSize: number;
+        lineHeight: number;
+        wordWrap: boolean;
+        breakWords: boolean;
+        wordWrapWidth: number;
+      };
       const s = probe.style as unknown as MutableTextStyle;
       s.fontSize = fs;
       s.lineHeight = fs * lineHeight;
@@ -92,7 +127,8 @@ export class TextFitService {
       s.wordWrapWidth = innerW;
     };
 
-    const rafOnce = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const rafOnce = () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
     setStyle(Math.max(min, Math.min(max, hint ?? min)));
     await rafOnce();
@@ -111,7 +147,8 @@ export class TextFitService {
       setStyle(mid);
       // eslint-disable-next-line no-await-in-loop
       await rafOnce();
-      const fits = probe.width <= innerW - fitMargin && probe.height <= innerH - fitMargin;
+      const fits =
+        probe.width <= innerW - fitMargin && probe.height <= innerH - fitMargin;
       if (fits) {
         best = mid;
         lo = mid + step;
@@ -125,7 +162,9 @@ export class TextFitService {
       if (near) {
         setStyle(hint);
         await rafOnce();
-        const ok = probe.width <= innerW - fitMargin && probe.height <= innerH - fitMargin;
+        const ok =
+          probe.width <= innerW - fitMargin &&
+          probe.height <= innerH - fitMargin;
         if (ok) best = hint;
       }
     }

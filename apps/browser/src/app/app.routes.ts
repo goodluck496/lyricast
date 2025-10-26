@@ -53,13 +53,13 @@ export const appRoutes: Route[] = [
             (c) => c.SettingsComponent
           ),
       },
-      {
-        path: Pages.TEST,
-        loadComponent: () =>
-          import('./pages/test-page/test-pixi-editor3/test-pixi-editor3.component').then(
-            (c) => c.TestPixiEditorV2Component
-          ),
-      },
+      // {
+      //   path: Pages.TEST,
+      //   loadComponent: () =>
+      //     import('./pages/test-page/test-pixi-editor3/test-pixi-editor3.component').then(
+      //       (c) => c.TestPixiEditorV2Component
+      //     ),
+      // },
     ],
   },
   {

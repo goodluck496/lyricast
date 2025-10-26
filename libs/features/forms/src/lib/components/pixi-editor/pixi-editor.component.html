@@ -1,0 +1,272 @@
+<ng-container *ngIf="vm$ | async as vm">
+  <div class="toolbar">
+    <button
+      (click)="emit({ t: 'ADD_TEXT', x: 100, y: 80 })"
+      [class.active]="selectedKind === 'text'"
+    >
+      Text
+    </button>
+    <button (click)="onImageUrl()">Image</button>
+    <button (click)="onVideoUrl()">Video</button>
+    <button (click)="onIframeUrl()">Iframe</button>
+    <span class="sep"></span>
+
+    <button
+      (click)="emit({ t: 'ADD_SHAPE', shape: 'rect', x: 120, y: 120 })"
+    >
+      Rect
+    </button>
+    <button
+      (click)="emit({ t: 'ADD_SHAPE', shape: 'ellipse', x: 140, y: 140 })"
+    >
+      Ellipse
+    </button>
+    <button
+      (click)="
+            emit({
+              t: 'ADD_SHAPE',
+              shape: 'line',
+              x: 160,
+              y: 160,
+              w: 220,
+              h: 1
+            })
+          "
+    >
+      Line
+    </button>
+    <button
+      (click)="emit({ t: 'START_BRUSH' })"
+      [class.active]="brushActive"
+    >
+      Brush
+    </button>
+    <span class="sep"></span>
+
+    <button (click)="onSetBackground()" [disabled]="!canSetBg">
+      BG Image…
+    </button>
+    <button (click)="onClearBackground()" [disabled]="!canSetBg">
+      Clear BG
+    </button>
+    <button
+      (click)="onApplyBgFill()"
+      [disabled]="!(selectedKind === 'shape' || selectedKind === 'text')"
+    >
+      Fill = Color
+    </button>
+    <span class="sep"></span>
+
+    <button
+      (click)="emit({ t: 'GROUP', ids: vm.selectedIds })"
+      [disabled]="(vm.selectedIds.length || 0) < 2"
+    >
+      Group
+    </button>
+    <button (click)="onUngroup()" [disabled]="selectedKind !== 'group'">
+      Ungroup
+    </button>
+    <button
+      (click)="emit({ t: 'DUPLICATE' })"
+      [disabled]="!vm.selectedIds.length"
+    >
+      Duplicate
+    </button>
+    <button
+      (click)="emit({ t: 'DELETE' })"
+      [disabled]="!vm.selectedIds.length"
+    >
+      Delete
+    </button>
+    <span class="sep"></span>
+
+    <button
+      (click)="onUndo()"
+      [disabled]="!(canUndo$ | async)"
+      title="Undo (Ctrl+Z)"
+    >
+      ↶ Undo
+    </button>
+    <button
+      (click)="onRedo()"
+      [disabled]="!(canRedo$ | async)"
+      title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
+    >
+      ↷ Redo
+    </button>
+    <span class="sep"></span>
+
+    <button
+      (click)="onToggleIframeInteractive()"
+      [disabled]="!(selectedKind === 'iframe' || selectedKind === 'video')"
+      title="Double-click or right-click inside iframe/video to interact"
+    >
+      🎬 Interact
+    </button>
+    <span class="sep"></span>
+
+    <label
+    >Zoom
+      <input
+        type="range"
+        min="0.25"
+        max="3"
+        step="0.05"
+        [ngModel]="vm.zoom"
+        (ngModelChange)="emit({ t: 'ZOOM', z: $event })"
+      />
+    </label>
+    <label>
+      <input
+        type="checkbox"
+        [ngModel]="vm.snapEnabled"
+        (ngModelChange)="emit({ t: 'SNAP', on: $event })"
+      />
+      Grid snap
+    </label>
+    <label>
+      <input
+        type="checkbox"
+        [ngModel]="vm.guidesEnabled"
+        (ngModelChange)="emit({ t: 'GUIDES', on: $event })"
+      />
+      Guides
+    </label>
+
+    <span class="sep"></span>
+    <label
+    >Aspect Ratio
+      <select
+        [ngModel]="aspectRatio"
+        (ngModelChange)="onAspectRatioChange($event)"
+      >
+        <option value="none">None</option>
+        <option value="16:9">16:9</option>
+        <option value="4:3">4:3</option>
+      </select>
+    </label>
+
+    <span class="sep"></span>
+    <label
+    >Font
+      <select
+        [ngModel]="vm.ui.font"
+        (ngModelChange)="
+              emit({ t: 'APPLY_STYLE', patch: { font: $event } })
+            "
+      >
+        <option>Inter, system-ui, sans-serif</option>
+        <option>Arial, Helvetica, sans-serif</option>
+        <option>Georgia, serif</option>
+        <option>'Times New Roman', Times, serif</option>
+        <option>'Segoe UI', Tahoma, Geneva, Verdana, sans-serif</option>
+      </select>
+    </label>
+    <label
+    >Weight
+      <select
+        [ngModel]="vm.ui.weight"
+        (ngModelChange)="
+              emit({ t: 'APPLY_STYLE', patch: { weight: $event } })
+            "
+      >
+        <option value="400">400</option>
+        <option value="500">500</option>
+        <option value="600">600</option>
+        <option value="700">700</option>
+        <option value="800">800</option>
+      </select>
+    </label>
+    <label
+    >Color
+      <input
+        type="color"
+        [ngModel]="vm.ui.colorHex"
+        (ngModelChange)="
+              emit({ t: 'APPLY_STYLE', patch: { colorHex: $event } })
+            "
+      />
+    </label>
+    <label>
+      Stroke
+      <input
+        type="number"
+        min="1"
+        max="60"
+        step="1"
+        [ngModel]="vm.ui.strokeWidth"
+        (ngModelChange)="
+              emit({ t: 'APPLY_STYLE', patch: { strokeWidth: +$event } })
+            "
+      />
+    </label>
+    <label
+    >Align
+      <select
+        [ngModel]="vm.ui.align"
+        (ngModelChange)="
+              emit({ t: 'APPLY_STYLE', patch: { align: $event } })
+            "
+      >
+        <option value="left">left</option>
+        <option value="center">center</option>
+        <option value="right">right</option>
+      </select>
+    </label>
+    <label
+    >Line
+      <input
+        type="range"
+        min="0.2"
+        max="1.8"
+        step="0.02"
+        [ngModel]="vm.ui.lineHeight"
+        (ngModelChange)="
+              emit({ t: 'APPLY_STYLE', patch: { lineHeight: +$event } })
+            "
+      />
+    </label>
+    <label
+    >Min
+      <input
+        type="number"
+        min="6"
+        max="300"
+        step="1"
+        [ngModel]="vm.ui.min"
+        (ngModelChange)="
+              emit({ t: 'APPLY_STYLE', patch: { min: +$event } })
+            "
+      />
+    </label>
+    <label
+    >Max
+      <input
+        type="number"
+        min="10"
+        max="400"
+        step="1"
+        [ngModel]="vm.ui.max"
+        (ngModelChange)="
+              emit({ t: 'APPLY_STYLE', patch: { max: +$event } })
+            "
+      />
+    </label>
+    <!--        <label>-->
+    <!--          <input-->
+    <!--            type="checkbox"-->
+    <!--            [ngModel]="vm.ui.list"-->
+    <!--            (ngModelChange)="-->
+    <!--              emit({ t: 'APPLY_STYLE', patch: { list: !!$event } })-->
+    <!--            "-->
+    <!--          />-->
+    <!--          Bulleted-->
+    <!--        </label>-->
+  </div>
+</ng-container>
+<div
+  class="host"
+  tabindex="0"
+  #host
+  (contextmenu)="onContextMenu($event)"
+></div>

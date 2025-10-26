@@ -5,6 +5,7 @@ import { BrushNode, GroupNode } from '../nodes';
 import { Subject } from 'rxjs';
 import { DragResizeService } from '../services/drag-resize.service';
 import { FederatedPointerEvent, Point } from 'pixi.js';
+import { AddNodeCommand } from '../services';
 
 /**
  * BrushPlugin enables freehand drawing to create BrushNode paths.
@@ -51,10 +52,13 @@ export class BrushPlugin implements EditorPlugin {
           const localX = worldPoint.x - this.tempNode.x;
           const localY = worldPoint.y - this.tempNode.y;
           type HasPath = { path?: Point[] };
-          const currentPath = (this.tempNode as unknown as HasPath).path as Point[] | undefined;
-          const points: Point[] = currentPath && currentPath.length
-            ? [...currentPath, new Point(localX, localY)]
-            : [new Point(localX, localY)];
+          const currentPath = (this.tempNode as unknown as HasPath).path as
+            | Point[]
+            | undefined;
+          const points: Point[] =
+            currentPath && currentPath.length
+              ? [...currentPath, new Point(localX, localY)]
+              : [new Point(localX, localY)];
           this.tempNode.setPath(points);
           // grow box
           const minX = Math.min(...points.map((pt) => pt.x));
@@ -63,7 +67,9 @@ export class BrushPlugin implements EditorPlugin {
           const maxY = Math.max(...points.map((pt) => pt.y));
           this.tempNode.x += minX;
           this.tempNode.y += minY;
-          const normalized = points.map((pt) => new Point(pt.x - minX, pt.y - minY));
+          const normalized = points.map(
+            (pt) => new Point(pt.x - minX, pt.y - minY)
+          );
           this.tempNode.w = Math.max(1, maxX - minX);
           this.tempNode.h = Math.max(1, maxY - minY);
           this.tempNode.setPath(normalized);
@@ -93,14 +99,63 @@ export class BrushPlugin implements EditorPlugin {
           ctx.app.stage.off('pointerdown', onDown);
           ctx.app.stage.off('pointermove', onMove);
           ctx.app.stage.off('pointerup', onUp);
-          (ctx.app.canvas as unknown as { style?: CSSStyleDeclaration }).style!.cursor = '';
+          (
+            ctx.app.canvas as unknown as { style?: CSSStyleDeclaration }
+          ).style!.cursor = '';
         };
 
         // attach temporary listeners
         ctx.app.stage.on('pointerdown', onDown);
         ctx.app.stage.on('pointermove', onMove);
         ctx.app.stage.on('pointerup', onUp);
-        (ctx.app.canvas as unknown as { style?: CSSStyleDeclaration }).style!.cursor = 'crosshair';
+        (
+          ctx.app.canvas as unknown as { style?: CSSStyleDeclaration }
+        ).style!.cursor = 'crosshair';
+      });
+
+    // ADD_BRUSH: create and select a new brush node from data
+    ctx.bus.commands$
+      .pipe(filter((command) => command.t === 'ADD_BRUSH'))
+      .subscribe((cmd) => {
+        const addBrush = cmd as Extract<
+          import('../services/command-bus.service').EditorCommand,
+          { t: 'ADD_BRUSH' }
+        >;
+        const brushNode = new BrushNode();
+        brushNode.x = addBrush.x ?? 100;
+        brushNode.y = addBrush.y ?? 100;
+        brushNode.applyBoxSize(
+          addBrush.options?.width ?? 200,
+          addBrush.options?.height ?? 200
+        );
+        brushNode.setPath(addBrush.path.map((p) => new Point(p.x, p.y)));
+        brushNode.setStyle(
+          addBrush.options?.stroke ?? 0xffffff,
+          addBrush.options?.strokeWidth ?? 4
+        );
+
+        const nodeState = {
+          id: brushNode.id,
+          type: 'brush' as const,
+          ref: brushNode,
+        };
+
+        const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
+        ctx.history.execute(command);
+
+        this.drag.bind(brushNode, new Subject<void>(), {
+          cfg: ctx.cfg,
+          store: ctx.store,
+          guides: ctx.guides,
+          world: ctx.world,
+          app: ctx.app,
+          bus: ctx.bus,
+          utils: ctx.utils,
+          overlay: ctx.overlay,
+          history: ctx.history,
+        });
+
+        ctx.bus.emit({ t: 'SELECT', ids: [brushNode.id] });
       });
 
     // Обработка команд для фона brush-элементов
@@ -119,13 +174,24 @@ export class BrushPlugin implements EditorPlugin {
       }
     };
 
-    ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_BRUSH_BACKGROUND')).subscribe((cmd) => {
-      const url = (cmd as Extract<import('../services/command-bus.service').EditorCommand, { t: 'SET_BRUSH_BACKGROUND' }>).url;
-      applyToSelection((b) => { void b.setBackground(url); });
-    });
-    
-    ctx.bus.commands$.pipe(filter((c) => c.t === 'CLEAR_BRUSH_BACKGROUND')).subscribe(() => {
-      applyToSelection((b) => b.clearBackground());
-    });
+    ctx.bus.commands$
+      .pipe(filter((c) => c.t === 'SET_BRUSH_BACKGROUND'))
+      .subscribe((cmd) => {
+        const url = (
+          cmd as Extract<
+            import('../services/command-bus.service').EditorCommand,
+            { t: 'SET_BRUSH_BACKGROUND' }
+          >
+        ).url;
+        applyToSelection((b) => {
+          void b.setBackground(url);
+        });
+      });
+
+    ctx.bus.commands$
+      .pipe(filter((c) => c.t === 'CLEAR_BRUSH_BACKGROUND'))
+      .subscribe(() => {
+        applyToSelection((b) => b.clearBackground());
+      });
   }
 }

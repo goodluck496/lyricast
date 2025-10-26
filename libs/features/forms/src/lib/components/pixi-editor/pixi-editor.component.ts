@@ -19,7 +19,7 @@ import {
   Texture,
   TilingSprite,
 } from 'pixi.js';
-import { EDITOR_CONFIG } from './types';
+import { EDITOR_CONFIG, UiTextStyles } from './types';
 import { EDITOR_PLUGINS, EditorContext, NodeBase } from './core';
 import { EditorStore, NodeState } from './services/editor-store.service';
 import {
@@ -50,7 +50,57 @@ import {
   TextNode,
   VideoNode,
 } from './nodes';
-import { PIXI_EDITOR_PROVIDERS } from './pixi-editor.providers';
+import { PIXI_EDITOR_PROVIDERS } from './pixi-editor.providers'; // Типы для сериализации состояния
+
+// Типы для сериализации состояния
+type SerializedNodeBase = {
+  id: string;
+  type: 'text' | 'image' | 'video' | 'iframe' | 'shape' | 'brush' | 'group';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  alpha: number;
+};
+
+type SerializedTextNode = SerializedNodeBase & {
+  type: 'text';
+  textHtml: string;
+  style: UiTextStyles;
+};
+type SerializedImageNode = SerializedNodeBase & { type: 'image'; url: string };
+type SerializedVideoNode = SerializedNodeBase & { type: 'video'; url: string };
+type SerializedIframeNode = SerializedNodeBase & {
+  type: 'iframe';
+  url: string;
+};
+type SerializedShapeNode = SerializedNodeBase & {
+  type: 'shape';
+  shape: 'rect' | 'ellipse' | 'line';
+  fill: number;
+  stroke: number;
+  lineWidth: number;
+};
+type SerializedBrushNode = SerializedNodeBase & {
+  type: 'brush';
+  stroke: number;
+  strokeWidth: number;
+  path: { x: number; y: number }[];
+};
+
+type SerializedNode =
+  | SerializedTextNode
+  | SerializedImageNode
+  | SerializedVideoNode
+  | SerializedIframeNode
+  | SerializedShapeNode
+  | SerializedBrushNode;
+
+type SerializedState = {
+  nodes: SerializedNode[];
+  zoom: number;
+};
 
 type WorldContainer = Container & { app: Application };
 
@@ -977,6 +1027,188 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   onContextMenu(e: MouseEvent) {
     e.preventDefault();
     this.ctxMenu?.open(e.clientX, e.clientY);
+  }
+
+  /**
+   * Сериализует текущее состояние редактора в JSON-объект.
+   */
+  serializeState(): SerializedState {
+    const state = this.store.snapshot((s) => s);
+    const serializableNodes = Object.values(state.nodes)
+      .map((nodeState) => {
+        const node = nodeState.ref as NodeBase;
+        const baseData: SerializedNodeBase = {
+          id: node.id,
+          type: nodeState.type as SerializedNode['type'],
+          x: node.x,
+          y: node.y,
+          width: node.width,
+          height: node.height,
+          rotation: node.rotation,
+          alpha: node.alpha,
+        };
+
+        if (node instanceof TextNode) {
+          return {
+            ...baseData,
+            type: 'text',
+            textHtml: node.textHtml,
+            style: node.style,
+          } as SerializedTextNode;
+        }
+        if (node instanceof ImageNode) {
+          return {
+            ...baseData,
+            type: 'image',
+            url: (node as any).url,
+          } as SerializedImageNode;
+        }
+        if (node instanceof VideoNode) {
+          return {
+            ...baseData,
+            type: 'video',
+            url: node.url,
+          } as SerializedVideoNode;
+        }
+        if (node instanceof IframeNode) {
+          return {
+            ...baseData,
+            type: 'iframe',
+            url: node.url,
+          } as SerializedIframeNode;
+        }
+        if (node instanceof ShapeNode) {
+          return {
+            ...baseData,
+            type: 'shape',
+            shape: node.shape,
+            fill: node.fill,
+            stroke: node.stroke,
+            lineWidth: node.lineWidth,
+          } as SerializedShapeNode;
+        }
+        if (node instanceof BrushNode) {
+          return {
+            ...baseData,
+            type: 'brush',
+            stroke: node.stroke,
+            strokeWidth: node.strokeWidth,
+            path: (node as any).path?.map((p: Point) => ({ x: p.x, y: p.y })),
+          } as SerializedBrushNode;
+        }
+        return null;
+      })
+      .filter((n): n is SerializedNode => n !== null);
+
+    return {
+      nodes: serializableNodes,
+      zoom: state.zoom,
+    };
+  }
+
+  /**
+   * Десериализует состояние из JSON-объекта и воссоздает сцену.
+   * @param data
+   */
+  deserializeState(data: SerializedState) {
+    this.clearAllNodes();
+    if (!data || !data.nodes) return;
+
+    data.nodes.forEach((nodeData) => {
+      const options = {
+        width: nodeData.width,
+        height: nodeData.height,
+        rotation: nodeData.rotation,
+        alpha: nodeData.alpha,
+      };
+
+      switch (nodeData.type) {
+        case 'text':
+          this.bus.emit({
+            t: 'ADD_TEXT',
+            x: nodeData.x,
+            y: nodeData.y,
+            text: nodeData.textHtml,
+            options: { ...options, style: nodeData.style },
+          });
+          break;
+        case 'image':
+          this.bus.emit({
+            t: 'ADD_IMAGE',
+            url: nodeData.url,
+            x: nodeData.x,
+            y: nodeData.y,
+            options: options,
+          });
+          break;
+        case 'video':
+          this.bus.emit({
+            t: 'ADD_VIDEO',
+            url: nodeData.url,
+            x: nodeData.x,
+            y: nodeData.y,
+            options: options,
+          });
+          break;
+        case 'iframe':
+          this.bus.emit({
+            t: 'ADD_IFRAME',
+            url: nodeData.url,
+            x: nodeData.x,
+            y: nodeData.y,
+            options: options,
+          });
+          break;
+        case 'shape':
+          this.bus.emit({
+            t: 'ADD_SHAPE',
+            shape: nodeData.shape,
+            x: nodeData.x,
+            y: nodeData.y,
+            options: {
+              ...options,
+              fill: nodeData.fill,
+              stroke: nodeData.stroke,
+              lineWidth: nodeData.lineWidth,
+            },
+          });
+          break;
+        case 'brush':
+          this.bus.emit({
+            t: 'ADD_BRUSH',
+            path: nodeData.path,
+            x: nodeData.x,
+            y: nodeData.y,
+            options: {
+              ...options,
+              stroke: nodeData.stroke,
+              strokeWidth: nodeData.strokeWidth,
+            },
+          });
+          break;
+      }
+    });
+  }
+
+  /**
+   * Очищает все ноды со сцены.
+   */
+  clearAllNodes() {
+    const allNodeIds = Object.keys(this.store.snapshot((s) => s.nodes));
+    if (allNodeIds.length > 0) {
+      // Используем существующую логику удаления, чтобы история работала корректно,
+      // но делаем это одной "тихой" операцией без добавления в историю.
+      const allNodes = this.store.snapshot((state) => state.nodes);
+      for (const nodeId of allNodeIds) {
+        const nodeState = allNodes[nodeId];
+        if (nodeState) {
+          this.world.removeChild(nodeState.ref);
+          nodeState.ref.destroy();
+        }
+      }
+      this.store.resetNodes();
+      this.bus.emit({ t: 'SELECT', ids: [] });
+    }
   }
 }
 

@@ -175,4 +175,12 @@ export class EditorStore extends ComponentStore<EditorViewModel> {
 
   /** Устанавливает состояние режима кисти */
   readonly setBrushActive = this.updater<boolean>((state, brushActive) => ({ ...state, brushActive }));
+
+  /** Сбрасывает состояние узлов, порядка и выделения */
+  readonly resetNodes = this.updater((state) => ({
+    ...state,
+    nodes: {},
+    order: [],
+    selectedIds: [],
+  }));
 }

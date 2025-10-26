@@ -31,7 +31,7 @@ export class TextPlugin implements EditorPlugin {
       const textNode = new TextNode(ctx.app, this.fitter);
       textNode.x = addText.x ?? 80;
       textNode.y = addText.y ?? 80;
-      textNode.applyBoxSize(addText.w ?? 600, addText.h ?? 240);
+      textNode.applyBoxSize(addText.options?.width ?? 600, addText.options?.height ?? 240);
       textNode.textHtml = addText.text ?? 'New text';
       void textNode.layout();
 

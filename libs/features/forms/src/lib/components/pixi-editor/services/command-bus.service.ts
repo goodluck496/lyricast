@@ -32,15 +32,16 @@ import { ShapeType } from '../enums';
 export type EditorCommand =
   // Команды выделения
   | { t: 'SELECT'; ids: string[] }  // Установить выделенные узлы
-  
+
   // Команды создания узлов
-  | { t: 'ADD_TEXT'; x: number; y: number; w?: number; h?: number; text?: string }  // Создать текстовый блок
-  | { t: 'ADD_IMAGE'; url: string; x?: number; y?: number; w?: number; h?: number }  // Создать изображение
-  | { t: 'ADD_VIDEO'; url: string; x?: number; y?: number; w?: number; h?: number }  // Создать видео
-  | { t: 'ADD_IFRAME'; url: string; x?: number; y?: number; w?: number; h?: number }  // Создать iframe
-  | { t: 'ADD_SHAPE'; shape: ShapeType; x: number; y: number; w?: number; h?: number }  // Создать фигуру
+  | { t: 'ADD_TEXT'; x: number; y: number; text?: string; options?: { width?: number; height?: number; rotation?: number; alpha?: number; style?: UiTextStyles } }
+  | { t: 'ADD_IMAGE'; url: string; x?: number; y?: number; options?: { width?: number; height?: number; rotation?: number; alpha?: number } }
+  | { t: 'ADD_VIDEO'; url: string; x?: number; y?: number; options?: { width?: number; height?: number; rotation?: number; alpha?: number } }
+  | { t: 'ADD_IFRAME'; url: string; x?: number; y?: number; options?: { width?: number; height?: number; rotation?: number; alpha?: number } }
+  | { t: 'ADD_SHAPE'; shape: ShapeType; x: number; y: number; options?: { width?: number; height?: number; rotation?: number; alpha?: number; fill?: number; stroke?: number; lineWidth?: number } }
+  | { t: 'ADD_BRUSH'; path: { x: number; y: number }[]; x?: number; y?: number; options?: { width?: number; height?: number; rotation?: number; alpha?: number; stroke?: number; strokeWidth?: number } }
   | { t: 'START_BRUSH' }  // Начать рисование кистью
-  
+
   // Команды аудио
   | { t: 'SET_AUDIO'; url?: string }  // Установить аудио-дорожку
   | { t: 'PLAY_AUDIO' | 'PAUSE_AUDIO' }  // Воспроизвести/приостановить аудио

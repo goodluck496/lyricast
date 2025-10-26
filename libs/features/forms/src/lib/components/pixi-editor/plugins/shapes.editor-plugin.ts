@@ -19,7 +19,8 @@ export class ShapesPlugin implements EditorPlugin {
       const shapeNode = new ShapeNode(addShape.shape);
       shapeNode.x = addShape.x;
       shapeNode.y = addShape.y;
-      shapeNode.applyBoxSize(addShape.w ?? 200, addShape.shape === 'line' ? 1 : (addShape.h ?? 120));
+
+      shapeNode.applyBoxSize(addShape?.options?.width ?? 200, addShape?.shape === 'line' ? 1 : (addShape?.options?.height ?? 120));
       ctx.world.addChild(shapeNode);
       const newId = shapeNode.id; ctx.store.addNode({ id: newId, type: 'shape', ref: shapeNode });
       this.drag.bind(shapeNode, new Subject<void>(), { cfg: ctx.cfg, store: ctx.store, guides: ctx.guides, world: ctx.world, app: ctx.app, bus: ctx.bus, utils: ctx.utils, overlay: ctx.overlay });

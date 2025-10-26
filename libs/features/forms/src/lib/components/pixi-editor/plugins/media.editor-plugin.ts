@@ -29,7 +29,7 @@ export class MediaPlugin implements EditorPlugin {
       const imageNode = new ImageNode(addImage.url);
       imageNode.x = addImage.x ?? 120;
       imageNode.y = addImage.y ?? 100;
-      imageNode.applyBoxSize(addImage.w ?? 400, addImage.h ?? 300);
+      imageNode.applyBoxSize(addImage.options?.width ?? 400, addImage.options?.height ?? 300);
       
       const nodeState = { id: imageNode.id, type: 'image' as const, ref: imageNode };
       
@@ -92,7 +92,7 @@ export class MediaPlugin implements EditorPlugin {
         const iframeNode = new IframeNode(embedUrl);
         iframeNode.x = addVideo.x ?? 180;
         iframeNode.y = addVideo.y ?? 160;
-        iframeNode.applyBoxSize(addVideo.w ?? 640, addVideo.h ?? 360);
+        iframeNode.applyBoxSize(addVideo.options?.width ?? 640, addVideo.options?.height ?? 360);
         
         const nodeState = { id: iframeNode.id, type: 'iframe' as const, ref: iframeNode };
         
@@ -122,7 +122,7 @@ export class MediaPlugin implements EditorPlugin {
         const videoNode = new VideoNode(addVideo.url);
         videoNode.x = addVideo.x ?? 160;
         videoNode.y = addVideo.y ?? 140;
-        videoNode.applyBoxSize(addVideo.w ?? 480, addVideo.h ?? 320);
+        videoNode.applyBoxSize(addVideo.options?.width ?? 480, addVideo.options?.height ?? 320);
         
         const nodeState = { id: videoNode.id, type: 'video' as const, ref: videoNode };
         

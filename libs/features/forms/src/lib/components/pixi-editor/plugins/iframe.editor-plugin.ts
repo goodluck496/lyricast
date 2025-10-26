@@ -48,7 +48,7 @@ export class IframePlugin implements EditorPlugin {
       const node = new IframeNode(embedUrl);
       node.x = addIframe.x ?? 180; 
       node.y = addIframe.y ?? 160; 
-      node.applyBoxSize(addIframe.w ?? 640, addIframe.h ?? 360);
+      node.applyBoxSize(addIframe.options?.width ?? 640, addIframe.options?.height ?? 360);
       
       const nodeState = { id: node.id, type: 'iframe' as const, ref: node };
       

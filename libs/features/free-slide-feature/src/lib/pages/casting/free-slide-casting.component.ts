@@ -1,21 +1,19 @@
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
-  ChangeDetectorRef,
   Component,
   DestroyRef,
   ElementRef,
   HostListener,
   inject,
   OnInit,
+  Renderer2,
   signal,
-  viewChildren,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import {
-  FreeSlideNavigatePayload,
-  FreeSlideStartCastingPayload,
   selectFreeSlideCastingPaused,
   selectFreeSlideCastingProcess,
   selectFreeSlideCastingStarted,
@@ -23,30 +21,77 @@ import {
 } from '@lyri-cast/free-slide-store';
 import { AppActions, BridgeService, Pages } from '@lyri-cast/common-browser';
 import { filterEmpty } from '@lyri-cast/common';
-import {
-  combineLatest,
-  debounceTime,
-  filter,
-  map,
-  Observable,
-  tap,
-  withLatestFrom,
-} from 'rxjs';
+import { combineLatest, filter, map } from 'rxjs';
 import { FreeSlide } from '@lyri-cast/entities';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
-import Reveal, { Api } from 'reveal.js';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Actions, ofType } from '@ngrx/effects';
 import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
+import {
+  Application,
+  Assets,
+  Container,
+  Graphics,
+  HTMLText,
+  HTMLTextStyle,
+  Sprite,
+} from 'pixi.js';
+
+// Типы для десериализации состояния. Должны быть синхронизированы с редактором.
+type SerializedNodeBase = {
+  id: string;
+  type: 'text' | 'image' | 'video' | 'iframe' | 'shape' | 'brush' | 'group';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  alpha: number;
+};
+
+type SerializedTextNode = SerializedNodeBase & {
+  type: 'text';
+  textHtml: string;
+  style: any;
+}; // style: UiTextStyles
+type SerializedImageNode = SerializedNodeBase & { type: 'image'; url: string };
+type SerializedVideoNode = SerializedNodeBase & { type: 'video'; url: string };
+type SerializedIframeNode = SerializedNodeBase & {
+  type: 'iframe';
+  url: string;
+};
+type SerializedShapeNode = SerializedNodeBase & {
+  type: 'shape';
+  shape: 'rect' | 'ellipse' | 'line';
+  fill: number;
+  stroke: number;
+  lineWidth: number;
+};
+type SerializedBrushNode = SerializedNodeBase & {
+  type: 'brush';
+  stroke: number;
+  strokeWidth: number;
+  path: { x: number; y: number }[];
+};
+
+type SerializedNode =
+  | SerializedTextNode
+  | SerializedImageNode
+  | SerializedVideoNode
+  | SerializedIframeNode
+  | SerializedShapeNode
+  | SerializedBrushNode;
+
+type SerializedState = {
+  nodes: SerializedNode[];
+  zoom: number;
+};
 
 @Component({
   selector: 'lyri-free-slide-casting',
   standalone: true,
-  imports: [CommonModule, Ng2FittextModule],
+  imports: [CommonModule],
   templateUrl: './free-slide-casting.component.html',
   styleUrls: ['./free-slide-casting.component.scss'],
-  // encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
@@ -54,259 +99,206 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
   private readonly actions$ = inject(Actions);
   private readonly bridge = inject(BridgeService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly elRef = inject(ElementRef<HTMLElement>);
-  private readonly sanitizer = inject(DomSanitizer);
+  private readonly renderer = inject(Renderer2);
 
-  deckRef?: Reveal.Api;
+  @ViewChild('pixiHost', { static: true })
+  pixiHostRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('domOverlay', { static: true })
+  domOverlayRef!: ElementRef<HTMLDivElement>;
 
-  selectCastingProcess$ = this.store.select(selectFreeSlideCastingProcess);
-  selectCastingStarted$ = this.store.select(selectFreeSlideCastingStarted);
-  slideNavigate$ = this.store.select(selectFreeSlideNavigateState);
-  castingPaused$ = this.store.select(selectFreeSlideCastingPaused);
+  private app!: Application;
+  private scene!: Container;
 
-  slides$: Observable<FreeSlide[]> = this.selectCastingProcess$.pipe(
-    filterEmpty(),
-    map((data) => {
-      console.log('FreeSlideCastingComponent', data);
-      return data.slides;
-    })
-  );
-
-  started = signal(false);
   hideContent = signal(false);
-  showedSlideIndex = signal(0);
-
-  fitTexts = viewChildren(Ng2FittextDirective);
 
   ngOnInit() {
-    console.log('FreeSlideCastingComponent ngOnInit', this);
-
-    this.selectCastingStarted$
+    this.store
+      .select(selectFreeSlideCastingStarted)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((data) => {
-        this.hideContent.set(data);
+      .subscribe((isCasting) => {
+        this.hideContent.set(!isCasting);
       });
 
     combineLatest([
-      this.selectCastingStarted$,
-      this.selectCastingProcess$.pipe(debounceTime(300), filterEmpty()),
-      this.slideNavigate$,
-    ]).subscribe(([started, process, navigate]) => {
-      if (!started) {
-        return;
-      }
-      this.started.set(started);
-
-      if (navigate) {
-        this.navigateSlideHandler(navigate);
-        if (navigate.index !== undefined) {
-          this.showedSlideIndex.set(navigate.index);
+      this.store.select(selectFreeSlideCastingProcess).pipe(filterEmpty()),
+      this.store.select(selectFreeSlideNavigateState),
+    ])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([process, navigate]) => {
+        const slideIndex = navigate?.index ?? process.fromIndex;
+        const slide = process.slides[slideIndex];
+        if (slide) {
+          this.renderSlide(slide);
         }
-        console.log('navigate', navigate);
-      } else if (process) {
-        console.log('process', process);
-        this.startCastingHandler(process);
-        this.showedSlideIndex.set(process.fromIndex);
-      }
+      });
 
-      setTimeout(() => {
-        this.openIframeFullscreen();
-      }, 300);
-    });
-    /*
-    this.selectCastingProcess$
-      .pipe(
-        debounceTime(300),
-        filterEmpty(),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe((data) => {
-        this.startCastingHandler(data);
-        /!**
-         * ХАК!!! надо рефачить
-         *!/
-        // setTimeout(() => {
-        //   window.dispatchEvent(new Event('resize', {}));
-        // }, 100);
-
-        setTimeout(() => {
-          this.openIframeFullscreen();
-        }, 1000);
-      });*/
-
-    /*  this.slideNavigate$
-        .pipe(
-          filterEmpty(),
-          withLatestFrom(this.selectCastingStarted$),
-          takeUntilDestroyed(this.destroyRef)
-        )
-        .subscribe(([data, started]) => {
-          if (started) {
-            console.log('navigate');
-            this.navigateSlideHandler(data);
-          }
-        });*/
+    this.store
+      .select(selectFreeSlideCastingPaused)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((paused) => {
+        this.hideContent.set(paused);
+      });
 
     this.actions$
       .pipe(
         ofType(AppActions.openPage),
-        tap((data) => {
-          console.log('AppActions.openPage', data);
-        }),
         filter(() => this.bridge.windowType !== AppWindowTypes.MAIN),
-        tap((data) => {
-          console.log('openPage', data);
-          // this.router
-          //   .navigate([...data.path], { replaceUrl: true })
-          //   .then((r) => console.log('open page', r));
-        }),
         map((data) => ({ type: APP_COMMON_ACTIONS.openPage, payload: data })),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((data) => {
-        console.log('-----------------open page', data);
-        this.initReveal();
+      .subscribe(() => {
+        this.resizeHandler();
       });
-
-    this.castingPaused$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((paused) => {
-        console.log('paused???', paused);
-        if (this.started()) {
-          this.hideContent.set(paused);
-        }
-      });
-  }
-
-  openIframeFullscreen() {
-    /**
-     * todo
-     * нужно обновить модель сообщения, чтобы принимать тип контента,
-     * и если есть видео или еще какое-то медиа c iframe - чтобы срабатывала эта функция
-     */
-
-    // Находим первое iframe внутри #preview
-    const iframe: HTMLIFrameElement | null =
-      this.elRef.nativeElement.querySelector('iframe');
-    if (!iframe) {
-      console.warn('Iframe не найден в контейнере превью');
-      return;
-    }
-
-    // Функция, учитывающая разные браузеры
-    const elem: any = iframe; // casting для поддержки префиксов
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen();
-    } else if (elem.mozRequestFullScreen) {
-      // Firefox
-      elem.mozRequestFullScreen();
-    } else if (elem.webkitRequestFullscreen) {
-      // Chrome, Safari, Opera
-      elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) {
-      // IE/Edge
-      elem.msRequestFullscreen();
-    } else {
-      console.error('Fullscreen API не поддерживается этим браузером');
-    }
   }
 
   async ngAfterViewInit() {
-    await this.initReveal();
-    console.log('afterViewInit');
-
+    await this.initPixi();
     this.bridge.windowSrv.electronContext.send({
       event: 'OPENED_PAGE',
       payload: { state: 'after-view-init', page: Pages.CASTING },
     });
   }
 
-  sanitizeHtml(rawHtml: string): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(rawHtml);
-  }
-
   @HostListener('window:resize', ['$event'])
   resizeHandler() {
-    if (!this.deckRef) {
-      return;
+    if (this.app) {
+      this.app.renderer.resize(
+        this.pixiHostRef.nativeElement.clientWidth,
+        this.pixiHostRef.nativeElement.clientHeight
+      );
     }
-
-    this.deckRef.layout();
-    this.updateTextSize();
   }
 
-  updateTextSize() {
-    this.fitTexts().forEach((el) => {
-      el.onResize(new Event('resize'));
+  private async initPixi() {
+    this.app = new Application();
+    await this.app.init({
+      resizeTo: this.pixiHostRef.nativeElement,
+      backgroundAlpha: 0,
+      antialias: true,
     });
+    this.pixiHostRef.nativeElement.appendChild(this.app.canvas);
+    this.scene = new Container();
+    this.app.stage.addChild(this.scene);
   }
 
-  startCastingHandler(payload: FreeSlideStartCastingPayload) {
-    if (!this.deckRef) {
-      return;
+  private async renderSlide(slide: FreeSlide) {
+    // Clear previous content
+    this.scene.removeChildren();
+    this.domOverlayRef.nativeElement.innerHTML = '';
+
+    if (!slide.htmlString) return;
+
+    try {
+      const data: SerializedState = JSON.parse(slide.htmlString);
+      if (!data || !data.nodes) return;
+
+      for (const nodeData of data.nodes) {
+        let node: any;
+
+        switch (nodeData.type) {
+          case 'text': {
+            const style = new HTMLTextStyle({
+              ...nodeData.style,
+              fill: nodeData.style.colorHex,
+              fontSize: nodeData.style.max, // Use max font size for casting
+              wordWrap: true,
+              wordWrapWidth: nodeData.width,
+            });
+            node = new HTMLText({ text: nodeData.textHtml, style });
+            break;
+          }
+
+          case 'image':
+          case 'video': {
+            const texture = await Assets.load(nodeData.url);
+            node = new Sprite(texture);
+            node.width = nodeData.width;
+            node.height = nodeData.height;
+            if (nodeData.type === 'video') {
+              const videoSource = node.texture.source as any;
+              if (videoSource.resource) {
+                videoSource.resource.loop = true;
+                videoSource.resource.autoplay = true;
+                videoSource.resource.muted = true;
+              }
+            }
+            break;
+          }
+
+          case 'shape':
+            node = new Graphics();
+            if (nodeData.shape === 'rect') {
+              node
+                .rect(0, 0, nodeData.width, nodeData.height)
+                .fill(nodeData.fill);
+              node.stroke({
+                width: nodeData.lineWidth,
+                color: nodeData.stroke,
+              });
+            } else if (nodeData.shape === 'ellipse') {
+              node
+                .ellipse(
+                  nodeData.width / 2,
+                  nodeData.height / 2,
+                  nodeData.width / 2,
+                  nodeData.height / 2
+                )
+                .fill(nodeData.fill);
+              node.stroke({
+                width: nodeData.lineWidth,
+                color: nodeData.stroke,
+              });
+            }
+            break;
+
+          case 'brush':
+            node = new Graphics();
+            if (nodeData.path && nodeData.path.length > 0) {
+              node.moveTo(nodeData.path[0].x, nodeData.path[0].y);
+              nodeData.path.forEach((p: { x: number; y: number }) =>
+                node.lineTo(p.x, p.y)
+              );
+              node.stroke({
+                width: nodeData.strokeWidth,
+                color: nodeData.stroke,
+                cap: 'round',
+                join: 'round',
+              });
+            }
+            break;
+
+          case 'iframe': {
+            const iframe = this.renderer.createElement('iframe');
+            this.renderer.setAttribute(iframe, 'src', nodeData.url);
+            this.renderer.setStyle(iframe, 'position', 'absolute');
+            this.renderer.setStyle(iframe, 'left', `${nodeData.x}px`);
+            this.renderer.setStyle(iframe, 'top', `${nodeData.y}px`);
+            this.renderer.setStyle(iframe, 'width', `${nodeData.width}px`);
+            this.renderer.setStyle(iframe, 'height', `${nodeData.height}px`);
+            this.renderer.setStyle(iframe, 'border', 'none');
+            this.renderer.appendChild(this.domOverlayRef.nativeElement, iframe);
+            break;
+          }
+        }
+
+        if (node) {
+          node.x = nodeData.x;
+          node.y = nodeData.y;
+          node.rotation = nodeData.rotation;
+          node.alpha = nodeData.alpha;
+          // For graphics, pivot needs to be set for rotation to work as expected
+          if (node instanceof Graphics) {
+            node.pivot.set(nodeData.width / 2, nodeData.height / 2);
+            node.position.set(
+              nodeData.x + nodeData.width / 2,
+              nodeData.y + nodeData.height / 2
+            );
+          }
+          this.scene.addChild(node);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to render slide content:', e);
     }
-    // this.clearSlides();
-    // await this.initReveal();
-
-    // if (payload.fromIndex !== undefined) {
-    this.deckRef.slide(undefined, payload.fromIndex);
-    // }
-
-    this.cdr.detectChanges();
-    this.updateTextSize();
-    this.hideContent.set(false);
-  }
-
-  navigateSlideHandler(payload: FreeSlideNavigatePayload) {
-    if (!this.deckRef) {
-      return;
-    }
-
-    this.deckRef.slide(undefined, payload.index);
-    this.updateTextSize();
-  }
-
-  clearSlides(): void {
-    this.deckRef?.destroy();
-
-    this.hideContent.set(true);
-  }
-
-  async initReveal(): Promise<Api> {
-    /*this.deckRef = new Reveal(this.elRef.nativeElement);
-
-    const deck = await this.deckRef?.initialize({
-      margin: -1,
-      disableLayout: true,
-      transition: 'fade', //todo можно сделать событие, которое будет изменять тип переходов между слайдами
-      // center: true,
-      embedded: true,
-      progress: false,
-      controls: false,
-      overview: false,
-      // controlsBackArrows: 'hidden',
-    });
-
-    return deck;
-  }*/
-
-    return new Promise((res, rej) => {
-      setTimeout(async () => {
-        const revealContainer =
-          this.elRef.nativeElement.querySelector('.reveal');
-        this.deckRef = new Reveal(revealContainer, {
-          margin: -1,
-          disableLayout: true,
-          transition: 'fade', //todo можно сделать событие, которое будет изменять тип переходов между слайдами
-          center: true,
-          embedded: true,
-        });
-
-        const deck = await this.deckRef?.initialize();
-
-        res(deck);
-      }, 300);
-    });
   }
 }

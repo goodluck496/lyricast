@@ -1,43 +1,37 @@
-:host {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  position: relative;
 
-  background-color: var(--r-background-color);
-  cursor: none;
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #000;
 }
 
+.pixi-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
 
-.slides {
-  &__container {
-    width: 100%;
-    height: 100%;
-    //height: calc(100% - 64px);
-    //margin-top: 64px;
+  &.hidden {
+    display: none;
   }
+}
 
-  &__section {
-    width: 100% !important;
-    height: 100% !important;
-    display: flex !important;
-    //align-items: center;
-    //justify-content: center;
+.pixi-host {
+  width: 100%;
+  height: 100%;
+}
 
-    // ВАЖНО добавить overflow: hidden; чтобы заработала fit-text директива
-    overflow: hidden;
+.dom-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Позволяет кликам проходить сквозь оверлей */
 
-    div {
-      width: 100% !important;
-    }
-
-
-  }
-
-  &__content {
-    width: 100%;
-    height: 100%;
-
-    white-space: nowrap;
+  /* Дочерние элементы (iframe) должны снова включить события */
+  & > * {
+    pointer-events: auto;
   }
 }

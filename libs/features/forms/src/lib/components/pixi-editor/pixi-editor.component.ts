@@ -50,57 +50,18 @@ import {
   TextNode,
   VideoNode,
 } from './nodes';
-import { PIXI_EDITOR_PROVIDERS } from './pixi-editor.providers'; // Типы для сериализации состояния
-
-// Типы для сериализации состояния
-type SerializedNodeBase = {
-  id: string;
-  type: 'text' | 'image' | 'video' | 'iframe' | 'shape' | 'brush' | 'group';
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  rotation: number;
-  alpha: number;
-};
-
-type SerializedTextNode = SerializedNodeBase & {
-  type: 'text';
-  textHtml: string;
-  style: UiTextStyles;
-};
-type SerializedImageNode = SerializedNodeBase & { type: 'image'; url: string };
-type SerializedVideoNode = SerializedNodeBase & { type: 'video'; url: string };
-type SerializedIframeNode = SerializedNodeBase & {
-  type: 'iframe';
-  url: string;
-};
-type SerializedShapeNode = SerializedNodeBase & {
-  type: 'shape';
-  shape: 'rect' | 'ellipse' | 'line';
-  fill: number;
-  stroke: number;
-  lineWidth: number;
-};
-type SerializedBrushNode = SerializedNodeBase & {
-  type: 'brush';
-  stroke: number;
-  strokeWidth: number;
-  path: { x: number; y: number }[];
-};
-
-type SerializedNode =
-  | SerializedTextNode
-  | SerializedImageNode
-  | SerializedVideoNode
-  | SerializedIframeNode
-  | SerializedShapeNode
-  | SerializedBrushNode;
-
-type SerializedState = {
-  nodes: SerializedNode[];
-  zoom: number;
-};
+import { PIXI_EDITOR_PROVIDERS } from './pixi-editor.providers';
+import {
+  SerializedState,
+  SerializedNode,
+  SerializedTextNode,
+  SerializedImageNode,
+  SerializedVideoNode,
+  SerializedIframeNode,
+  SerializedShapeNode,
+  SerializedBrushNode,
+  SerializedNodeBase,
+} from '@lyri-cast/entities';
 
 type WorldContainer = Container & { app: Application };
 
@@ -726,20 +687,6 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     };
     this.plugins.forEach((plugin) => plugin.init(ctx));
 
-    // Demo nodes (optional)
-    this.bus.emit({
-      t: 'ADD_TEXT',
-      x: 120,
-      y: 100,
-      text: 'Благодать твоя, как река, Наполняет сердце моё…',
-    });
-    this.bus.emit({
-      t: 'ADD_TEXT',
-      x: 180,
-      y: 380,
-      text: 'В Твоих я покоюсь руках.',
-    });
-
     // Context menu
     this.ctxMenu = new ContextMenuService(
       this.hostRef.nativeElement,
@@ -1054,13 +1001,14 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             type: 'text',
             textHtml: node.textHtml,
             style: node.style,
+            actualFontSize: node.currentFontSize, // Сохраняем реальный размер шрифта
           } as SerializedTextNode;
         }
         if (node instanceof ImageNode) {
           return {
             ...baseData,
             type: 'image',
-            url: (node as any).url,
+            url: node.url,
           } as SerializedImageNode;
         }
         if (node instanceof VideoNode) {

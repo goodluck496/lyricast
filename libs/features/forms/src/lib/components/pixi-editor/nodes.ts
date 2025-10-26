@@ -345,6 +345,7 @@ async function loadTextureRobust(url: string): Promise<Texture> {
 export class ImageNode extends NodeBase {
   readonly type = 'image' as const;
   sprite = new Sprite();
+  url = '';
 
   constructor(url?: string) {
     super();
@@ -357,6 +358,7 @@ export class ImageNode extends NodeBase {
   }
 
   async setUrl(url: string) {
+    this.url = url;
     try {
       const texture = await loadTextureRobust(url);
       if (!texture) throw new Error('Failed to load image texture');

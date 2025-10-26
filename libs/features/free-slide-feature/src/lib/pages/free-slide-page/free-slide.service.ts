@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { FreeSlide } from '@lyri-cast/entities';
 import { v4 as uuid } from 'uuid';
 
@@ -7,6 +7,9 @@ import { v4 as uuid } from 'uuid';
 export class FreeSlideService {
   slidesMap = new Map<string, FreeSlide>();
   slides$ = new BehaviorSubject<FreeSlide[]>([]);
+
+  // Событие для запроса сохранения текущего слайда
+  requestSaveCurrentSlide$ = new Subject<void>();
 
   constructor() {
     this._addFirstSlide();

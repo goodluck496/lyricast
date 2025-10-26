@@ -65,18 +65,32 @@ export class FreeSlideSidebarComponent {
   castingIsPaused$ = this.store.select(selectFreeSlideCastingPaused);
 
   onStartCasting() {
-    this.store
-      .select(selectFreeSlideSelected)
-      .pipe(filterEmpty(), take(1))
-      .subscribe((slide) => {
-        this.store.dispatch(
-          FreeSlideActions[FreeSlideActionsEnum.openCasting]({
-            slideId: slide.id,
-            slides: this.slideService.slides$.value,
-            fromIndex: slide.index,
-          })
-        );
-      });
+    console.log('[Sidebar] Starting casting...');
+    // Запрашиваем сохранение текущего слайда перед трансляцией
+    this.slideService.requestSaveCurrentSlide$.next();
+
+    // Даём время на сохранение, затем запускаем трансляцию
+    setTimeout(() => {
+      this.store
+        .select(selectFreeSlideSelected)
+        .pipe(filterEmpty(), take(1))
+        .subscribe((slide) => {
+          // Получаем актуальные данные слайдов из сервиса
+          const currentSlides = this.slideService.slides$.value;
+
+          console.log('[Sidebar] Selected slide:', slide);
+          console.log('[Sidebar] Total slides:', currentSlides.length);
+          console.log('[Sidebar] Slide htmlString length:', slide.htmlString?.length);
+
+          this.store.dispatch(
+            FreeSlideActions[FreeSlideActionsEnum.openCasting]({
+              slideId: slide.id,
+              slides: currentSlides,
+              fromIndex: slide.index,
+            })
+          );
+        });
+    }, 50);
 
     /*this.store
       .select(selectSelectedBibleVerse)

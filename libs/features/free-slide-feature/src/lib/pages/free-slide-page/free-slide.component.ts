@@ -11,7 +11,8 @@ import { DropdownModule } from 'primeng/dropdown';
 import { FreeSlideService } from './free-slide.service';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
-import { first, take } from 'rxjs';
+import { debounceTime, first, Subject, take } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgScrollbar } from 'ngx-scrollbar';
 import { PreviewSlideComponent } from '../../components/preview-slide/preview-slide.component';
 import { FreeSlideSidebarComponent } from '../../components/free-slide-sidebar/free-slide-sidebar.component';
@@ -58,6 +59,9 @@ export class FreeSlideComponent implements AfterViewInit {
 
   slides$ = this.slideService.slides$.asObservable();
 
+  // Автосохранение с debounce при изменениях в редакторе
+  private autoSave$ = new Subject<void>();
+
   onAddNewSlide() {
     const newSlide = this.slideService.addSlide();
 
@@ -65,6 +69,11 @@ export class FreeSlideComponent implements AfterViewInit {
   }
 
   onSelectSlide(slide: FreeSlide) {
+    // Автосохранение текущего слайда перед переключением
+    if (this.currentSlideId && this.pixiEditor) {
+      this.onSaveSlide();
+    }
+
     this.currentSlideName = slide.name;
     this.currentSlideId = slide.id;
     this.currentSlideIndex = slide.index;
@@ -105,15 +114,26 @@ export class FreeSlideComponent implements AfterViewInit {
 
   onSaveSlide() {
     if (!this.pixiEditor) {
+      console.warn('[FreeSlide] Cannot save: pixiEditor is not ready');
       return;
     }
     const editorState = this.pixiEditor.serializeState();
+    const htmlString = JSON.stringify(editorState);
+
+    console.log('[FreeSlide] Saving slide:', {
+      id: this.currentSlideId,
+      name: this.currentSlideName,
+      index: this.currentSlideIndex,
+      nodesCount: editorState.nodes.length,
+      htmlStringLength: htmlString.length,
+    });
+    console.log('[FreeSlide] Serialized nodes:', editorState.nodes);
 
     this.slideService.updateSlide({
       id: this.currentSlideId,
       name: this.currentSlideName,
       index: this.currentSlideIndex,
-      htmlString: JSON.stringify(editorState),
+      htmlString: htmlString,
     });
   }
 
@@ -141,14 +161,57 @@ export class FreeSlideComponent implements AfterViewInit {
     this.onSaveSlide();
   }
 
+  /**
+   * Сохраняет текущий слайд перед трансляцией.
+   * Этот метод вызывается из сайдбара перед началом кастинга.
+   */
+  saveCurrentSlide() {
+    if (this.pixiEditor && this.currentSlideId) {
+      this.onSaveSlide();
+    }
+  }
+
   ngAfterViewInit() {
     // Сброс состояния кастинга при инициализации free-slide фичи
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
 
+    // Подписка на запросы сохранения текущего слайда (например, перед трансляцией)
+    this.slideService.requestSaveCurrentSlide$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.onSaveSlide();
+      });
+
+    // Автосохранение с задержкой 3 секунды после изменений
+    this.autoSave$
+      .pipe(
+        debounceTime(3000),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.onSaveSlide();
+      });
+
+    // Подписка на изменения в редакторе (команды)
+    // Запускаем автосохранение при любых изменениях
+    setTimeout(() => {
+      if (this.pixiEditor?.bus) {
+        this.pixiEditor.bus.commands$
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe(() => {
+            this.autoSave$.next();
+          });
+      }
+    }, 200);
+
+    // Даём время на инициализацию PixiJS редактора перед загрузкой первого слайда
     this.slides$.pipe(first()).subscribe((slides) => {
       const firstSlide = slides[0];
       if (firstSlide) {
-        this.onSelectSlide(firstSlide);
+        // Небольшая задержка для завершения инициализации PixiJS
+        setTimeout(() => {
+          this.onSelectSlide(firstSlide);
+        }, 150);
       }
     });
   }

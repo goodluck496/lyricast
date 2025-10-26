@@ -89,7 +89,7 @@ export class HtmlEditorComponent
     'color',
     'background',
     'font',
-    // 'align',
+    'align',
     // 'link',
     // 'image',
     // 'video', // ← вот сюда
@@ -108,7 +108,7 @@ export class HtmlEditorComponent
       [{ header: [1, 2, 3, 4, 5, 6, false] }], // заголовки 1–6
       [{ color: [] }, { background: [] }], // цвет текста и фон
       // [{ font: [] }], // шрифты
-      // [{ align: [] }], // выравнивание
+      [{ align: [] }], // выравнивание
       ['clean'], // убрать форматирование
       // ['link', 'image', 'video'], // ← важно: кнопка Video
     ],

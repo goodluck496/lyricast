@@ -66,11 +66,22 @@ export class TextNode extends NodeBase {
   get currentFontSize(): number {
     return this.lastCalculatedFontSize;
   }
+
+  /** Геттеры для сериализации */
+  get backgroundColor(): number | null {
+    return this.bgFillColor;
+  }
+
+  get backgroundImageUrl(): string | undefined {
+    return this.bgImageUrl;
+  }
+
   private fitScheduled = false;
   private readonly textDisplay = new HTMLText({ text: '' });
 
   // Background: either solid fill via Graphics, or image via Sprite scaled to cover
   private bgFillColor: number | null = null;
+  private bgImageUrl?: string; // URL фонового изображения для сериализации
   private readonly bgG = new Graphics();
   private bgSprite?: Sprite;
   private maskG?: Graphics;
@@ -120,6 +131,8 @@ export class TextNode extends NodeBase {
   async setBackground(url: string) {
     try {
       const tex = await loadTextureRobust(url);
+      // Сохраняем URL для сериализации
+      this.bgImageUrl = url;
       // Если устанавливаем изображение, очищаем цветной фон
       this.bgFillColor = null;
 
@@ -149,6 +162,7 @@ export class TextNode extends NodeBase {
 
   /** Remove image background */
   clearBackground() {
+    this.bgImageUrl = undefined;
     if (this.bgSprite) {
       this.bgSprite.destroy();
       this.bgSprite = undefined;

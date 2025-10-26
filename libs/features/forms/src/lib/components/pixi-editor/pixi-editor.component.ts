@@ -85,7 +85,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     | 'brush';
   brushActive = false;
   canSetBg = false;
-  aspectRatio: '16:9' | '4:3' | 'none' = 'none';
+  aspectRatio: '16:9' | '4:3' | 'none' = '16:9';
 
   readonly cfg = inject(EDITOR_CONFIG);
   readonly store = inject(EditorStore);
@@ -101,6 +101,12 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   grid!: TilingSprite;
   guides!: GuideLayer;
   private sceneBounds?: Container;
+  // Текущие размеры сцены (с учетом zoom для отрисовки)
+  private sceneWidth: number = 1920;
+  private sceneHeight: number = 1080;
+  // Базовые размеры сцены (без zoom, для сериализации)
+  private baseSceneWidth: number = 1920;
+  private baseSceneHeight: number = 1080;
   private readonly textFit = inject(TextFitService);
   private readonly drag = inject(DragResizeService);
   private readonly dialog = inject(DialogService);
@@ -127,6 +133,12 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         this.brushActive = isActive;
         this.cdr.markForCheck();
       });
+
+    // Инициализируем границы сцены при запуске
+    // Небольшая задержка для завершения инициализации PixiJS
+    setTimeout(() => {
+      this.updateSceneBounds();
+    }, 200);
   }
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -693,6 +705,9 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       this.bus,
       this.store
     );
+
+    // Инициализируем размеры сцены сразу после создания app
+    this.updateSceneBounds();
   }
 
   private createGridTexture(size = 20, line = 1, alpha = 0.08) {
@@ -883,12 +898,6 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       this.sceneBounds = undefined;
     }
 
-    if (this.aspectRatio === 'none') return;
-
-    // Создаём контейнер для границ
-    const bounds = new Container();
-    const g = new Graphics();
-
     // Определяем размеры сцены на основе соотношения сторон
     const canvasWidth = this.app.renderer.width;
     const canvasHeight = this.app.renderer.height;
@@ -896,32 +905,71 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     // Учитываем текущий zoom и позицию world
     const zoom = this.store.snapshot((s) => s.zoom);
 
-    let sceneWidth: number;
-    let sceneHeight: number;
+    console.log('[Editor] updateSceneBounds:', {
+      canvasWidth,
+      canvasHeight,
+      zoom,
+      aspectRatio: this.aspectRatio
+    });
+
+    if (this.aspectRatio === 'none') {
+      // Для 'none' используем размеры canvas
+      this.sceneWidth = canvasWidth / zoom;
+      this.sceneHeight = canvasHeight / zoom;
+      // Базовые размеры без zoom (при zoom=1)
+      this.baseSceneWidth = canvasWidth;
+      this.baseSceneHeight = canvasHeight;
+      console.log('[Editor] Scene bounds (none):', {
+        sceneWidth: this.sceneWidth,
+        sceneHeight: this.sceneHeight,
+        baseSceneWidth: this.baseSceneWidth,
+        baseSceneHeight: this.baseSceneHeight
+      });
+      return;
+    }
 
     if (this.aspectRatio === '16:9') {
       // Вычисляем размеры для 16:9
       const ratio = 16 / 9;
       if (canvasWidth / canvasHeight > ratio) {
         // Ограничены по высоте
-        sceneHeight = (canvasHeight * 0.9) / zoom; // 90% высоты canvas с учетом zoom
-        sceneWidth = sceneHeight * ratio;
+        this.sceneHeight = (canvasHeight * 0.9) / zoom; // 90% высоты canvas с учетом zoom
+        this.sceneWidth = this.sceneHeight * ratio;
+        // Базовые размеры при zoom=1
+        this.baseSceneHeight = canvasHeight * 0.9;
+        this.baseSceneWidth = this.baseSceneHeight * ratio;
       } else {
         // Ограничены по ширине
-        sceneWidth = (canvasWidth * 0.9) / zoom; // 90% ширины canvas с учетом zoom
-        sceneHeight = sceneWidth / ratio;
+        this.sceneWidth = (canvasWidth * 0.9) / zoom; // 90% ширины canvas с учетом zoom
+        this.sceneHeight = this.sceneWidth / ratio;
+        // Базовые размеры при zoom=1
+        this.baseSceneWidth = canvasWidth * 0.9;
+        this.baseSceneHeight = this.baseSceneWidth / ratio;
       }
     } else {
       // 4:3
       const ratio = 4 / 3;
       if (canvasWidth / canvasHeight > ratio) {
-        sceneHeight = (canvasHeight * 0.9) / zoom;
-        sceneWidth = sceneHeight * ratio;
+        this.sceneHeight = (canvasHeight * 0.9) / zoom;
+        this.sceneWidth = this.sceneHeight * ratio;
+        // Базовые размеры при zoom=1
+        this.baseSceneHeight = canvasHeight * 0.9;
+        this.baseSceneWidth = this.baseSceneHeight * ratio;
       } else {
-        sceneWidth = (canvasWidth * 0.9) / zoom;
-        sceneHeight = sceneWidth / ratio;
+        this.sceneWidth = (canvasWidth * 0.9) / zoom;
+        this.sceneHeight = this.sceneWidth / ratio;
+        // Базовые размеры при zoom=1
+        this.baseSceneWidth = canvasWidth * 0.9;
+        this.baseSceneHeight = this.baseSceneWidth / ratio;
       }
     }
+
+    // Создаём контейнер для границ
+    const bounds = new Container();
+    const g = new Graphics();
+
+    const sceneWidth = this.sceneWidth;
+    const sceneHeight = this.sceneHeight;
 
     // Центрируем сцену относительно видимой области world
     const x = (canvasWidth / zoom - sceneWidth) / 2;
@@ -981,14 +1029,28 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
    */
   serializeState(): SerializedState {
     const state = this.store.snapshot((s) => s);
+
+    // Вычисляем offset сцены (где начинается рамка aspectRatio)
+    // ВАЖНО: offset вычисляется БЕЗ учета zoom, т.к. sceneWidth/Height уже учитывают zoom
+    const canvasWidth = this.app.renderer.width;
+    const canvasHeight = this.app.renderer.height;
+    const zoom = state.zoom;
+
+    // sceneWidth и sceneHeight уже в "мировых" координатах (без zoom)
+    // Но offset нужно вычислять в тех же координатах, что и ноды
+    // Ноды находятся в мировых координатах world, которые масштабируются zoom
+    const sceneOffsetX = (canvasWidth / zoom - this.sceneWidth) / 2;
+    const sceneOffsetY = (canvasHeight / zoom - this.sceneHeight) / 2;
+
     const serializableNodes = Object.values(state.nodes)
       .map((nodeState) => {
         const node = nodeState.ref as NodeBase;
+        // Сохраняем координаты относительно начала сцены (рамки aspectRatio)
         const baseData: SerializedNodeBase = {
           id: node.id,
           type: nodeState.type as SerializedNode['type'],
-          x: node.x,
-          y: node.y,
+          x: node.x - sceneOffsetX,
+          y: node.y - sceneOffsetY,
           width: node.width,
           height: node.height,
           rotation: node.rotation,
@@ -1002,14 +1064,18 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             textHtml: node.textHtml,
             style: node.style,
             actualFontSize: node.currentFontSize, // Сохраняем реальный размер шрифта
+            bgFillColor: node.backgroundColor, // Сохраняем цвет фона
+            bgImageUrl: node.backgroundImageUrl, // Сохраняем URL фонового изображения
           } as SerializedTextNode;
         }
         if (node instanceof ImageNode) {
-          return {
+          const imageData = {
             ...baseData,
             type: 'image',
             url: node.url,
           } as SerializedImageNode;
+          console.log('[Editor] Serializing ImageNode:', { id: node.id, url: node.url, width: node.width, height: node.height });
+          return imageData;
         }
         if (node instanceof VideoNode) {
           return {
@@ -1048,10 +1114,28 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       })
       .filter((n): n is SerializedNode => n !== null);
 
-    return {
+    const result = {
       nodes: serializableNodes,
       zoom: state.zoom,
+      sceneBounds: {
+        width: this.baseSceneWidth, // Используем базовые размеры без zoom
+        height: this.baseSceneHeight,
+      },
     };
+
+    console.log('[Editor] Serializing state:', {
+      nodesCount: serializableNodes.length,
+      sceneWidth: this.sceneWidth,
+      sceneHeight: this.sceneHeight,
+      baseSceneWidth: this.baseSceneWidth,
+      baseSceneHeight: this.baseSceneHeight,
+      sceneOffsetX,
+      sceneOffsetY,
+      zoom,
+      aspectRatio: this.aspectRatio,
+    });
+
+    return result;
   }
 
   /**
@@ -1062,6 +1146,13 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     this.clearAllNodes();
     if (!data || !data.nodes) return;
 
+    // Вычисляем offset сцены для восстановления абсолютных координат
+    const canvasWidth = this.app.renderer.width;
+    const canvasHeight = this.app.renderer.height;
+    const zoom = this.store.snapshot((s) => s.zoom);
+    const sceneOffsetX = (canvasWidth / zoom - this.sceneWidth) / 2;
+    const sceneOffsetY = (canvasHeight / zoom - this.sceneHeight) / 2;
+
     data.nodes.forEach((nodeData) => {
       const options = {
         width: nodeData.width,
@@ -1070,12 +1161,16 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         alpha: nodeData.alpha,
       };
 
+      // Восстанавливаем абсолютные координаты, добавляя offset сцены
+      const absoluteX = nodeData.x + sceneOffsetX;
+      const absoluteY = nodeData.y + sceneOffsetY;
+
       switch (nodeData.type) {
         case 'text':
           this.bus.emit({
             t: 'ADD_TEXT',
-            x: nodeData.x,
-            y: nodeData.y,
+            x: absoluteX,
+            y: absoluteY,
             text: nodeData.textHtml,
             options: { ...options, style: nodeData.style },
           });
@@ -1084,8 +1179,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           this.bus.emit({
             t: 'ADD_IMAGE',
             url: nodeData.url,
-            x: nodeData.x,
-            y: nodeData.y,
+            x: absoluteX,
+            y: absoluteY,
             options: options,
           });
           break;
@@ -1093,8 +1188,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           this.bus.emit({
             t: 'ADD_VIDEO',
             url: nodeData.url,
-            x: nodeData.x,
-            y: nodeData.y,
+            x: absoluteX,
+            y: absoluteY,
             options: options,
           });
           break;
@@ -1102,8 +1197,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           this.bus.emit({
             t: 'ADD_IFRAME',
             url: nodeData.url,
-            x: nodeData.x,
-            y: nodeData.y,
+            x: absoluteX,
+            y: absoluteY,
             options: options,
           });
           break;
@@ -1111,8 +1206,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           this.bus.emit({
             t: 'ADD_SHAPE',
             shape: nodeData.shape,
-            x: nodeData.x,
-            y: nodeData.y,
+            x: absoluteX,
+            y: absoluteY,
             options: {
               ...options,
               fill: nodeData.fill,
@@ -1125,8 +1220,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           this.bus.emit({
             t: 'ADD_BRUSH',
             path: nodeData.path,
-            x: nodeData.x,
-            y: nodeData.y,
+            x: absoluteX,
+            y: absoluteY,
             options: {
               ...options,
               stroke: nodeData.stroke,

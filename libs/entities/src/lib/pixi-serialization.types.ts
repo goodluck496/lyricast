@@ -19,6 +19,8 @@ export type SerializedTextNode = SerializedNodeBase & {
   textHtml: string;
   style: any; // UiTextStyles из pixi-editor
   actualFontSize?: number; // Реальный размер шрифта после auto-fit
+  bgFillColor?: number | null; // Цвет фона
+  bgImageUrl?: string; // URL фонового изображения
 };
 
 export type SerializedImageNode = SerializedNodeBase & {

@@ -21,7 +21,7 @@ import {
 } from '@lyri-cast/free-slide-store';
 import { AppActions, BridgeService, Pages } from '@lyri-cast/common-browser';
 import { filterEmpty } from '@lyri-cast/common';
-import { combineLatest, filter, map } from 'rxjs';
+import { combineLatest, filter, map, take } from 'rxjs';
 import { FreeSlide } from '@lyri-cast/entities';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Actions, ofType } from '@ngrx/effects';
@@ -35,7 +35,7 @@ import {
   HTMLTextStyle,
   Sprite,
 } from 'pixi.js';
-import { SerializedState } from '@lyri-cast/entities';
+import { SerializedState, SerializedIframeNode } from '@lyri-cast/entities';
 
 @Component({
   selector: 'lyri-free-slide-casting',
@@ -67,7 +67,6 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       .select(selectFreeSlideCastingStarted)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((isCasting) => {
-        console.log('[Casting] isCasting changed:', isCasting);
         this.hideContent.set(!isCasting);
       });
 
@@ -77,11 +76,8 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
     ])
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(([process, navigate]) => {
-        console.log('[Casting] Process received:', process);
-        console.log('[Casting] Navigate state:', navigate);
         const slideIndex = navigate?.index ?? process.fromIndex;
         const slide = process.slides[slideIndex];
-        console.log('[Casting] Rendering slide at index', slideIndex, ':', slide);
         if (slide) {
           this.renderSlide(slide);
         }
@@ -117,35 +113,68 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
   @HostListener('window:resize', ['$event'])
   resizeHandler() {
     if (this.app) {
-      this.app.renderer.resize(
-        this.pixiHostRef.nativeElement.clientWidth,
-        this.pixiHostRef.nativeElement.clientHeight
-      );
+      const newWidth = this.pixiHostRef.nativeElement.clientWidth || window.innerWidth;
+      const newHeight = this.pixiHostRef.nativeElement.clientHeight || window.innerHeight;
+
+      console.log('[Casting] Resizing renderer to:', { newWidth, newHeight });
+
+      this.app.renderer.resize(newWidth, newHeight);
+
+      // Перерисовываем текущий слайд с новыми размерами
+      // Получаем текущий слайд из стора
+      this.store.select(selectFreeSlideCastingProcess).pipe(
+        filterEmpty(),
+        take(1)
+      ).subscribe((process) => {
+        this.store.select(selectFreeSlideNavigateState).pipe(take(1)).subscribe((navigate) => {
+          const slideIndex = navigate?.index ?? process.fromIndex;
+          const slide = process.slides[slideIndex];
+          if (slide) {
+            this.renderSlide(slide);
+          }
+        });
+      });
     }
   }
 
   private async initPixi() {
     this.app = new Application();
-    await this.app.init({
-      resizeTo: this.pixiHostRef.nativeElement,
-      background: '#333333', // Серый фон для отладки (было: backgroundAlpha: 0)
-      antialias: true,
+
+    // Получаем реальные размеры контейнера
+    const containerWidth = this.pixiHostRef.nativeElement.clientWidth || window.innerWidth;
+    const containerHeight = this.pixiHostRef.nativeElement.clientHeight || window.innerHeight;
+
+    console.log('[Casting] initPixi - container dimensions:', {
+      clientWidth: this.pixiHostRef.nativeElement.clientWidth,
+      clientHeight: this.pixiHostRef.nativeElement.clientHeight,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      using: { width: containerWidth, height: containerHeight }
     });
+
+    await this.app.init({
+      width: containerWidth,
+      height: containerHeight,
+      backgroundAlpha: 0, // Прозрачный фон
+      antialias: true,
+      // НЕ используем resizeTo при инициализации, т.к. элемент может быть 0x0
+    });
+
     this.pixiHostRef.nativeElement.appendChild(this.app.canvas);
     this.scene = new Container();
     this.app.stage.addChild(this.scene);
-    console.log('[Casting] PixiJS initialized. Canvas size:', {
+
+    console.log('[Casting] PixiJS initialized with renderer size:', {
       width: this.app.renderer.width,
-      height: this.app.renderer.height,
+      height: this.app.renderer.height
     });
   }
 
   private async renderSlide(slide: FreeSlide) {
-    console.log('[Casting] renderSlide called with slide:', slide.id, slide.name);
-    console.log('[Casting] slide.htmlString length:', slide.htmlString?.length);
-
-    // Clear previous content
+    // Clear previous content and reset scale
     this.scene.removeChildren();
+    this.scene.scale.set(1, 1);
+    this.scene.position.set(0, 0);
     this.domOverlayRef.nativeElement.innerHTML = '';
 
     if (!slide.htmlString) {
@@ -155,43 +184,28 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
 
     try {
       const data: SerializedState = JSON.parse(slide.htmlString);
-      console.log('[Casting] Parsed data:', data);
-      console.log('[Casting] Nodes count:', data?.nodes?.length);
 
       if (!data || !data.nodes) {
         console.warn('[Casting] No data or nodes!');
         return;
       }
 
-      // Вычисляем scale заранее для масштабирования fontSize
+      // Получаем размеры canvas для кастинга
       const canvasWidth = this.app.renderer.width;
       const canvasHeight = this.app.renderer.height;
 
-      // Вычисляем bounding box всех нод для определения размера сцены
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      for (const nodeData of data.nodes) {
-        minX = Math.min(minX, nodeData.x);
-        minY = Math.min(minY, nodeData.y);
-        maxX = Math.max(maxX, nodeData.x + nodeData.width);
-        maxY = Math.max(maxY, nodeData.y + nodeData.height);
-      }
+      // Используем сохраненные размеры сцены из редактора (рамка aspectRatio)
+      // Если не сохранены, используем дефолтные 1920x1080
+      const sceneWidth = data.sceneBounds?.width || 1920;
+      const sceneHeight = data.sceneBounds?.height || 1080;
 
-      // Если нет нод или все координаты 0, используем дефолтные размеры
-      if (!isFinite(minX) || !isFinite(maxX)) {
-        minX = 0;
-        maxX = 1920;
-      }
-      if (!isFinite(minY) || !isFinite(maxY)) {
-        minY = 0;
-        maxY = 1080;
-      }
+      console.log('[Casting] Scene dimensions:', { sceneWidth, sceneHeight });
+      console.log('[Casting] Canvas dimensions:', { canvasWidth, canvasHeight });
 
-      const sceneWidth = data.sceneBounds?.width || Math.max(100, maxX - minX);
-      const sceneHeight = data.sceneBounds?.height || Math.max(100, maxY - minY);
-
-      // Вычисляем scale factor - используем 95% канваса для небольших отступов
-      const scaleX = (canvasWidth * 0.95) / sceneWidth;
-      const scaleY = (canvasHeight * 0.95) / sceneHeight;
+      // Вычисляем scale factor для заполнения всего окна кастинга
+      // Используем 100% canvas - контент должен занять весь экран
+      const scaleX = canvasWidth / sceneWidth;
+      const scaleY = canvasHeight / sceneHeight;
       let scaleFactor = Math.min(scaleX, scaleY);
 
       // Защита от некорректных значений
@@ -200,26 +214,26 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
         console.warn('[Casting] Invalid scaleFactor, using 1');
       }
 
-      console.log('[Casting] Pre-calculated scale:', {
-        canvasWidth,
-        canvasHeight,
-        sceneWidth,
-        sceneHeight,
-        minX,
-        minY,
-        maxX,
-        maxY,
-        scaleX,
-        scaleY,
-        scaleFactor,
-      });
+      console.log('[Casting] Scale factor:', scaleFactor);
+
+      // Массивы для отложенного рендеринга
+      const iframeNodes: SerializedIframeNode[] = [];
+      const textBackgrounds: Array<{ nodeData: any, x: number, y: number }> = [];
 
       for (const nodeData of data.nodes) {
-        console.log('[Casting] Rendering node:', nodeData.type, nodeData);
         let node: any;
 
         switch (nodeData.type) {
           case 'text': {
+            // Сохраняем информацию о фоне для отложенного рендеринга
+            if (nodeData.bgFillColor != null || nodeData.bgImageUrl) {
+              textBackgrounds.push({
+                nodeData: nodeData,
+                x: nodeData.x * scaleFactor,
+                y: nodeData.y * scaleFactor
+              });
+            }
+
             // Используем actualFontSize если есть, иначе вычисляем оптимальный размер
             let fontSize = nodeData.actualFontSize;
             if (!fontSize || fontSize === 0) {
@@ -229,49 +243,44 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
               console.warn('[Casting] actualFontSize not found, using calculated:', fontSize);
             }
 
-            console.log('[Casting] Creating text node with:', {
-              text: nodeData.textHtml,
-              style: nodeData.style,
-              width: nodeData.width,
-              height: nodeData.height,
-              fontSize: fontSize,
-            });
+            // Масштабируем fontSize для соответствия целевому размеру
+            const scaledFontSize = fontSize * scaleFactor;
 
-            // Создаём стиль с оригинальным fontSize
+            // Создаём стиль с масштабированным fontSize и lineHeight
             const style = new HTMLTextStyle({
               fontFamily: nodeData.style.font || 'Arial',
               fontWeight: nodeData.style.weight || 'normal',
               fill: nodeData.style.colorHex || '#FFFFFF',
-              fontSize: fontSize,
+              fontSize: scaledFontSize,
               align: nodeData.style.align || 'center',
+              //нельзя ставить lineHeight - текст сжимается в строку толщиной пара пикселей
+              // lineHeight: nodeData.style.lineHeight || 10,
               wordWrap: false,
             });
 
             node = new HTMLText({ text: nodeData.textHtml, style });
-
-            console.log('[Casting] Text node created:', {
-              text: node.text,
-              fontSize: style.fontSize,
-              bounds: node.getBounds(),
-              actualWidth: node.width,
-              actualHeight: node.height,
-            });
             break;
           }
 
           case 'image':
           case 'video': {
-            const texture = await Assets.load(nodeData.url);
-            node = new Sprite(texture);
-            node.width = nodeData.width;
-            node.height = nodeData.height;
-            if (nodeData.type === 'video') {
-              const videoSource = node.texture.source as any;
-              if (videoSource.resource) {
-                videoSource.resource.loop = true;
-                videoSource.resource.autoplay = true;
-                videoSource.resource.muted = true;
+            try {
+              console.log(`[Casting] Loading ${nodeData.type}:`, nodeData.url);
+              const texture = await Assets.load(nodeData.url);
+              node = new Sprite(texture);
+              node.width = nodeData.width * scaleFactor;
+              node.height = nodeData.height * scaleFactor;
+              if (nodeData.type === 'video') {
+                const videoSource = node.texture.source as any;
+                if (videoSource.resource) {
+                  videoSource.resource.loop = true;
+                  videoSource.resource.autoplay = true;
+                  videoSource.resource.muted = true;
+                }
               }
+              console.log(`[Casting] ${nodeData.type} loaded successfully`);
+            } catch (e) {
+              console.error(`[Casting] Failed to load ${nodeData.type}:`, nodeData.url, e);
             }
             break;
           }
@@ -280,23 +289,23 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
             node = new Graphics();
             if (nodeData.shape === 'rect') {
               node
-                .rect(0, 0, nodeData.width, nodeData.height)
+                .rect(0, 0, nodeData.width * scaleFactor, nodeData.height * scaleFactor)
                 .fill(nodeData.fill);
               node.stroke({
-                width: nodeData.lineWidth,
+                width: nodeData.lineWidth * scaleFactor,
                 color: nodeData.stroke,
               });
             } else if (nodeData.shape === 'ellipse') {
               node
                 .ellipse(
-                  nodeData.width / 2,
-                  nodeData.height / 2,
-                  nodeData.width / 2,
-                  nodeData.height / 2
+                  (nodeData.width / 2) * scaleFactor,
+                  (nodeData.height / 2) * scaleFactor,
+                  (nodeData.width / 2) * scaleFactor,
+                  (nodeData.height / 2) * scaleFactor
                 )
                 .fill(nodeData.fill);
               node.stroke({
-                width: nodeData.lineWidth,
+                width: nodeData.lineWidth * scaleFactor,
                 color: nodeData.stroke,
               });
             }
@@ -305,12 +314,12 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
           case 'brush':
             node = new Graphics();
             if (nodeData.path && nodeData.path.length > 0) {
-              node.moveTo(nodeData.path[0].x, nodeData.path[0].y);
+              node.moveTo(nodeData.path[0].x * scaleFactor, nodeData.path[0].y * scaleFactor);
               nodeData.path.forEach((p: { x: number; y: number }) =>
-                node.lineTo(p.x, p.y)
+                node.lineTo(p.x * scaleFactor, p.y * scaleFactor)
               );
               node.stroke({
-                width: nodeData.strokeWidth,
+                width: nodeData.strokeWidth * scaleFactor,
                 color: nodeData.stroke,
                 cap: 'round',
                 join: 'round',
@@ -319,77 +328,107 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
             break;
 
           case 'iframe': {
-            const iframe = this.renderer.createElement('iframe');
-            this.renderer.setAttribute(iframe, 'src', nodeData.url);
-            this.renderer.setStyle(iframe, 'position', 'absolute');
-            this.renderer.setStyle(iframe, 'left', `${nodeData.x * scaleFactor}px`);
-            this.renderer.setStyle(iframe, 'top', `${nodeData.y * scaleFactor}px`);
-            this.renderer.setStyle(iframe, 'width', `${nodeData.width * scaleFactor}px`);
-            this.renderer.setStyle(iframe, 'height', `${nodeData.height * scaleFactor}px`);
-            this.renderer.setStyle(iframe, 'border', 'none');
-            this.renderer.appendChild(this.domOverlayRef.nativeElement, iframe);
+            // Откладываем рендеринг iframe до вычисления позиции сцены
+            iframeNodes.push(nodeData as SerializedIframeNode);
             break;
           }
         }
 
         if (node) {
-          // Используем оригинальные координаты без масштабирования
-          node.x = nodeData.x;
-          node.y = nodeData.y;
+          // Масштабируем координаты (они уже относительно (0,0) сцены из редактора)
+          node.x = nodeData.x * scaleFactor;
+          node.y = nodeData.y * scaleFactor;
           node.rotation = nodeData.rotation;
           node.alpha = nodeData.alpha;
-
-          console.log('[Casting] Adding node to scene at position:', {
-            x: node.x,
-            y: node.y,
-            width: nodeData.width,
-            height: nodeData.height,
-            rotation: node.rotation,
-            alpha: node.alpha,
-          });
           this.scene.addChild(node);
-
-          // DEBUG: Добавляем красный прямоугольник вокруг текста для отладки
-          if (nodeData.type === 'text') {
-            const debugRect = new Graphics();
-            debugRect.rect(
-              nodeData.x,
-              nodeData.y,
-              nodeData.width,
-              nodeData.height
-            );
-            debugRect.stroke({ width: 2, color: 0xff0000 }); // Красная рамка
-            this.scene.addChild(debugRect);
-            console.log('[Casting] DEBUG: Added red rectangle at:', {
-              x: nodeData.x,
-              y: nodeData.y,
-              width: nodeData.width,
-              height: nodeData.height,
-            });
-          }
-        } else {
-          console.warn('[Casting] Node is null/undefined for:', nodeData.type);
         }
       }
 
-      console.log('[Casting] Finished rendering. Scene children count:', this.scene.children.length);
+      // Центрируем масштабированную сцену на canvas
+      // Размеры сцены после масштабирования
+      const scaledSceneWidth = sceneWidth * scaleFactor;
+      const scaledSceneHeight = sceneHeight * scaleFactor;
 
-      // Применяем масштабирование ко всей сцене
-      this.scene.scale.set(scaleFactor, scaleFactor);
-      console.log('[Casting] Scene scaled by:', scaleFactor);
+      // Позиционируем сцену в центре canvas
+      this.scene.x = (canvasWidth - scaledSceneWidth) / 2;
+      this.scene.y = (canvasHeight - scaledSceneHeight) / 2;
 
-      // Центрируем сцену на canvas
-      const bounds = this.scene.getBounds();
-      console.log('[Casting] Scene bounds after scaling:', bounds);
+      console.log('[Casting] Scene position:', { x: this.scene.x, y: this.scene.y });
 
-      this.scene.x = (canvasWidth - bounds.width) / 2 - bounds.x;
-      this.scene.y = (canvasHeight - bounds.height) / 2 - bounds.y;
+      // Рендерим фоны для текстовых нод (добавляем в начало сцены, чтобы были под текстом)
+      for (const bgInfo of textBackgrounds) {
+        const { nodeData, x, y } = bgInfo;
+        const scaledWidth = nodeData.width * scaleFactor;
+        const scaledHeight = nodeData.height * scaleFactor;
 
-      console.log('[Casting] Scene centered at:', { x: this.scene.x, y: this.scene.y });
-      console.log('[Casting] App stage size:', {
-        width: this.app.renderer.width,
-        height: this.app.renderer.height,
-      });
+        if (nodeData.bgImageUrl) {
+          // Фоновое изображение
+          try {
+            const bgTexture = await Assets.load(nodeData.bgImageUrl);
+            const bgSprite = new Sprite(bgTexture);
+
+            // Scale to cover
+            const scaleX = scaledWidth / bgTexture.width;
+            const scaleY = scaledHeight / bgTexture.height;
+            const bgScale = Math.max(scaleX, scaleY);
+            bgSprite.scale.set(bgScale);
+
+            // Позиционируем спрайт
+            bgSprite.anchor.set(0, 0);
+            bgSprite.x = x;
+            bgSprite.y = y;
+
+            // Центрируем спрайт если он больше блока
+            if (bgSprite.width > scaledWidth) {
+              bgSprite.x += (scaledWidth - bgSprite.width) / 2;
+            }
+            if (bgSprite.height > scaledHeight) {
+              bgSprite.y += (scaledHeight - bgSprite.height) / 2;
+            }
+
+            // Создаём маску
+            const maskG = new Graphics();
+            maskG.roundRect(x, y, scaledWidth, scaledHeight, 6 * scaleFactor).fill(0xffffff);
+            bgSprite.mask = maskG;
+
+            // Добавляем в начало сцены (индекс 0)
+            this.scene.addChildAt(bgSprite, 0);
+            this.scene.addChildAt(maskG, 0);
+          } catch (e) {
+            console.warn('[Casting] Failed to load text background image:', nodeData.bgImageUrl, e);
+          }
+        } else if (nodeData.bgFillColor != null) {
+          // Цветной фон
+          const bgGraphics = new Graphics();
+          bgGraphics.roundRect(
+            x,
+            y,
+            scaledWidth,
+            scaledHeight,
+            6 * scaleFactor
+          ).fill(nodeData.bgFillColor);
+          bgGraphics.alpha = nodeData.alpha || 1;
+
+          // Добавляем в начало сцены
+          this.scene.addChildAt(bgGraphics, 0);
+        }
+      }
+
+      // Теперь рендерим iframe элементы с правильной позицией сцены
+      for (const iframeData of iframeNodes) {
+        const iframe = this.renderer.createElement('iframe');
+        this.renderer.setAttribute(iframe, 'src', iframeData.url);
+        this.renderer.setStyle(iframe, 'position', 'absolute');
+        // Вычисляем абсолютную позицию с учетом смещения сцены
+        const absoluteLeft = this.scene.x + iframeData.x * scaleFactor;
+        const absoluteTop = this.scene.y + iframeData.y * scaleFactor;
+        this.renderer.setStyle(iframe, 'left', `${absoluteLeft}px`);
+        this.renderer.setStyle(iframe, 'top', `${absoluteTop}px`);
+        this.renderer.setStyle(iframe, 'width', `${iframeData.width * scaleFactor}px`);
+        this.renderer.setStyle(iframe, 'height', `${iframeData.height * scaleFactor}px`);
+        this.renderer.setStyle(iframe, 'border', 'none');
+        this.renderer.appendChild(this.domOverlayRef.nativeElement, iframe);
+      }
     } catch (e) {
       console.error('[Casting] Failed to render slide content:', e);
     }

@@ -1,7 +1,46 @@
-import { Application, Assets, Container, Graphics, HTMLText, Text,  Point, Sprite, Texture } from 'pixi.js';
+import { Application, Assets, Container, Graphics, HTMLText, HTMLTextStyle, Text,  Point, Sprite, Texture } from 'pixi.js';
 import { DEFAULT_CONFIG, UiTextStyles } from './types';
 import { TextFitService } from './services/text-fit.service';
 import { NodeBase } from './core';
+
+// Normalize font weight into a safe string literal that PixiJS expects
+type NumericWeightString =
+  | '100'
+  | '200'
+  | '300'
+  | '400'
+  | '500'
+  | '600'
+  | '700'
+  | '800'
+  | '900';
+type FontWeightKeyword = 'normal' | 'bold' | 'bolder' | 'lighter';
+type FontWeightValue = NumericWeightString | FontWeightKeyword;
+const normalizeFontWeight = (w: string): FontWeightValue => {
+  const s = String(w).trim().toLowerCase();
+  if (s === 'normal' || s === 'bold' || s === 'bolder' || s === 'lighter')
+    return s as FontWeightKeyword;
+  const n = Number(s);
+  const allowed: NumericWeightString[] = [
+    '100',
+    '200',
+    '300',
+    '400',
+    '500',
+    '600',
+    '700',
+    '800',
+    '900',
+  ];
+  const nearest = Number.isFinite(n)
+    ? (String(
+    Math.min(900, Math.max(100, Math.round(n / 100) * 100))
+    ) as NumericWeightString)
+    : '400';
+  return allowed.includes(nearest as NumericWeightString)
+    ? (nearest as NumericWeightString)
+    : '400';
+};
 
 /**
  * Editable text node that auto-fits text into its bounding box using TextFitService.
@@ -192,16 +231,21 @@ export class TextNode extends NodeBase {
 
     this.lastCalculatedFontSize = size;
 
-    Object.assign(this.textDisplay.style, {
+    this.textDisplay.style = new HTMLTextStyle({
       fontFamily: this.style.font,
-      fontWeight: this.style.weight,
+      fontWeight: normalizeFontWeight(this.style.weight),
       align: this.style.align,
       wordWrap: true,
       breakWords: true,
+      whiteSpace: 'normal',
       fill: this.style.color,
       lineHeight: size * this.style.lineHeight,
       fontSize: size,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
+      cssOverrides: [
+        'p { margin: 0; }',
+        'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+      ],
     });
 
     const anchorX =

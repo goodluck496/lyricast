@@ -287,7 +287,7 @@ type WorldContainer = Container & { app: Application };
           >Line
           <input
             type="range"
-            min="1"
+            min="0.2"
             max="1.8"
             step="0.02"
             [ngModel]="vm.ui.lineHeight"

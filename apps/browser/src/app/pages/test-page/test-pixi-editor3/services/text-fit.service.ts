@@ -102,6 +102,8 @@ export class TextFitService {
         align,
         wordWrap: true,
         wordWrapWidth: innerW,
+        whiteSpace: 'normal',
+        breakWords: true,
         fill:
           baseStyle && typeof baseStyle.fill === 'number'
             ? baseStyle.fill
@@ -117,6 +119,7 @@ export class TextFitService {
         lineHeight: number;
         wordWrap: boolean;
         breakWords: boolean;
+        whiteSpace: string;
         wordWrapWidth: number;
       };
       const s = probe.style as unknown as MutableTextStyle;
@@ -124,6 +127,7 @@ export class TextFitService {
       s.lineHeight = fs * lineHeight;
       s.wordWrap = true;
       s.breakWords = true;
+      s.whiteSpace = 'normal';
       s.wordWrapWidth = innerW;
     };
 

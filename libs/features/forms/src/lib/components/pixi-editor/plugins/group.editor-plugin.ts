@@ -78,9 +78,10 @@ export class GroupingPlugin implements EditorPlugin {
 
       // Register the group node in the store and select it
       const groupId = group.id;
-      ctx.store.addNode({ id: groupId, type: 'group', ref: group });
+      const destroy$ = new Subject<void>();
+      ctx.store.addNode({ id: groupId, type: 'group', ref: group, destroy$ });
       // Bind drag/resize to the group so it moves/resizes as a single block
-      this.drag.bind(group, new Subject<void>(), {
+      this.drag.bind(group, destroy$, {
         cfg: ctx.cfg,
         store: ctx.store,
         guides: ctx.guides,
@@ -123,12 +124,14 @@ export class GroupingPlugin implements EditorPlugin {
           const exists = ctx.store.snapshot((s) => s.nodes)[child.id];
           if (!exists) {
             const type = getNodeType(child);
+            const destroy$ = new Subject<void>();
             ctx.store.addNode({
               id: child.id,
               type,
               ref: child,
+              destroy$,
             });
-            this.drag.bind(child, new Subject<void>(), {
+            this.drag.bind(child, destroy$, {
               cfg: ctx.cfg,
               store: ctx.store,
               guides: ctx.guides,

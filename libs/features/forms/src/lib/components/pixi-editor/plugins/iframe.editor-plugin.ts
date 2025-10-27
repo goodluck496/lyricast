@@ -52,24 +52,23 @@ export class IframePlugin implements EditorPlugin {
       node.y = addIframe.y ?? 160;
       node.applyBoxSize(addIframe.options?.width ?? 640, addIframe.options?.height ?? 360);
 
-      const nodeState = { id: node.id, type: 'iframe' as const, ref: node };
-
-      // Выполняем команду добавления через историю
-      const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
-      ctx.history.execute(command);
-
-      this.drag.bind(node, new Subject<void>(), {
-        cfg: ctx.cfg,
-        store: ctx.store,
-        guides: ctx.guides,
-        world: ctx.world,
-        app: ctx.app,
-        bus: ctx.bus,
-        utils: ctx.utils,
-        overlay: ctx.overlay,
-        history: ctx.history
-      });
-      ctx.overlay.attachIframe(node);
+            const nodeState = { id: node.id, type: 'iframe' as const, ref: node, destroy$: new Subject<void>() };
+            
+            // Выполняем команду добавления через историю
+            const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
+            ctx.history.execute(command);
+            
+            this.drag.bind(node, nodeState.destroy$, { 
+              cfg: ctx.cfg, 
+              store: ctx.store, 
+              guides: ctx.guides, 
+              world: ctx.world, 
+              app: ctx.app, 
+              bus: ctx.bus, 
+              utils: ctx.utils, 
+              overlay: ctx.overlay,
+              history: ctx.history
+            });      ctx.overlay.attachIframe(node);
       // enable temporary interaction with double-click
       ctx.utils.fromPixi<FederatedPointerEvent>(node, 'pointertap')
         .pipe(filter((evt) => evt.detail >= 2), takeUntil(this.destroy$))

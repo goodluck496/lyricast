@@ -9,6 +9,7 @@ import { TextFitService } from '../services/text-fit.service';
 import { DragResizeService } from '../services/drag-resize.service';
 import { BrushNode, GroupNode, ShapeNode, TextNode } from '../nodes';
 import { Align, UiTextStyles } from '../types';
+import { AssetStorageService } from '../services/asset-storage.service';
 
 /**
  * TextPlugin handles creating text nodes and applying style patches to the selection.
@@ -23,14 +24,14 @@ export class TextPlugin implements EditorPlugin {
   id = 'text';
   private destroy$ = new Subject<void>();
 
-  constructor(private readonly fitter: TextFitService, private readonly drag: DragResizeService) {}
+  constructor(private readonly fitter: TextFitService, private readonly drag: DragResizeService, private readonly assetStorage: AssetStorageService) {}
 
   /** Initialize subscriptions for text-related editor commands. */
   init(ctx: EditorContext): void {
     // ADD_TEXT: create and select a new text node
     ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_TEXT'), takeUntil(this.destroy$)).subscribe((cmd) => {
       const addText = cmd as Extract<EditorCommand, { t: 'ADD_TEXT' }>;
-      const textNode = new TextNode(ctx.app, this.fitter);
+      const textNode = new TextNode(ctx.app, this.fitter, this.assetStorage);
       textNode.x = addText.x ?? 80;
       textNode.y = addText.y ?? 80;
 
@@ -42,6 +43,13 @@ export class TextPlugin implements EditorPlugin {
       }
       textNode.textHtml = addText.text ?? 'New text';
 
+      if (typeof addText.options?.bgFillColor === 'number') {
+        textNode.setBackgroundFill(addText.options.bgFillColor);
+      } else if (addText.options?.bgAssetId) {
+        // This will be resolved by deserializeState later
+        textNode.bgAssetId = addText.options.bgAssetId;
+      }
+
       // Теперь вызываем applyBoxSize, который использует actualFontSize, если он есть
       textNode.applyBoxSize(addText.options?.width ?? 600, addText.options?.height ?? 240);
 
@@ -50,7 +58,8 @@ export class TextPlugin implements EditorPlugin {
         void textNode.layout();
       }
 
-      const nodeState = { id: textNode.id, type: 'text' as const, ref: textNode };
+      const destroy$ = new Subject<void>();
+      const nodeState = { id: textNode.id, type: 'text' as const, ref: textNode, destroy$ };
 
       // Выполняем команду добавления через историю
       const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
@@ -59,7 +68,6 @@ export class TextPlugin implements EditorPlugin {
       ctx.bus.emit({ t: 'SELECT', ids: [textNode.id] });
       ctx.guides.draw([]);
 
-      const destroy$ = new Subject<void>();
       this.drag.bind(textNode, destroy$, {
         cfg: ctx.cfg,
         store: ctx.store,
@@ -136,15 +144,41 @@ export class TextPlugin implements EditorPlugin {
         }
       };
       for (const id of selectedIds) {
-        const n = nodeMap[id]?.ref as NodeBase | undefined;
-        if (n) visit(n);
+        const n = nodeMap[id]?.ref as TextNode | undefined ;
+        if (n) {
+          console.log(`[TextPlugin] applyToSelection: Found node ${id}, type: ${n['type'] }`, n);
+          visit(n);
+        }
       }
     };
 
     ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_TEXT_BACKGROUND'), takeUntil(this.destroy$)).subscribe(async (cmd) => {
-      const url = (cmd as Extract<EditorCommand, { t: 'SET_TEXT_BACKGROUND' }>).url;
-      const base64Url = await ctx.utils.urlToBase64(url);
-      applyToSelection((t) => { void t.setBackground(base64Url); });
+      const setBgCmd = cmd as Extract<EditorCommand, { t: 'SET_TEXT_BACKGROUND' }>;
+      let source: string | undefined;
+
+      console.log('setBgCmd.assetId', setBgCmd.assetId);
+      if (setBgCmd.assetId) {
+        source = await this.assetStorage.getAssetObjectURL(setBgCmd.assetId);
+        applyToSelection((t) => { t.bgAssetId = setBgCmd.assetId; });
+      } else if (setBgCmd.url) {
+        // If it's a data URL, convert to Blob and save as asset
+        if (setBgCmd.url.startsWith('data:')) {
+          const mimeType = setBgCmd.url.substring(setBgCmd.url.indexOf(':') + 1, setBgCmd.url.indexOf(';'));
+          const base64 = setBgCmd.url.split(',')[1];
+          const blob = ctx.utils.base64ToBlob(base64, mimeType);
+          const assetId = await this.assetStorage.saveAsset(blob, mimeType);
+          source = await this.assetStorage.getAssetObjectURL(assetId);
+          // Update the node's bgAssetId for serialization
+          applyToSelection((t) => { t.bgAssetId = assetId; });
+        } else {
+          source = setBgCmd.url;
+          applyToSelection((t) => { t.bgAssetId = setBgCmd.url; });
+        }
+      }
+
+      if (source) {
+        applyToSelection((t) => { void t.setBackground(source!); });
+      }
     });
     ctx.bus.commands$.pipe(filter((c) => c.t === 'CLEAR_TEXT_BACKGROUND'), takeUntil(this.destroy$)).subscribe(() => {
       applyToSelection((t) => t.clearBackground());

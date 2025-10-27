@@ -7,6 +7,7 @@ import { Subject } from 'rxjs';
 import { FederatedPointerEvent } from 'pixi.js';
 import { DragResizeService } from '../services/drag-resize.service';
 import { IframeNode, ImageNode, VideoNode } from '../nodes';
+import { AssetStorageService } from '../services/asset-storage.service';
 
 /**
  * MediaPlugin handles image, video, iframe embedding and background audio control.
@@ -21,44 +22,69 @@ export class MediaPlugin implements EditorPlugin {
   private backgroundAudio?: HTMLAudioElement;
   private destroy$ = new Subject<void>();
 
-  constructor(private readonly drag: DragResizeService) {}
+  constructor(private readonly drag: DragResizeService, private readonly assetStorage: AssetStorageService) {}
 
   /** Initialize subscriptions for media-related commands. */
   init(ctx: EditorContext): void {
     // ADD_IMAGE
     ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_IMAGE'), takeUntil(this.destroy$)).subscribe(async (cmd) => {
       const addImage = cmd as Extract<EditorCommand, { t: 'ADD_IMAGE' }>;
-      const base64Url = await ctx.utils.urlToBase64(addImage.url);
-      const imageNode = new ImageNode(base64Url);
+      let source: string | undefined;
+      if (addImage.assetId) {
+        source = await this.assetStorage.getAssetObjectURL(addImage.assetId);
+      } else if (addImage.url) {
+        source = addImage.url;
+      }
+
+      if (!source) {
+        console.warn('ADD_IMAGE command received without assetId or url.');
+        return;
+      }
+
+      const imageNode = new ImageNode(source);
       imageNode.x = addImage.x ?? 120;
       imageNode.y = addImage.y ?? 100;
       imageNode.applyBoxSize(addImage.options?.width ?? 400, addImage.options?.height ?? 300);
+      // Set assetId or url on the node for serialization
+      if (addImage.assetId) imageNode.assetId = addImage.assetId;
+      else if (addImage.url) imageNode.url = addImage.url;
 
-      const nodeState = { id: imageNode.id, type: 'image' as const, ref: imageNode };
-
+      const nodeState = { id: imageNode.id, type: 'image' as const, ref: imageNode, destroy$: new Subject<void>() };
+            
       // Выполняем команду добавления через историю
       const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
       ctx.history.execute(command);
-
-      this.drag.bind(imageNode, new Subject<void>(), {
-        cfg: ctx.cfg,
-        store: ctx.store,
-        guides: ctx.guides,
-        world: ctx.world,
-        app: ctx.app,
-        bus: ctx.bus,
-        utils: ctx.utils,
+            
+      this.drag.bind(imageNode, nodeState.destroy$, { 
+        cfg: ctx.cfg, 
+        store: ctx.store, 
+        guides: ctx.guides, 
+        world: ctx.world, 
+        app: ctx.app, 
+        bus: ctx.bus, 
+        utils: ctx.utils, 
         overlay: ctx.overlay,
         history: ctx.history
-      });
-      ctx.bus.emit({ t: 'SELECT', ids: [imageNode.id] });
+      });      ctx.bus.emit({ t: 'SELECT', ids: [imageNode.id] });
     });
 
     // ADD_VIDEO
     ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_VIDEO'), takeUntil(this.destroy$)).subscribe(async (cmd) => {
       const addVideo = cmd as Extract<EditorCommand, { t: 'ADD_VIDEO' }>;
-      const isYouTube = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)/i.test(addVideo.url ?? '');
-      const isVimeo = /vimeo\.com\//i.test(addVideo.url ?? '');
+      let source: string | undefined;
+      if (addVideo.assetId) {
+        source = await this.assetStorage.getAssetObjectURL(addVideo.assetId);
+      } else if (addVideo.url) {
+        source = addVideo.url;
+      }
+
+      if (!source) {
+        console.warn('ADD_VIDEO command received without assetId or url.');
+        return;
+      }
+
+      const isYouTube = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)/i.test(source ?? '');
+      const isVimeo = /vimeo\.com\//i.test(source ?? '');
 
       const toYouTubeEmbed = (url: string) => {
         try {
@@ -91,30 +117,29 @@ export class MediaPlugin implements EditorPlugin {
 
       if (isYouTube || isVimeo) {
         // Use iframe overlay for streaming platforms
-        const embedUrl = isYouTube ? toYouTubeEmbed(addVideo.url) : toVimeoEmbed(addVideo.url);
+        const embedUrl = isYouTube ? toYouTubeEmbed(source) : toVimeoEmbed(source);
         const iframeNode = new IframeNode(embedUrl);
         iframeNode.x = addVideo.x ?? 180;
         iframeNode.y = addVideo.y ?? 160;
         iframeNode.applyBoxSize(addVideo.options?.width ?? 640, addVideo.options?.height ?? 360);
 
-        const nodeState = { id: iframeNode.id, type: 'iframe' as const, ref: iframeNode };
-
-        // Выполняем команду добавления через историю
-        const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
-        ctx.history.execute(command);
-
-        this.drag.bind(iframeNode, new Subject<void>(), {
-          cfg: ctx.cfg,
-          store: ctx.store,
-          guides: ctx.guides,
-          world: ctx.world,
-          app: ctx.app,
-          bus: ctx.bus,
-          utils: ctx.utils,
-          overlay: ctx.overlay,
-          history: ctx.history
-        });
-        ctx.overlay.attachIframe(iframeNode);
+                const nodeState = { id: iframeNode.id, type: 'iframe' as const, ref: iframeNode, destroy$: new Subject<void>() };
+                
+                // Выполняем команду добавления через историю
+                const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
+                ctx.history.execute(command);
+                
+                this.drag.bind(iframeNode, nodeState.destroy$, { 
+                  cfg: ctx.cfg, 
+                  store: ctx.store, 
+                  guides: ctx.guides, 
+                  world: ctx.world, 
+                  app: ctx.app, 
+                  bus: ctx.bus, 
+                  utils: ctx.utils, 
+                  overlay: ctx.overlay,
+                  history: ctx.history
+                });        ctx.overlay.attachIframe(iframeNode);
         // enable temporary interaction with double-click
         ctx.utils
           .fromPixi<FederatedPointerEvent>(iframeNode, 'pointertap')
@@ -122,29 +147,31 @@ export class MediaPlugin implements EditorPlugin {
           .subscribe(() => ctx.overlay.setIframeInteractive(true));
         ctx.bus.emit({ t: 'SELECT', ids: [iframeNode.id] });
       } else {
-        const videoNode = new VideoNode(addVideo.url);
+        const videoNode = new VideoNode(source);
         videoNode.x = addVideo.x ?? 160;
         videoNode.y = addVideo.y ?? 140;
         videoNode.applyBoxSize(addVideo.options?.width ?? 480, addVideo.options?.height ?? 320);
+        // Set assetId or url on the node for serialization
+        if (addVideo.assetId) videoNode.assetId = addVideo.assetId;
+        else if (addVideo.url) videoNode.url = addVideo.url;
 
-        const nodeState = { id: videoNode.id, type: 'video' as const, ref: videoNode };
-
-        // Выполняем команду добавления через историю
-        const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
-        ctx.history.execute(command);
-
-        this.drag.bind(videoNode, new Subject<void>(), {
-          cfg: ctx.cfg,
-          store: ctx.store,
-          guides: ctx.guides,
-          world: ctx.world,
-          app: ctx.app,
-          bus: ctx.bus,
-          utils: ctx.utils,
-          overlay: ctx.overlay,
-          history: ctx.history
-        });
-        // double-click to toggle play/pause if underlying HTMLVideoElement is present
+                const nodeState = { id: videoNode.id, type: 'video' as const, ref: videoNode, destroy$: new Subject<void>() };
+                
+                // Выполняем команду добавления через историю
+                const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
+                ctx.history.execute(command);
+                
+                this.drag.bind(videoNode, nodeState.destroy$, { 
+                  cfg: ctx.cfg, 
+                  store: ctx.store, 
+                  guides: ctx.guides, 
+                  world: ctx.world, 
+                  app: ctx.app, 
+                  bus: ctx.bus, 
+                  utils: ctx.utils, 
+                  overlay: ctx.overlay,
+                  history: ctx.history
+                });        // double-click to toggle play/pause if underlying HTMLVideoElement is present
         ctx.utils
           .fromPixi<FederatedPointerEvent>(videoNode, 'pointertap')
           .pipe(filter((evt) => evt.detail >= 2), takeUntil(this.destroy$))

@@ -12,6 +12,7 @@ import {
 import { DEFAULT_CONFIG, UiTextStyles } from './types';
 import { TextFitService } from './services/text-fit.service';
 import { NodeBase } from './core';
+import { AssetStorageService } from './services/asset-storage.service';
 
 // Normalize font weight into a safe string literal that PixiJS expects
 type NumericWeightString =
@@ -85,22 +86,24 @@ export class TextNode extends NodeBase {
   }
 
   get backgroundImageUrl(): string | undefined {
-    return this.bgImageUrl;
+    // This getter is for serialization, we'll store assetId instead of URL
+    return undefined; // Will be handled by assetId
   }
 
   private fitScheduled = false;
   private readonly textDisplay = new HTMLText({ text: '' });
 
   // Background: either solid fill via Graphics, or image via Sprite scaled to cover
-  private bgFillColor: number | null = null;
-  private bgImageUrl?: string; // URL фонового изображения для сериализации
+  public bgFillColor: number | null = null;
+  public bgAssetId?: string; // Changed from bgImageUrl
   private readonly bgG = new Graphics();
   private bgSprite?: Sprite;
   private maskG?: Graphics;
 
   constructor(
     private readonly app: Application,
-    private readonly fitter: TextFitService
+    private readonly fitter: TextFitService,
+    private readonly assetStorage: AssetStorageService
   ) {
     super();
     // Rendering order: background (solid/image) -> text -> handles
@@ -186,15 +189,36 @@ export class TextNode extends NodeBase {
         this.maskG = undefined;
       }
     }
+    this.bgAssetId = undefined; // Clear asset ID when setting solid fill
     this.redrawBackground();
   }
 
   /** Apply an image background (URL/blob/data). */
-  async setBackground(url: string) {
+  async setBackground(urlOrAssetId: string) {
+    let finalImageUrl: string; // This will be the URL used to load the texture
+
+    const isAssetId = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(urlOrAssetId);
+
+    if (isAssetId) {
+      const resolvedUrl = await this.assetStorage.getAssetObjectURL(urlOrAssetId);
+      if (resolvedUrl) {
+        finalImageUrl = resolvedUrl;
+        this.bgAssetId = urlOrAssetId; // Store the asset ID for serialization
+      } else {
+        console.warn(`[TextNode] Failed to resolve asset ID: ${urlOrAssetId}`);
+        this.bgAssetId = undefined; // Clear if resolution fails
+        return;
+      }
+    } else {
+      // It's a direct URL (http, https, data, blob)
+      finalImageUrl = urlOrAssetId;
+      this.bgAssetId = urlOrAssetId; // Store the direct URL for serialization
+    }
+
     try {
-      const tex = await loadTextureRobust(url);
-      // Сохраняем URL для сериализации
-      this.bgImageUrl = url;
+      // Explicitly add the URL to PixiJS Assets to ensure it's recognized
+      Assets.add({ alias: finalImageUrl, src: finalImageUrl });
+      const tex = await loadTextureRobust(finalImageUrl);
       // Если устанавливаем изображение, очищаем цветной фон
       this.bgFillColor = null;
 
@@ -224,7 +248,7 @@ export class TextNode extends NodeBase {
 
   /** Remove image background */
   clearBackground() {
-    this.bgImageUrl = undefined;
+    this.bgAssetId = undefined; // Clear asset ID
     if (this.bgSprite) {
       this.bgSprite.destroy();
       this.bgSprite = undefined;
@@ -348,12 +372,7 @@ export class TextNode extends NodeBase {
         : 0;
 
     const valign = this.style.valign || 'top';
-    const anchorY =
-      valign === 'middle'
-        ? 0.5
-        : valign === 'bottom'
-        ? 1
-        : 0;
+    const anchorY = valign === 'middle' ? 0.5 : valign === 'bottom' ? 1 : 0;
 
     this.textDisplay.anchor.set(anchorX, anchorY);
 
@@ -496,45 +515,58 @@ async function loadTextureRobust(url: string): Promise<Texture> {
 }
 
 export class ImageNode extends NodeBase {
-  readonly type = 'image' as const;
-  sprite = new Sprite();
-  url = '';
+  public sprite: Sprite;
+  public assetId?: string; // For locally stored assets
+  public url?: string; // For external URLs
 
-  constructor(url?: string) {
-    super();
-    if (url) void this.setUrl(url);
-    this.drawFrame();
-    this.drawHandles(true);
-    this.addChild(this.sprite);
-    // keep handles above content
-    this.addChild(this.handlesContainer);
+  get imageUrl(): string | undefined {
+    // For serialization, we prioritize assetId, otherwise use url
+    return this.assetId || this.url;
   }
 
-  async setUrl(url: string) {
-    this.url = url;
-    try {
-      const texture = await loadTextureRobust(url);
-      if (!texture) throw new Error('Failed to load image texture');
-      this.sprite.texture = texture;
-      this.sprite.anchor.set(0.5);
-      this.sprite.position.set(this.w / 2, this.h / 2);
-      const baseTex = (texture as unknown as { baseTexture?: unknown })
-        .baseTexture as unknown;
-      const realW = (baseTex as { realWidth?: number } | undefined)?.realWidth;
-      const realH = (baseTex as { realHeight?: number } | undefined)
-        ?.realHeight;
-      const tw = texture.width || realW || this.w;
-      const th = texture.height || realH || this.h;
-      const scale = Math.min(
-        this.w / Math.max(1, tw),
-        this.h / Math.max(1, th)
-      );
-      this.sprite.scale.set(scale);
-      // keep handles above content
-      this.addChild(this.handlesContainer);
-    } catch (err) {
-      console.warn('Image load failed:', err);
+  constructor(initialSource?: string) {
+    super();
+    this.sprite = new Sprite(Texture.WHITE);
+    this.sprite.anchor.set(0.5);
+    this.addChild(this.sprite);
+    this.addChild(this.handlesContainer);
+    this.drawHandles(true);
+
+    if (initialSource) {
+      // Determine if initialSource is an assetId or a URL
+      if (
+        initialSource.startsWith('http:') ||
+        initialSource.startsWith('https:') ||
+        initialSource.startsWith('data:')
+      ) {
+        this.url = initialSource;
+      } else {
+        this.assetId = initialSource;
+      }
+      void this.setImage(initialSource);
     }
+  }
+
+  async setImage(source: string) {
+    try {
+      const texture = await loadTextureRobust(source);
+      this.sprite.texture = texture;
+      this.sprite.width = texture.width;
+      this.sprite.height = texture.height;
+      this.applyBoxSize(texture.width, texture.height);
+    } catch (e) {
+      console.error('Failed to load image:', source, e);
+      // Fallback to a placeholder or clear the image
+      this.sprite.texture = Texture.WHITE;
+      this.sprite.width = 100;
+      this.sprite.height = 100;
+      this.applyBoxSize(100, 100);
+    }
+  }
+
+  override destroy(options?: any /*IDestroyOptions*/ | boolean): void {
+    this.sprite.destroy(options);
+    super.destroy(options);
   }
 
   applyBoxSize(w: number, h: number): void {
@@ -552,48 +584,52 @@ export class ImageNode extends NodeBase {
 }
 
 export class VideoNode extends NodeBase {
-  readonly type = 'video' as const;
-  sprite = new Sprite();
-  url = '';
+  public sprite: Sprite;
+  public assetId?: string; // For locally stored assets
+  public url = ''; // For external URLs
 
-  constructor(url?: string) {
-    super();
-    if (url) void this.setUrl(url);
-    this.drawFrame();
-    this.drawHandles(true);
-    this.addChild(this.sprite);
-    // keep handles above content
-    this.addChild(this.handlesContainer);
+  get videoUrl(): string {
+    // For serialization, we prioritize assetId, otherwise use url
+    return this.assetId || this.url;
   }
 
-  async setUrl(url: string) {
-    this.url = url;
-    try {
-      const texture = (await Assets.load(url)) as Texture;
-      if (!texture) throw new Error('Failed to load video texture');
-      const baseTex = (texture as unknown as { baseTexture?: unknown })
-        .baseTexture as unknown;
-      const resource = (baseTex as { resource?: unknown } | undefined)
-        ?.resource as unknown;
-      const source = (resource as { source?: unknown } | undefined)
-        ?.source as unknown;
-      const videoEl: HTMLVideoElement | null =
-        source instanceof HTMLVideoElement ? source : null;
-      if (videoEl) {
-        videoEl.muted = true;
-        videoEl.loop = true;
-        void videoEl.play();
+  constructor(initialSource?: string) {
+    super();
+    this.sprite = new Sprite(Texture.WHITE);
+    this.sprite.anchor.set(0.5);
+    this.addChild(this.sprite);
+    this.addChild(this.handlesContainer);
+    this.drawHandles(true);
+
+    if (initialSource) {
+      // Determine if initialSource is an assetId or a URL
+      if (
+        initialSource.startsWith('http:') ||
+        initialSource.startsWith('https:') ||
+        initialSource.startsWith('data:')
+      ) {
+        this.url = initialSource;
+      } else {
+        this.assetId = initialSource;
       }
+      void this.setVideo(initialSource);
+    }
+  }
+
+  async setVideo(source: string) {
+    try {
+      const texture = await loadTextureRobust(source);
       this.sprite.texture = texture;
-      this.sprite.anchor.set(0.5);
-      this.sprite.position.set(this.w / 2, this.h / 2);
-      const tw = texture.width || this.w,
-        th = texture.height || this.h;
-      this.sprite.scale.set(Math.min(this.w / tw, this.h / th));
-    } catch (err) {
-      // Gracefully degrade if loading fails (e.g., unsupported provider like YouTube)
-      // Keep empty sprite to avoid breaking editor; use console for diagnostics
-      console.warn('Video load failed:', err);
+      this.sprite.width = texture.width;
+      this.sprite.height = texture.height;
+      this.applyBoxSize(texture.width, texture.height);
+    } catch (e) {
+      console.error('Failed to load video:', source, e);
+      // Fallback to a placeholder or clear the video
+      this.sprite.texture = Texture.WHITE;
+      this.sprite.width = 100;
+      this.sprite.height = 100;
+      this.applyBoxSize(100, 100);
     }
   }
 
@@ -608,6 +644,11 @@ export class VideoNode extends NodeBase {
       this.sprite.position.set(this.w / 2, this.h / 2);
       this.sprite.scale.set(scale);
     }
+  }
+
+  override destroy(options?: any /*IDestroyOptions*/ | boolean): void {
+    this.sprite.destroy(options);
+    super.destroy(options);
   }
 }
 
@@ -645,9 +686,12 @@ export class ShapeNode extends NodeBase {
   // Optional background sprite masked by the shape for image fills
   private bgSprite?: Sprite;
   private maskG?: Graphics;
-  public bgImageUrl?: string; // Added public property
+  public bgAssetId?: string; // Changed from bgImageUrl
 
-  constructor(kind: 'rect' | 'ellipse' | 'line' = 'rect') {
+  constructor(
+    kind: 'rect' | 'ellipse' | 'line' = 'rect',
+    private readonly assetStorage: AssetStorageService
+  ) {
     super();
     this.shape = kind;
     // Insert order: background sprite (if any) -> shape graphics (stroke/fallback fill) -> handles
@@ -670,16 +714,40 @@ export class ShapeNode extends NodeBase {
         this.maskG = undefined;
       }
     }
-    this.bgImageUrl = undefined; // Clear bgImageUrl when setting solid fill
+    this.bgAssetId = undefined; // Clear asset ID when setting solid fill
     this.redraw();
   }
 
   /** Apply a background image by URL/data/blob. Only works for rect/ellipse. */
-  async setBackground(url: string) {
+  async setBackground(urlOrAssetId: string) {
     if (this.shape === 'line') return; // not supported for open line
+
+    let finalImageUrl: string; // This will be the URL used to load the texture
+
+    const isAssetId = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(urlOrAssetId);
+
+    if (isAssetId) {
+      const resolvedUrl = await this.assetStorage.getAssetObjectURL(urlOrAssetId);
+      if (resolvedUrl) {
+        finalImageUrl = resolvedUrl;
+        this.bgAssetId = urlOrAssetId; // Store the asset ID for serialization
+      } else {
+        console.warn(`[ShapeNode] Failed to resolve asset ID: ${urlOrAssetId}`);
+        this.bgAssetId = undefined; // Clear if resolution fails
+        return;
+      }
+    } else {
+      // It's a direct URL (http, https, data, blob)
+      finalImageUrl = urlOrAssetId;
+      this.bgAssetId = urlOrAssetId; // Store the direct URL for serialization
+    }
+
     try {
-      const tex = await loadTextureRobust(url);
-      this.bgImageUrl = url; // Assign the URL to the new property
+      // Explicitly add the URL to PixiJS Assets to ensure it's recognized
+      Assets.add({ alias: finalImageUrl, src: finalImageUrl });
+      const tex = await loadTextureRobust(finalImageUrl);
+      // Если устанавливаем изображение, очищаем цветной фон
+      // this.bgFillColor = null;
       if (!this.bgSprite) {
         this.bgSprite = new Sprite(tex);
         this.bgSprite.anchor.set(0.5);
@@ -707,7 +775,7 @@ export class ShapeNode extends NodeBase {
 
   /** Remove background image and mask, falling back to solid fill. */
   clearBackground() {
-    this.bgImageUrl = undefined; // Clear bgImageUrl
+    this.bgAssetId = undefined; // Clear asset ID
     if (this.bgSprite) {
       this.bgSprite.destroy();
       this.bgSprite = undefined;
@@ -831,9 +899,9 @@ export class BrushNode extends NodeBase {
   // Background support for closed paths
   private bgSprite?: Sprite;
   private maskG?: Graphics;
-  public bgImageUrl?: string; // Added public property
+  public bgAssetId?: string; // Changed from bgImageUrl
 
-  constructor() {
+  constructor(private readonly assetStorage: AssetStorageService) {
     super();
     this.addChild(this.g);
     this.addChild(this.handlesContainer);
@@ -862,14 +930,38 @@ export class BrushNode extends NodeBase {
   }
 
   /** Установить фоновое изображение (работает только для замкнутых путей) */
-  async setBackground(url: string) {
+  async setBackground(urlOrAssetId: string) {
     if (!this.isPathClosed()) {
       console.warn('Cannot set background: path is not closed');
       return;
     }
+
+    let finalImageUrl: string; // This will be the URL used to load the texture
+
+    const isAssetId = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(urlOrAssetId);
+
+    if (isAssetId) {
+      const resolvedUrl = await this.assetStorage.getAssetObjectURL(urlOrAssetId);
+      if (resolvedUrl) {
+        finalImageUrl = resolvedUrl;
+        this.bgAssetId = urlOrAssetId; // Store the asset ID for serialization
+      } else {
+        console.warn(`[BrushNode] Failed to resolve asset ID: ${urlOrAssetId}`);
+        this.bgAssetId = undefined; // Clear if resolution fails
+        return;
+      }
+    } else {
+      // It's a direct URL (http, https, data, blob)
+      finalImageUrl = urlOrAssetId;
+      this.bgAssetId = urlOrAssetId; // Store the direct URL for serialization
+    }
+
     try {
-      const tex = await loadTextureRobust(url);
-      this.bgImageUrl = url; // Assign the URL to the new property
+      // Explicitly add the URL to PixiJS Assets to ensure it's recognized
+      Assets.add({ alias: finalImageUrl, src: finalImageUrl });
+      const tex = await loadTextureRobust(finalImageUrl);
+      // Если устанавливаем изображение, очищаем цветной фон
+      // this.bgFillColor = null;
       if (!this.bgSprite) {
         this.bgSprite = new Sprite(tex);
         this.bgSprite.anchor.set(0.5);
@@ -893,7 +985,7 @@ export class BrushNode extends NodeBase {
 
   /** Очистить фоновое изображение */
   clearBackground() {
-    this.bgImageUrl = undefined; // Clear bgImageUrl
+    this.bgAssetId = undefined; // Clear asset ID
     if (this.bgSprite) {
       this.bgSprite.destroy();
       this.bgSprite = undefined;

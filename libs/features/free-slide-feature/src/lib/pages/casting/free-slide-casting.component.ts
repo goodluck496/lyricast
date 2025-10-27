@@ -20,12 +20,15 @@ import {
   selectFreeSlideNavigateState,
 } from '@lyri-cast/free-slide-store';
 import { AppActions, BridgeService, Pages } from '@lyri-cast/common-browser';
+
 import { filterEmpty } from '@lyri-cast/common';
 import { combineLatest, filter, map, take } from 'rxjs';
 import {
   FreeSlide,
   SerializedIframeNode,
+  SerializedImageNode,
   SerializedState,
+  SerializedVideoNode,
 } from '@lyri-cast/entities';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Actions, ofType } from '@ngrx/effects';
@@ -38,8 +41,10 @@ import {
   HTMLText,
   HTMLTextStyle,
   Sprite,
+  Texture,
 } from 'pixi.js';
 import { ViewContainer } from 'pixi.js/lib/scene/view/ViewContainer';
+import { AssetStorageService } from '@lyri-cast/form';
 
 @Component({
   selector: 'lyri-free-slide-casting',
@@ -55,6 +60,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
   private readonly bridge = inject(BridgeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly renderer = inject(Renderer2);
+  private readonly assetStorage = inject(AssetStorageService);
 
   @ViewChild('pixiHost', { static: true })
   pixiHostRef!: ElementRef<HTMLDivElement>;
@@ -65,6 +71,12 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
   private scene!: Container;
 
   hideContent = signal(false);
+
+  private isUUID(str: string): boolean {
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+      str
+    );
+  }
 
   ngOnInit() {
     this.store
@@ -182,6 +194,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
   }
 
   private async renderSlide(slide: FreeSlide) {
+    console.log('[Casting] renderSlide called with slide:', slide);
     // Clear previous content and reset scale
     this.scene.removeChildren();
     this.scene.scale.set(1, 1);
@@ -195,6 +208,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
 
     try {
       const data: SerializedState = JSON.parse(slide.htmlString);
+      console.log('[Casting] Deserialized slide data:', data);
 
       if (!data || !data.nodes) {
         console.warn('[Casting] No data or nodes!');
@@ -204,29 +218,61 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       // --- PRE-LOADING STAGE ---
       const urlsToLoad: string[] = [];
       for (const node of data.nodes) {
-        if ((node.type === 'image' || node.type === 'video') && node.url) {
-          urlsToLoad.push(node.url);
+        if (node.type === 'image' || node.type === 'video') {
+          if (node.assetId) {
+            const objectURL = await this.assetStorage.getAssetObjectURL(
+              node.assetId
+            );
+            if (objectURL) urlsToLoad.push(objectURL);
+          } else if (node.url) {
+            urlsToLoad.push(node.url);
+          }
         }
-        if (node.type === 'text' && node.bgImageUrl) {
-          urlsToLoad.push(node.bgImageUrl);
+        if (node.type === 'text' && node.bgAssetId) {
+          let sourceIdentifier = node.bgAssetId;
+          if (this.isUUID(sourceIdentifier)) {
+            const objectURL = await this.assetStorage.getAssetObjectURL(
+              sourceIdentifier
+            );
+            if (objectURL) urlsToLoad.push(objectURL);
+          } else {
+            // It's already a direct URL (http, https, data, blob)
+            urlsToLoad.push(sourceIdentifier);
+          }
         }
-        // Add bgImageUrl for shape nodes
-        if (node.type === 'shape' && node.bgImageUrl) {
-          urlsToLoad.push(node.bgImageUrl);
+        if (node.type === 'shape' && node.bgAssetId) {
+          let sourceIdentifier = node.bgAssetId;
+          if (this.isUUID(sourceIdentifier)) {
+            const objectURL = await this.assetStorage.getAssetObjectURL(
+              sourceIdentifier
+            );
+            if (objectURL) urlsToLoad.push(objectURL);
+          } else {
+            // It's already a direct URL (http, https, data, blob)
+            urlsToLoad.push(sourceIdentifier);
+          }
         }
-        // Add bgImageUrl for brush nodes
-        if (node.type === 'brush' && node.bgImageUrl) {
-          urlsToLoad.push(node.bgImageUrl);
-          console.log(
-            '[Casting Debug] Pre-loading brush bgImageUrl:',
-            node.bgImageUrl
-          );
+        if (node.type === 'brush' && node.bgAssetId) {
+          let sourceIdentifier = node.bgAssetId;
+          if (this.isUUID(sourceIdentifier)) {
+            const objectURL = await this.assetStorage.getAssetObjectURL(
+              sourceIdentifier
+            );
+            if (objectURL) urlsToLoad.push(objectURL);
+          } else {
+            // It's already a direct URL (http, https, data, blob)
+            urlsToLoad.push(sourceIdentifier);
+          }
         }
       }
 
       if (urlsToLoad.length > 0) {
-        const uniqueUrls = [...new Set(urlsToLoad)];
-        await Assets.load(uniqueUrls);
+        const uniqueUrls = [
+          ...new Set(urlsToLoad.filter((url) => !url.startsWith('blob:'))),
+        ];
+        if (uniqueUrls.length > 0) {
+          await Assets.load(uniqueUrls);
+        }
       }
 
       // --- SYNCHRONOUS BUILD STAGE ---
@@ -246,6 +292,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       for (const nodeData of data.nodes) {
         let node: any | ViewContainer;
 
+        let bgSource: string | undefined;
         switch (nodeData.type) {
           case 'text': {
             const scaledWidth = nodeData.width * scaleFactor;
@@ -253,82 +300,127 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
             const x = nodeData.x * scaleFactor;
             const y = nodeData.y * scaleFactor;
 
-            if (nodeData.bgImageUrl) {
-              try {
-                const bgTexture = Assets.get(nodeData.bgImageUrl);
-                const bgSprite = new Sprite(bgTexture);
-                const scaleToCover = Math.max(
-                  scaledWidth / bgTexture.width,
-                  scaledHeight / bgTexture.height
+            if (nodeData.bgAssetId) {
+              const sourceIdentifier = nodeData.bgAssetId;
+              let bgSource: string | undefined;
+              if (this.isUUID(sourceIdentifier)) {
+                console.log(
+                  `[Casting] Text node ${nodeData.id} has bgAssetId (UUID): ${sourceIdentifier}`
                 );
-                bgSprite.scale.set(scaleToCover);
-                bgSprite.anchor.set(0.5);
-                bgSprite.x = x + scaledWidth / 2;
-                bgSprite.y = y + scaledHeight / 2;
-                bgSprite.alpha = nodeData.alpha ?? 1;
+                bgSource = await this.assetStorage.getAssetObjectURL(
+                  sourceIdentifier
+                );
+                console.log(
+                  `[Casting] Text node ${nodeData.id} resolved object URL: ${bgSource}`
+                );
+              } else {
+                console.log(
+                  `[Casting] Text node ${nodeData.id} has bgAssetId (direct URL): ${sourceIdentifier}`
+                );
+                bgSource = sourceIdentifier; // It's already a direct URL
+              }
 
-                const mask = new Graphics();
-                mask
+              if (bgSource) {
+                try {
+                  const bgTexture = await loadTextureRobustCasting(
+                    bgSource,
+                    'background'
+                  );
+                  const bgSprite = new Sprite(bgTexture);
+                  const scaleToCover = Math.max(
+                    scaledWidth / bgTexture.width,
+                    scaledHeight / bgTexture.height
+                  );
+                  bgSprite.scale.set(scaleToCover);
+                  bgSprite.anchor.set(0.5);
+                  bgSprite.x = x + scaledWidth / 2;
+                  bgSprite.y = y + scaledHeight / 2;
+                  bgSprite.alpha = nodeData.alpha ?? 1;
+
+                  const mask = new Graphics();
+                  mask
+                    .roundRect(x, y, scaledWidth, scaledHeight, 6 * scaleFactor)
+                    .fill(0xffffff);
+                  bgSprite.mask = mask;
+
+                  this.scene.addChild(bgSprite, mask);
+                } catch (e) {
+                  console.warn(
+                    '[Casting] Failed to get text background image:',
+                    bgSource,
+                    e
+                  );
+                }
+              } else if (nodeData.bgFillColor != null) {
+                const bgGraphics = new Graphics();
+                bgGraphics
                   .roundRect(x, y, scaledWidth, scaledHeight, 6 * scaleFactor)
-                  .fill(0xffffff);
-                bgSprite.mask = mask;
+                  .fill(nodeData.bgFillColor);
+                bgGraphics.alpha = nodeData.alpha ?? 1;
+                this.scene.addChild(bgGraphics);
+              }
 
-                this.scene.addChild(bgSprite, mask);
-              } catch (e) {
-                console.warn(
-                  '[Casting] Failed to get text background image:',
-                  nodeData.bgImageUrl,
-                  e
+              let fontSize = nodeData.actualFontSize;
+              if (!fontSize || fontSize === 0) {
+                fontSize = Math.max(
+                  nodeData.style.min,
+                  Math.min(nodeData.style.max, nodeData.height * 0.7)
                 );
               }
-            } else if (nodeData.bgFillColor != null) {
-              const bgGraphics = new Graphics();
-              bgGraphics
-                .roundRect(x, y, scaledWidth, scaledHeight, 6 * scaleFactor)
-                .fill(nodeData.bgFillColor);
-              bgGraphics.alpha = nodeData.alpha ?? 1;
-              this.scene.addChild(bgGraphics);
+              const scaledFontSize = fontSize * scaleFactor;
+              const style = new HTMLTextStyle({
+                fontFamily: nodeData.style.font || 'Arial',
+                fontWeight: nodeData.style.weight || 'normal',
+                fill: nodeData.style.colorHex || '#FFFFFF',
+                fontSize: scaledFontSize,
+                align: nodeData.style.align || 'center',
+                wordWrap: true,
+                wordWrapWidth: scaledWidth,
+                lineHeight: scaledFontSize * (nodeData.style.lineHeight || 1.2),
+                cssOverrides: [
+                  'p { margin: 0; }',
+                  'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+                ],
+              });
+
+              node = new HTMLText({ text: nodeData.textHtml, style });
+
+              const align = nodeData.style.align || 'center';
+              const anchorX =
+                align === 'center' ? 0.5 : align === 'right' ? 1 : 0;
+              const valign = nodeData.style.valign || 'top';
+              const anchorY =
+                valign === 'middle' ? 0.5 : valign === 'bottom' ? 1 : 0;
+              node.anchor.set(anchorX, anchorY);
             }
-
-            let fontSize = nodeData.actualFontSize;
-            if (!fontSize || fontSize === 0) {
-              fontSize = Math.max(
-                nodeData.style.min,
-                Math.min(nodeData.style.max, nodeData.height * 0.7)
-              );
-            }
-            const scaledFontSize = fontSize * scaleFactor;
-            const style = new HTMLTextStyle({
-              fontFamily: nodeData.style.font || 'Arial',
-              fontWeight: nodeData.style.weight || 'normal',
-              fill: nodeData.style.colorHex || '#FFFFFF',
-              fontSize: scaledFontSize,
-              align: nodeData.style.align || 'center',
-              wordWrap: true,
-              wordWrapWidth: scaledWidth,
-              lineHeight: scaledFontSize * (nodeData.style.lineHeight || 1.2),
-              cssOverrides: [
-                'p { margin: 0; }',
-                'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
-              ],
-            });
-
-            node = new HTMLText({ text: nodeData.textHtml, style });
-
-            const align = nodeData.style.align || 'center';
-            const anchorX =
-              align === 'center' ? 0.5 : align === 'right' ? 1 : 0;
-            const valign = nodeData.style.valign || 'top';
-            const anchorY =
-              valign === 'middle' ? 0.5 : valign === 'bottom' ? 1 : 0;
-            node.anchor.set(anchorX, anchorY);
             break;
           }
-
           case 'image':
           case 'video': {
+            const nodeDataNew = nodeData as
+              | SerializedImageNode
+              | SerializedVideoNode;
+            let source: string | undefined;
+            if (nodeDataNew.assetId) {
+              source = await this.assetStorage.getAssetObjectURL(
+                nodeDataNew.assetId
+              );
+            } else if (nodeDataNew.url) {
+              source = nodeDataNew.url;
+            }
+
+            if (!source) {
+              console.warn(
+                `[Casting] ${nodeDataNew.type} node without assetId or url.`
+              );
+              break;
+            }
+
             try {
-              const texture = Assets.get(nodeData.url);
+              const texture = await loadTextureRobustCasting(
+                source,
+                nodeDataNew.type
+              );
               node = new Sprite(texture);
               node.width = nodeData.width * scaleFactor;
               node.height = nodeData.height * scaleFactor;
@@ -343,7 +435,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
             } catch (e) {
               console.error(
                 `[Casting] Failed to get ${nodeData.type}:`,
-                nodeData.url,
+                source,
                 e
               );
             }
@@ -363,10 +455,41 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
             const mainGraphics = new Graphics(); // For fill and stroke
             shapeContainer.addChild(mainGraphics);
 
-            if (nodeData.bgImageUrl) {
+            let bgSource: string | undefined;
+            if (nodeData.bgAssetId) {
+              let sourceIdentifier = nodeData.bgAssetId;
+              if (this.isUUID(sourceIdentifier)) {
+                console.log(
+                  `[Casting] Shape node ${nodeData.id} has bgAssetId (UUID): ${sourceIdentifier}`
+                );
+                bgSource = await this.assetStorage.getAssetObjectURL(
+                  sourceIdentifier
+                );
+                console.log(
+                  `[Casting] Shape node ${nodeData.id} resolved object URL: ${bgSource}`
+                );
+              } else {
+                console.log(
+                  `[Casting] Shape node ${nodeData.id} has bgAssetId (direct URL): ${sourceIdentifier}`
+                );
+                bgSource = sourceIdentifier; // It's already a direct URL
+              }
+            }
+
+            if (bgSource) {
               try {
-                const bgTexture = Assets.get(nodeData.bgImageUrl);
-                if (!bgTexture || !bgTexture.valid)
+                console.log(
+                  `[Casting] Calling loadTextureRobustCasting for shape ${nodeData.id} with URL: ${bgSource}`
+                );
+                const bgTexture = await loadTextureRobustCasting(
+                  bgSource,
+                  'background'
+                );
+                console.log(
+                  `[Casting] loadTextureRobustCasting for shape ${nodeData.id} returned texture:`,
+                  bgTexture
+                );
+                if (!bgTexture || ('valid' in bgTexture && !bgTexture.valid))
                   console.error('[Casting Debug] Shape bgTexture invalid!');
                 const bgSprite = new Sprite(bgTexture);
                 const scaleToCover = Math.max(
@@ -400,7 +523,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
               } catch (e) {
                 console.warn(
                   '[Casting] Failed to get shape background image:',
-                  nodeData.bgImageUrl,
+                  bgSource,
                   e
                 );
               }
@@ -469,14 +592,41 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
             const mainGraphics = new Graphics(); // For the brush stroke
             brushContainer.addChild(mainGraphics);
 
-            if (
-              nodeData.bgImageUrl &&
-              nodeData.path &&
-              nodeData.path.length > 0
-            ) {
+            let bgSource: string | undefined;
+            if (nodeData.bgAssetId) {
+              let sourceIdentifier = nodeData.bgAssetId;
+              if (this.isUUID(sourceIdentifier)) {
+                console.log(
+                  `[Casting] Brush node ${nodeData.id} has bgAssetId (UUID): ${sourceIdentifier}`
+                );
+                bgSource = await this.assetStorage.getAssetObjectURL(
+                  sourceIdentifier
+                );
+                console.log(
+                  `[Casting] Brush node ${nodeData.id} resolved object URL: ${bgSource}`
+                );
+              } else {
+                console.log(
+                  `[Casting] Brush node ${nodeData.id} has bgAssetId (direct URL): ${sourceIdentifier}`
+                );
+                bgSource = sourceIdentifier; // It's already a direct URL
+              }
+            }
+
+            if (bgSource && nodeData.path && nodeData.path.length > 0) {
               try {
-                const bgTexture = Assets.get(nodeData.bgImageUrl);
-                if (!bgTexture || !bgTexture.valid)
+                console.log(
+                  `[Casting] Calling loadTextureRobustCasting for brush ${nodeData.id} with URL: ${bgSource}`
+                );
+                const bgTexture = await loadTextureRobustCasting(
+                  bgSource,
+                  'background'
+                );
+                console.log(
+                  `[Casting] loadTextureRobustCasting for brush ${nodeData.id} returned texture:`,
+                  bgTexture
+                );
+                if (!bgTexture || ('valid' in bgTexture && !bgTexture.valid))
                   console.error('[Casting Debug] Brush bgTexture invalid!');
                 const bgSprite = new Sprite(bgTexture);
                 const scaleToCover = Math.max(
@@ -506,7 +656,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
               } catch (e) {
                 console.warn(
                   '[Casting] Failed to get brush background image:',
-                  (nodeData as any).bgImageUrl,
+                  bgSource,
                   e
                 );
               }
@@ -585,4 +735,78 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       console.error('[Casting] Failed to render slide content:', e);
     }
   }
+}
+
+async function loadTextureRobustCasting(
+  url: string,
+  type: 'image' | 'video' | 'background'
+): Promise<Texture> {
+  console.log(`[Casting] Attempting to load texture: ${url}, type: ${type}`);
+
+  // 1) Try direct Texture.from (string URL)
+  console.log(`[Casting] Trying Texture.from for ${url}`);
+  try {
+    const t = Texture.from(url);
+    if (t) {
+      console.log(`[Casting] Texture.from successful for ${url}`);
+      // For video, ensure it's loaded
+      if (type === 'video') {
+        const videoResource = (t.baseTexture as any)?.resource;
+        if (videoResource && videoResource.source instanceof HTMLVideoElement) {
+          await new Promise<void>((resolve, reject) => {
+            videoResource.source.onloadeddata = resolve;
+            videoResource.source.onerror = reject;
+            if (videoResource.source.readyState >= 2) resolve(); // Already loaded enough
+          });
+        }
+      }
+      return t;
+    }
+  } catch (e) {
+    console.warn(`[Casting] Texture.from(${url}) failed:`, e);
+  }
+
+  // 2) Manual HTMLImage/HTMLVideo decode as a last resort (works great for blob:/data:)
+  console.log(`[Casting] Trying manual HTML element loading for ${url}`);
+  try {
+    if (type === 'video') {
+      const videoElement = document.createElement('video');
+      videoElement.src = url;
+      videoElement.autoplay = true;
+      videoElement.loop = true;
+      videoElement.muted = true;
+      await new Promise((resolve, reject) => {
+        videoElement.onloadeddata = resolve;
+        videoElement.onerror = reject;
+      });
+      const texture = Texture.from(videoElement);
+      console.log(`[Casting] Manual video texture successful for ${url}`);
+      return texture;
+    } else {
+      // image or background
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = url;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => {
+          console.log(`[Casting] HTMLImageElement loaded for ${url}`);
+          resolve();
+        };
+        img.onerror = (e) => {
+          console.error(
+            `[Casting] HTMLImageElement failed to load for ${url}:`,
+            e
+          );
+          reject(e);
+        };
+      });
+      const texture = Texture.from(img);
+      console.log(`[Casting] Manual image texture successful for ${url}`);
+      return texture;
+    }
+  } catch (e) {
+    console.warn(`[Casting] Manual HTML element loading for ${url} failed:`, e);
+  }
+
+  throw new Error('[Casting] Failed to load texture from URL: ' + url);
 }

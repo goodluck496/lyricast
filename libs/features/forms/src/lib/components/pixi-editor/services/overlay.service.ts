@@ -18,7 +18,7 @@ import {
   HTML_EDITOR_COMPONENT,
   HtmlEditorComponent,
   LyriHtmlEditorResult,
-} from '@lyri-cast/form';
+} from '../../html-editor';
 
 @Injectable()
 export class OverlayService {
@@ -72,7 +72,7 @@ export class OverlayService {
     if (!this.hostEl) return;
 
     // 1) контейнер под редактор
-    const bounds = node.getBounds();
+    // const bounds = node.getBounds();
     // const scaleY = bounds.height / node.h;
     const deg = 0; //((node.rotation || 0) * 180) / Math.PI;
 

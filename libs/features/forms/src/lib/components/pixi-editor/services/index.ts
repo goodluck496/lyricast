@@ -8,3 +8,4 @@ export  * from './history-commands';
 export  * from './history.service';
 export  * from './overlay.service';
 export  * from './text-fit.service';
+export * from  './asset-storage.service'

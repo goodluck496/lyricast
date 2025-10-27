@@ -2,19 +2,15 @@ import { Injectable } from '@angular/core';
 import { EditorContext, EditorPlugin } from '../core';
 import { fromEvent, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { AssetStorageService } from '../services/asset-storage.service';
+import { EditorUtilsService } from '../services';
 
-/**
- * ClipboardPlugin listens for global paste events and routes content to the proper ADD_* command.
- *
- * Behavior:
- * - If focus is inside an input/textarea or a modal dialog is open, it does nothing.
- * - Files: image files are pasted as ADD_IMAGE with a temporary blob URL.
- * - Strings: data:image/* data-URLs become images; URLs are routed to image/video/iframe; otherwise added as text.
- */
 @Injectable()
 export class ClipboardPlugin implements EditorPlugin {
   id = 'clipboard';
   private destroy$ = new Subject<void>();
+
+  constructor(private readonly assetStorage: AssetStorageService, private utils: EditorUtilsService) {}
 
   init(ctx: EditorContext): void {
     fromEvent<ClipboardEvent>(document, 'paste').pipe(takeUntil(this.destroy$)).subscribe((event) => {
@@ -32,21 +28,21 @@ export class ClipboardPlugin implements EditorPlugin {
           const file = item.getAsFile(); if (!file) continue;
           if (file.type.startsWith('image/')) {
             imageProcessed = true; // Отмечаем, что изображение обработано
-            const url = URL.createObjectURL(file);
-            const sel = ctx.store.snapshot(s => s.selectedIds) || [];
-            const nodes = ctx.store.snapshot(s => s.nodes);
-            const hasTextSel = sel.some(id => nodes[id]?.type === 'text');
-            const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
-            const hasBrushSel = sel.some(id => nodes[id]?.type === 'brush');
-            ctx.utils.urlToBase64(url).then(base64Url => {
+            // Save the file (Blob) directly to AssetStorageService
+            this.assetStorage.saveAsset(file, file.type).then(assetId => {
+              const sel = ctx.store.snapshot(s => s.selectedIds) || [];
+              const nodes = ctx.store.snapshot(s => s.nodes);
+              const hasTextSel = sel.some(id => nodes[id]?.type === 'text');
+              const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
+              const hasBrushSel = sel.some(id => nodes[id]?.type === 'brush');
               if (hasTextSel) {
-                ctx.bus.emit({ t: 'SET_TEXT_BACKGROUND', url: base64Url });
+                ctx.bus.emit({ t: 'SET_TEXT_BACKGROUND', assetId: assetId });
               } else if (hasShapeSel) {
-                ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url: base64Url });
+                ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', assetId: assetId });
               } else if (hasBrushSel) {
-                ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', url: base64Url });
+                ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', assetId: assetId });
               } else {
-                ctx.bus.emit({ t: 'ADD_IMAGE', url: base64Url, x: 100, y: 100 });
+                ctx.bus.emit({ t: 'ADD_IMAGE', assetId: assetId, x: 100, y: 100 });
               }
             });
           }
@@ -68,30 +64,38 @@ export class ClipboardPlugin implements EditorPlugin {
               const hasTextSel = sel.some(id => nodes[id]?.type === 'text');
               const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
               const hasBrushSel = sel.some(id => nodes[id]?.type === 'brush');
-              if (hasTextSel) {
-                ctx.bus.emit({ t: 'SET_TEXT_BACKGROUND', url: str });
-              } else if (hasShapeSel) {
-                ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url: str });
-              } else if (hasBrushSel) {
-                ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', url: str });
-              } else {
-                ctx.bus.emit({ t: 'ADD_IMAGE', url: str, x: 120, y: 120 });
-              }
+
+              // Convert data URL to Blob and save as asset
+              const mimeType = str.substring(str.indexOf(':') + 1, str.indexOf(';'));
+              const base64 = str.split(',')[1];
+              const blob = this.utils.base64ToBlob(base64, mimeType);
+
+              this.assetStorage.saveAsset(blob, mimeType).then(assetId => {
+                if (hasTextSel) {
+                  ctx.bus.emit({ t: 'SET_TEXT_BACKGROUND', assetId: assetId });
+                } else if (hasShapeSel) {
+                  ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', assetId: assetId });
+                } else if (hasBrushSel) {
+                  ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', assetId: assetId });
+                } else {
+                  ctx.bus.emit({ t: 'ADD_IMAGE', assetId: assetId, x: 120, y: 120 });
+                }
+              });
               return;
             }
             if (ctx.utils.isUrl(str)) {
               if (ctx.utils.isImageUrl(str)) {
-                const base64Url = await ctx.utils.urlToBase64(str);
+                // For external image URLs, just pass the URL
                 const sel = ctx.store.snapshot(s => s.selectedIds) || [];
                 const nodes = ctx.store.snapshot(s => s.nodes);
                 const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
                 const hasBrushSel = sel.some(id => nodes[id]?.type === 'brush');
                 if (hasShapeSel) {
-                  ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url: base64Url });
+                  ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url: str });
                 } else if (hasBrushSel) {
-                  ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', url: base64Url });
+                  ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', url: str });
                 } else {
-                  ctx.bus.emit({ t: 'ADD_IMAGE', url: base64Url, x: 120, y: 120 });
+                  ctx.bus.emit({ t: 'ADD_IMAGE', url: str, x: 120, y: 120 });
                 }
               } else if (ctx.utils.isVideoUrl(str)) ctx.bus.emit({ t: 'ADD_VIDEO', url: str });
               else ctx.bus.emit({ t: 'ADD_IFRAME', url: str });

@@ -20,18 +20,19 @@ export type SerializedTextNode = SerializedNodeBase & {
   style: any; // UiTextStyles из pixi-editor
   actualFontSize?: number; // Реальный размер шрифта после auto-fit
   bgFillColor?: number | null; // Цвет фона
-  bgImageUrl?: string; // URL фонового изображения
+  bgAssetId?: string; // ID фонового изображения в AssetStorageService
 };
 
 export type SerializedImageNode = SerializedNodeBase & {
   type: 'image';
-  url: string;
-  bgImageUrl: string | any;
+  url?: string; // URL внешнего изображения
+  assetId?: string; // ID изображения в AssetStorageService
 };
 
 export type SerializedVideoNode = SerializedNodeBase & {
   type: 'video';
-  url: string;
+  url?: string; // URL внешнего видео
+  assetId?: string; // ID видео в AssetStorageService
 };
 
 export type SerializedIframeNode = SerializedNodeBase & {
@@ -45,7 +46,7 @@ export type SerializedShapeNode = SerializedNodeBase & {
   fill: number;
   stroke: number;
   lineWidth: number;
-  bgImageUrl: string | any;
+  bgAssetId?: string; // ID фонового изображения в AssetStorageService
 };
 
 export type SerializedBrushNode = SerializedNodeBase & {
@@ -53,7 +54,7 @@ export type SerializedBrushNode = SerializedNodeBase & {
   stroke: number;
   strokeWidth: number;
   path: { x: number; y: number }[];
-  bgImageUrl: string | any;
+  bgAssetId?: string; // ID фонового изображения в AssetStorageService
 };
 
 export type SerializedNode =

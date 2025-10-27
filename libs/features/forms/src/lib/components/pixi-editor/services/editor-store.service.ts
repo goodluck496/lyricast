@@ -3,6 +3,7 @@ import { ComponentStore } from '@ngrx/component-store';
 import { EDITOR_CONFIG, EditorConfig, UiTextStyles } from '../types';
 import { NodeType } from '../enums';
 import type { NodeBase } from '../core';
+import { Subject } from 'rxjs';
 
 /**
  * Сервис управления состоянием редактора.
@@ -25,6 +26,9 @@ export interface NodeState {
 
   /** Ссылка на фактический PixiJS-объект (NodeBase) */
   ref: NodeBase;
+
+  /** Subject для отписки от RxJS-потоков, связанных с этим узлом */
+  destroy$?: Subject<void>;
 }
 
 /**

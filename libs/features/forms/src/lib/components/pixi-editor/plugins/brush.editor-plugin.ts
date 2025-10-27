@@ -5,7 +5,8 @@ import { BrushNode, GroupNode } from '../nodes';
 import { Subject } from 'rxjs';
 import { DragResizeService } from '../services/drag-resize.service';
 import { FederatedPointerEvent, Point } from 'pixi.js';
-import { AddNodeCommand } from '../services';
+import { AddNodeCommand, EditorCommand } from '../services';
+import { AssetStorageService } from '../services/asset-storage.service';
 
 /**
  * BrushPlugin enables freehand drawing to create BrushNode paths.
@@ -22,7 +23,7 @@ export class BrushPlugin implements EditorPlugin {
   private tempNode?: BrushNode;
   private destroy$ = new Subject<void>();
 
-  constructor(private readonly drag: DragResizeService) {}
+  constructor(private readonly drag: DragResizeService, private readonly assetStorage: AssetStorageService) {}
 
   init(ctx: EditorContext): void {
     ctx.bus.commands$
@@ -37,7 +38,7 @@ export class BrushPlugin implements EditorPlugin {
         const onDown = (event: FederatedPointerEvent) => {
           if (!this.drawing) return;
           startWorldPoint = ctx.utils.toWorldLocal(event, ctx.world);
-          const node = new BrushNode();
+          const node = new BrushNode(this.assetStorage);
           node.x = startWorldPoint.x;
           node.y = startWorldPoint.y;
           node.applyBoxSize(1, 1);
@@ -85,8 +86,9 @@ export class BrushPlugin implements EditorPlugin {
           this.drawing = false;
           ctx.store.setBrushActive(false);
           const newId = node.id;
-          ctx.store.addNode({ id: newId, type: 'brush', ref: node });
-          this.drag.bind(node, new Subject<void>(), {
+          const destroy$ = new Subject<void>();
+          ctx.store.addNode({ id: newId, type: 'brush', ref: node, destroy$ });
+          this.drag.bind(node, destroy$, {
             cfg: ctx.cfg,
             store: ctx.store,
             guides: ctx.guides,
@@ -123,7 +125,7 @@ export class BrushPlugin implements EditorPlugin {
           import('../services/command-bus.service').EditorCommand,
           { t: 'ADD_BRUSH' }
         >;
-        const brushNode = new BrushNode();
+        const brushNode = new BrushNode(this.assetStorage);
         brushNode.x = addBrush.x ?? 100;
         brushNode.y = addBrush.y ?? 100;
         brushNode.applyBoxSize(
@@ -135,17 +137,23 @@ export class BrushPlugin implements EditorPlugin {
           addBrush.options?.stroke ?? 0xffffff,
           addBrush.options?.strokeWidth ?? 4
         );
+        if (addBrush.options?.bgAssetId) {
+          // This will be resolved by deserializeState later
+          brushNode.bgAssetId = addBrush.options.bgAssetId;
+        }
 
+        const destroy$ = new Subject<void>();
         const nodeState = {
           id: brushNode.id,
           type: 'brush' as const,
           ref: brushNode,
+          destroy$,
         };
 
         const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
         ctx.history.execute(command);
 
-        this.drag.bind(brushNode, new Subject<void>(), {
+        this.drag.bind(brushNode, destroy$, {
           cfg: ctx.cfg,
           store: ctx.store,
           guides: ctx.guides,
@@ -179,16 +187,32 @@ export class BrushPlugin implements EditorPlugin {
     ctx.bus.commands$
       .pipe(filter((c) => c.t === 'SET_BRUSH_BACKGROUND'), takeUntil(this.destroy$))
       .subscribe(async (cmd) => {
-        const url = (
-          cmd as Extract<
-            import('../services/command-bus.service').EditorCommand,
-            { t: 'SET_BRUSH_BACKGROUND' }
-          >
-        ).url;
-        const base64Url = await ctx.utils.urlToBase64(url);
-        applyToSelection((b) => {
-          void b.setBackground(base64Url);
-        });
+        const setBgCmd = cmd as Extract<EditorCommand, { t: 'SET_BRUSH_BACKGROUND' }>;
+        let source: string | undefined;
+
+        if (setBgCmd.assetId) {
+          source = await this.assetStorage.getAssetObjectURL(setBgCmd.assetId);
+          applyToSelection((b) => { b.bgAssetId = setBgCmd.assetId; });
+        } else if (setBgCmd.url) {
+          // If it's a data URL, convert to Blob and save as asset
+          if (setBgCmd.url.startsWith('data:')) {
+            const mimeType = setBgCmd.url.substring(setBgCmd.url.indexOf(':') + 1, setBgCmd.url.indexOf(';'));
+            const base64 = setBgCmd.url.split(',')[1];
+            const blob = ctx.utils.base64ToBlob(base64, mimeType);
+            const assetId = await this.assetStorage.saveAsset(blob, mimeType);
+            source = await this.assetStorage.getAssetObjectURL(assetId);
+            // Update the node's bgAssetId for serialization
+            applyToSelection((b) => { b.bgAssetId = assetId; });
+          } else {
+                      source = setBgCmd.url;
+                      applyToSelection((b) => { b.bgAssetId = setBgCmd.url; });          }
+        }
+
+        if (source) {
+          applyToSelection((b) => {
+            void b.setBackground(source!);
+          });
+        }
       });
 
     ctx.bus.commands$

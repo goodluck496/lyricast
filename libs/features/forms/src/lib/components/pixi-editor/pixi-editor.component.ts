@@ -12,6 +12,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import {
   Application,
+  Assets,
   Container,
   FederatedPointerEvent,
   Graphics,
@@ -40,6 +41,7 @@ import {
 import { GuideLayer } from './guides';
 import { fromEvent, Subject } from 'rxjs';
 import { ContextMenuService } from './services/context-menu.service';
+import { AssetStorageService } from './services/asset-storage.service';
 import { auditTime, filter, takeUntil, tap } from 'rxjs/operators';
 import {
   BrushNode,
@@ -110,6 +112,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   private readonly textFit = inject(TextFitService);
   private readonly drag = inject(DragResizeService);
   private readonly dialog = inject(DialogService);
+  private readonly assetStorage = inject(AssetStorageService);
+  private readonly overlayService = inject(OverlayService);
 
   // Plugin instances provided via DI multi-token
   private plugins = inject(EDITOR_PLUGINS);
@@ -743,7 +747,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
 
   private cloneNode(src: NodeBase): NodeBase | null {
     if (src instanceof TextNode) {
-      const n = new TextNode(this.app, this.textFit);
+      const n = new TextNode(this.app, this.textFit, this.assetStorage);
       n.textHtml = src.textHtml;
       n.style = { ...src.style };
       n.applyBoxSize(src.w, src.h);
@@ -792,7 +796,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       return g;
     }
     if (src instanceof ShapeNode) {
-      const n = new ShapeNode(src.shape);
+      const n = new ShapeNode(src.shape, this.assetStorage);
       n.fill = src.fill;
       n.stroke = src.stroke;
       n.lineWidth = src.lineWidth;
@@ -800,7 +804,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       return n;
     }
     if (src instanceof BrushNode) {
-      const n = new BrushNode();
+      const n = new BrushNode(this.assetStorage);
       n.stroke = src.stroke;
       n.strokeWidth = src.strokeWidth;
       n.applyBoxSize(src.w, src.h);
@@ -1048,30 +1052,39 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           alpha: node.alpha,
         };
 
+        console.log('------------', node);
         if (node instanceof TextNode) {
           return {
-            ...baseData,
+            id: node.id,
             type: 'text',
+            x: node.x,
+            y: node.y,
+            alpha: node.alpha,
+            width: node.w,
+            height: node.h,
+            rotation: node.rotation,
             textHtml: node.textHtml,
             style: node.style,
-            actualFontSize: node.currentFontSize, // Сохраняем реальный размер шрифта
-            bgFillColor: node.backgroundColor, // Сохраняем цвет фона
-            bgImageUrl: node.backgroundImageUrl, // Сохраняем URL фонового изображения
+            padding: node.padding,
+            bgFillColor: node.bgFillColor,
+            bgAssetId: node.bgAssetId, // Store asset ID
+            actualFontSize: node.style.actualFontSize,
           } as SerializedTextNode;
         }
         if (node instanceof ImageNode) {
-          const imageData = {
+          return {
             ...baseData,
             type: 'image',
-            url: node.url,
+            assetId: node.assetId, // Store asset ID
+            url: node.url, // Store external URL
           } as SerializedImageNode;
-          return imageData;
         }
         if (node instanceof VideoNode) {
           return {
             ...baseData,
             type: 'video',
-            url: node.url,
+            assetId: node.assetId, // Store asset ID
+            url: node.url, // Store external URL
           } as SerializedVideoNode;
         }
         if (node instanceof IframeNode) {
@@ -1089,7 +1102,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             fill: node.fill,
             stroke: node.stroke,
             lineWidth: node.lineWidth,
-            bgImageUrl: (node as any).bgImageUrl, // Add bgImageUrl for ShapeNode
+            bgAssetId: node.bgAssetId, // Store asset ID
           } as SerializedShapeNode;
         }
         if (node instanceof BrushNode) {
@@ -1099,14 +1112,14 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             stroke: node.stroke,
             strokeWidth: node.strokeWidth,
             path: (node as any).path?.map((p: Point) => ({ x: p.x, y: p.y })),
-            bgImageUrl: (node as any).bgImageUrl, // Add bgImageUrl for BrushNode
+            bgAssetId: node.bgAssetId, // Store asset ID
           } as SerializedBrushNode;
         }
         return null;
       })
-      .filter((n): n is SerializedNode => n !== null);
+      .filter((n) => n !== null);
 
-    const result = {
+    const result: SerializedState = {
       nodes: serializableNodes,
       zoom: state.zoom,
       sceneBounds: {
@@ -1128,6 +1141,60 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     });
 
     return result;
+  }
+
+  /**
+   * Предварительная загрузка ассетов (изображений, видео) для данного состояния слайда.
+   * Использует PixiJS Assets для кэширования.
+   */
+  async preloadAssets(data: SerializedState): Promise<void> {
+    if (!data || !data.nodes) return;
+
+    const urlsToPreload: string[] = [];
+
+    for (const nodeData of data.nodes) {
+      if (nodeData.type === 'image' || nodeData.type === 'video') {
+        if (nodeData.assetId) {
+          const objectURL = await this.assetStorage.getAssetObjectURL(
+            nodeData.assetId
+          );
+          if (objectURL) urlsToPreload.push(objectURL);
+        } else if (nodeData.url) {
+          urlsToPreload.push(nodeData.url);
+        }
+      } else if (nodeData.type === 'iframe') {
+        if (nodeData.url) {
+          urlsToPreload.push(nodeData.url);
+        }
+      } else if (nodeData.type === 'text' && nodeData.bgAssetId) {
+        const objectURL = await this.assetStorage.getAssetObjectURL(
+          nodeData.bgAssetId
+        );
+        if (objectURL) urlsToPreload.push(objectURL);
+      } else if (nodeData.type === 'shape' && nodeData.bgAssetId) {
+        const objectURL = await this.assetStorage.getAssetObjectURL(
+          nodeData.bgAssetId
+        );
+        if (objectURL) urlsToPreload.push(objectURL);
+      } else if (nodeData.type === 'brush' && nodeData.bgAssetId) {
+        const objectURL = await this.assetStorage.getAssetObjectURL(
+          nodeData.bgAssetId
+        );
+        if (objectURL) urlsToPreload.push(objectURL);
+      }
+    }
+
+    const uniqueUrls = Array.from(new Set(urlsToPreload));
+
+    if (uniqueUrls.length > 0) {
+      console.log(`[Editor] Preloading ${uniqueUrls.length} assets...`);
+      try {
+        await Assets.load(uniqueUrls);
+        console.log('[Editor] Assets preloaded successfully.');
+      } catch (e) {
+        console.warn('[Editor] Failed to preload assets:', e);
+      }
+    }
   }
 
   /**
@@ -1170,13 +1237,16 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
                 ...nodeData.style,
                 actualFontSize: nodeData.actualFontSize,
               },
+              bgFillColor: nodeData.bgFillColor,
+              bgAssetId: nodeData.bgAssetId, // Pass asset ID
             },
           });
           break;
         case 'image':
           this.bus.emit({
             t: 'ADD_IMAGE',
-            url: nodeData.url,
+            assetId: nodeData.assetId, // Pass asset ID
+            url: nodeData.url, // Pass external URL
             x: absoluteX,
             y: absoluteY,
             options: options,
@@ -1185,7 +1255,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         case 'video':
           this.bus.emit({
             t: 'ADD_VIDEO',
-            url: nodeData.url,
+            assetId: nodeData.assetId, // Pass asset ID
+            url: nodeData.url, // Pass external URL
             x: absoluteX,
             y: absoluteY,
             options: options,
@@ -1211,6 +1282,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
               fill: nodeData.fill,
               stroke: nodeData.stroke,
               lineWidth: nodeData.lineWidth,
+              bgAssetId: nodeData.bgAssetId, // Pass asset ID
             },
           });
           break;
@@ -1224,6 +1296,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
               ...options,
               stroke: nodeData.stroke,
               strokeWidth: nodeData.strokeWidth,
+              bgAssetId: nodeData.bgAssetId, // Pass asset ID
             },
           });
           break;
@@ -1244,13 +1317,9 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         const nodeState = allNodes[nodeId];
         if (nodeState) {
           this.world.removeChild(nodeState.ref);
-          nodeState.ref.destroy({
-            children: true,
-            texture: true,
-            textureSource: true,
-            // style: true,
-            // context: true,
-          });
+          nodeState.destroy$?.next();
+          nodeState.destroy$?.complete();
+          nodeState.ref.destroy();
         }
       }
       this.store.resetNodes();

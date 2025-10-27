@@ -81,6 +81,8 @@ export class FreeSlideComponent implements AfterViewInit {
       if (slide.htmlString) {
         try {
           const slideData = JSON.parse(slide.htmlString);
+          // Trigger preloading in the background, but don't await it to avoid blocking UI
+          void this.pixiEditor.preloadAssets(slideData);
           this.pixiEditor.deserializeState(slideData);
         } catch (e) {
           console.error('Error parsing slide data, clearing editor', e);
@@ -118,6 +120,7 @@ export class FreeSlideComponent implements AfterViewInit {
     }
     const editorState = this.pixiEditor.serializeState();
     const htmlString = JSON.stringify(editorState);
+    console.log('[FreeSlide] Saving slide:', this.currentSlideName, htmlString);
 
     this.slideService.updateSlide({
       id: this.currentSlideId,

@@ -47,6 +47,8 @@ export class RemoveNodeCommand implements HistoryCommand {
 
   execute(): void {
     this.world.removeChild(this.nodeState.ref);
+    this.nodeState.destroy$?.next();
+    this.nodeState.destroy$?.complete();
     this.store.removeNode(this.nodeState.id);
   }
 

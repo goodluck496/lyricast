@@ -645,6 +645,7 @@ export class ShapeNode extends NodeBase {
   // Optional background sprite masked by the shape for image fills
   private bgSprite?: Sprite;
   private maskG?: Graphics;
+  public bgImageUrl?: string; // Added public property
 
   constructor(kind: 'rect' | 'ellipse' | 'line' = 'rect') {
     super();
@@ -669,6 +670,7 @@ export class ShapeNode extends NodeBase {
         this.maskG = undefined;
       }
     }
+    this.bgImageUrl = undefined; // Clear bgImageUrl when setting solid fill
     this.redraw();
   }
 
@@ -677,6 +679,7 @@ export class ShapeNode extends NodeBase {
     if (this.shape === 'line') return; // not supported for open line
     try {
       const tex = await loadTextureRobust(url);
+      this.bgImageUrl = url; // Assign the URL to the new property
       if (!this.bgSprite) {
         this.bgSprite = new Sprite(tex);
         this.bgSprite.anchor.set(0.5);
@@ -704,6 +707,7 @@ export class ShapeNode extends NodeBase {
 
   /** Remove background image and mask, falling back to solid fill. */
   clearBackground() {
+    this.bgImageUrl = undefined; // Clear bgImageUrl
     if (this.bgSprite) {
       this.bgSprite.destroy();
       this.bgSprite = undefined;
@@ -827,6 +831,7 @@ export class BrushNode extends NodeBase {
   // Background support for closed paths
   private bgSprite?: Sprite;
   private maskG?: Graphics;
+  public bgImageUrl?: string; // Added public property
 
   constructor() {
     super();
@@ -864,6 +869,7 @@ export class BrushNode extends NodeBase {
     }
     try {
       const tex = await loadTextureRobust(url);
+      this.bgImageUrl = url; // Assign the URL to the new property
       if (!this.bgSprite) {
         this.bgSprite = new Sprite(tex);
         this.bgSprite.anchor.set(0.5);
@@ -887,6 +893,7 @@ export class BrushNode extends NodeBase {
 
   /** Очистить фоновое изображение */
   clearBackground() {
+    this.bgImageUrl = undefined; // Clear bgImageUrl
     if (this.bgSprite) {
       this.bgSprite.destroy();
       this.bgSprite = undefined;

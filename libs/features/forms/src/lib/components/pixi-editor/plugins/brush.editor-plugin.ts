@@ -176,15 +176,16 @@ export class BrushPlugin implements EditorPlugin {
 
     ctx.bus.commands$
       .pipe(filter((c) => c.t === 'SET_BRUSH_BACKGROUND'))
-      .subscribe((cmd) => {
+      .subscribe(async (cmd) => {
         const url = (
           cmd as Extract<
             import('../services/command-bus.service').EditorCommand,
             { t: 'SET_BRUSH_BACKGROUND' }
           >
         ).url;
+        const base64Url = await ctx.utils.urlToBase64(url);
         applyToSelection((b) => {
-          void b.setBackground(url);
+          void b.setBackground(base64Url);
         });
       });
 

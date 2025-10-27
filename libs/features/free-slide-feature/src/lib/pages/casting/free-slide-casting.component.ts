@@ -22,7 +22,11 @@ import {
 import { AppActions, BridgeService, Pages } from '@lyri-cast/common-browser';
 import { filterEmpty } from '@lyri-cast/common';
 import { combineLatest, filter, map, take } from 'rxjs';
-import { FreeSlide, SerializedNode } from '@lyri-cast/entities';
+import {
+  FreeSlide,
+  SerializedIframeNode,
+  SerializedState,
+} from '@lyri-cast/entities';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Actions, ofType } from '@ngrx/effects';
 import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
@@ -35,7 +39,6 @@ import {
   HTMLTextStyle,
   Sprite,
 } from 'pixi.js';
-import { SerializedState, SerializedIframeNode } from '@lyri-cast/entities';
 import { ViewContainer } from 'pixi.js/lib/scene/view/ViewContainer';
 
 @Component({
@@ -114,8 +117,10 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
   @HostListener('window:resize', ['$event'])
   resizeHandler() {
     if (this.app) {
-      const newWidth = this.pixiHostRef.nativeElement.clientWidth || window.innerWidth;
-      const newHeight = this.pixiHostRef.nativeElement.clientHeight || window.innerHeight;
+      const newWidth =
+        this.pixiHostRef.nativeElement.clientWidth || window.innerWidth;
+      const newHeight =
+        this.pixiHostRef.nativeElement.clientHeight || window.innerHeight;
 
       console.log('[Casting] Resizing renderer to:', { newWidth, newHeight });
 
@@ -123,18 +128,21 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
 
       // Перерисовываем текущий слайд с новыми размерами
       // Получаем текущий слайд из стора
-      this.store.select(selectFreeSlideCastingProcess).pipe(
-        filterEmpty(),
-        take(1)
-      ).subscribe((process) => {
-        this.store.select(selectFreeSlideNavigateState).pipe(take(1)).subscribe((navigate) => {
-          const slideIndex = navigate?.index ?? process.fromIndex;
-          const slide = process.slides[slideIndex];
-          if (slide) {
-            this.renderSlide(slide);
-          }
+      this.store
+        .select(selectFreeSlideCastingProcess)
+        .pipe(filterEmpty(), take(1))
+        .subscribe((process) => {
+          this.store
+            .select(selectFreeSlideNavigateState)
+            .pipe(take(1))
+            .subscribe((navigate) => {
+              const slideIndex = navigate?.index ?? process.fromIndex;
+              const slide = process.slides[slideIndex];
+              if (slide) {
+                this.renderSlide(slide);
+              }
+            });
         });
-      });
     }
   }
 
@@ -142,15 +150,17 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
     this.app = new Application();
 
     // Получаем реальные размеры контейнера
-    const containerWidth = this.pixiHostRef.nativeElement.clientWidth || window.innerWidth;
-    const containerHeight = this.pixiHostRef.nativeElement.clientHeight || window.innerHeight;
+    const containerWidth =
+      this.pixiHostRef.nativeElement.clientWidth || window.innerWidth;
+    const containerHeight =
+      this.pixiHostRef.nativeElement.clientHeight || window.innerHeight;
 
     console.log('[Casting] initPixi - container dimensions:', {
       clientWidth: this.pixiHostRef.nativeElement.clientWidth,
       clientHeight: this.pixiHostRef.nativeElement.clientHeight,
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
-      using: { width: containerWidth, height: containerHeight }
+      using: { width: containerWidth, height: containerHeight },
     });
 
     await this.app.init({
@@ -167,7 +177,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
 
     console.log('[Casting] PixiJS initialized with renderer size:', {
       width: this.app.renderer.width,
-      height: this.app.renderer.height
+      height: this.app.renderer.height,
     });
   }
 
@@ -194,19 +204,29 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       // --- PRE-LOADING STAGE ---
       const urlsToLoad: string[] = [];
       for (const node of data.nodes) {
-        if ((node.type === 'image' || node.type === 'video') && (node as any).url) {
-          urlsToLoad.push((node as any).url);
+        if ((node.type === 'image' || node.type === 'video') && node.url) {
+          urlsToLoad.push(node.url);
         }
-        if (node.type === 'text' && (node as any).bgImageUrl) {
-          urlsToLoad.push((node as any).bgImageUrl);
+        if (node.type === 'text' && node.bgImageUrl) {
+          urlsToLoad.push(node.bgImageUrl);
+        }
+        // Add bgImageUrl for shape nodes
+        if (node.type === 'shape' && node.bgImageUrl) {
+          urlsToLoad.push(node.bgImageUrl);
+        }
+        // Add bgImageUrl for brush nodes
+        if (node.type === 'brush' && node.bgImageUrl) {
+          urlsToLoad.push(node.bgImageUrl);
+          console.log(
+            '[Casting Debug] Pre-loading brush bgImageUrl:',
+            node.bgImageUrl
+          );
         }
       }
 
       if (urlsToLoad.length > 0) {
         const uniqueUrls = [...new Set(urlsToLoad)];
-        console.log('[Casting] Pre-loading assets:', uniqueUrls);
         await Assets.load(uniqueUrls);
-        console.log('[Casting] Assets loaded.');
       }
 
       // --- SYNCHRONOUS BUILD STAGE ---
@@ -237,7 +257,10 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
               try {
                 const bgTexture = Assets.get(nodeData.bgImageUrl);
                 const bgSprite = new Sprite(bgTexture);
-                const scaleToCover = Math.max(scaledWidth / bgTexture.width, scaledHeight / bgTexture.height);
+                const scaleToCover = Math.max(
+                  scaledWidth / bgTexture.width,
+                  scaledHeight / bgTexture.height
+                );
                 bgSprite.scale.set(scaleToCover);
                 bgSprite.anchor.set(0.5);
                 bgSprite.x = x + scaledWidth / 2;
@@ -245,24 +268,34 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
                 bgSprite.alpha = nodeData.alpha ?? 1;
 
                 const mask = new Graphics();
-                mask.roundRect(x, y, scaledWidth, scaledHeight, 6 * scaleFactor).fill(0xffffff);
+                mask
+                  .roundRect(x, y, scaledWidth, scaledHeight, 6 * scaleFactor)
+                  .fill(0xffffff);
                 bgSprite.mask = mask;
 
                 this.scene.addChild(bgSprite, mask);
               } catch (e) {
-                console.warn('[Casting] Failed to get text background image:', nodeData.bgImageUrl, e);
+                console.warn(
+                  '[Casting] Failed to get text background image:',
+                  nodeData.bgImageUrl,
+                  e
+                );
               }
             } else if (nodeData.bgFillColor != null) {
               const bgGraphics = new Graphics();
-              bgGraphics.roundRect(x, y, scaledWidth, scaledHeight, 6 * scaleFactor)
-                        .fill(nodeData.bgFillColor);
+              bgGraphics
+                .roundRect(x, y, scaledWidth, scaledHeight, 6 * scaleFactor)
+                .fill(nodeData.bgFillColor);
               bgGraphics.alpha = nodeData.alpha ?? 1;
               this.scene.addChild(bgGraphics);
             }
 
             let fontSize = nodeData.actualFontSize;
             if (!fontSize || fontSize === 0) {
-              fontSize = Math.max(nodeData.style.min, Math.min(nodeData.style.max, nodeData.height * 0.7));
+              fontSize = Math.max(
+                nodeData.style.min,
+                Math.min(nodeData.style.max, nodeData.height * 0.7)
+              );
             }
             const scaledFontSize = fontSize * scaleFactor;
             const style = new HTMLTextStyle({
@@ -283,9 +316,11 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
             node = new HTMLText({ text: nodeData.textHtml, style });
 
             const align = nodeData.style.align || 'center';
-            const anchorX = align === 'center' ? 0.5 : align === 'right' ? 1 : 0;
-            const valign = (nodeData.style as any).valign || 'top';
-            const anchorY = valign === 'middle' ? 0.5 : valign === 'bottom' ? 1 : 0;
+            const anchorX =
+              align === 'center' ? 0.5 : align === 'right' ? 1 : 0;
+            const valign = nodeData.style.valign || 'top';
+            const anchorY =
+              valign === 'middle' ? 0.5 : valign === 'bottom' ? 1 : 0;
             node.anchor.set(anchorX, anchorY);
             break;
           }
@@ -306,30 +341,197 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
                 }
               }
             } catch (e) {
-              console.error(`[Casting] Failed to get ${nodeData.type}:`, nodeData.url, e);
+              console.error(
+                `[Casting] Failed to get ${nodeData.type}:`,
+                nodeData.url,
+                e
+              );
             }
             break;
           }
 
-          case 'shape':
-            node = new Graphics();
-            if (nodeData.shape === 'rect') {
-              node.rect(0, 0, nodeData.width * scaleFactor, nodeData.height * scaleFactor).fill(nodeData.fill);
-              node.stroke({ width: nodeData.lineWidth * scaleFactor, color: nodeData.stroke });
-            } else if (nodeData.shape === 'ellipse') {
-              node.ellipse((nodeData.width / 2) * scaleFactor, (nodeData.height / 2) * scaleFactor, (nodeData.width / 2) * scaleFactor, (nodeData.height / 2) * scaleFactor).fill(nodeData.fill);
-              node.stroke({ width: nodeData.lineWidth * scaleFactor, color: nodeData.stroke });
-            }
-            break;
+          case 'shape': {
+            const scaledWidth = nodeData.width * scaleFactor;
+            const scaledHeight = nodeData.height * scaleFactor;
+            const x = nodeData.x * scaleFactor;
+            const y = nodeData.y * scaleFactor;
 
-          case 'brush':
-            node = new Graphics();
-            if (nodeData.path && nodeData.path.length > 0) {
-              node.moveTo(nodeData.path[0].x * scaleFactor, nodeData.path[0].y * scaleFactor);
-              nodeData.path.forEach((p: { x: number; y: number }) => node.lineTo(p.x * scaleFactor, p.y * scaleFactor));
-              node.stroke({ width: nodeData.strokeWidth * scaleFactor, color: nodeData.stroke, cap: 'round', join: 'round' });
+            const shapeContainer = new Container(); // Use a container to group shape graphics and background
+            shapeContainer.x = x;
+            shapeContainer.y = y;
+
+            const mainGraphics = new Graphics(); // For fill and stroke
+            shapeContainer.addChild(mainGraphics);
+
+            if (nodeData.bgImageUrl) {
+              try {
+                const bgTexture = Assets.get(nodeData.bgImageUrl);
+                if (!bgTexture || !bgTexture.valid)
+                  console.error('[Casting Debug] Shape bgTexture invalid!');
+                const bgSprite = new Sprite(bgTexture);
+                const scaleToCover = Math.max(
+                  scaledWidth / bgTexture.width,
+                  scaledHeight / bgTexture.height
+                );
+                bgSprite.scale.set(scaleToCover);
+                bgSprite.anchor.set(0.5);
+                bgSprite.x = scaledWidth / 2; // Position relative to container
+                bgSprite.y = scaledHeight / 2; // Position relative to container
+                bgSprite.alpha = nodeData.alpha ?? 1;
+
+                const maskGraphics = new Graphics();
+                if (nodeData.shape === 'rect') {
+                  maskGraphics
+                    .roundRect(0, 0, scaledWidth, scaledHeight, 6 * scaleFactor)
+                    .fill(0xffffff);
+                } else if (nodeData.shape === 'ellipse') {
+                  maskGraphics
+                    .ellipse(
+                      scaledWidth / 2,
+                      scaledHeight / 2,
+                      scaledWidth / 2,
+                      scaledHeight / 2
+                    )
+                    .fill(0xffffff);
+                }
+                bgSprite.mask = maskGraphics;
+                shapeContainer.addChildAt(bgSprite, 0); // Add sprite behind main graphics
+                shapeContainer.addChild(maskGraphics); // Add mask to container
+              } catch (e) {
+                console.warn(
+                  '[Casting] Failed to get shape background image:',
+                  nodeData.bgImageUrl,
+                  e
+                );
+              }
+            } else {
+              // Render solid fill if no background image
+              if (nodeData.shape === 'rect') {
+                mainGraphics
+                  .roundRect(0, 0, scaledWidth, scaledHeight, 6 * scaleFactor)
+                  .fill(nodeData.fill);
+              } else if (nodeData.shape === 'ellipse') {
+                mainGraphics
+                  .ellipse(
+                    scaledWidth / 2,
+                    scaledHeight / 2,
+                    scaledWidth / 2,
+                    scaledHeight / 2
+                  )
+                  .fill(nodeData.fill);
+              }
             }
+
+            // Always render stroke
+            if (nodeData.shape === 'rect') {
+              mainGraphics
+                .roundRect(0, 0, scaledWidth, scaledHeight, 6 * scaleFactor)
+                .stroke({
+                  width: nodeData.lineWidth * scaleFactor,
+                  color: nodeData.stroke,
+                });
+            } else if (nodeData.shape === 'ellipse') {
+              mainGraphics
+                .ellipse(
+                  scaledWidth / 2,
+                  scaledHeight / 2,
+                  scaledWidth / 2,
+                  scaledHeight / 2
+                )
+                .stroke({
+                  width: nodeData.lineWidth * scaleFactor,
+                  color: nodeData.stroke,
+                });
+            } else if (nodeData.shape === 'line') {
+              mainGraphics
+                .moveTo(0, 0)
+                .lineTo(scaledWidth, 0)
+                .stroke({
+                  width: nodeData.lineWidth * scaleFactor,
+                  color: nodeData.stroke,
+                });
+            }
+
+            node = shapeContainer; // Assign the container to node
             break;
+          }
+
+          case 'brush': {
+            const scaledWidth = nodeData.width * scaleFactor;
+            const scaledHeight = nodeData.height * scaleFactor;
+            const x = nodeData.x * scaleFactor;
+            const y = nodeData.y * scaleFactor;
+
+            const brushContainer = new Container();
+            brushContainer.x = x;
+            brushContainer.y = y;
+
+            const mainGraphics = new Graphics(); // For the brush stroke
+            brushContainer.addChild(mainGraphics);
+
+            if (
+              nodeData.bgImageUrl &&
+              nodeData.path &&
+              nodeData.path.length > 0
+            ) {
+              try {
+                const bgTexture = Assets.get(nodeData.bgImageUrl);
+                if (!bgTexture || !bgTexture.valid)
+                  console.error('[Casting Debug] Brush bgTexture invalid!');
+                const bgSprite = new Sprite(bgTexture);
+                const scaleToCover = Math.max(
+                  scaledWidth / bgTexture.width,
+                  scaledHeight / bgTexture.height
+                );
+                bgSprite.scale.set(scaleToCover);
+                bgSprite.anchor.set(0.5);
+                bgSprite.x = scaledWidth / 2;
+                bgSprite.y = scaledHeight / 2;
+                bgSprite.alpha = nodeData.alpha ?? 1;
+
+                const maskGraphics = new Graphics();
+                maskGraphics.moveTo(
+                  nodeData.path[0].x * scaleFactor,
+                  nodeData.path[0].y * scaleFactor
+                );
+                nodeData.path.forEach((p: { x: number; y: number }) =>
+                  maskGraphics.lineTo(p.x * scaleFactor, p.y * scaleFactor)
+                );
+                maskGraphics.closePath(); // Assume closed path for background
+                maskGraphics.fill(0xffffff);
+
+                bgSprite.mask = maskGraphics;
+                brushContainer.addChildAt(bgSprite, 0);
+                brushContainer.addChild(maskGraphics);
+              } catch (e) {
+                console.warn(
+                  '[Casting] Failed to get brush background image:',
+                  (nodeData as any).bgImageUrl,
+                  e
+                );
+              }
+            }
+
+            // Render brush stroke
+            if (nodeData.path && nodeData.path.length > 0) {
+              mainGraphics.moveTo(
+                nodeData.path[0].x * scaleFactor,
+                nodeData.path[0].y * scaleFactor
+              );
+              nodeData.path.forEach((p: { x: number; y: number }) =>
+                mainGraphics.lineTo(p.x * scaleFactor, p.y * scaleFactor)
+              );
+              mainGraphics.stroke({
+                width: nodeData.strokeWidth * scaleFactor,
+                color: nodeData.stroke,
+                cap: 'round',
+                join: 'round',
+              });
+            }
+
+            node = brushContainer;
+            break;
+          }
 
           case 'iframe': {
             iframeNodes.push(nodeData as SerializedIframeNode);
@@ -358,8 +560,6 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       this.scene.x = (canvasWidth - scaledSceneWidth) / 2;
       this.scene.y = (canvasHeight - scaledSceneHeight) / 2;
 
-      console.log('[Casting] Scene position:', { x: this.scene.x, y: this.scene.y });
-
       for (const iframeData of iframeNodes) {
         const iframe = this.renderer.createElement('iframe');
         this.renderer.setAttribute(iframe, 'src', iframeData.url);
@@ -368,8 +568,16 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
         const absoluteTop = this.scene.y + iframeData.y * scaleFactor;
         this.renderer.setStyle(iframe, 'left', `${absoluteLeft}px`);
         this.renderer.setStyle(iframe, 'top', `${absoluteTop}px`);
-        this.renderer.setStyle(iframe, 'width', `${iframeData.width * scaleFactor}px`);
-        this.renderer.setStyle(iframe, 'height', `${iframeData.height * scaleFactor}px`);
+        this.renderer.setStyle(
+          iframe,
+          'width',
+          `${iframeData.width * scaleFactor}px`
+        );
+        this.renderer.setStyle(
+          iframe,
+          'height',
+          `${iframeData.height * scaleFactor}px`
+        );
         this.renderer.setStyle(iframe, 'border', 'none');
         this.renderer.appendChild(this.domOverlayRef.nativeElement, iframe);
       }

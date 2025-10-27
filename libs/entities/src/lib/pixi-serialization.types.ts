@@ -26,6 +26,7 @@ export type SerializedTextNode = SerializedNodeBase & {
 export type SerializedImageNode = SerializedNodeBase & {
   type: 'image';
   url: string;
+  bgImageUrl: string | any;
 };
 
 export type SerializedVideoNode = SerializedNodeBase & {
@@ -44,6 +45,7 @@ export type SerializedShapeNode = SerializedNodeBase & {
   fill: number;
   stroke: number;
   lineWidth: number;
+  bgImageUrl: string | any;
 };
 
 export type SerializedBrushNode = SerializedNodeBase & {
@@ -51,6 +53,7 @@ export type SerializedBrushNode = SerializedNodeBase & {
   stroke: number;
   strokeWidth: number;
   path: { x: number; y: number }[];
+  bgImageUrl: string | any;
 };
 
 export type SerializedNode =

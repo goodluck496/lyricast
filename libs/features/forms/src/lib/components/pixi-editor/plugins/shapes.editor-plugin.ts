@@ -30,12 +30,13 @@ export class ShapesPlugin implements EditorPlugin {
     // Set/Clear background on selected shape(s)
     ctx.bus.commands$.pipe(filter((command) => command.t === 'SET_SHAPE_BACKGROUND')).subscribe(async (cmd) => {
       const url = (cmd as Extract<EditorCommand, { t: 'SET_SHAPE_BACKGROUND' }>).url;
+      const base64Url = await ctx.utils.urlToBase64(url);
       const ids = ctx.store.snapshot(s => s.selectedIds) || [];
       const nodes = ctx.store.snapshot(s => s.nodes);
       for (const id of ids) {
         const ref = nodes[id]?.ref;
         if (ref instanceof ShapeNode && ref.shape !== 'line') {
-          await ref.setBackground(url);
+          await ref.setBackground(base64Url);
         }
       }
     });

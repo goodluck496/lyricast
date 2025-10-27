@@ -119,15 +119,6 @@ export class FreeSlideComponent implements AfterViewInit {
     const editorState = this.pixiEditor.serializeState();
     const htmlString = JSON.stringify(editorState);
 
-    console.log('[FreeSlide] Saving slide:', {
-      id: this.currentSlideId,
-      name: this.currentSlideName,
-      index: this.currentSlideIndex,
-      nodesCount: editorState.nodes.length,
-      htmlStringLength: htmlString.length,
-    });
-    console.log('[FreeSlide] Serialized nodes:', editorState.nodes);
-
     this.slideService.updateSlide({
       id: this.currentSlideId,
       name: this.currentSlideName,

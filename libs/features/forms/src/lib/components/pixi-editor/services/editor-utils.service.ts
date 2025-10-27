@@ -41,4 +41,38 @@ export class EditorUtilsService {
   isUrl(text: string) { try { new URL(text); return true; } catch { return false; } }
   isImageUrl(url: string) { return /(\.(png|jpe?g|gif|webp|avif|svg))(\?|#|$)/i.test(url); }
   isVideoUrl(url: string) { return /(\.(mp4|webm|ogg))(\?|#|$)/i.test(url); }
+
+  async urlToBase64(url: string): Promise<string> {
+    if (url.startsWith('data:')) {
+      return url;
+    }
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(url);
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        try {
+          const dataURL = canvas.toDataURL('image/png');
+          resolve(dataURL);
+        } catch (e) {
+          console.warn(`Could not convert image to base64 due to CORS. Using original URL: ${url}`, e);
+          resolve(url);
+        }
+      };
+      img.onerror = (err) => {
+        console.error(`Failed to load image from URL for base64 conversion: ${url}`, err);
+        resolve(url);
+      };
+      img.src = url;
+    });
+  }
 }

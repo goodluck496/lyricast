@@ -26,7 +26,8 @@ export class MediaPlugin implements EditorPlugin {
     // ADD_IMAGE
     ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_IMAGE')).subscribe(async (cmd) => {
       const addImage = cmd as Extract<EditorCommand, { t: 'ADD_IMAGE' }>;
-      const imageNode = new ImageNode(addImage.url);
+      const base64Url = await ctx.utils.urlToBase64(addImage.url);
+      const imageNode = new ImageNode(base64Url);
       imageNode.x = addImage.x ?? 120;
       imageNode.y = addImage.y ?? 100;
       imageNode.applyBoxSize(addImage.options?.width ?? 400, addImage.options?.height ?? 300);

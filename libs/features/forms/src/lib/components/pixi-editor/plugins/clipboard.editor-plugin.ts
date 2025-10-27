@@ -35,18 +35,20 @@ export class ClipboardPlugin implements EditorPlugin {
             const hasTextSel = sel.some(id => nodes[id]?.type === 'text');
             const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
             const hasBrushSel = sel.some(id => nodes[id]?.type === 'brush');
-            if (hasTextSel) {
-              ctx.bus.emit({ t: 'SET_TEXT_BACKGROUND', url });
-            } else if (hasShapeSel) {
-              ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url });
-            } else if (hasBrushSel) {
-              ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', url });
-            } else {
-              ctx.bus.emit({ t: 'ADD_IMAGE', url, x: 100, y: 100 });
-            }
+            ctx.utils.urlToBase64(url).then(base64Url => {
+              if (hasTextSel) {
+                ctx.bus.emit({ t: 'SET_TEXT_BACKGROUND', url: base64Url });
+              } else if (hasShapeSel) {
+                ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url: base64Url });
+              } else if (hasBrushSel) {
+                ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', url: base64Url });
+              } else {
+                ctx.bus.emit({ t: 'ADD_IMAGE', url: base64Url, x: 100, y: 100 });
+              }
+            });
           }
         } else if (item.kind === 'string') {
-          item.getAsString((raw) => {
+          item.getAsString(async (raw) => {
             // Если изображение уже обработано, игнорируем HTML/текст из буфера
             if (imageProcessed) return;
             
@@ -76,16 +78,17 @@ export class ClipboardPlugin implements EditorPlugin {
             }
             if (ctx.utils.isUrl(str)) {
               if (ctx.utils.isImageUrl(str)) {
+                const base64Url = await ctx.utils.urlToBase64(str);
                 const sel = ctx.store.snapshot(s => s.selectedIds) || [];
                 const nodes = ctx.store.snapshot(s => s.nodes);
                 const hasShapeSel = sel.some(id => nodes[id]?.type === 'shape');
                 const hasBrushSel = sel.some(id => nodes[id]?.type === 'brush');
                 if (hasShapeSel) {
-                  ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url: str });
+                  ctx.bus.emit({ t: 'SET_SHAPE_BACKGROUND', url: base64Url });
                 } else if (hasBrushSel) {
-                  ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', url: str });
+                  ctx.bus.emit({ t: 'SET_BRUSH_BACKGROUND', url: base64Url });
                 } else {
-                  ctx.bus.emit({ t: 'ADD_IMAGE', url: str, x: 120, y: 120 });
+                  ctx.bus.emit({ t: 'ADD_IMAGE', url: base64Url, x: 120, y: 120 });
                 }
               } else if (ctx.utils.isVideoUrl(str)) ctx.bus.emit({ t: 'ADD_VIDEO', url: str });
               else ctx.bus.emit({ t: 'ADD_IFRAME', url: str });

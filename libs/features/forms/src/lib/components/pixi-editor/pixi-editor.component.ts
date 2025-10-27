@@ -905,13 +905,6 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     // Учитываем текущий zoom и позицию world
     const zoom = this.store.snapshot((s) => s.zoom);
 
-    console.log('[Editor] updateSceneBounds:', {
-      canvasWidth,
-      canvasHeight,
-      zoom,
-      aspectRatio: this.aspectRatio,
-    });
-
     if (this.aspectRatio === 'none') {
       // Для 'none' используем размеры canvas
       this.sceneWidth = canvasWidth / zoom;
@@ -919,12 +912,6 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       // Базовые размеры без zoom (при zoom=1)
       this.baseSceneWidth = canvasWidth;
       this.baseSceneHeight = canvasHeight;
-      console.log('[Editor] Scene bounds (none):', {
-        sceneWidth: this.sceneWidth,
-        sceneHeight: this.sceneHeight,
-        baseSceneWidth: this.baseSceneWidth,
-        baseSceneHeight: this.baseSceneHeight,
-      });
       return;
     }
 
@@ -1074,12 +1061,6 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             type: 'image',
             url: node.url,
           } as SerializedImageNode;
-          console.log('[Editor] Serializing ImageNode:', {
-            id: node.id,
-            url: node.url,
-            width: node.width,
-            height: node.height,
-          });
           return imageData;
         }
         if (node instanceof VideoNode) {
@@ -1104,6 +1085,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             fill: node.fill,
             stroke: node.stroke,
             lineWidth: node.lineWidth,
+            bgImageUrl: (node as any).bgImageUrl, // Add bgImageUrl for ShapeNode
           } as SerializedShapeNode;
         }
         if (node instanceof BrushNode) {
@@ -1113,6 +1095,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             stroke: node.stroke,
             strokeWidth: node.strokeWidth,
             path: (node as any).path?.map((p: Point) => ({ x: p.x, y: p.y })),
+            bgImageUrl: (node as any).bgImageUrl, // Add bgImageUrl for BrushNode
           } as SerializedBrushNode;
         }
         return null;
@@ -1151,97 +1134,97 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     this.clearAllNodes();
     if (!data || !data.nodes) return;
 
-      // Вычисляем offset сцены для восстановления абсолютных координат
-      const canvasWidth = this.app.renderer.width;
-      const canvasHeight = this.app.renderer.height;
-      const zoom = this.store.snapshot((s) => s.zoom);
-      const sceneOffsetX = (canvasWidth / zoom - this.sceneWidth) / 2;
-      const sceneOffsetY = (canvasHeight / zoom - this.sceneHeight) / 2;
+    // Вычисляем offset сцены для восстановления абсолютных координат
+    const canvasWidth = this.app.renderer.width;
+    const canvasHeight = this.app.renderer.height;
+    const zoom = this.store.snapshot((s) => s.zoom);
+    const sceneOffsetX = (canvasWidth / zoom - this.sceneWidth) / 2;
+    const sceneOffsetY = (canvasHeight / zoom - this.sceneHeight) / 2;
 
-      data.nodes.forEach((nodeData) => {
-        const options = {
-          width: nodeData.width,
-          height: nodeData.height,
-          rotation: nodeData.rotation,
-          alpha: nodeData.alpha,
-        };
+    data.nodes.forEach((nodeData) => {
+      const options = {
+        width: nodeData.width,
+        height: nodeData.height,
+        rotation: nodeData.rotation,
+        alpha: nodeData.alpha,
+      };
 
-        // Восстанавливаем абсолютные координаты, добавляя offset сцены
-        const absoluteX = nodeData.x + sceneOffsetX;
-        const absoluteY = nodeData.y + sceneOffsetY;
+      // Восстанавливаем абсолютные координаты, добавляя offset сцены
+      const absoluteX = nodeData.x + sceneOffsetX;
+      const absoluteY = nodeData.y + sceneOffsetY;
 
-        switch (nodeData.type) {
-          case 'text':
-            this.bus.emit({
-              t: 'ADD_TEXT',
-              x: absoluteX,
-              y: absoluteY,
-              text: nodeData.textHtml,
-              options: {
-                ...options,
-                style: {
-                  ...nodeData.style,
-                  actualFontSize: nodeData.actualFontSize,
-                },
+      switch (nodeData.type) {
+        case 'text':
+          this.bus.emit({
+            t: 'ADD_TEXT',
+            x: absoluteX,
+            y: absoluteY,
+            text: nodeData.textHtml,
+            options: {
+              ...options,
+              style: {
+                ...nodeData.style,
+                actualFontSize: nodeData.actualFontSize,
               },
-            });
-            break;
-          case 'image':
-            this.bus.emit({
-              t: 'ADD_IMAGE',
-              url: nodeData.url,
-              x: absoluteX,
-              y: absoluteY,
-              options: options,
-            });
-            break;
-          case 'video':
-            this.bus.emit({
-              t: 'ADD_VIDEO',
-              url: nodeData.url,
-              x: absoluteX,
-              y: absoluteY,
-              options: options,
-            });
-            break;
-          case 'iframe':
-            this.bus.emit({
-              t: 'ADD_IFRAME',
-              url: nodeData.url,
-              x: absoluteX,
-              y: absoluteY,
-              options: options,
-            });
-            break;
-          case 'shape':
-            this.bus.emit({
-              t: 'ADD_SHAPE',
-              shape: nodeData.shape,
-              x: absoluteX,
-              y: absoluteY,
-              options: {
-                ...options,
-                fill: nodeData.fill,
-                stroke: nodeData.stroke,
-                lineWidth: nodeData.lineWidth,
-              },
-            });
-            break;
-          case 'brush':
-            this.bus.emit({
-              t: 'ADD_BRUSH',
-              path: nodeData.path,
-              x: absoluteX,
-              y: absoluteY,
-              options: {
-                ...options,
-                stroke: nodeData.stroke,
-                strokeWidth: nodeData.strokeWidth,
-              },
-            });
-            break;
-        }
-      });
+            },
+          });
+          break;
+        case 'image':
+          this.bus.emit({
+            t: 'ADD_IMAGE',
+            url: nodeData.url,
+            x: absoluteX,
+            y: absoluteY,
+            options: options,
+          });
+          break;
+        case 'video':
+          this.bus.emit({
+            t: 'ADD_VIDEO',
+            url: nodeData.url,
+            x: absoluteX,
+            y: absoluteY,
+            options: options,
+          });
+          break;
+        case 'iframe':
+          this.bus.emit({
+            t: 'ADD_IFRAME',
+            url: nodeData.url,
+            x: absoluteX,
+            y: absoluteY,
+            options: options,
+          });
+          break;
+        case 'shape':
+          this.bus.emit({
+            t: 'ADD_SHAPE',
+            shape: nodeData.shape,
+            x: absoluteX,
+            y: absoluteY,
+            options: {
+              ...options,
+              fill: nodeData.fill,
+              stroke: nodeData.stroke,
+              lineWidth: nodeData.lineWidth,
+            },
+          });
+          break;
+        case 'brush':
+          this.bus.emit({
+            t: 'ADD_BRUSH',
+            path: nodeData.path,
+            x: absoluteX,
+            y: absoluteY,
+            options: {
+              ...options,
+              stroke: nodeData.stroke,
+              strokeWidth: nodeData.strokeWidth,
+            },
+          });
+          break;
+      }
+    });
   }
 
   /**

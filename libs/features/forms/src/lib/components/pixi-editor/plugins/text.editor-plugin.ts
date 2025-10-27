@@ -139,9 +139,10 @@ export class TextPlugin implements EditorPlugin {
       }
     };
 
-    ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_TEXT_BACKGROUND')).subscribe((cmd) => {
+    ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_TEXT_BACKGROUND')).subscribe(async (cmd) => {
       const url = (cmd as Extract<EditorCommand, { t: 'SET_TEXT_BACKGROUND' }>).url;
-      applyToSelection((t) => { void t.setBackground(url); });
+      const base64Url = await ctx.utils.urlToBase64(url);
+      applyToSelection((t) => { void t.setBackground(base64Url); });
     });
     ctx.bus.commands$.pipe(filter((c) => c.t === 'CLEAR_TEXT_BACKGROUND')).subscribe(() => {
       applyToSelection((t) => t.clearBackground());

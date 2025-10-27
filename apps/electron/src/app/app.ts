@@ -163,7 +163,7 @@ export default class App {
 
           if (!environment.production) {
             // открываем devTools для отладки
-            // App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+            App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
           }
 
           if (App.openedWindows.MAIN.isFocused()) {

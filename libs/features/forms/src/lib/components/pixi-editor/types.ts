@@ -24,6 +24,8 @@ export interface UiTextStyles {
   /** Семейство шрифтов (например, 'Inter, system-ui, sans-serif') */
   font: string;
 
+  actualFontSize?: number
+
   /** Насыщенность шрифта (например, '400', '600', '700') */
   weight: string;
 

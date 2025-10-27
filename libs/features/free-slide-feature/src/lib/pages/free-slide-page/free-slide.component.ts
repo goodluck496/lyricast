@@ -64,7 +64,6 @@ export class FreeSlideComponent implements AfterViewInit {
 
   onAddNewSlide() {
     const newSlide = this.slideService.addSlide();
-
     this.onSelectSlide(newSlide);
   }
 

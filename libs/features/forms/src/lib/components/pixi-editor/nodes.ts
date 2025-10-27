@@ -70,6 +70,7 @@ export class TextNode extends NodeBase {
     max: DEFAULT_CONFIG.defaults.textMax,
     color: 0xffffff,
     colorHex: '#ffffff',
+    actualFontSize: 32,
   };
 
   private lastCalculatedFontSize = 32;
@@ -123,10 +124,10 @@ export class TextNode extends NodeBase {
     this.drawHandles();
 
     // Check if this is a restoration call by looking for a special property.
-    const restoredFontSize = (this.style as any).actualFontSize;
+    const restoredFontSize = this.style.actualFontSize;
     if (restoredFontSize) {
       this.applyFixedSize(restoredFontSize);
-      delete (this.style as any).actualFontSize; // Consume the property to avoid re-triggering
+      delete this.style.actualFontSize; // Consume the property to avoid re-triggering
       return;
     }
 
@@ -308,6 +309,9 @@ export class TextNode extends NodeBase {
       breakWords: false,
       whiteSpace: 'normal',
       fill: this.style.color,
+      fontSize: this.lastCalculatedFontSize,
+      lineHeight: this.lastCalculatedFontSize * this.style.lineHeight,
+      wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
         'p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
         'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',

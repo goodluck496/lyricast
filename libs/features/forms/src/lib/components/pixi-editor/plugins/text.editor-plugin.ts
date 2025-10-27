@@ -31,9 +31,22 @@ export class TextPlugin implements EditorPlugin {
       const textNode = new TextNode(ctx.app, this.fitter);
       textNode.x = addText.x ?? 80;
       textNode.y = addText.y ?? 80;
-      textNode.applyBoxSize(addText.options?.width ?? 600, addText.options?.height ?? 240);
+
+      // Применяем стили и текст ДО вызова applyBoxSize и layout
+      if (addText.options?.style) {
+        textNode.style = { ...addText.options.style };
+        // Передаем actualFontSize для восстановления
+        textNode.style.actualFontSize = addText.options.style.actualFontSize;
+      }
       textNode.textHtml = addText.text ?? 'New text';
-      void textNode.layout();
+
+      // Теперь вызываем applyBoxSize, который использует actualFontSize, если он есть
+      textNode.applyBoxSize(addText.options?.width ?? 600, addText.options?.height ?? 240);
+
+      // layout() вызываем только если узел создается с нуля, а не восстанавливается
+      if (!addText.options?.style?.actualFontSize) {
+        void textNode.layout();
+      }
 
       const nodeState = { id: textNode.id, type: 'text' as const, ref: textNode };
 

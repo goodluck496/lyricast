@@ -84,6 +84,8 @@ export class EditorStore extends ComponentStore<EditorViewModel> {
         lineHeight: cfg.defaults.lineHeight,
         min: cfg.defaults.textMin,
         max: cfg.defaults.textMax,
+        actualFontSize: 32,
+        valign: 'middle',
         // list: false,
         strokeWidth: 4,
       },
@@ -127,7 +129,10 @@ export class EditorStore extends ComponentStore<EditorViewModel> {
    */
   snapshot<T>(project: (state: EditorViewModel) => T): T {
     let value!: T;
-    this.select(project).pipe().subscribe((projectedValue) => (value = projectedValue)).unsubscribe();
+    this.select(project)
+      .pipe()
+      .subscribe((projectedValue) => (value = projectedValue))
+      .unsubscribe();
     return value;
   }
 
@@ -135,22 +140,34 @@ export class EditorStore extends ComponentStore<EditorViewModel> {
   // Updater-методы для изменения состояния
 
   /** Устанавливает масштаб */
-  readonly setZoom = this.updater<number>((state, zoom) => ({ ...state, zoom }));
+  readonly setZoom = this.updater<number>((state, zoom) => ({
+    ...state,
+    zoom,
+  }));
 
   /** Включает/выключает привязку к сетке */
-  readonly setSnap = this.updater<boolean>((state, snapEnabled) => ({ ...state, snapEnabled }));
+  readonly setSnap = this.updater<boolean>((state, snapEnabled) => ({
+    ...state,
+    snapEnabled,
+  }));
 
   /** Включает/выключает направляющие линии */
-  readonly setGuides = this.updater<boolean>((state, guidesEnabled) => ({ ...state, guidesEnabled }));
+  readonly setGuides = this.updater<boolean>((state, guidesEnabled) => ({
+    ...state,
+    guidesEnabled,
+  }));
 
   /** Обновляет UI-настройки (частичное обновление) */
   readonly setUI = this.updater<Partial<UiTextStyles>>((state, patch) => ({
     ...state,
-    ui: { ...state.ui, ...patch }
+    ui: { ...state.ui, ...patch },
   }));
 
   /** Устанавливает выделенные узлы */
-  readonly setSelection = this.updater<string[]>((state, ids) => ({ ...state, selectedIds: ids }));
+  readonly setSelection = this.updater<string[]>((state, ids) => ({
+    ...state,
+    selectedIds: ids,
+  }));
 
   /** Добавляет новый узел в хранилище */
   readonly addNode = this.updater<NodeState>((state, node) => ({
@@ -171,10 +188,16 @@ export class EditorStore extends ComponentStore<EditorViewModel> {
   });
 
   /** Изменяет порядок узлов (z-индекс) */
-  readonly reorder = this.updater<string[]>((state, order) => ({ ...state, order }));
+  readonly reorder = this.updater<string[]>((state, order) => ({
+    ...state,
+    order,
+  }));
 
   /** Устанавливает состояние режима кисти */
-  readonly setBrushActive = this.updater<boolean>((state, brushActive) => ({ ...state, brushActive }));
+  readonly setBrushActive = this.updater<boolean>((state, brushActive) => ({
+    ...state,
+    brushActive,
+  }));
 
   /** Сбрасывает состояние узлов, порядка и выделения */
   readonly resetNodes = this.updater((state) => ({

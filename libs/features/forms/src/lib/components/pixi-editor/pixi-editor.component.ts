@@ -19,7 +19,7 @@ import {
   Texture,
   TilingSprite,
 } from 'pixi.js';
-import { EDITOR_CONFIG, UiTextStyles } from './types';
+import { EDITOR_CONFIG } from './types';
 import { EDITOR_PLUGINS, EditorContext, NodeBase } from './core';
 import { EditorStore, NodeState } from './services/editor-store.service';
 import {
@@ -52,15 +52,15 @@ import {
 } from './nodes';
 import { PIXI_EDITOR_PROVIDERS } from './pixi-editor.providers';
 import {
-  SerializedState,
-  SerializedNode,
-  SerializedTextNode,
-  SerializedImageNode,
-  SerializedVideoNode,
-  SerializedIframeNode,
-  SerializedShapeNode,
   SerializedBrushNode,
+  SerializedIframeNode,
+  SerializedImageNode,
+  SerializedNode,
   SerializedNodeBase,
+  SerializedShapeNode,
+  SerializedState,
+  SerializedTextNode,
+  SerializedVideoNode,
 } from '@lyri-cast/entities';
 
 type WorldContainer = Container & { app: Application };
@@ -909,7 +909,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       canvasWidth,
       canvasHeight,
       zoom,
-      aspectRatio: this.aspectRatio
+      aspectRatio: this.aspectRatio,
     });
 
     if (this.aspectRatio === 'none') {
@@ -923,7 +923,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         sceneWidth: this.sceneWidth,
         sceneHeight: this.sceneHeight,
         baseSceneWidth: this.baseSceneWidth,
-        baseSceneHeight: this.baseSceneHeight
+        baseSceneHeight: this.baseSceneHeight,
       });
       return;
     }
@@ -1051,8 +1051,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           type: nodeState.type as SerializedNode['type'],
           x: node.x - sceneOffsetX,
           y: node.y - sceneOffsetY,
-          width: node.width,
-          height: node.height,
+          width: node.w,
+          height: node.h,
           rotation: node.rotation,
           alpha: node.alpha,
         };
@@ -1074,7 +1074,12 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             type: 'image',
             url: node.url,
           } as SerializedImageNode;
-          console.log('[Editor] Serializing ImageNode:', { id: node.id, url: node.url, width: node.width, height: node.height });
+          console.log('[Editor] Serializing ImageNode:', {
+            id: node.id,
+            url: node.url,
+            width: node.width,
+            height: node.height,
+          });
           return imageData;
         }
         if (node instanceof VideoNode) {
@@ -1146,91 +1151,97 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     this.clearAllNodes();
     if (!data || !data.nodes) return;
 
-    // Вычисляем offset сцены для восстановления абсолютных координат
-    const canvasWidth = this.app.renderer.width;
-    const canvasHeight = this.app.renderer.height;
-    const zoom = this.store.snapshot((s) => s.zoom);
-    const sceneOffsetX = (canvasWidth / zoom - this.sceneWidth) / 2;
-    const sceneOffsetY = (canvasHeight / zoom - this.sceneHeight) / 2;
+      // Вычисляем offset сцены для восстановления абсолютных координат
+      const canvasWidth = this.app.renderer.width;
+      const canvasHeight = this.app.renderer.height;
+      const zoom = this.store.snapshot((s) => s.zoom);
+      const sceneOffsetX = (canvasWidth / zoom - this.sceneWidth) / 2;
+      const sceneOffsetY = (canvasHeight / zoom - this.sceneHeight) / 2;
 
-    data.nodes.forEach((nodeData) => {
-      const options = {
-        width: nodeData.width,
-        height: nodeData.height,
-        rotation: nodeData.rotation,
-        alpha: nodeData.alpha,
-      };
+      data.nodes.forEach((nodeData) => {
+        const options = {
+          width: nodeData.width,
+          height: nodeData.height,
+          rotation: nodeData.rotation,
+          alpha: nodeData.alpha,
+        };
 
-      // Восстанавливаем абсолютные координаты, добавляя offset сцены
-      const absoluteX = nodeData.x + sceneOffsetX;
-      const absoluteY = nodeData.y + sceneOffsetY;
+        // Восстанавливаем абсолютные координаты, добавляя offset сцены
+        const absoluteX = nodeData.x + sceneOffsetX;
+        const absoluteY = nodeData.y + sceneOffsetY;
 
-      switch (nodeData.type) {
-        case 'text':
-          this.bus.emit({
-            t: 'ADD_TEXT',
-            x: absoluteX,
-            y: absoluteY,
-            text: nodeData.textHtml,
-            options: { ...options, style: { ...nodeData.style, actualFontSize: nodeData.actualFontSize } },
-          });
-          break;
-        case 'image':
-          this.bus.emit({
-            t: 'ADD_IMAGE',
-            url: nodeData.url,
-            x: absoluteX,
-            y: absoluteY,
-            options: options,
-          });
-          break;
-        case 'video':
-          this.bus.emit({
-            t: 'ADD_VIDEO',
-            url: nodeData.url,
-            x: absoluteX,
-            y: absoluteY,
-            options: options,
-          });
-          break;
-        case 'iframe':
-          this.bus.emit({
-            t: 'ADD_IFRAME',
-            url: nodeData.url,
-            x: absoluteX,
-            y: absoluteY,
-            options: options,
-          });
-          break;
-        case 'shape':
-          this.bus.emit({
-            t: 'ADD_SHAPE',
-            shape: nodeData.shape,
-            x: absoluteX,
-            y: absoluteY,
-            options: {
-              ...options,
-              fill: nodeData.fill,
-              stroke: nodeData.stroke,
-              lineWidth: nodeData.lineWidth,
-            },
-          });
-          break;
-        case 'brush':
-          this.bus.emit({
-            t: 'ADD_BRUSH',
-            path: nodeData.path,
-            x: absoluteX,
-            y: absoluteY,
-            options: {
-              ...options,
-              stroke: nodeData.stroke,
-              strokeWidth: nodeData.strokeWidth,
-            },
-          });
-          break;
-      }
-    });
+        switch (nodeData.type) {
+          case 'text':
+            this.bus.emit({
+              t: 'ADD_TEXT',
+              x: absoluteX,
+              y: absoluteY,
+              text: nodeData.textHtml,
+              options: {
+                ...options,
+                style: {
+                  ...nodeData.style,
+                  actualFontSize: nodeData.actualFontSize,
+                },
+              },
+            });
+            break;
+          case 'image':
+            this.bus.emit({
+              t: 'ADD_IMAGE',
+              url: nodeData.url,
+              x: absoluteX,
+              y: absoluteY,
+              options: options,
+            });
+            break;
+          case 'video':
+            this.bus.emit({
+              t: 'ADD_VIDEO',
+              url: nodeData.url,
+              x: absoluteX,
+              y: absoluteY,
+              options: options,
+            });
+            break;
+          case 'iframe':
+            this.bus.emit({
+              t: 'ADD_IFRAME',
+              url: nodeData.url,
+              x: absoluteX,
+              y: absoluteY,
+              options: options,
+            });
+            break;
+          case 'shape':
+            this.bus.emit({
+              t: 'ADD_SHAPE',
+              shape: nodeData.shape,
+              x: absoluteX,
+              y: absoluteY,
+              options: {
+                ...options,
+                fill: nodeData.fill,
+                stroke: nodeData.stroke,
+                lineWidth: nodeData.lineWidth,
+              },
+            });
+            break;
+          case 'brush':
+            this.bus.emit({
+              t: 'ADD_BRUSH',
+              path: nodeData.path,
+              x: absoluteX,
+              y: absoluteY,
+              options: {
+                ...options,
+                stroke: nodeData.stroke,
+                strokeWidth: nodeData.strokeWidth,
+              },
+            });
+            break;
+        }
+      });
   }
 
   /**

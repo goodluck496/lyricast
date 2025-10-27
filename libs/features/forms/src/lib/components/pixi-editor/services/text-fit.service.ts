@@ -103,11 +103,15 @@ export class TextFitService {
         wordWrap: true,
         wordWrapWidth: innerW,
         whiteSpace: 'normal',
-        breakWords: true,
+        breakWords: false,
         fill:
           baseStyle && typeof baseStyle.fill === 'number'
             ? baseStyle.fill
             : this.utils.colorToNumber('#ffffee'),
+        cssOverrides: [
+          'p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
+          'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+        ],
       },
     });
     probe.visible = false;
@@ -126,7 +130,7 @@ export class TextFitService {
       s.fontSize = fs;
       s.lineHeight = fs * lineHeight;
       s.wordWrap = true;
-      s.breakWords = true;
+      s.breakWords = false;
       s.whiteSpace = 'normal';
       s.wordWrapWidth = innerW;
     };

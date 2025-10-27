@@ -1172,7 +1172,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             x: absoluteX,
             y: absoluteY,
             text: nodeData.textHtml,
-            options: { ...options, style: nodeData.style },
+            options: { ...options, style: { ...nodeData.style, actualFontSize: nodeData.actualFontSize } },
           });
           break;
         case 'image':

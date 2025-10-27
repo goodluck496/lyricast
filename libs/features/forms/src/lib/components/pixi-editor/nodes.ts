@@ -1,4 +1,14 @@
-import { Application, Assets, Container, Graphics, HTMLText, HTMLTextStyle, Text,  Point, Sprite, Texture } from 'pixi.js';
+import {
+  Application,
+  Assets,
+  Container,
+  Graphics,
+  HTMLText,
+  HTMLTextStyle,
+  Point,
+  Sprite,
+  Texture,
+} from 'pixi.js';
 import { DEFAULT_CONFIG, UiTextStyles } from './types';
 import { TextFitService } from './services/text-fit.service';
 import { NodeBase } from './core';
@@ -34,8 +44,8 @@ const normalizeFontWeight = (w: string): FontWeightValue => {
   ];
   const nearest = Number.isFinite(n)
     ? (String(
-    Math.min(900, Math.max(100, Math.round(n / 100) * 100))
-    ) as NumericWeightString)
+        Math.min(900, Math.max(100, Math.round(n / 100) * 100))
+      ) as NumericWeightString)
     : '400';
   return allowed.includes(nearest as NumericWeightString)
     ? (nearest as NumericWeightString)
@@ -54,6 +64,7 @@ export class TextNode extends NodeBase {
     font: DEFAULT_CONFIG.defaults.family,
     weight: DEFAULT_CONFIG.defaults.weight,
     align: DEFAULT_CONFIG.defaults.align,
+    valign: 'middle',
     lineHeight: DEFAULT_CONFIG.defaults.lineHeight,
     min: DEFAULT_CONFIG.defaults.textMin,
     max: DEFAULT_CONFIG.defaults.textMax,
@@ -100,16 +111,66 @@ export class TextNode extends NodeBase {
   }
 
   applyBoxSize(w: number, h: number): void {
-    // Минимальный размер блока = минимальный размер шрифта + padding * 2
-    // Это гарантирует, что текст не выйдет за границы блока
+    const prevW = this.w;
+    const prevH = this.h;
+
     const minSize = this.style.min + this.padding * 2;
     this.w = Math.max(minSize, w);
     this.h = Math.max(minSize, h);
+
     this.drawFrame();
     this.updateBackgroundLayout();
     this.drawHandles();
-    // Recompute the best font size whenever the text box size changes
-    this.requestFit();
+
+    // Check if this is a restoration call by looking for a special property.
+    const restoredFontSize = (this.style as any).actualFontSize;
+    if (restoredFontSize) {
+      this.applyFixedSize(restoredFontSize);
+      delete (this.style as any).actualFontSize; // Consume the property to avoid re-triggering
+      return;
+    }
+
+    // If there's no size change, do nothing.
+    if (this.w === prevW && this.h === prevH) {
+      return;
+    }
+
+    // For user-driven resizes, decide whether to reflow or refit.
+    // ONLY if we are making the box narrower AND not shorter, do we try to reflow first.
+    if (this.w < prevW && this.h >= prevH) {
+      this.requestReflowOrFit();
+    } else {
+      // In all other cases (growing, shrinking height, complex changes), find the new optimal font size.
+      this.requestFit();
+    }
+  }
+
+  /**
+   * Applies a specific font size and lays out the text, bypassing the fit algorithm.
+   * Used for restoring a node from a serialized state.
+   */
+  public applyFixedSize(size: number) {
+    this.lastCalculatedFontSize = size;
+    this.textDisplay.text = this.textHtml;
+
+    this.textDisplay.style = new HTMLTextStyle({
+      fontFamily: this.style.font,
+      fontWeight: normalizeFontWeight(this.style.weight),
+      align: this.style.align,
+      wordWrap: true,
+      breakWords: false,
+      whiteSpace: 'normal',
+      fill: this.style.color,
+      lineHeight: size * this.style.lineHeight,
+      fontSize: size,
+      wordWrapWidth: Math.max(4, this.w - this.padding * 2),
+      cssOverrides: [
+        'p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
+        'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+      ],
+    });
+
+    this.updateTextPosition();
   }
 
   /** Set solid background color behind text */
@@ -206,6 +267,7 @@ export class TextNode extends NodeBase {
 
   /**
    * Schedule a layout pass on the next animation frame. Multiple calls within a frame coalesce.
+   * This method always re-calculates the optimal font size.
    */
   requestFit() {
     if (this.fitScheduled) return;
@@ -214,6 +276,90 @@ export class TextNode extends NodeBase {
       this.fitScheduled = false;
       void this.layout();
     });
+  }
+
+  private reflowOrFitScheduled = false;
+
+  /**
+   * Schedules a check to see if the text can fit with the current font size after a resize.
+   * If it can't, it falls back to running a full layout to find a new optimal font size.
+   */
+  public requestReflowOrFit() {
+    if (this.reflowOrFitScheduled) return;
+    this.reflowOrFitScheduled = true;
+    requestAnimationFrame(() => {
+      this.reflowOrFitScheduled = false;
+      void this.reflowOrFit();
+    });
+  }
+
+  /**
+   * First, attempts to reflow the text with the current font size into the new box dimensions.
+   * If the text overflows, it triggers a full `layout()` pass to find a new, smaller font size.
+   */
+  private async reflowOrFit() {
+    // 1. Try to apply current font size with new width.
+    this.textDisplay.text = this.textHtml;
+    this.textDisplay.style = new HTMLTextStyle({
+      fontFamily: this.style.font,
+      fontWeight: normalizeFontWeight(this.style.weight),
+      align: this.style.align,
+      wordWrap: true,
+      breakWords: false,
+      whiteSpace: 'normal',
+      fill: this.style.color,
+      cssOverrides: [
+        'p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
+        'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+      ],
+    });
+
+    // Give Pixi a frame to update the text's metrics
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
+
+    const innerH = Math.max(4, this.h - this.padding * 2);
+    const fitMargin = DEFAULT_CONFIG.defaults.fitMargin;
+
+    // 2. Check if it fits vertically.
+    if (this.textDisplay.height <= innerH - fitMargin) {
+      // It fits! Just update the position and we're done.
+      this.updateTextPosition();
+    } else {
+      // 3. It doesn't fit. Fall back to the original layout logic to find a new font size.
+      await this.layout();
+    }
+  }
+
+  /**
+   * Sets the position of the inner textDisplay object based on the current alignment and box size.
+   */
+  private updateTextPosition() {
+    const anchorX =
+      this.style.align === 'center'
+        ? 0.5
+        : this.style.align === 'right'
+        ? 1
+        : 0;
+
+    const valign = this.style.valign || 'top';
+    const anchorY =
+      valign === 'middle'
+        ? 0.5
+        : valign === 'bottom'
+        ? 1
+        : 0;
+
+    this.textDisplay.anchor.set(anchorX, anchorY);
+
+    const innerW = Math.max(4, this.w - this.padding * 2);
+    const innerH = Math.max(4, this.h - this.padding * 2);
+
+    const x = this.padding + innerW * anchorX;
+    const y = this.padding + innerH * anchorY;
+
+    this.textDisplay.position.set(Math.round(x), Math.round(y));
   }
 
   /**
@@ -250,30 +396,19 @@ export class TextNode extends NodeBase {
       fontWeight: normalizeFontWeight(this.style.weight),
       align: this.style.align,
       wordWrap: true,
-      breakWords: true,
+      breakWords: false,
       whiteSpace: 'normal',
       fill: this.style.color,
       lineHeight: size * this.style.lineHeight,
       fontSize: size,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
-        'p { margin: 0; }',
+        'p { margin: 0; white-space: normal; }',
         'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
       ],
     });
 
-    const anchorX =
-      this.style.align === 'center'
-        ? 0.5
-        : this.style.align === 'right'
-        ? 1
-        : 0;
-    this.textDisplay.anchor?.set(anchorX, 0);
-
-    const innerW = Math.max(4, this.w - this.padding * 2);
-    const x = this.padding + innerW * anchorX;
-    const y = this.padding;
-    this.textDisplay.position.set(Math.round(x), Math.round(y));
+    this.updateTextPosition();
   }
 }
 
@@ -670,7 +805,7 @@ export class GroupNode extends NodeBase {
         const newW = Math.max(1, ch.w * sx);
         const newH = Math.max(1, ch.h * sy);
         ch.applyBoxSize(newW, newH);
-        if (ch instanceof TextNode) ch.requestFit();
+        if (ch instanceof TextNode) ch.requestReflowOrFit();
       }
     }
     this.drawFrame();

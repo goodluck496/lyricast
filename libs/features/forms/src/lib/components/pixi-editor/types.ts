@@ -50,6 +50,9 @@ export interface UiTextStyles {
   //
   /** Ширина обводки для кисти и линий (опционально) */
   strokeWidth?: number;
+
+  /** Вертикальное выравнивание текста */
+  valign?: 'top' | 'middle' | 'bottom';
 }
 
 /**

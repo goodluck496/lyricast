@@ -1057,8 +1057,8 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           return {
             id: node.id,
             type: 'text',
-            x: node.x,
-            y: node.y,
+            x: node.x - sceneOffsetX,
+            y: node.y - sceneOffsetY,
             alpha: node.alpha,
             width: node.w,
             height: node.h,

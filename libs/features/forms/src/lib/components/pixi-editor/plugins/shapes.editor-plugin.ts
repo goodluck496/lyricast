@@ -33,8 +33,8 @@ export class ShapesPlugin implements EditorPlugin {
         shapeNode.lineWidth = addShape.options.lineWidth;
       }
       if (addShape.options?.bgAssetId) {
-        // This will be resolved by deserializeState later
         shapeNode.bgAssetId = addShape.options.bgAssetId;
+        void shapeNode.setBackground(addShape.options.bgAssetId);
       }
 
       shapeNode.applyBoxSize(addShape?.options?.width ?? 200, addShape?.shape === 'line' ? 1 : (addShape?.options?.height ?? 120));

@@ -46,8 +46,8 @@ export class TextPlugin implements EditorPlugin {
       if (typeof addText.options?.bgFillColor === 'number') {
         textNode.setBackgroundFill(addText.options.bgFillColor);
       } else if (addText.options?.bgAssetId) {
-        // This will be resolved by deserializeState later
         textNode.bgAssetId = addText.options.bgAssetId;
+        void textNode.setBackground(addText.options.bgAssetId);
       }
 
       // Теперь вызываем applyBoxSize, который использует actualFontSize, если он есть

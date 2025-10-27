@@ -64,7 +64,8 @@ export class MediaPlugin implements EditorPlugin {
         bus: ctx.bus, 
         utils: ctx.utils, 
         overlay: ctx.overlay,
-        history: ctx.history
+        history: ctx.history,
+        getSceneBounds: ctx.getSceneBounds
       });      ctx.bus.emit({ t: 'SELECT', ids: [imageNode.id] });
     });
 
@@ -138,7 +139,8 @@ export class MediaPlugin implements EditorPlugin {
                   bus: ctx.bus, 
                   utils: ctx.utils, 
                   overlay: ctx.overlay,
-                  history: ctx.history
+                  history: ctx.history,
+                  getSceneBounds: ctx.getSceneBounds
                 });        ctx.overlay.attachIframe(iframeNode);
         // enable temporary interaction with double-click
         ctx.utils
@@ -170,7 +172,8 @@ export class MediaPlugin implements EditorPlugin {
                   bus: ctx.bus, 
                   utils: ctx.utils, 
                   overlay: ctx.overlay,
-                  history: ctx.history
+                  history: ctx.history,
+                  getSceneBounds: ctx.getSceneBounds
                 });        // double-click to toggle play/pause if underlying HTMLVideoElement is present
         ctx.utils
           .fromPixi<FederatedPointerEvent>(videoNode, 'pointertap')

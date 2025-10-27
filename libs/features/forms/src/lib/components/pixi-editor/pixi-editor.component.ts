@@ -115,6 +115,22 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   private readonly assetStorage = inject(AssetStorageService);
   private readonly overlayService = inject(OverlayService);
 
+  getSceneBounds(): { x: number; y: number; width: number; height: number } {
+    const canvasWidth = this.app.renderer.width;
+    const canvasHeight = this.app.renderer.height;
+    const zoom = this.store.snapshot((s) => s.zoom);
+
+    // These are the dimensions of the scene in world coordinates (without zoom applied)
+    const sceneWidth = this.sceneWidth;
+    const sceneHeight = this.sceneHeight;
+
+    // Calculate the offset of the scene within the world container
+    const sceneOffsetX = (canvasWidth / zoom - sceneWidth) / 2;
+    const sceneOffsetY = (canvasHeight / zoom - sceneHeight) / 2;
+
+    return { x: sceneOffsetX, y: sceneOffsetY, width: sceneWidth, height: sceneHeight };
+  }
+
   // Plugin instances provided via DI multi-token
   private plugins = inject(EDITOR_PLUGINS);
 
@@ -430,7 +446,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           const nodeRef = this.store.snapshot((state) => state.nodes)[
             selectedId
           ]?.ref as NodeBase;
-          if (nodeRef instanceof IframeNode || nodeRef instanceof VideoNode) {
+          if (nodeRef instanceof IframeNode) {
             this.overlay.attachIframe(nodeRef);
             // Оставляем неинтерактивным для перемещения/изменения размера
             // Двойной клик или правый клик внутри области активирует интерактивность
@@ -573,6 +589,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             utils: this.utils,
             overlay: this.overlay,
             history: this.history,
+            getSceneBounds: () => this.getSceneBounds(),
           });
 
           addedNodes.push(newNodeState);
@@ -704,6 +721,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       guides: this.guides,
       cfg: this.cfg,
       history: this.history,
+      getSceneBounds: () => this.getSceneBounds(),
     };
     this.plugins.forEach((plugin) => plugin.init(ctx));
 

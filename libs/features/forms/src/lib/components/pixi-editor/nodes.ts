@@ -153,7 +153,7 @@ export class TextNode extends NodeBase {
    * Applies a specific font size and lays out the text, bypassing the fit algorithm.
    * Used for restoring a node from a serialized state.
    */
-  public applyFixedSize(size: number) {
+   applyFixedSize(size: number) {
     this.lastCalculatedFontSize = size;
     this.textDisplay.text = this.textHtml;
 

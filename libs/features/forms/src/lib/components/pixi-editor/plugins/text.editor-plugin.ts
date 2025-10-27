@@ -78,6 +78,7 @@ export class TextPlugin implements EditorPlugin {
         utils: ctx.utils,
         overlay: ctx.overlay,
         history: ctx.history,
+        getSceneBounds: ctx.getSceneBounds,
       });
 
       // Double-click to edit in an overlay textarea

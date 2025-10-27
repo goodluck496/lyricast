@@ -42,7 +42,7 @@ export class ShapesPlugin implements EditorPlugin {
       const newId = shapeNode.id;
       const destroy$ = new Subject<void>();
       ctx.store.addNode({ id: newId, type: 'shape', ref: shapeNode, destroy$ });
-      this.drag.bind(shapeNode, destroy$, { cfg: ctx.cfg, store: ctx.store, guides: ctx.guides, world: ctx.world, app: ctx.app, bus: ctx.bus, utils: ctx.utils, overlay: ctx.overlay });
+      this.drag.bind(shapeNode, destroy$, { cfg: ctx.cfg, store: ctx.store, guides: ctx.guides, world: ctx.world, app: ctx.app, bus: ctx.bus, utils: ctx.utils, overlay: ctx.overlay, history: ctx.history, getSceneBounds: ctx.getSceneBounds });
       ctx.bus.emit({ t: 'SELECT', ids: [newId] });
     });
 

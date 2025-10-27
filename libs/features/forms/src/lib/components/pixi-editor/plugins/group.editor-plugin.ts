@@ -90,6 +90,8 @@ export class GroupingPlugin implements EditorPlugin {
         bus: ctx.bus,
         utils: ctx.utils,
         overlay: ctx.overlay,
+        history: ctx.history,
+        getSceneBounds: ctx.getSceneBounds,
       });
       ctx.bus.emit({ t: 'SELECT', ids: [groupId] });
     });
@@ -140,6 +142,8 @@ export class GroupingPlugin implements EditorPlugin {
               bus: ctx.bus,
               utils: ctx.utils,
               overlay: ctx.overlay,
+              history: ctx.history,
+              getSceneBounds: ctx.getSceneBounds,
             });
             // Ensure iframe overlay can be positioned later if needed
             if (child instanceof IframeNode) {

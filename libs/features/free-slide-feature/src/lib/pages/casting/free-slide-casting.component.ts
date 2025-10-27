@@ -304,19 +304,10 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
               const sourceIdentifier = nodeData.bgAssetId;
               let bgSource: string | undefined;
               if (this.isUUID(sourceIdentifier)) {
-                console.log(
-                  `[Casting] Text node ${nodeData.id} has bgAssetId (UUID): ${sourceIdentifier}`
-                );
                 bgSource = await this.assetStorage.getAssetObjectURL(
                   sourceIdentifier
                 );
-                console.log(
-                  `[Casting] Text node ${nodeData.id} resolved object URL: ${bgSource}`
-                );
               } else {
-                console.log(
-                  `[Casting] Text node ${nodeData.id} has bgAssetId (direct URL): ${sourceIdentifier}`
-                );
                 bgSource = sourceIdentifier; // It's already a direct URL
               }
 
@@ -371,9 +362,8 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
               const style = new HTMLTextStyle({
                 fontFamily: nodeData.style.font || 'Arial',
                 fontWeight: nodeData.style.weight || 'normal',
-                fill: nodeData.style.colorHex || '#FFFFFF',
-                fontSize: scaledFontSize,
-                align: nodeData.style.align || 'center',
+                                            fill: nodeData.style.colorHex || '#FFFFFF',
+                                            fontSize: scaledFontSize,                align: nodeData.style.align || 'center',
                 wordWrap: true,
                 wordWrapWidth: scaledWidth,
                 lineHeight: scaledFontSize * (nodeData.style.lineHeight || 1.2),

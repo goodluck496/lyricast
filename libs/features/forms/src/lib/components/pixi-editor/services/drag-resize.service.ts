@@ -12,6 +12,19 @@ import { EditorUtilsService } from './editor-utils.service';
 import { NodeBase } from '../core';
 import { OverlayService } from './overlay.service';
 
+export interface DragResizeContext {
+  cfg: EditorConfig;
+  store: EditorStore;
+  guides: GuideLayer;
+  world: Container & { app: Application };
+  app: Application;
+  bus: CommandBusService;
+  utils: EditorUtilsService;
+  overlay?: OverlayService;
+  history?: HistoryService;
+  getSceneBounds: () => { x: number; y: number; width: number; height: number };
+}
+
 /**
  * Handles pointer interactions for moving, resizing and rotating NodeBase instances.
  *
@@ -30,17 +43,7 @@ export class DragResizeService {
   bind(
     node: NodeBase,
     destroy$: Subject<void>,
-    ctx: {
-      cfg: EditorConfig;
-      store: EditorStore;
-      guides: GuideLayer;
-      world: Container & { app: Application };
-      app: Application;
-      bus: CommandBusService;
-      utils: EditorUtilsService;
-      overlay?: OverlayService;
-      history?: HistoryService;
-    }
+    ctx: DragResizeContext
   ) {
     node.eventMode = 'static';
     // Pixi DisplayObject supports setting cursor but typings may not include it on Container in our version.
@@ -88,7 +91,25 @@ export class DragResizeService {
             }
             const snapped = ctx.guides.snap(node, nextX, nextY, node.w, node.h);
             ctx.guides.draw(snapped.lines);
-            return { x: snapped.x, y: snapped.y, startX: startState.origin.x, startY: startState.origin.y };
+
+            // --- CLAMPING LOGIC FOR DRAGGING --- START
+            const sceneBounds = ctx.getSceneBounds();
+            const nodeWidth = node.w;
+            const nodeHeight = node.h;
+
+            let clampedX = snapped.x;
+            let clampedY = snapped.y;
+
+            // Clamp X
+            clampedX = Math.max(sceneBounds.x, clampedX);
+            clampedX = Math.min(sceneBounds.x + sceneBounds.width - nodeWidth, clampedX);
+
+            // Clamp Y
+            clampedY = Math.max(sceneBounds.y, clampedY);
+            clampedY = Math.min(sceneBounds.y + sceneBounds.height - nodeHeight, clampedY);
+            // --- CLAMPING LOGIC FOR DRAGGING --- END
+
+            return { x: clampedX, y: clampedY, startX: startState.origin.x, startY: startState.origin.y };
           }),
           takeUntil(up$.pipe(tap(() => {
             // При завершении перемещения сохраняем команду в историю
@@ -179,7 +200,56 @@ export class DragResizeService {
               if (node.snap && snapEnabled) { nextW = ctx.utils.snap(nextW, ctx.cfg.resizeSnap); nextH = ctx.utils.snap(nextH, ctx.cfg.resizeSnap); nextX = ctx.utils.snap(nextX, ctx.cfg.resizeSnap); nextY = ctx.utils.snap(nextY, ctx.cfg.resizeSnap); }
               const snapped = ctx.guides.snap(node, nextX, nextY, nextW, nextH);
               ctx.guides.draw(snapped.lines);
-              const result: ResizeResult = { kind: 'resize', nextX: snapped.x, nextY: snapped.y, nextW, nextH, rotation: startState.begin.rotation, anchorWorld: startState.anchorWorld, handleName: startState.handleName };
+
+              // --- CLAMPING LOGIC FOR RESIZING --- START
+              const sceneBounds = ctx.getSceneBounds();
+
+              let clampedX = snapped.x;
+              let clampedY = snapped.y;
+              let clampedW = nextW;
+              let clampedH = nextH;
+
+              // Calculate current node bounds after potential snap
+              const nodeLeft = clampedX;
+              const nodeTop = clampedY;
+              let nodeRight = clampedX + clampedW;
+              let nodeBottom = clampedY + clampedH;
+
+              // Clamp dimensions to be at least minW/minH
+              clampedW = Math.max(minW, clampedW);
+              clampedH = Math.max(minH, clampedH);
+
+              // Clamp position and size to scene bounds
+              // Adjust right/bottom if they exceed scene bounds
+              if (nodeRight > sceneBounds.x + sceneBounds.width) {
+                clampedW = Math.max(minW, sceneBounds.x + sceneBounds.width - nodeLeft);
+                nodeRight = nodeLeft + clampedW; // Update nodeRight after clamping width
+              }
+              if (nodeBottom > sceneBounds.y + sceneBounds.height) {
+                clampedH = Math.max(minH, sceneBounds.y + sceneBounds.height - nodeTop);
+                nodeBottom = nodeTop + clampedH; // Update nodeBottom after clamping height
+              }
+
+              // Adjust left/top if they go below scene bounds
+              if (nodeLeft < sceneBounds.x) {
+                clampedX = sceneBounds.x;
+                clampedW = Math.max(minW, nodeRight - clampedX);
+              }
+              if (nodeTop < sceneBounds.y) {
+                clampedY = sceneBounds.y;
+                clampedH = Math.max(minH, nodeBottom - clampedY);
+              }
+
+              // Re-clamp dimensions to ensure they don't exceed scene dimensions
+              clampedW = Math.min(clampedW, sceneBounds.width);
+              clampedH = Math.min(clampedH, sceneBounds.height);
+
+              // Ensure minimum width/height after all clamping
+              clampedW = Math.max(minW, clampedW);
+              clampedH = Math.max(minH, clampedH);
+              // --- CLAMPING LOGIC FOR RESIZING --- END
+
+              const result: ResizeResult = { kind: 'resize', nextX: clampedX, nextY: clampedY, nextW: clampedW, nextH: clampedH, rotation: startState.begin.rotation, anchorWorld: startState.anchorWorld, handleName: startState.handleName };
               return result;
             }),
             takeUntil(up$.pipe(tap(() => {

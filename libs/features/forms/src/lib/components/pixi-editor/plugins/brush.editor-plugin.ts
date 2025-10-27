@@ -97,6 +97,8 @@ export class BrushPlugin implements EditorPlugin {
             bus: ctx.bus,
             utils: ctx.utils,
             overlay: ctx.overlay,
+            history: ctx.history,
+            getSceneBounds: ctx.getSceneBounds,
           });
           ctx.bus.emit({ t: 'SELECT', ids: [newId] });
           // cleanup events
@@ -163,6 +165,7 @@ export class BrushPlugin implements EditorPlugin {
           utils: ctx.utils,
           overlay: ctx.overlay,
           history: ctx.history,
+          getSceneBounds: ctx.getSceneBounds,
         });
 
         ctx.bus.emit({ t: 'SELECT', ids: [brushNode.id] });

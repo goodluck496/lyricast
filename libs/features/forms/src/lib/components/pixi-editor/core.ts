@@ -76,6 +76,9 @@ export interface EditorContext {
 
   /** Сервис управления историей изменений (Undo/Redo) */
   history: HistoryService;
+
+  /** Функция для получения текущих границ сцены */
+  getSceneBounds: () => { x: number; y: number; width: number; height: number };
 }
 
 /**

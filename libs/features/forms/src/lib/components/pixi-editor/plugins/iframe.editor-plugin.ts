@@ -58,17 +58,29 @@ export class IframePlugin implements EditorPlugin {
             const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
             ctx.history.execute(command);
             
-            this.drag.bind(node, nodeState.destroy$, { 
-              cfg: ctx.cfg, 
-              store: ctx.store, 
-              guides: ctx.guides, 
-              world: ctx.world, 
-              app: ctx.app, 
-              bus: ctx.bus, 
-              utils: ctx.utils, 
-              overlay: ctx.overlay,
-              history: ctx.history
-            });      ctx.overlay.attachIframe(node);
+                        this.drag.bind(node, nodeState.destroy$, {
+            
+                          cfg: ctx.cfg,
+            
+                          store: ctx.store,
+            
+                          guides: ctx.guides,
+            
+                          world: ctx.world,
+            
+                          app: ctx.app,
+            
+                          bus: ctx.bus,
+            
+                          utils: ctx.utils,
+            
+                          overlay: ctx.overlay,
+            
+                          history: ctx.history,
+            
+                          getSceneBounds: ctx.getSceneBounds,
+            
+                        });      ctx.overlay.attachIframe(node);
       // enable temporary interaction with double-click
       ctx.utils.fromPixi<FederatedPointerEvent>(node, 'pointertap')
         .pipe(filter((evt) => evt.detail >= 2), takeUntil(this.destroy$))

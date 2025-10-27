@@ -230,7 +230,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
               textBackgrounds.push({
                 nodeData: nodeData,
                 x: nodeData.x * scaleFactor,
-                y: nodeData.y * scaleFactor
+                y: nodeData.y * scaleFactor,
               });
             }
 
@@ -239,12 +239,19 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
             if (!fontSize || fontSize === 0) {
               // Fallback: вычисляем fontSize на основе высоты блока
               // Примерно 70% от высоты блока для однострочного текста
-              fontSize = Math.max(nodeData.style.min, Math.min(nodeData.style.max, nodeData.height * 0.7));
-              console.warn('[Casting] actualFontSize not found, using calculated:', fontSize);
+              fontSize = Math.max(
+                nodeData.style.min,
+                Math.min(nodeData.style.max, nodeData.height * 0.7)
+              );
+              console.warn(
+                '[Casting] actualFontSize not found, using calculated:',
+                fontSize
+              );
             }
 
             // Масштабируем fontSize для соответствия целевому размеру
             const scaledFontSize = fontSize * scaleFactor;
+            const scaledWidth = nodeData.width * scaleFactor;
 
             // Создаём стиль с масштабированным fontSize и lineHeight
             const style = new HTMLTextStyle({
@@ -253,12 +260,22 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
               fill: nodeData.style.colorHex || '#FFFFFF',
               fontSize: scaledFontSize,
               align: nodeData.style.align || 'center',
-              //нельзя ставить lineHeight - текст сжимается в строку толщиной пара пикселей
-              // lineHeight: nodeData.style.lineHeight || 10,
-              wordWrap: false,
+              wordWrap: true,
+              wordWrapWidth: scaledWidth,
+              lineHeight: scaledFontSize * (nodeData.style.lineHeight || 1.2),
+              cssOverrides: [
+                'p { margin: 0; }',
+                'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+              ],
             });
 
             node = new HTMLText({ text: nodeData.textHtml, style });
+
+            // Set anchor based on alignment for correct positioning
+            const align = nodeData.style.align || 'center';
+            const anchorX =
+              align === 'center' ? 0.5 : align === 'right' ? 1 : 0;
+            node.anchor.set(anchorX, 0);
             break;
           }
 
@@ -335,9 +352,17 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
         }
 
         if (node) {
-          // Масштабируем координаты (они уже относительно (0,0) сцены из редактора)
-          node.x = nodeData.x * scaleFactor;
-          node.y = nodeData.y * scaleFactor;
+          // Position node
+          if (nodeData.type === 'text') {
+            // For text, the anchor is set, so we position the anchor point
+            const anchorX = node.anchor.x; // Get anchor from the node itself
+            node.x = (nodeData.x + nodeData.width * anchorX) * scaleFactor;
+            node.y = nodeData.y * scaleFactor;
+          } else {
+            // For other nodes, position top-left
+            node.x = nodeData.x * scaleFactor;
+            node.y = nodeData.y * scaleFactor;
+          }
           node.rotation = nodeData.rotation;
           node.alpha = nodeData.alpha;
           this.scene.addChild(node);

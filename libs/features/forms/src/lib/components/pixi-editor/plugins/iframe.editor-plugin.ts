@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { EditorContext, EditorPlugin } from '../core';
-import { filter } from 'rxjs/operators';
+import { filter, takeUntil } from 'rxjs/operators';
 import { EditorCommand } from '../services/command-bus.service';
 import { AddNodeCommand } from '../services/history-commands';
 import { IframeNode } from '../nodes';
@@ -17,9 +17,11 @@ import { DragResizeService } from '../services/drag-resize.service';
 @Injectable()
 export class IframePlugin implements EditorPlugin {
   id = 'iframe';
+  private destroy$ = new Subject<void>();
+
   constructor(private readonly drag: DragResizeService) {}
   init(ctx: EditorContext): void {
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_IFRAME')).subscribe((cmd) => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_IFRAME'), takeUntil(this.destroy$)).subscribe((cmd) => {
       const addIframe = cmd as Extract<EditorCommand, { t: 'ADD_IFRAME' }>;
       const isYouTube = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)/i.test(addIframe.url ?? '');
       const isVimeo = /vimeo\.com\//i.test(addIframe.url ?? '');
@@ -46,33 +48,39 @@ export class IframePlugin implements EditorPlugin {
       };
       const embedUrl = isYouTube ? toYouTubeEmbed(addIframe.url) : isVimeo ? toVimeoEmbed(addIframe.url) : addIframe.url;
       const node = new IframeNode(embedUrl);
-      node.x = addIframe.x ?? 180; 
-      node.y = addIframe.y ?? 160; 
+      node.x = addIframe.x ?? 180;
+      node.y = addIframe.y ?? 160;
       node.applyBoxSize(addIframe.options?.width ?? 640, addIframe.options?.height ?? 360);
-      
+
       const nodeState = { id: node.id, type: 'iframe' as const, ref: node };
-      
+
       // Выполняем команду добавления через историю
       const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
       ctx.history.execute(command);
-      
-      this.drag.bind(node, new Subject<void>(), { 
-        cfg: ctx.cfg, 
-        store: ctx.store, 
-        guides: ctx.guides, 
-        world: ctx.world, 
-        app: ctx.app, 
-        bus: ctx.bus, 
-        utils: ctx.utils, 
+
+      this.drag.bind(node, new Subject<void>(), {
+        cfg: ctx.cfg,
+        store: ctx.store,
+        guides: ctx.guides,
+        world: ctx.world,
+        app: ctx.app,
+        bus: ctx.bus,
+        utils: ctx.utils,
         overlay: ctx.overlay,
         history: ctx.history
       });
       ctx.overlay.attachIframe(node);
       // enable temporary interaction with double-click
       ctx.utils.fromPixi<FederatedPointerEvent>(node, 'pointertap')
-        .pipe(filter((evt) => evt.detail >= 2))
+        .pipe(filter((evt) => evt.detail >= 2), takeUntil(this.destroy$))
         .subscribe(() => ctx.overlay.setIframeInteractive(true));
       ctx.bus.emit({ t: 'SELECT', ids: [node.id] });
     });
   }
+
+  dispose(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
 }

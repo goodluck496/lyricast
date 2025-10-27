@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { EditorContext, EditorPlugin, NodeBase } from '../core';
-import { filter } from 'rxjs/operators';
+import { filter, takeUntil } from 'rxjs/operators';
 import { EditorCommand } from '../services/command-bus.service';
 import { AddNodeCommand } from '../services/history-commands';
 import { Subject } from 'rxjs';
@@ -21,12 +21,14 @@ import { Align, UiTextStyles } from '../types';
 @Injectable()
 export class TextPlugin implements EditorPlugin {
   id = 'text';
+  private destroy$ = new Subject<void>();
+
   constructor(private readonly fitter: TextFitService, private readonly drag: DragResizeService) {}
 
   /** Initialize subscriptions for text-related editor commands. */
   init(ctx: EditorContext): void {
     // ADD_TEXT: create and select a new text node
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_TEXT')).subscribe((cmd) => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_TEXT'), takeUntil(this.destroy$)).subscribe((cmd) => {
       const addText = cmd as Extract<EditorCommand, { t: 'ADD_TEXT' }>;
       const textNode = new TextNode(ctx.app, this.fitter);
       textNode.x = addText.x ?? 80;
@@ -73,12 +75,12 @@ export class TextPlugin implements EditorPlugin {
       // Double-click to edit in an overlay textarea
       ctx.utils
         .fromPixi<FederatedPointerEvent>(textNode, 'pointertap')
-        .pipe(filter((evt) => evt.detail >= 2))
+        .pipe(filter((evt) => evt.detail >= 2), takeUntil(this.destroy$))
         .subscribe(() => ctx.overlay.attachTextarea(textNode));
     });
 
     // APPLY_STYLE to selected nodes (Text/Brush/Shapes; supports groups)
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'APPLY_STYLE')).subscribe((cmd) => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'APPLY_STYLE'), takeUntil(this.destroy$)).subscribe((cmd) => {
       const patch = (cmd as Extract<EditorCommand, { t: 'APPLY_STYLE' }>).patch;
       const selectedIds = ctx.store.snapshot((s) => s.selectedIds);
       const nodeMap = ctx.store.snapshot((s) => s.nodes);
@@ -139,17 +141,23 @@ export class TextPlugin implements EditorPlugin {
       }
     };
 
-    ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_TEXT_BACKGROUND')).subscribe(async (cmd) => {
+    ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_TEXT_BACKGROUND'), takeUntil(this.destroy$)).subscribe(async (cmd) => {
       const url = (cmd as Extract<EditorCommand, { t: 'SET_TEXT_BACKGROUND' }>).url;
       const base64Url = await ctx.utils.urlToBase64(url);
       applyToSelection((t) => { void t.setBackground(base64Url); });
     });
-    ctx.bus.commands$.pipe(filter((c) => c.t === 'CLEAR_TEXT_BACKGROUND')).subscribe(() => {
+    ctx.bus.commands$.pipe(filter((c) => c.t === 'CLEAR_TEXT_BACKGROUND'), takeUntil(this.destroy$)).subscribe(() => {
       applyToSelection((t) => t.clearBackground());
     });
-    ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_TEXT_BG_COLOR')).subscribe((cmd) => {
+    ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_TEXT_BG_COLOR'), takeUntil(this.destroy$)).subscribe((cmd) => {
       const color = (cmd as Extract<EditorCommand, { t: 'SET_TEXT_BG_COLOR' }>).color >>> 0;
       applyToSelection((t) => t.setBackgroundFill(color));
     });
   }
+
+  dispose(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
 }

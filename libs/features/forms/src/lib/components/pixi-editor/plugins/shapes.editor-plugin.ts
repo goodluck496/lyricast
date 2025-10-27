@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { EditorContext, EditorPlugin } from '../core';
-import { filter } from 'rxjs/operators';
+import { filter, takeUntil } from 'rxjs/operators';
 import { EditorCommand } from '../services/command-bus.service';
 import { ShapeNode } from '../nodes';
 import { Subject } from 'rxjs';
@@ -12,9 +12,11 @@ import { DragResizeService } from '../services/drag-resize.service';
 @Injectable()
 export class ShapesPlugin implements EditorPlugin {
   id = 'shapes';
+  private destroy$ = new Subject<void>();
+
   constructor(private readonly drag: DragResizeService) {}
   init(ctx: EditorContext): void {
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_SHAPE')).subscribe((cmd) => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_SHAPE'), takeUntil(this.destroy$)).subscribe((cmd) => {
       const addShape = cmd as Extract<EditorCommand, { t: 'ADD_SHAPE' }>;
       const shapeNode = new ShapeNode(addShape.shape);
       shapeNode.x = addShape.x;
@@ -28,7 +30,7 @@ export class ShapesPlugin implements EditorPlugin {
     });
 
     // Set/Clear background on selected shape(s)
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'SET_SHAPE_BACKGROUND')).subscribe(async (cmd) => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'SET_SHAPE_BACKGROUND'), takeUntil(this.destroy$)).subscribe(async (cmd) => {
       const url = (cmd as Extract<EditorCommand, { t: 'SET_SHAPE_BACKGROUND' }>).url;
       const base64Url = await ctx.utils.urlToBase64(url);
       const ids = ctx.store.snapshot(s => s.selectedIds) || [];
@@ -40,7 +42,7 @@ export class ShapesPlugin implements EditorPlugin {
         }
       }
     });
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'CLEAR_SHAPE_BACKGROUND')).subscribe(() => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'CLEAR_SHAPE_BACKGROUND'), takeUntil(this.destroy$)).subscribe(() => {
       const ids = ctx.store.snapshot(s => s.selectedIds) || [];
       const nodes = ctx.store.snapshot(s => s.nodes);
       for (const id of ids) {
@@ -52,7 +54,7 @@ export class ShapesPlugin implements EditorPlugin {
     });
 
     // Set fill color from current UI color
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'SET_SHAPE_FILL')).subscribe((cmd) => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'SET_SHAPE_FILL'), takeUntil(this.destroy$)).subscribe((cmd) => {
       const color = (cmd as Extract<EditorCommand, { t: 'SET_SHAPE_FILL' }>).color >>> 0;
       const ids = ctx.store.snapshot(s => s.selectedIds) || [];
       const nodes = ctx.store.snapshot(s => s.nodes);
@@ -63,5 +65,11 @@ export class ShapesPlugin implements EditorPlugin {
         }
       }
     });
+
+  }
+
+  dispose(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

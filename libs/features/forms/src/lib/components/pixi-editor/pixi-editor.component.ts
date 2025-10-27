@@ -143,6 +143,10 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.ctxMenu?.close();
+    this.overlay.teardownEditor();
+    this.overlay.detachIframe();
+    this.plugins.forEach((plugin) => plugin.dispose?.());
     this.app?.destroy(true);
   }
 
@@ -1240,7 +1244,13 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         const nodeState = allNodes[nodeId];
         if (nodeState) {
           this.world.removeChild(nodeState.ref);
-          nodeState.ref.destroy();
+          nodeState.ref.destroy({
+            children: true,
+            texture: true,
+            textureSource: true,
+            // style: true,
+            // context: true,
+          });
         }
       }
       this.store.resetNodes();

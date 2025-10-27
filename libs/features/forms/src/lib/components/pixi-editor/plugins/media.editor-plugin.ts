@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { EditorContext, EditorPlugin } from '../core';
-import { filter } from 'rxjs/operators';
+import { filter, takeUntil } from 'rxjs/operators';
 import { EditorCommand } from '../services/command-bus.service';
 import { AddNodeCommand } from '../services/history-commands';
 import { Subject } from 'rxjs';
@@ -19,33 +19,35 @@ import { IframeNode, ImageNode, VideoNode } from '../nodes';
 export class MediaPlugin implements EditorPlugin {
   id = 'media';
   private backgroundAudio?: HTMLAudioElement;
+  private destroy$ = new Subject<void>();
+
   constructor(private readonly drag: DragResizeService) {}
 
   /** Initialize subscriptions for media-related commands. */
   init(ctx: EditorContext): void {
     // ADD_IMAGE
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_IMAGE')).subscribe(async (cmd) => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_IMAGE'), takeUntil(this.destroy$)).subscribe(async (cmd) => {
       const addImage = cmd as Extract<EditorCommand, { t: 'ADD_IMAGE' }>;
       const base64Url = await ctx.utils.urlToBase64(addImage.url);
       const imageNode = new ImageNode(base64Url);
       imageNode.x = addImage.x ?? 120;
       imageNode.y = addImage.y ?? 100;
       imageNode.applyBoxSize(addImage.options?.width ?? 400, addImage.options?.height ?? 300);
-      
+
       const nodeState = { id: imageNode.id, type: 'image' as const, ref: imageNode };
-      
+
       // Выполняем команду добавления через историю
       const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
       ctx.history.execute(command);
-      
-      this.drag.bind(imageNode, new Subject<void>(), { 
-        cfg: ctx.cfg, 
-        store: ctx.store, 
-        guides: ctx.guides, 
-        world: ctx.world, 
-        app: ctx.app, 
-        bus: ctx.bus, 
-        utils: ctx.utils, 
+
+      this.drag.bind(imageNode, new Subject<void>(), {
+        cfg: ctx.cfg,
+        store: ctx.store,
+        guides: ctx.guides,
+        world: ctx.world,
+        app: ctx.app,
+        bus: ctx.bus,
+        utils: ctx.utils,
         overlay: ctx.overlay,
         history: ctx.history
       });
@@ -53,7 +55,7 @@ export class MediaPlugin implements EditorPlugin {
     });
 
     // ADD_VIDEO
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_VIDEO')).subscribe(async (cmd) => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_VIDEO'), takeUntil(this.destroy$)).subscribe(async (cmd) => {
       const addVideo = cmd as Extract<EditorCommand, { t: 'ADD_VIDEO' }>;
       const isYouTube = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)/i.test(addVideo.url ?? '');
       const isVimeo = /vimeo\.com\//i.test(addVideo.url ?? '');
@@ -94,21 +96,21 @@ export class MediaPlugin implements EditorPlugin {
         iframeNode.x = addVideo.x ?? 180;
         iframeNode.y = addVideo.y ?? 160;
         iframeNode.applyBoxSize(addVideo.options?.width ?? 640, addVideo.options?.height ?? 360);
-        
+
         const nodeState = { id: iframeNode.id, type: 'iframe' as const, ref: iframeNode };
-        
+
         // Выполняем команду добавления через историю
         const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
         ctx.history.execute(command);
-        
-        this.drag.bind(iframeNode, new Subject<void>(), { 
-          cfg: ctx.cfg, 
-          store: ctx.store, 
-          guides: ctx.guides, 
-          world: ctx.world, 
-          app: ctx.app, 
-          bus: ctx.bus, 
-          utils: ctx.utils, 
+
+        this.drag.bind(iframeNode, new Subject<void>(), {
+          cfg: ctx.cfg,
+          store: ctx.store,
+          guides: ctx.guides,
+          world: ctx.world,
+          app: ctx.app,
+          bus: ctx.bus,
+          utils: ctx.utils,
           overlay: ctx.overlay,
           history: ctx.history
         });
@@ -116,7 +118,7 @@ export class MediaPlugin implements EditorPlugin {
         // enable temporary interaction with double-click
         ctx.utils
           .fromPixi<FederatedPointerEvent>(iframeNode, 'pointertap')
-          .pipe(filter((evt) => evt.detail >= 2))
+          .pipe(filter((evt) => evt.detail >= 2), takeUntil(this.destroy$))
           .subscribe(() => ctx.overlay.setIframeInteractive(true));
         ctx.bus.emit({ t: 'SELECT', ids: [iframeNode.id] });
       } else {
@@ -124,28 +126,28 @@ export class MediaPlugin implements EditorPlugin {
         videoNode.x = addVideo.x ?? 160;
         videoNode.y = addVideo.y ?? 140;
         videoNode.applyBoxSize(addVideo.options?.width ?? 480, addVideo.options?.height ?? 320);
-        
+
         const nodeState = { id: videoNode.id, type: 'video' as const, ref: videoNode };
-        
+
         // Выполняем команду добавления через историю
         const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
         ctx.history.execute(command);
-        
-        this.drag.bind(videoNode, new Subject<void>(), { 
-          cfg: ctx.cfg, 
-          store: ctx.store, 
-          guides: ctx.guides, 
-          world: ctx.world, 
-          app: ctx.app, 
-          bus: ctx.bus, 
-          utils: ctx.utils, 
+
+        this.drag.bind(videoNode, new Subject<void>(), {
+          cfg: ctx.cfg,
+          store: ctx.store,
+          guides: ctx.guides,
+          world: ctx.world,
+          app: ctx.app,
+          bus: ctx.bus,
+          utils: ctx.utils,
           overlay: ctx.overlay,
           history: ctx.history
         });
         // double-click to toggle play/pause if underlying HTMLVideoElement is present
         ctx.utils
           .fromPixi<FederatedPointerEvent>(videoNode, 'pointertap')
-          .pipe(filter((evt) => evt.detail >= 2))
+          .pipe(filter((evt) => evt.detail >= 2), takeUntil(this.destroy$))
           .subscribe(() => {
             // Safely discover HTMLVideoElement behind Pixi VideoResource
             const textureUnknown = videoNode.sprite.texture as unknown;
@@ -169,7 +171,7 @@ export class MediaPlugin implements EditorPlugin {
     });
 
     // background audio controls
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'SET_AUDIO')).subscribe((cmd) => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'SET_AUDIO'), takeUntil(this.destroy$)).subscribe((cmd) => {
       const setAudio = cmd as Extract<EditorCommand, { t: 'SET_AUDIO' }>;
       if (!setAudio.url) {
         this.backgroundAudio?.pause();
@@ -185,17 +187,24 @@ export class MediaPlugin implements EditorPlugin {
       ctx.store.patchState({ audioUrl: setAudio.url, isPlayingAudio: true });
     });
 
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'PLAY_AUDIO')).subscribe(() => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'PLAY_AUDIO'), takeUntil(this.destroy$)).subscribe(() => {
       if (this.backgroundAudio) {
         void this.backgroundAudio.play();
         ctx.store.patchState({ isPlayingAudio: true });
       }
     });
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'PAUSE_AUDIO')).subscribe(() => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'PAUSE_AUDIO'), takeUntil(this.destroy$)).subscribe(() => {
       if (this.backgroundAudio) {
         this.backgroundAudio.pause();
         ctx.store.patchState({ isPlayingAudio: false });
       }
     });
+  }
+
+  dispose(): void {
+    this.backgroundAudio?.pause();
+    this.backgroundAudio = undefined;
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

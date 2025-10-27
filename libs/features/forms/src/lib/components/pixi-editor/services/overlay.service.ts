@@ -174,7 +174,7 @@ export class OverlayService {
     this.editingTextNode = node;
   }
 
-  private teardownEditor() {
+  public teardownEditor() {
     try {
       this.editorRef?.destroy();
     } catch {}
@@ -268,7 +268,6 @@ export class OverlayService {
     if (!this.hostEl) return;
 
     if (this.editorHostEl && node instanceof TextNode) {
-      const b = node.getBounds();
       const { scaleX, scaleY } = node.getWorldScale();
       const { x: cx, y: cy } = node.getWorldCenter();
 

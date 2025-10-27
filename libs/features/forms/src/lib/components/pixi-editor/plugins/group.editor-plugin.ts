@@ -5,6 +5,7 @@ import { EditorCommand } from '../services/command-bus.service';
 import { DragResizeService } from '../services/drag-resize.service';
 import { GroupNode, IframeNode, TextNode, ImageNode, VideoNode, ShapeNode, BrushNode } from '../nodes';
 import { NodeState } from '../services/editor-store.service';
+import { takeUntil } from 'rxjs/operators';
 
 function getNodeType(node: NodeBase): NodeState['type'] {
   if (node instanceof TextNode) return 'text';
@@ -26,10 +27,12 @@ function getNodeType(node: NodeBase): NodeState['type'] {
 @Injectable()
 export class GroupingPlugin implements EditorPlugin {
   id = 'grouping';
+  private destroy$ = new Subject<void>();
+
   constructor(private readonly drag: DragResizeService) {}
   init(ctx: EditorContext): void {
     // GROUP
-    ctx.bus.commands$.pipe(filter((command) => command.t === 'GROUP')).subscribe((cmd) => {
+    ctx.bus.commands$.pipe(filter((command) => command.t === 'GROUP'), takeUntil(this.destroy$)).subscribe((cmd) => {
       const groupCmd = cmd as Extract<EditorCommand, { t: 'GROUP' }>;
       const ids = groupCmd.ids?.length
         ? groupCmd.ids
@@ -92,7 +95,7 @@ export class GroupingPlugin implements EditorPlugin {
 
     // UNGROUP
     ctx.bus.commands$
-      .pipe(filter((command) => command.t === 'UNGROUP'))
+      .pipe(filter((command) => command.t === 'UNGROUP'), takeUntil(this.destroy$))
       .subscribe((cmd) => {
         const ungroupCmd = cmd as Extract<EditorCommand, { t: 'UNGROUP' }>;
         const maybeId = ungroupCmd.id ?? ctx.store.snapshot((s) => s.selectedIds)[0];
@@ -148,5 +151,10 @@ export class GroupingPlugin implements EditorPlugin {
         ctx.store.removeNode(maybeId);
         ctx.bus.emit({ t: 'SELECT', ids: childIds });
       });
+  }
+
+  dispose(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

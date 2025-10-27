@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { EditorContext, EditorPlugin } from '../core';
-import { fromEvent } from 'rxjs';
+import { fromEvent, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 /**
  * ClipboardPlugin listens for global paste events and routes content to the proper ADD_* command.
@@ -13,8 +14,10 @@ import { fromEvent } from 'rxjs';
 @Injectable()
 export class ClipboardPlugin implements EditorPlugin {
   id = 'clipboard';
+  private destroy$ = new Subject<void>();
+
   init(ctx: EditorContext): void {
-    fromEvent<ClipboardEvent>(document, 'paste').subscribe((event) => {
+    fromEvent<ClipboardEvent>(document, 'paste').pipe(takeUntil(this.destroy$)).subscribe((event) => {
       // Если открыт модальный инпут/textarea или фокус в форме — не перехватываем глобальную вставку
       const active = document.activeElement as HTMLElement | null;
       const focusInForm = !!active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
@@ -51,13 +54,13 @@ export class ClipboardPlugin implements EditorPlugin {
           item.getAsString(async (raw) => {
             // Если изображение уже обработано, игнорируем HTML/текст из буфера
             if (imageProcessed) return;
-            
+
             const str = raw.trim();
             // Игнорируем HTML-фрагменты с изображениями (они приходят вместе с file)
             if (/^<html>|<!--StartFragment-->/.test(str) && /<img\s+src=/.test(str)) {
               return;
             }
-            
+
             // Support base64/data-URL images pasted as text
             if (/^data:image\//i.test(str)) {
               const sel = ctx.store.snapshot(s => s.selectedIds) || [];
@@ -99,5 +102,10 @@ export class ClipboardPlugin implements EditorPlugin {
         }
       }
     });
+  }
+
+  dispose(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

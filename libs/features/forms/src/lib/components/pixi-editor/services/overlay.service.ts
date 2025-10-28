@@ -12,8 +12,7 @@ import { takeUntil } from 'rxjs/operators';
 import { EditorStore } from './editor-store.service';
 import { HistoryService } from './history.service';
 import { ChangeTextCommand } from './history-commands';
-import { IframeNode, TextNode, VideoNode } from '../nodes';
-import { NodeBase } from '../core';
+import { IframeNode, NodeBase, TextNode, VideoNode } from '../nodes';
 import {
   HTML_EDITOR_COMPONENT,
   HtmlEditorComponent,
@@ -75,7 +74,6 @@ export class OverlayService {
     // const bounds = node.getBounds();
     // const scaleY = bounds.height / node.h;
     const deg = 0; //((node.rotation || 0) * 180) / Math.PI;
-
 
     const { scaleX, scaleY } = node.getWorldScale();
     const { x: cx, y: cy } = node.getWorldCenter();
@@ -305,5 +303,4 @@ export class OverlayService {
       } as CSSStyleDeclaration);
     }
   }
-
 }

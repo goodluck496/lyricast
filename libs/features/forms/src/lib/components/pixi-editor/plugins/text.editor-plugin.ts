@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { EditorContext, EditorPlugin, NodeBase } from '../core';
+import { EditorContext, EditorPlugin,  } from '../core';
 import { filter, takeUntil } from 'rxjs/operators';
 import { EditorCommand } from '../services/command-bus.service';
 import { AddNodeCommand } from '../services/history-commands';
@@ -7,7 +7,7 @@ import { Subject } from 'rxjs';
 import { FederatedPointerEvent } from 'pixi.js';
 import { TextFitService } from '../services/text-fit.service';
 import { DragResizeService } from '../services/drag-resize.service';
-import { BrushNode, GroupNode, ShapeNode, TextNode } from '../nodes';
+import { BrushNode, GroupNode, ShapeNode, TextNode, NodeBase } from '../nodes';
 import { Align, UiTextStyles } from '../types';
 import { AssetStorageService } from '../services/asset-storage.service';
 

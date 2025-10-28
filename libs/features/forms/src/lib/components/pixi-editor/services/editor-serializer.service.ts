@@ -8,7 +8,7 @@ import {
   ImageNode,
   ShapeNode,
   TextNode,
-  VideoNode,
+  VideoNode,NodeBase
 } from '../nodes';
 import {
   SerializedBrushNode,
@@ -22,7 +22,6 @@ import {
   SerializedVideoNode,
 } from '@lyri-cast/entities';
 import { CommandBusService } from './command-bus.service';
-import { NodeBase } from '../core';
 
 @Injectable()
 export class EditorSerializerService {

@@ -7,7 +7,7 @@ import {
   UiTextStyles,
 } from '../types';
 import { NodeType } from '../enums';
-import type { NodeBase } from '../core';
+import type {NodeBase  } from '../nodes';
 import { Subject } from 'rxjs';
 
 /**

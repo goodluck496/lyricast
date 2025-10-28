@@ -1,8 +1,7 @@
 import { Container } from 'pixi.js';
 import { HistoryCommand } from './history.service';
 import { EditorStore, NodeState } from './editor-store.service';
-import { NodeBase } from '../core';
-import { TextNode } from '../nodes';
+import { NodeBase, TextNode } from '../nodes';
 import { CommandBusService } from './command-bus.service';
 
 /**

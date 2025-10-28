@@ -9,8 +9,8 @@ import { MoveNodeCommand, ResizeNodeCommand, RotateNodeCommand } from './history
 import { GuideLayer } from '../guides';
 import { CommandBusService } from './command-bus.service';
 import { EditorUtilsService } from './editor-utils.service';
-import { NodeBase } from '../core';
 import { OverlayService } from './overlay.service';
+import { NodeBase } from '../nodes';
 
 export interface DragResizeContext {
   cfg: EditorConfig;
@@ -140,11 +140,11 @@ export class DragResizeService {
 
     type RotateResult = { kind: 'rotate'; rotation: number; centerX: number; centerY: number; boxW: number; boxH: number };
     type ResizeResult = { kind: 'resize'; nextX: number; nextY: number; nextW: number; nextH: number; rotation: number; anchorWorld: { x: number; y: number }; handleName: string };
-    type StartState = { 
-      handleName: string; 
-      start: { x: number; y: number }; 
-      begin: { x: number; y: number; w: number; h: number; rotation: number }; 
-      anchorWorld: { x: number; y: number } 
+    type StartState = {
+      handleName: string;
+      start: { x: number; y: number };
+      begin: { x: number; y: number; w: number; h: number; rotation: number };
+      anchorWorld: { x: number; y: number }
     };
 
     Object.entries(node.handleRects).forEach(([handleName, handleGraphic]) => {
@@ -272,7 +272,7 @@ export class DragResizeService {
                   const finalY = node.y;
                   const finalW = node.w;
                   const finalH = node.h;
-                  if (finalX !== startState.begin.x || finalY !== startState.begin.y || 
+                  if (finalX !== startState.begin.x || finalY !== startState.begin.y ||
                       finalW !== startState.begin.w || finalH !== startState.begin.h) {
                     const command = new ResizeNodeCommand(
                       node,

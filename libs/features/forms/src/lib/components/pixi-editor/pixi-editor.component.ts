@@ -19,7 +19,7 @@ import {
   TilingSprite,
 } from 'pixi.js';
 import { EDITOR_CONFIG } from './types';
-import { EDITOR_PLUGINS, EditorContext, NodeBase } from './core';
+import { EDITOR_PLUGINS, EditorContext } from './core';
 import { EditorStore, NodeState } from './services/editor-store.service';
 import {
   CommandBusService,
@@ -46,6 +46,7 @@ import {
   GroupNode,
   IframeNode,
   ImageNode,
+  NodeBase,
   ShapeNode,
   TextNode,
   VideoNode,
@@ -217,7 +218,6 @@ export class PixiSlideEditorV2Component
     this.app.stage.eventMode = 'static';
 
     this.applyPixiParams();
-
 
     this.utils
       .fromPixi<FederatedPointerEvent>(this.app.stage, 'pointerdown')

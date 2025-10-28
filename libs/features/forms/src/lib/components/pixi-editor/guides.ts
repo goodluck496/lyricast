@@ -1,6 +1,6 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import { DEFAULT_CONFIG, EditorConfig } from './types';
-import { NodeBase } from './core';
+import { NodeBase } from './nodes';
 
 export type GuideLine = { t: 'v'; x: number } | { t: 'h'; y: number };
 

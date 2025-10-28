@@ -5,13 +5,13 @@ import {
   GroupNode,
   IframeNode,
   ImageNode,
+  NodeBase,
   ShapeNode,
   TextNode,
   VideoNode,
 } from '../nodes';
 import { TextFitService } from './text-fit.service';
 import { AssetStorageService } from './asset-storage.service';
-import { NodeBase } from '../core';
 
 @Injectable()
 export class NodeFactoryService {

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { EditorContext, EditorPlugin, NodeBase } from '../core';
+import { EditorContext, EditorPlugin } from '../core';
 import { filter, takeUntil } from 'rxjs/operators';
-import { BrushNode, GroupNode } from '../nodes';
+import { BrushNode, GroupNode, NodeBase } from '../nodes';
 import { Subject } from 'rxjs';
 import { DragResizeService } from '../services/drag-resize.service';
 import { FederatedPointerEvent, Point } from 'pixi.js';
@@ -23,11 +23,17 @@ export class BrushPlugin implements EditorPlugin {
   private tempNode?: BrushNode;
   private destroy$ = new Subject<void>();
 
-  constructor(private readonly drag: DragResizeService, private readonly assetStorage: AssetStorageService) {}
+  constructor(
+    private readonly drag: DragResizeService,
+    private readonly assetStorage: AssetStorageService
+  ) {}
 
   init(ctx: EditorContext): void {
     ctx.bus.commands$
-      .pipe(filter((command) => command.t === 'START_BRUSH'), takeUntil(this.destroy$))
+      .pipe(
+        filter((command) => command.t === 'START_BRUSH'),
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => {
         if (this.drawing) return;
         this.drawing = true;
@@ -121,7 +127,10 @@ export class BrushPlugin implements EditorPlugin {
 
     // ADD_BRUSH: create and select a new brush node from data
     ctx.bus.commands$
-      .pipe(filter((command) => command.t === 'ADD_BRUSH'), takeUntil(this.destroy$))
+      .pipe(
+        filter((command) => command.t === 'ADD_BRUSH'),
+        takeUntil(this.destroy$)
+      )
       .subscribe((cmd) => {
         const addBrush = cmd as Extract<
           import('../services/command-bus.service').EditorCommand,
@@ -188,27 +197,43 @@ export class BrushPlugin implements EditorPlugin {
     };
 
     ctx.bus.commands$
-      .pipe(filter((c) => c.t === 'SET_BRUSH_BACKGROUND'), takeUntil(this.destroy$))
+      .pipe(
+        filter((c) => c.t === 'SET_BRUSH_BACKGROUND'),
+        takeUntil(this.destroy$)
+      )
       .subscribe(async (cmd) => {
-        const setBgCmd = cmd as Extract<EditorCommand, { t: 'SET_BRUSH_BACKGROUND' }>;
+        const setBgCmd = cmd as Extract<
+          EditorCommand,
+          { t: 'SET_BRUSH_BACKGROUND' }
+        >;
         let source: string | undefined;
 
         if (setBgCmd.assetId) {
           source = await this.assetStorage.getAssetObjectURL(setBgCmd.assetId);
-          applyToSelection((b) => { b.bgAssetId = setBgCmd.assetId; });
+          applyToSelection((b) => {
+            b.bgAssetId = setBgCmd.assetId;
+          });
         } else if (setBgCmd.url) {
           // If it's a data URL, convert to Blob and save as asset
           if (setBgCmd.url.startsWith('data:')) {
-            const mimeType = setBgCmd.url.substring(setBgCmd.url.indexOf(':') + 1, setBgCmd.url.indexOf(';'));
+            const mimeType = setBgCmd.url.substring(
+              setBgCmd.url.indexOf(':') + 1,
+              setBgCmd.url.indexOf(';')
+            );
             const base64 = setBgCmd.url.split(',')[1];
             const blob = ctx.utils.base64ToBlob(base64, mimeType);
             const assetId = await this.assetStorage.saveAsset(blob, mimeType);
             source = await this.assetStorage.getAssetObjectURL(assetId);
             // Update the node's bgAssetId for serialization
-            applyToSelection((b) => { b.bgAssetId = assetId; });
+            applyToSelection((b) => {
+              b.bgAssetId = assetId;
+            });
           } else {
-                      source = setBgCmd.url;
-                      applyToSelection((b) => { b.bgAssetId = setBgCmd.url; });          }
+            source = setBgCmd.url;
+            applyToSelection((b) => {
+              b.bgAssetId = setBgCmd.url;
+            });
+          }
         }
 
         if (source) {
@@ -219,7 +244,10 @@ export class BrushPlugin implements EditorPlugin {
       });
 
     ctx.bus.commands$
-      .pipe(filter((c) => c.t === 'CLEAR_BRUSH_BACKGROUND'), takeUntil(this.destroy$))
+      .pipe(
+        filter((c) => c.t === 'CLEAR_BRUSH_BACKGROUND'),
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => {
         applyToSelection((b) => b.clearBackground());
       });

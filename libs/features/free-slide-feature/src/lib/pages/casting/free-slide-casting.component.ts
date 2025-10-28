@@ -180,6 +180,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       height: containerHeight,
       backgroundAlpha: 0, // Прозрачный фон
       antialias: true,
+      resolution: 1, // Explicitly set resolution to 1 to match editor's canvas
       // НЕ используем resizeTo при инициализации, т.к. элемент может быть 0x0
     });
 
@@ -217,6 +218,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
 
       // --- PRE-LOADING STAGE ---
       const urlsToLoad: string[] = [];
+
       for (const node of data.nodes) {
         if (node.type === 'image' || node.type === 'video') {
           if (node.assetId) {
@@ -287,9 +289,14 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
         scaleFactor = 1;
       }
 
+      console.log('[Casting Debug] Canvas dimensions:', { canvasWidth, canvasHeight });
+      console.log('[Casting Debug] Scene dimensions:', { sceneWidth, sceneHeight });
+      console.log('[Casting Debug] Calculated scaleFactor:', scaleFactor);
+
       const iframeNodes: SerializedIframeNode[] = [];
 
       for (const nodeData of data.nodes) {
+        console.log(`[Casting Debug] Processing node: type=${nodeData.type}, id=${nodeData.id}`);
         let node: any | ViewContainer;
 
         let bgSource: string | undefined;
@@ -300,6 +307,44 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
             const x = nodeData.x * scaleFactor;
             const y = nodeData.y * scaleFactor;
 
+            // Always calculate font size and create HTMLText node
+            let fontSize = nodeData.actualFontSize;
+            if (!fontSize || fontSize === 0) {
+              fontSize = Math.max(
+                nodeData.style.min,
+                Math.min(nodeData.style.max, nodeData.height * 0.7)
+              );
+            }
+            console.log(`[Casting Debug] Text node ${nodeData.id} - nodeData.width: ${nodeData.width}, nodeData.height: ${nodeData.height}, nodeData.actualFontSize: ${nodeData.actualFontSize}`);
+            console.log(`[Casting Debug] Text node ${nodeData.id} - fontSize (used in style): ${fontSize}`);
+            console.log(`[Casting Debug] Text node ${nodeData.id} - wordWrapWidth (unscaled): ${Math.max(4, nodeData.width - (nodeData.padding || 0) * 2)}`);
+            console.log(`[Casting Debug] Text node ${nodeData.id} - scaledWidth: ${scaledWidth}, scaledHeight: ${scaledHeight}`);
+            const style = new HTMLTextStyle({
+              fontFamily: nodeData.style.font || 'Arial',
+              fontWeight: nodeData.style.weight || 'normal',
+              fill: nodeData.style.colorHex || '#FFFFFF',
+              fontSize: fontSize, // Use unscaled fontSize
+              align: nodeData.style.align || 'center',
+              wordWrap: true,
+              wordWrapWidth: Math.max(4, nodeData.width - (nodeData.padding || 0) * 2), // Use unscaled wordWrapWidth
+              lineHeight: fontSize * (nodeData.style.lineHeight || 1.2), // Use unscaled fontSize
+              cssOverrides: [
+                'p { margin: 0; }',
+                'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+              ],
+            });
+
+            node = new HTMLText({ text: nodeData.textHtml, style });
+
+            const align = nodeData.style.align || 'center';
+            const anchorX =
+              align === 'center' ? 0.5 : align === 'right' ? 1 : 0;
+            const valign = nodeData.style.valign || 'top';
+            const anchorY =
+              valign === 'middle' ? 0.5 : valign === 'bottom' ? 1 : 0;
+            node.anchor.set(anchorX, anchorY);
+
+            // Background rendering logic (conditional)
             if (nodeData.bgAssetId) {
               const sourceIdentifier = nodeData.bgAssetId;
               let bgSource: string | undefined;
@@ -342,46 +387,14 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
                     e
                   );
                 }
-              } else if (nodeData.bgFillColor != null) {
-                const bgGraphics = new Graphics();
-                bgGraphics
-                  .roundRect(x, y, scaledWidth, scaledHeight, 6 * scaleFactor)
-                  .fill(nodeData.bgFillColor);
-                bgGraphics.alpha = nodeData.alpha ?? 1;
-                this.scene.addChild(bgGraphics);
               }
-
-              let fontSize = nodeData.actualFontSize;
-              if (!fontSize || fontSize === 0) {
-                fontSize = Math.max(
-                  nodeData.style.min,
-                  Math.min(nodeData.style.max, nodeData.height * 0.7)
-                );
-              }
-              const scaledFontSize = fontSize * scaleFactor;
-              const style = new HTMLTextStyle({
-                fontFamily: nodeData.style.font || 'Arial',
-                fontWeight: nodeData.style.weight || 'normal',
-                                            fill: nodeData.style.colorHex || '#FFFFFF',
-                                            fontSize: scaledFontSize,                align: nodeData.style.align || 'center',
-                wordWrap: true,
-                wordWrapWidth: scaledWidth,
-                lineHeight: scaledFontSize * (nodeData.style.lineHeight || 1.2),
-                cssOverrides: [
-                  'p { margin: 0; }',
-                  'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
-                ],
-              });
-
-              node = new HTMLText({ text: nodeData.textHtml, style });
-
-              const align = nodeData.style.align || 'center';
-              const anchorX =
-                align === 'center' ? 0.5 : align === 'right' ? 1 : 0;
-              const valign = nodeData.style.valign || 'top';
-              const anchorY =
-                valign === 'middle' ? 0.5 : valign === 'bottom' ? 1 : 0;
-              node.anchor.set(anchorX, anchorY);
+            } else if (nodeData.bgFillColor != null) {
+              const bgGraphics = new Graphics();
+              bgGraphics
+                .roundRect(x, y, scaledWidth, scaledHeight, 6 * scaleFactor)
+                .fill(nodeData.bgFillColor);
+              bgGraphics.alpha = nodeData.alpha ?? 1;
+              this.scene.addChild(bgGraphics);
             }
             break;
           }
@@ -685,12 +698,17 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
             const anchorY = node.anchor.y;
             node.x = (nodeData.x + nodeData.width * anchorX) * scaleFactor;
             node.y = (nodeData.y + nodeData.height * anchorY) * scaleFactor;
+            node.scale.set(scaleFactor, scaleFactor);
           } else {
             node.x = nodeData.x * scaleFactor;
             node.y = nodeData.y * scaleFactor;
           }
           node.rotation = nodeData.rotation;
           node.alpha = nodeData.alpha;
+          console.log(`[Casting Debug] Adding node to scene: type=${nodeData.type}, id=${nodeData.id}, x=${node.x}, y=${node.y}, alpha=${node.alpha}`);
+          if (nodeData.type === 'text') {
+            console.log(`[Casting Debug] Text node details: textHtml=${nodeData.textHtml}, fill=${nodeData.style.colorHex}, fontSize=${node.style.fontSize}`);
+          }
           this.scene.addChild(node);
         }
       }
@@ -700,31 +718,57 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       this.scene.x = (canvasWidth - scaledSceneWidth) / 2;
       this.scene.y = (canvasHeight - scaledSceneHeight) / 2;
 
-      for (const iframeData of iframeNodes) {
-        const iframe = this.renderer.createElement('iframe');
-        this.renderer.setAttribute(iframe, 'src', iframeData.url);
-        this.renderer.setStyle(iframe, 'position', 'absolute');
-        const absoluteLeft = this.scene.x + iframeData.x * scaleFactor;
-        const absoluteTop = this.scene.y + iframeData.y * scaleFactor;
-        this.renderer.setStyle(iframe, 'left', `${absoluteLeft}px`);
-        this.renderer.setStyle(iframe, 'top', `${absoluteTop}px`);
-        this.renderer.setStyle(
-          iframe,
-          'width',
-          `${iframeData.width * scaleFactor}px`
-        );
-        this.renderer.setStyle(
-          iframe,
-          'height',
-          `${iframeData.height * scaleFactor}px`
-        );
-        this.renderer.setStyle(iframe, 'border', 'none');
-        this.renderer.appendChild(this.domOverlayRef.nativeElement, iframe);
-      }
-    } catch (e) {
-      console.error('[Casting] Failed to render slide content:', e);
-    }
-  }
+                  for (const iframeData of iframeNodes) {
+
+                    const iframe = this.renderer.createElement('iframe');
+
+                    this.renderer.setAttribute(iframe, 'src', iframeData.url);
+
+                    this.renderer.setStyle(iframe, 'position', 'absolute');
+
+                    const absoluteLeft = this.scene.x + iframeData.x * scaleFactor;
+
+                    const absoluteTop = this.scene.y + iframeData.y * scaleFactor;
+
+                    this.renderer.setStyle(iframe, 'left', `${absoluteLeft}px`);
+
+                    this.renderer.setStyle(iframe, 'top', `${absoluteTop}px`);
+
+                    this.renderer.setStyle(
+
+                      iframe,
+
+                      'width',
+
+                      `${iframeData.width * scaleFactor}px`
+
+                    );
+
+                    this.renderer.setStyle(
+
+                      iframe,
+
+                      'height',
+
+                      `${iframeData.height * scaleFactor}px`
+
+                    );
+
+                    this.renderer.setStyle(iframe, 'border', 'none');
+
+                    this.renderer.appendChild(this.domOverlayRef.nativeElement, iframe);
+
+                  }
+
+            
+
+                } catch (e) {
+
+                  console.error('[Casting] Failed to render slide content:', e);
+
+                }
+
+              }
 }
 
 async function loadTextureRobustCasting(

@@ -1086,7 +1086,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             padding: node.padding,
             bgFillColor: node.bgFillColor,
             bgAssetId: node.bgAssetId, // Store asset ID
-            actualFontSize: node.style.actualFontSize,
+            actualFontSize: node.currentFontSize,
           } as SerializedTextNode;
         }
         if (node instanceof ImageNode) {

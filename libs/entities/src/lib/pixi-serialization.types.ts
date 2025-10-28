@@ -21,6 +21,7 @@ export type SerializedTextNode = SerializedNodeBase & {
   actualFontSize?: number; // Реальный размер шрифта после auto-fit
   bgFillColor?: number | null; // Цвет фона
   bgAssetId?: string; // ID фонового изображения в AssetStorageService
+  padding?: number; // Отступ текста от границ блока
 };
 
 export type SerializedImageNode = SerializedNodeBase & {

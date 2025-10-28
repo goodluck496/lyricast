@@ -289,10 +289,6 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
         scaleFactor = 1;
       }
 
-      console.log('[Casting Debug] Canvas dimensions:', { canvasWidth, canvasHeight });
-      console.log('[Casting Debug] Scene dimensions:', { sceneWidth, sceneHeight });
-      console.log('[Casting Debug] Calculated scaleFactor:', scaleFactor);
-
       const iframeNodes: SerializedIframeNode[] = [];
 
       for (const nodeData of data.nodes) {
@@ -315,19 +311,15 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
                 Math.min(nodeData.style.max, nodeData.height * 0.7)
               );
             }
-            console.log(`[Casting Debug] Text node ${nodeData.id} - nodeData.width: ${nodeData.width}, nodeData.height: ${nodeData.height}, nodeData.actualFontSize: ${nodeData.actualFontSize}`);
-            console.log(`[Casting Debug] Text node ${nodeData.id} - fontSize (used in style): ${fontSize}`);
-            console.log(`[Casting Debug] Text node ${nodeData.id} - wordWrapWidth (unscaled): ${Math.max(4, nodeData.width - (nodeData.padding || 0) * 2)}`);
-            console.log(`[Casting Debug] Text node ${nodeData.id} - scaledWidth: ${scaledWidth}, scaledHeight: ${scaledHeight}`);
             const style = new HTMLTextStyle({
               fontFamily: nodeData.style.font || 'Arial',
               fontWeight: nodeData.style.weight || 'normal',
               fill: nodeData.style.colorHex || '#FFFFFF',
-              fontSize: fontSize, // Use unscaled fontSize
+              fontSize: fontSize * scaleFactor, // Use scaled fontSize
               align: nodeData.style.align || 'center',
               wordWrap: true,
-              wordWrapWidth: Math.max(4, nodeData.width - (nodeData.padding || 0) * 2), // Use unscaled wordWrapWidth
-              lineHeight: fontSize * (nodeData.style.lineHeight || 1.2), // Use unscaled fontSize
+              wordWrapWidth: Math.max(4, (nodeData.width - (nodeData.padding || 0) * 2) * scaleFactor), // Use scaled wordWrapWidth
+              lineHeight: (fontSize * scaleFactor) * (nodeData.style.lineHeight || 1.2), // Use scaled fontSize
               cssOverrides: [
                 'p { margin: 0; }',
                 'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
@@ -437,7 +429,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
               }
             } catch (e) {
               console.error(
-                `[Casting] Failed to get ${nodeData.type}:`,
+                `[Casting] Failed to get ${nodeDataNew.type}:`,
                 source,
                 e
               );
@@ -536,7 +528,8 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
                 mainGraphics
                   .roundRect(0, 0, scaledWidth, scaledHeight, 6 * scaleFactor)
                   .fill(nodeData.fill);
-              } else if (nodeData.shape === 'ellipse') {
+
+            } else if (nodeData.shape === 'ellipse') {
                 mainGraphics
                   .ellipse(
                     scaledWidth / 2,
@@ -698,7 +691,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
             const anchorY = node.anchor.y;
             node.x = (nodeData.x + nodeData.width * anchorX) * scaleFactor;
             node.y = (nodeData.y + nodeData.height * anchorY) * scaleFactor;
-            node.scale.set(scaleFactor, scaleFactor);
+            // node.scale.set(scaleFactor, scaleFactor); // This line was removed
           } else {
             node.x = nodeData.x * scaleFactor;
             node.y = nodeData.y * scaleFactor;
@@ -707,7 +700,6 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
           node.alpha = nodeData.alpha;
           console.log(`[Casting Debug] Adding node to scene: type=${nodeData.type}, id=${nodeData.id}, x=${node.x}, y=${node.y}, alpha=${node.alpha}`);
           if (nodeData.type === 'text') {
-            console.log(`[Casting Debug] Text node details: textHtml=${nodeData.textHtml}, fill=${nodeData.style.colorHex}, fontSize=${node.style.fontSize}`);
           }
           this.scene.addChild(node);
         }
@@ -760,7 +752,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
 
                   }
 
-            
+
 
                 } catch (e) {
 

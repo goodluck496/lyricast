@@ -97,5 +97,7 @@ export const appConfig: ApplicationConfig = {
     //navigator state
     provideState(NavigatorFeatureName, NavigatorReducer),
     provideEffects(NavigatorFeatureEffects),
+    // Предоставляем EDITOR_CONFIG на корневом уровне
+    // { provide: EDITOR_CONFIG, useValue: DEFAULT_CONFIG },
   ],
 };

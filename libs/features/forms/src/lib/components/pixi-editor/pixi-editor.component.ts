@@ -1,5 +1,7 @@
+import { EditorSerializerService } from './services/editor-serializer.service';
 import { CommonModule } from '@angular/common';
 import {
+  AfterViewInit,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -12,12 +14,8 @@ import {
 import { FormsModule } from '@angular/forms';
 import {
   Application,
-  Assets,
   Container,
   FederatedPointerEvent,
-  Graphics,
-  Point,
-  Texture,
   TilingSprite,
 } from 'pixi.js';
 import { EDITOR_CONFIG } from './types';
@@ -53,17 +51,8 @@ import {
   VideoNode,
 } from './nodes';
 import { PIXI_EDITOR_PROVIDERS } from './pixi-editor.providers';
-import {
-  SerializedBrushNode,
-  SerializedIframeNode,
-  SerializedImageNode,
-  SerializedNode,
-  SerializedNodeBase,
-  SerializedShapeNode,
-  SerializedState,
-  SerializedTextNode,
-  SerializedVideoNode,
-} from '@lyri-cast/entities';
+import { NodeFactoryService } from './services/node-factory.service';
+import { SceneViewportService } from './services/scene-viewport.service';
 
 type WorldContainer = Container & { app: Application };
 
@@ -75,7 +64,9 @@ type WorldContainer = Container & { app: Application };
   styleUrl: 'pixi-editor.component.scss',
   providers: [...PIXI_EDITOR_PROVIDERS()],
 })
-export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
+export class PixiSlideEditorV2Component
+  implements OnInit, AfterViewInit, OnDestroy
+{
   @ViewChild('host', { static: true }) hostRef!: ElementRef<HTMLDivElement>;
   selectedKind?:
     | 'text'
@@ -97,39 +88,20 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   readonly history = inject(HistoryService);
   private readonly zone = inject(NgZone);
   private readonly cdr = inject(ChangeDetectorRef);
+  public readonly serializer = inject(EditorSerializerService);
+  private readonly nodeFactory = inject(NodeFactoryService);
+  private readonly sceneViewport = inject(SceneViewportService);
 
   app!: Application;
   world!: Container & { app: Application };
   grid!: TilingSprite;
   guides!: GuideLayer;
-  private sceneBounds?: Container;
-  // Текущие размеры сцены (с учетом zoom для отрисовки)
-  private sceneWidth: number = 1920;
-  private sceneHeight: number = 1080;
-  // Базовые размеры сцены (без zoom, для сериализации)
-  private baseSceneWidth: number = 1920;
-  private baseSceneHeight: number = 1080;
+
   private readonly textFit = inject(TextFitService);
   private readonly drag = inject(DragResizeService);
   private readonly dialog = inject(DialogService);
   private readonly assetStorage = inject(AssetStorageService);
   private readonly overlayService = inject(OverlayService);
-
-  getSceneBounds(): { x: number; y: number; width: number; height: number } {
-    const canvasWidth = this.app.renderer.width;
-    const canvasHeight = this.app.renderer.height;
-    const zoom = this.store.snapshot((s) => s.zoom);
-
-    // These are the dimensions of the scene in world coordinates (without zoom applied)
-    const sceneWidth = this.sceneWidth;
-    const sceneHeight = this.sceneHeight;
-
-    // Calculate the offset of the scene within the world container
-    const sceneOffsetX = (canvasWidth / zoom - sceneWidth) / 2;
-    const sceneOffsetY = (canvasHeight / zoom - sceneHeight) / 2;
-
-    return { x: sceneOffsetX, y: sceneOffsetY, width: sceneWidth, height: sceneHeight };
-  }
 
   // Plugin instances provided via DI multi-token
   private plugins = inject(EDITOR_PLUGINS);
@@ -143,9 +115,35 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private ctxMenu?: ContextMenuService;
 
-  ngOnInit() {}
-  ngAfterViewInit(): void {
-    void this.initPixi();
+  ngOnInit() {
+    // Initialize serializer with component's PixiJS context
+    this.serializer.app = this.app;
+    this.serializer.sceneWidth = this.sceneViewport.sceneWidth;
+    this.serializer.sceneHeight = this.sceneViewport.sceneHeight;
+    this.serializer.baseSceneWidth = this.sceneViewport.baseSceneWidth;
+    this.serializer.baseSceneHeight = this.sceneViewport.baseSceneHeight;
+    this.serializer.aspectRatio = this.sceneViewport.aspectRatio;
+
+    // Initialize node factory with component's PixiJS context
+    this.nodeFactory.app = this.app;
+
+    // Initialize scene viewport service with component's PixiJS context
+    this.sceneViewport.app = this.app;
+    this.sceneViewport.world = this.world;
+    this.sceneViewport.aspectRatio = this.aspectRatio;
+  }
+
+  async ngAfterViewInit(): Promise<void> {
+    await this.initPixi();
+
+    // Инициализируем границы сцены при запуске
+    this.sceneViewport.updateSceneBounds();
+
+    // Update serializer with new scene dimensions
+    this.serializer.baseSceneWidth = this.sceneViewport.baseSceneWidth;
+    this.serializer.baseSceneHeight = this.sceneViewport.baseSceneHeight;
+    this.serializer.aspectRatio = this.sceneViewport.aspectRatio;
+
     // track brush active state for toolbar button highlight
     this.store.brushActive$
       .pipe(takeUntil(this.destroy$))
@@ -153,13 +151,21 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         this.brushActive = isActive;
         this.cdr.markForCheck();
       });
-
-    // Инициализируем границы сцены при запуске
-    // Небольшая задержка для завершения инициализации PixiJS
-    setTimeout(() => {
-      this.updateSceneBounds();
-    }, 200);
   }
+
+  applyPixiParams() {
+    this.serializer.app = this.app;
+    this.serializer.sceneWidth = this.sceneViewport.sceneWidth;
+    this.serializer.sceneHeight = this.sceneViewport.sceneHeight;
+    // Initialize node factory with component's PixiJS context
+    this.nodeFactory.app = this.app;
+
+    // Initialize scene viewport service with component's PixiJS context
+    this.sceneViewport.app = this.app;
+    this.sceneViewport.world = this.world;
+    this.sceneViewport.aspectRatio = this.aspectRatio;
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
@@ -184,7 +190,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     world.app = app;
     app.stage.addChild(world);
 
-    const gridTexture = this.createGridTexture(
+    const gridTexture = this.sceneViewport.createGridTexture(
       this.cfg.grid.size,
       this.cfg.grid.line,
       this.cfg.grid.alpha
@@ -209,6 +215,10 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
 
     // Stage click to deselect (and commit any open textarea editor)
     this.app.stage.eventMode = 'static';
+
+    this.applyPixiParams();
+
+
     this.utils
       .fromPixi<FederatedPointerEvent>(this.app.stage, 'pointerdown')
       .pipe(
@@ -472,7 +482,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
         this.store.setZoom(zoomCommand.z);
         this.world.scale.set(zoomCommand.z);
         this.guides.draw([]);
-        this.updateSceneBounds(); // Обновляем границы при изменении zoom
+        this.sceneViewport.updateSceneBounds(); // Обновляем границы при изменении zoom
         const selectedId = this.store.snapshot((state) => state.selectedIds)[0];
         if (selectedId) {
           const nodeRef = this.store.snapshot((state) => state.nodes)[
@@ -566,7 +576,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           const nodeState = allNodes[nodeId];
           if (!nodeState) continue;
           const originalNode = nodeState.ref as NodeBase;
-          const clonedNode = this.cloneNode(originalNode);
+          const clonedNode = this.nodeFactory.cloneNode(originalNode);
           if (!clonedNode) continue;
           clonedNode.x = originalNode.x + 24;
           clonedNode.y = originalNode.y + 24;
@@ -574,7 +584,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
           // Создаём состояние для нового узла
           const newNodeState: NodeState = {
             id: clonedNode.id,
-            type: this.getNodeType(clonedNode),
+            type: this.nodeFactory.getNodeType(clonedNode),
             ref: clonedNode,
           };
 
@@ -589,7 +599,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
             utils: this.utils,
             overlay: this.overlay,
             history: this.history,
-            getSceneBounds: () => this.getSceneBounds(),
+            getSceneBounds: () => this.sceneViewport.getSceneBounds(),
           });
 
           addedNodes.push(newNodeState);
@@ -721,7 +731,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
       guides: this.guides,
       cfg: this.cfg,
       history: this.history,
-      getSceneBounds: () => this.getSceneBounds(),
+      getSceneBounds: () => this.sceneViewport.getSceneBounds(),
     };
     this.plugins.forEach((plugin) => plugin.init(ctx));
 
@@ -733,109 +743,7 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     );
 
     // Инициализируем размеры сцены сразу после создания app
-    this.updateSceneBounds();
-  }
-
-  private createGridTexture(size = 20, line = 1, alpha = 0.08) {
-    const cvs = document.createElement('canvas');
-    cvs.width = size;
-    cvs.height = size;
-    const ctx = cvs.getContext('2d')!;
-    ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-    ctx.fillRect(size - line, 0, line, size);
-    ctx.fillRect(0, size - line, size, line);
-    return Texture.from(cvs);
-  }
-
-  private getNodeType(
-    n: NodeBase
-  ): 'text' | 'image' | 'video' | 'iframe' | 'shape' | 'group' | 'brush' {
-    if (n instanceof TextNode) return 'text';
-    if (n instanceof ImageNode) return 'image';
-    if (n instanceof VideoNode) return 'video';
-    if (n instanceof IframeNode) return 'iframe';
-    if (n instanceof ShapeNode) return 'shape';
-    if (n instanceof GroupNode) return 'group';
-    if (n instanceof BrushNode) return 'brush';
-    // Fallback: create an explicit type if new node classes appear
-    // Unknown node type; defaulting to 'group' to keep it visible
-    return 'group';
-  }
-
-  private cloneNode(src: NodeBase): NodeBase | null {
-    if (src instanceof TextNode) {
-      const n = new TextNode(this.app, this.textFit, this.assetStorage);
-      n.textHtml = src.textHtml;
-      n.style = { ...src.style };
-      n.applyBoxSize(src.w, src.h);
-      n.requestFit();
-      return n;
-    }
-    if (src instanceof ImageNode) {
-      const n = new ImageNode();
-      n.applyBoxSize(src.w, src.h);
-      n.sprite.texture = (src as ImageNode).sprite.texture;
-      n.sprite.anchor.set(0.5);
-      n.sprite.position.set(n.w / 2, n.h / 2);
-      n.sprite.scale.set((src as ImageNode).sprite.scale.x);
-      return n;
-    }
-    if (src instanceof VideoNode) {
-      const n = new VideoNode();
-      n.applyBoxSize(src.w, src.h);
-      n.sprite.texture = (src as VideoNode).sprite.texture;
-      n.sprite.anchor.set(0.5);
-      n.sprite.position.set(n.w / 2, n.h / 2);
-      n.sprite.scale.set((src as VideoNode).sprite.scale.x);
-      return n;
-    }
-    if (src instanceof IframeNode) {
-      const n = new IframeNode(src.url);
-      n.applyBoxSize(src.w, src.h);
-      return n;
-    }
-    if (src instanceof GroupNode) {
-      // Deep-clone group with its children (as a new independent block)
-      const childClones: NodeBase[] = [];
-      const g = new GroupNode();
-      g.applyBoxSize(src.w, src.h);
-      // Clone each child, keep relative position
-      for (const ch of src.children) {
-        if (!(ch instanceof NodeBase)) continue;
-        const c = this.cloneNode(ch);
-        if (!c) continue;
-        c.x = ch.x;
-        c.y = ch.y;
-        c.eventMode = 'none';
-        g.addChild(c);
-        childClones.push(c);
-      }
-      return g;
-    }
-    if (src instanceof ShapeNode) {
-      const n = new ShapeNode(src.shape, this.assetStorage);
-      n.fill = src.fill;
-      n.stroke = src.stroke;
-      n.lineWidth = src.lineWidth;
-      n.applyBoxSize(src.w, src.h);
-      return n;
-    }
-    if (src instanceof BrushNode) {
-      const n = new BrushNode(this.assetStorage);
-      n.stroke = src.stroke;
-      n.strokeWidth = src.strokeWidth;
-      n.applyBoxSize(src.w, src.h);
-      // copy path from internal BrushNode state; TypeScript doesn't expose it, so we use a typed view
-      type HasPath = { path?: Point[] };
-      const raw = src as unknown as HasPath; // specific structural type cast instead of any
-      const pts: Point[] = (raw.path ?? []).map(
-        (p: Point) => new Point(p.x, p.y)
-      );
-      n.setPath(pts);
-      return n;
-    }
-    return null;
+    this.sceneViewport.updateSceneBounds();
   }
 
   emit(cmd: EditorCommand) {
@@ -901,7 +809,13 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
 
   onAspectRatioChange(ratio: '16:9' | '4:3' | 'none') {
     this.aspectRatio = ratio;
-    this.updateSceneBounds();
+    this.sceneViewport.updateSceneBounds();
+    // Update serializer with new scene dimensions
+    this.serializer.sceneWidth = this.sceneViewport.sceneWidth;
+    this.serializer.sceneHeight = this.sceneViewport.sceneHeight;
+    this.serializer.baseSceneWidth = this.sceneViewport.baseSceneWidth;
+    this.serializer.baseSceneHeight = this.sceneViewport.baseSceneHeight;
+    this.serializer.aspectRatio = this.aspectRatio;
   }
 
   onToggleIframeInteractive() {
@@ -916,410 +830,9 @@ export class PixiSlideEditorV2Component implements OnInit, OnDestroy {
     }
   }
 
-  private updateSceneBounds() {
-    // Удаляем старые границы если есть
-    if (this.sceneBounds) {
-      this.world.removeChild(this.sceneBounds);
-      this.sceneBounds.destroy();
-      this.sceneBounds = undefined;
-    }
-
-    // Определяем размеры сцены на основе соотношения сторон
-    const canvasWidth = this.app.renderer.width;
-    const canvasHeight = this.app.renderer.height;
-
-    // Учитываем текущий zoom и позицию world
-    const zoom = this.store.snapshot((s) => s.zoom);
-
-    if (this.aspectRatio === 'none') {
-      // Для 'none' используем размеры canvas
-      this.sceneWidth = canvasWidth / zoom;
-      this.sceneHeight = canvasHeight / zoom;
-      // Базовые размеры без zoom (при zoom=1)
-      this.baseSceneWidth = canvasWidth;
-      this.baseSceneHeight = canvasHeight;
-      return;
-    }
-
-    if (this.aspectRatio === '16:9') {
-      // Вычисляем размеры для 16:9
-      const ratio = 16 / 9;
-      if (canvasWidth / canvasHeight > ratio) {
-        // Ограничены по высоте
-        this.sceneHeight = (canvasHeight * 0.9) / zoom; // 90% высоты canvas с учетом zoom
-        this.sceneWidth = this.sceneHeight * ratio;
-        // Базовые размеры при zoom=1
-        this.baseSceneHeight = canvasHeight * 0.9;
-        this.baseSceneWidth = this.baseSceneHeight * ratio;
-      } else {
-        // Ограничены по ширине
-        this.sceneWidth = (canvasWidth * 0.9) / zoom; // 90% ширины canvas с учетом zoom
-        this.sceneHeight = this.sceneWidth / ratio;
-        // Базовые размеры при zoom=1
-        this.baseSceneWidth = canvasWidth * 0.9;
-        this.baseSceneHeight = this.baseSceneWidth / ratio;
-      }
-    } else {
-      // 4:3
-      const ratio = 4 / 3;
-      if (canvasWidth / canvasHeight > ratio) {
-        this.sceneHeight = (canvasHeight * 0.9) / zoom;
-        this.sceneWidth = this.sceneHeight * ratio;
-        // Базовые размеры при zoom=1
-        this.baseSceneHeight = canvasHeight * 0.9;
-        this.baseSceneWidth = this.baseSceneHeight * ratio;
-      } else {
-        this.sceneWidth = (canvasWidth * 0.9) / zoom;
-        this.sceneHeight = this.sceneWidth / ratio;
-        // Базовые размеры при zoom=1
-        this.baseSceneWidth = canvasWidth * 0.9;
-        this.baseSceneHeight = this.baseSceneWidth / ratio;
-      }
-    }
-
-    // Создаём контейнер для границ
-    const bounds = new Container();
-    const g = new Graphics();
-
-    const sceneWidth = this.sceneWidth;
-    const sceneHeight = this.sceneHeight;
-
-    // Центрируем сцену относительно видимой области world
-    const x = (canvasWidth / zoom - sceneWidth) / 2;
-    const y = (canvasHeight / zoom - sceneHeight) / 2;
-
-    // Рисуем границы (пунктирная линия)
-    g.setStrokeStyle({ width: 2 / zoom, color: 0xff6b6b, alpha: 0.8 });
-
-    // Рисуем прямоугольник границ
-    const dashLength = 10 / zoom;
-    const gapLength = 5 / zoom;
-
-    // Верхняя линия
-    for (let i = 0; i < sceneWidth; i += dashLength + gapLength) {
-      const len = Math.min(dashLength, sceneWidth - i);
-      g.moveTo(x + i, y);
-      g.lineTo(x + i + len, y);
-    }
-
-    // Правая линия
-    for (let i = 0; i < sceneHeight; i += dashLength + gapLength) {
-      const len = Math.min(dashLength, sceneHeight - i);
-      g.moveTo(x + sceneWidth, y + i);
-      g.lineTo(x + sceneWidth, y + i + len);
-    }
-
-    // Нижняя линия
-    for (let i = 0; i < sceneWidth; i += dashLength + gapLength) {
-      const len = Math.min(dashLength, sceneWidth - i);
-      g.moveTo(x + sceneWidth - i, y + sceneHeight);
-      g.lineTo(x + sceneWidth - i - len, y + sceneHeight);
-    }
-
-    // Левая линия
-    for (let i = 0; i < sceneHeight; i += dashLength + gapLength) {
-      const len = Math.min(dashLength, sceneHeight - i);
-      g.moveTo(x, y + sceneHeight - i);
-      g.lineTo(x, y + sceneHeight - i - len);
-    }
-
-    g.stroke();
-
-    bounds.addChild(g);
-
-    this.sceneBounds = bounds;
-    // Добавляем границы поверх всего, но под handles
-    this.world.addChild(bounds);
-  }
-
   onContextMenu(e: MouseEvent) {
     e.preventDefault();
     this.ctxMenu?.open(e.clientX, e.clientY);
-  }
-
-  /**
-   * Сериализует текущее состояние редактора в JSON-объект.
-   */
-  serializeState(): SerializedState {
-    const state = this.store.snapshot((s) => s);
-
-    // Вычисляем offset сцены (где начинается рамка aspectRatio)
-    // ВАЖНО: offset вычисляется БЕЗ учета zoom, т.к. sceneWidth/Height уже учитывают zoom
-    const canvasWidth = this.app.renderer.width;
-    const canvasHeight = this.app.renderer.height;
-    const zoom = state.zoom;
-
-    // sceneWidth и sceneHeight уже в "мировых" координатах (без zoom)
-    // Но offset нужно вычислять в тех же координатах, что и ноды
-    // Ноды находятся в мировых координатах world, которые масштабируются zoom
-    const sceneOffsetX = (canvasWidth / zoom - this.sceneWidth) / 2;
-    const sceneOffsetY = (canvasHeight / zoom - this.sceneHeight) / 2;
-
-    const serializableNodes = Object.values(state.nodes)
-      .map((nodeState) => {
-        const node = nodeState.ref as NodeBase;
-        // Сохраняем координаты относительно начала сцены (рамки aspectRatio)
-        const baseData: SerializedNodeBase = {
-          id: node.id,
-          type: nodeState.type as SerializedNode['type'],
-          x: node.x - sceneOffsetX,
-          y: node.y - sceneOffsetY,
-          width: node.w,
-          height: node.h,
-          rotation: node.rotation,
-          alpha: node.alpha,
-        };
-
-        console.log('------------', node);
-        if (node instanceof TextNode) {
-          return {
-            id: node.id,
-            type: 'text',
-            x: node.x - sceneOffsetX,
-            y: node.y - sceneOffsetY,
-            alpha: node.alpha,
-            width: node.w,
-            height: node.h,
-            rotation: node.rotation,
-            textHtml: node.textHtml,
-            style: node.style,
-            padding: node.padding,
-            bgFillColor: node.bgFillColor,
-            bgAssetId: node.bgAssetId, // Store asset ID
-            actualFontSize: node.currentFontSize,
-          } as SerializedTextNode;
-        }
-        if (node instanceof ImageNode) {
-          return {
-            ...baseData,
-            type: 'image',
-            assetId: node.assetId, // Store asset ID
-            url: node.url, // Store external URL
-          } as SerializedImageNode;
-        }
-        if (node instanceof VideoNode) {
-          return {
-            ...baseData,
-            type: 'video',
-            assetId: node.assetId, // Store asset ID
-            url: node.url, // Store external URL
-          } as SerializedVideoNode;
-        }
-        if (node instanceof IframeNode) {
-          return {
-            ...baseData,
-            type: 'iframe',
-            url: node.url,
-          } as SerializedIframeNode;
-        }
-        if (node instanceof ShapeNode) {
-          return {
-            ...baseData,
-            type: 'shape',
-            shape: node.shape,
-            fill: node.fill,
-            stroke: node.stroke,
-            lineWidth: node.lineWidth,
-            bgAssetId: node.bgAssetId, // Store asset ID
-          } as SerializedShapeNode;
-        }
-        if (node instanceof BrushNode) {
-          return {
-            ...baseData,
-            type: 'brush',
-            stroke: node.stroke,
-            strokeWidth: node.strokeWidth,
-            path: (node as any).path?.map((p: Point) => ({ x: p.x, y: p.y })),
-            bgAssetId: node.bgAssetId, // Store asset ID
-          } as SerializedBrushNode;
-        }
-        return null;
-      })
-      .filter((n) => n !== null);
-
-    const result: SerializedState = {
-      nodes: serializableNodes,
-      zoom: state.zoom,
-      sceneBounds: {
-        width: this.baseSceneWidth, // Используем базовые размеры без zoom
-        height: this.baseSceneHeight,
-      },
-    };
-
-    console.log('[Editor] Serializing state:', {
-      nodesCount: serializableNodes.length,
-      sceneWidth: this.sceneWidth,
-      sceneHeight: this.sceneHeight,
-      baseSceneWidth: this.baseSceneWidth,
-      baseSceneHeight: this.baseSceneHeight,
-      sceneOffsetX,
-      sceneOffsetY,
-      zoom,
-      aspectRatio: this.aspectRatio,
-    });
-
-    return result;
-  }
-
-  /**
-   * Предварительная загрузка ассетов (изображений, видео) для данного состояния слайда.
-   * Использует PixiJS Assets для кэширования.
-   */
-  async preloadAssets(data: SerializedState): Promise<void> {
-    if (!data || !data.nodes) return;
-
-    const urlsToPreload: string[] = [];
-
-    for (const nodeData of data.nodes) {
-      if (nodeData.type === 'image' || nodeData.type === 'video') {
-        if (nodeData.assetId) {
-          const objectURL = await this.assetStorage.getAssetObjectURL(
-            nodeData.assetId
-          );
-          if (objectURL) urlsToPreload.push(objectURL);
-        } else if (nodeData.url) {
-          urlsToPreload.push(nodeData.url);
-        }
-      } else if (nodeData.type === 'iframe') {
-        if (nodeData.url) {
-          urlsToPreload.push(nodeData.url);
-        }
-      } else if (nodeData.type === 'text' && nodeData.bgAssetId) {
-        const objectURL = await this.assetStorage.getAssetObjectURL(
-          nodeData.bgAssetId
-        );
-        if (objectURL) urlsToPreload.push(objectURL);
-      } else if (nodeData.type === 'shape' && nodeData.bgAssetId) {
-        const objectURL = await this.assetStorage.getAssetObjectURL(
-          nodeData.bgAssetId
-        );
-        if (objectURL) urlsToPreload.push(objectURL);
-      } else if (nodeData.type === 'brush' && nodeData.bgAssetId) {
-        const objectURL = await this.assetStorage.getAssetObjectURL(
-          nodeData.bgAssetId
-        );
-        if (objectURL) urlsToPreload.push(objectURL);
-      }
-    }
-
-    const uniqueUrls = Array.from(new Set(urlsToPreload));
-
-    if (uniqueUrls.length > 0) {
-      console.log(`[Editor] Preloading ${uniqueUrls.length} assets...`);
-      try {
-        await Assets.load(uniqueUrls);
-        console.log('[Editor] Assets preloaded successfully.');
-      } catch (e) {
-        console.warn('[Editor] Failed to preload assets:', e);
-      }
-    }
-  }
-
-  /**
-   * Десериализует состояние из JSON-объекта и воссоздает сцену.
-   * @param data
-   */
-  deserializeState(data: SerializedState) {
-    this.clearAllNodes();
-    if (!data || !data.nodes) return;
-
-    // Вычисляем offset сцены для восстановления абсолютных координат
-    const canvasWidth = this.app.renderer.width;
-    const canvasHeight = this.app.renderer.height;
-    const zoom = this.store.snapshot((s) => s.zoom);
-    const sceneOffsetX = (canvasWidth / zoom - this.sceneWidth) / 2;
-    const sceneOffsetY = (canvasHeight / zoom - this.sceneHeight) / 2;
-
-    data.nodes.forEach((nodeData) => {
-      const options = {
-        width: nodeData.width,
-        height: nodeData.height,
-        rotation: nodeData.rotation,
-        alpha: nodeData.alpha,
-      };
-
-      // Восстанавливаем абсолютные координаты, добавляя offset сцены
-      const absoluteX = nodeData.x + sceneOffsetX;
-      const absoluteY = nodeData.y + sceneOffsetY;
-
-      switch (nodeData.type) {
-        case 'text':
-          this.bus.emit({
-            t: 'ADD_TEXT',
-            x: absoluteX,
-            y: absoluteY,
-            text: nodeData.textHtml,
-            options: {
-              ...options,
-              style: {
-                ...nodeData.style,
-                actualFontSize: nodeData.actualFontSize,
-              },
-              bgFillColor: nodeData.bgFillColor,
-              bgAssetId: nodeData.bgAssetId, // Pass asset ID
-            },
-          });
-          break;
-        case 'image':
-          this.bus.emit({
-            t: 'ADD_IMAGE',
-            assetId: nodeData.assetId, // Pass asset ID
-            url: nodeData.url, // Pass external URL
-            x: absoluteX,
-            y: absoluteY,
-            options: options,
-          });
-          break;
-        case 'video':
-          this.bus.emit({
-            t: 'ADD_VIDEO',
-            assetId: nodeData.assetId, // Pass asset ID
-            url: nodeData.url, // Pass external URL
-            x: absoluteX,
-            y: absoluteY,
-            options: options,
-          });
-          break;
-        case 'iframe':
-          this.bus.emit({
-            t: 'ADD_IFRAME',
-            url: nodeData.url,
-            x: absoluteX,
-            y: absoluteY,
-            options: options,
-          });
-          break;
-        case 'shape':
-          this.bus.emit({
-            t: 'ADD_SHAPE',
-            shape: nodeData.shape,
-            x: absoluteX,
-            y: absoluteY,
-            options: {
-              ...options,
-              fill: nodeData.fill,
-              stroke: nodeData.stroke,
-              lineWidth: nodeData.lineWidth,
-              bgAssetId: nodeData.bgAssetId, // Pass asset ID
-            },
-          });
-          break;
-        case 'brush':
-          this.bus.emit({
-            t: 'ADD_BRUSH',
-            path: nodeData.path,
-            x: absoluteX,
-            y: absoluteY,
-            options: {
-              ...options,
-              stroke: nodeData.stroke,
-              strokeWidth: nodeData.strokeWidth,
-              bgAssetId: nodeData.bgAssetId, // Pass asset ID
-            },
-          });
-          break;
-      }
-    });
   }
 
   /**

@@ -13,18 +13,23 @@ import { HTML_EDITOR_COMPONENT, HtmlEditorComponent } from '../html-editor';
 import {
   CommandBusService,
   DialogService,
-  DragResizeService,
-  EditorStore,
+  DragResizeService, EditorStore,
   EditorUtilsService,
   HistoryService,
   OverlayService,
   TextFitService,
 } from './services';
+import { EditorSerializerService } from './services/editor-serializer.service';
+import { NodeFactoryService } from './services/node-factory.service';
+import { SceneViewportService } from './services/scene-viewport.service';
 
 export const PIXI_EDITOR_PROVIDERS = () => {
   return [
-    { provide: EDITOR_CONFIG, useValue: DEFAULT_CONFIG },
     EditorStore,
+    EditorSerializerService,
+    SceneViewportService,
+    NodeFactoryService,
+    { provide: EDITOR_CONFIG, useValue: DEFAULT_CONFIG },
     CommandBusService,
     EditorUtilsService,
     TextFitService,

@@ -82,8 +82,8 @@ export class FreeSlideComponent implements AfterViewInit {
         try {
           const slideData = JSON.parse(slide.htmlString);
           // Trigger preloading in the background, but don't await it to avoid blocking UI
-          void this.pixiEditor.preloadAssets(slideData);
-          this.pixiEditor.deserializeState(slideData);
+          void this.pixiEditor.serializer.preloadAssets(slideData);
+          this.pixiEditor.serializer.deserializeState(slideData);
         } catch (e) {
           console.error('Error parsing slide data, clearing editor', e);
           this.pixiEditor.clearAllNodes();
@@ -118,7 +118,7 @@ export class FreeSlideComponent implements AfterViewInit {
       console.warn('[FreeSlide] Cannot save: pixiEditor is not ready');
       return;
     }
-    const editorState = this.pixiEditor.serializeState();
+    const editorState = this.pixiEditor.serializer.serializeState();
     const htmlString = JSON.stringify(editorState);
     console.log('[FreeSlide] Saving slide:', this.currentSlideName, htmlString);
 

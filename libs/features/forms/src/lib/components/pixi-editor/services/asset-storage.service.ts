@@ -33,7 +33,9 @@ export class AssetStorageService {
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
         db.createObjectStore(this.storeName, { keyPath: 'id' });
-        console.log('[AssetStorageService] IndexedDB upgrade needed, object store created.');
+        console.log(
+          '[AssetStorageService] IndexedDB upgrade needed, object store created.'
+        );
       };
 
       request.onsuccess = (event) => {
@@ -43,19 +45,28 @@ export class AssetStorageService {
       };
 
       request.onerror = (event) => {
-        console.error('[AssetStorageService] IndexedDB error:', (event.target as IDBOpenDBRequest).error);
+        console.error(
+          '[AssetStorageService] IndexedDB error:',
+          (event.target as IDBOpenDBRequest).error
+        );
         reject((event.target as IDBOpenDBRequest).error);
       };
     });
   }
 
-  private async getObjectStore(mode: IDBTransactionMode): Promise<IDBObjectStore> {
+  private async getObjectStore(
+    mode: IDBTransactionMode
+  ): Promise<IDBObjectStore> {
     const db = await this.openDb();
     const transaction = db.transaction(this.storeName, mode);
     return transaction.objectStore(this.storeName);
   }
 
-  async saveAsset(blob: Blob, mimeType: string, originalUrl?: string): Promise<string> {
+  async saveAsset(
+    blob: Blob,
+    mimeType: string,
+    originalUrl?: string
+  ): Promise<string> {
     const db = await this.openDb();
     return new Promise((resolve, reject) => {
       const id = uuidv4(); // Generate unique ID
@@ -72,11 +83,16 @@ export class AssetStorageService {
       const request = store.add(record);
 
       request.onsuccess = () => {
-        console.log(`[AssetStorageService] Asset saved with ID: ${id}, mimeType: ${mimeType}`);
+        console.log(
+          `[AssetStorageService] Asset saved with ID: ${id}, mimeType: ${mimeType}`
+        );
         resolve(id);
       };
       request.onerror = (event) => {
-        console.error('[AssetStorageService] Error saving asset:', (event.target as IDBRequest).error);
+        console.error(
+          '[AssetStorageService] Error saving asset:',
+          (event.target as IDBRequest).error
+        );
         reject((event.target as IDBRequest).error);
       };
     });
@@ -92,7 +108,9 @@ export class AssetStorageService {
       request.onsuccess = () => {
         const record = request.result as AssetRecord;
         if (record) {
-          console.log(`[AssetStorageService] Asset blob retrieved for ID: ${id}, mimeType: ${record.mimeType}`);
+          console.log(
+            `[AssetStorageService] Asset blob retrieved for ID: ${id}, mimeType: ${record.mimeType}`
+          );
           resolve(record.data);
         } else {
           console.warn(`[AssetStorageService] No asset found for ID: ${id}`);
@@ -100,7 +118,10 @@ export class AssetStorageService {
         }
       };
       request.onerror = (event) => {
-        console.error('[AssetStorageService] Error getting asset blob:', (event.target as IDBRequest).error);
+        console.error(
+          '[AssetStorageService] Error getting asset blob:',
+          (event.target as IDBRequest).error
+        );
         reject((event.target as IDBRequest).error);
       };
     });
@@ -108,19 +129,27 @@ export class AssetStorageService {
 
   async getAssetObjectURL(id: string): Promise<string | undefined> {
     if (this.objectURLMap.has(id)) {
-      console.log(`[AssetStorageService] Returning cached object URL for ID: ${id}`);
+      console.log(
+        `[AssetStorageService] Returning cached object URL for ID: ${id}`
+      );
       return this.objectURLMap.get(id);
     }
 
-    console.log(`[AssetStorageService] Generating new object URL for ID: ${id}`);
+    console.log(
+      `[AssetStorageService] Generating new object URL for ID: ${id}`
+    );
     const blob = await this.getAssetBlob(id);
     if (blob) {
       const objectURL = URL.createObjectURL(blob);
       this.objectURLMap.set(id, objectURL);
-      console.log(`[AssetStorageService] Generated object URL: ${objectURL} for ID: ${id}`);
+      console.log(
+        `[AssetStorageService] Generated object URL: ${objectURL} for ID: ${id}`
+      );
       return objectURL;
     }
-    console.warn(`[AssetStorageService] Could not generate object URL, blob not found for ID: ${id}`);
+    console.warn(
+      `[AssetStorageService] Could not generate object URL, blob not found for ID: ${id}`
+    );
     return undefined;
   }
 
@@ -146,7 +175,10 @@ export class AssetStorageService {
         resolve();
       };
       request.onerror = (event) => {
-        console.error('[AssetStorageService] Error deleting asset:', (event.target as IDBRequest).error);
+        console.error(
+          '[AssetStorageService] Error deleting asset:',
+          (event.target as IDBRequest).error
+        );
         reject((event.target as IDBRequest).error);
       };
     });
@@ -168,7 +200,10 @@ export class AssetStorageService {
         resolve();
       };
       request.onerror = (event) => {
-        console.error('[AssetStorageService] Error clearing all assets:', (event.target as IDBRequest).error);
+        console.error(
+          '[AssetStorageService] Error clearing all assets:',
+          (event.target as IDBRequest).error
+        );
         reject((event.target as IDBRequest).error);
       };
     });

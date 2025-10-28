@@ -1,6 +1,11 @@
-import { Inject, Injectable } from '@angular/core';
+import { inject, Inject, Injectable } from '@angular/core';
 import { ComponentStore } from '@ngrx/component-store';
-import { EDITOR_CONFIG, EditorConfig, UiTextStyles } from '../types';
+import {
+  DEFAULT_CONFIG,
+  EDITOR_CONFIG,
+  EditorConfig,
+  UiTextStyles,
+} from '../types';
 import { NodeType } from '../enums';
 import type { NodeBase } from '../core';
 import { Subject } from 'rxjs';
@@ -71,7 +76,8 @@ export interface EditorViewModel {
 
 @Injectable()
 export class EditorStore extends ComponentStore<EditorViewModel> {
-  constructor(@Inject(EDITOR_CONFIG) cfg: EditorConfig) {
+   cfg = inject<EditorConfig>(EDITOR_CONFIG)
+  constructor() {
     super({
       nodes: {},
       order: [],
@@ -80,15 +86,16 @@ export class EditorStore extends ComponentStore<EditorViewModel> {
       snapEnabled: true,
       guidesEnabled: true,
       ui: {
-        font: cfg.defaults.family,
-        weight: cfg.defaults.weight,
+        font: DEFAULT_CONFIG.defaults.family,
+        weight: DEFAULT_CONFIG.defaults.weight,
         colorHex: '#ffffff',
         color: 0xffffff,
-        align: cfg.defaults.align,
-        lineHeight: cfg.defaults.lineHeight,
-        min: cfg.defaults.textMin,
-        max: cfg.defaults.textMax,
+        // align: this.cfg.defaults.align,
+        lineHeight: DEFAULT_CONFIG.defaults.lineHeight,
+        min: DEFAULT_CONFIG.defaults.textMin,
+        max: DEFAULT_CONFIG.defaults.textMax,
         actualFontSize: 32,
+        align: 'center',
         valign: 'middle',
         // list: false,
         strokeWidth: 4,
@@ -96,6 +103,7 @@ export class EditorStore extends ComponentStore<EditorViewModel> {
       isPlayingAudio: false,
       brushActive: false,
     });
+
   }
 
   // ==================== Селекторы ====================

@@ -1,7 +1,7 @@
 import {
   Application,
-  Assets,
   Container,
+  DestroyOptions,
   Graphics,
   HTMLText,
   HTMLTextStyle,
@@ -13,51 +13,20 @@ import { DEFAULT_CONFIG, UiTextStyles } from './types';
 import { TextFitService } from './services/text-fit.service';
 import { NodeBase } from './core';
 import { AssetStorageService } from './services/asset-storage.service';
+import { loadTextureRobust } from './utils/texture-loader';
+import { normalizeFontWeight } from './utils/text-utils';
 
 // Normalize font weight into a safe string literal that PixiJS expects
-type NumericWeightString =
-  | '100'
-  | '200'
-  | '300'
-  | '400'
-  | '500'
-  | '600'
-  | '700'
-  | '800'
-  | '900';
-type FontWeightKeyword = 'normal' | 'bold' | 'bolder' | 'lighter';
-type FontWeightValue = NumericWeightString | FontWeightKeyword;
-const normalizeFontWeight = (w: string): FontWeightValue => {
-  const s = String(w).trim().toLowerCase();
-  if (s === 'normal' || s === 'bold' || s === 'bolder' || s === 'lighter')
-    return s as FontWeightKeyword;
-  const n = Number(s);
-  const allowed: NumericWeightString[] = [
-    '100',
-    '200',
-    '300',
-    '400',
-    '500',
-    '600',
-    '700',
-    '800',
-    '900',
-  ];
-  const nearest = Number.isFinite(n)
-    ? (String(
-        Math.min(900, Math.max(100, Math.round(n / 100) * 100))
-      ) as NumericWeightString)
-    : '400';
-  return allowed.includes(nearest as NumericWeightString)
-    ? (nearest as NumericWeightString)
-    : '400';
-};
-
 /**
  * Editable text node that auto-fits text into its bounding box using TextFitService.
  * Supports list style, alignment, font family/weight, color and dynamic line height.
  */
-export class TextNode extends NodeBase {
+import {
+  BackgroundHostNode,
+  NodeBackgroundManager,
+} from './mixins/background-manager'; // Add manager imports
+
+export class TextNode extends NodeBase implements BackgroundHostNode {
   readonly type = 'text' as const;
 
   textHtml = 'Double-click to edit';
@@ -82,23 +51,18 @@ export class TextNode extends NodeBase {
 
   /** Геттеры для сериализации */
   get backgroundColor(): number | null {
-    return this.bgFillColor;
+    return this.backgroundManager.bgFillColor;
   }
 
   get backgroundImageUrl(): string | undefined {
-    // This getter is for serialization, we'll store assetId instead of URL
-    return undefined; // Will be handled by assetId
+    return this.backgroundManager.bgAssetId;
   }
 
   private fitScheduled = false;
-  private readonly textDisplay = new HTMLText({ text: '' });
-
-  // Background: either solid fill via Graphics, or image via Sprite scaled to cover
-  public bgFillColor: number | null = null;
-  public bgAssetId?: string; // Changed from bgImageUrl
-  private readonly bgG = new Graphics();
-  private bgSprite?: Sprite;
-  private maskG?: Graphics;
+  public readonly textDisplay = new HTMLText({ text: '' }); // Make public for BackgroundHostNode
+  private readonly bgG = new Graphics(); // Keep for solid fill drawing
+  bgAssetId?: string; // наверно можно удалить
+  private backgroundManager: NodeBackgroundManager; // New manager instance
 
   constructor(
     private readonly app: Application,
@@ -106,6 +70,12 @@ export class TextNode extends NodeBase {
     private readonly assetStorage: AssetStorageService
   ) {
     super();
+    this.backgroundManager = new NodeBackgroundManager(
+      this,
+      this.assetStorage,
+      () => this.textDisplay, // Primary graphics for z-ordering
+      () => this.redrawBackground() // Callback for host to redraw its solid background
+    );
     // Rendering order: background (solid/image) -> text -> handles
     this.addChild(this.bgG);
     this.addChild(this.textDisplay);
@@ -123,7 +93,8 @@ export class TextNode extends NodeBase {
     this.h = Math.max(minSize, h);
 
     this.drawFrame();
-    this.updateBackgroundLayout();
+    this.redrawBackground(); // Ensure solid background is redrawn on resize
+    this.backgroundManager.updateBackgroundLayout(); // Delegate to manager
     this.drawHandles();
 
     // Check if this is a restoration call by looking for a special property.
@@ -153,7 +124,7 @@ export class TextNode extends NodeBase {
    * Applies a specific font size and lays out the text, bypassing the fit algorithm.
    * Used for restoring a node from a serialized state.
    */
-   applyFixedSize(size: number) {
+  applyFixedSize(size: number) {
     this.lastCalculatedFontSize = size;
     this.textDisplay.text = this.textHtml;
 
@@ -179,114 +150,28 @@ export class TextNode extends NodeBase {
 
   /** Set solid background color behind text */
   setBackgroundFill(color: number | null) {
-    this.bgFillColor = color == null ? null : color >>> 0;
-    // Если устанавливаем цвет, очищаем фоновое изображение
-    if (this.bgFillColor != null && this.bgSprite) {
-      this.bgSprite.destroy();
-      this.bgSprite = undefined;
-      if (this.maskG) {
-        this.maskG.destroy();
-        this.maskG = undefined;
-      }
-    }
-    this.bgAssetId = undefined; // Clear asset ID when setting solid fill
-    this.redrawBackground();
+    this.backgroundManager.setBackgroundFill(color);
   }
 
   /** Apply an image background (URL/blob/data). */
   async setBackground(urlOrAssetId: string) {
-    let finalImageUrl: string; // This will be the URL used to load the texture
-
-    const isAssetId = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(urlOrAssetId);
-
-    if (isAssetId) {
-      const resolvedUrl = await this.assetStorage.getAssetObjectURL(urlOrAssetId);
-      if (resolvedUrl) {
-        finalImageUrl = resolvedUrl;
-        this.bgAssetId = urlOrAssetId; // Store the asset ID for serialization
-      } else {
-        console.warn(`[TextNode] Failed to resolve asset ID: ${urlOrAssetId}`);
-        this.bgAssetId = undefined; // Clear if resolution fails
-        return;
-      }
-    } else {
-      // It's a direct URL (http, https, data, blob)
-      finalImageUrl = urlOrAssetId;
-      this.bgAssetId = urlOrAssetId; // Store the direct URL for serialization
-    }
-
-    try {
-      // Explicitly add the URL to PixiJS Assets to ensure it's recognized
-      Assets.add({ alias: finalImageUrl, src: finalImageUrl });
-      const tex = await loadTextureRobust(finalImageUrl);
-      // Если устанавливаем изображение, очищаем цветной фон
-      this.bgFillColor = null;
-
-      if (!this.bgSprite) {
-        this.bgSprite = new Sprite(tex);
-        this.bgSprite.anchor.set(0.5);
-        this.bgSprite.position.set(this.w / 2, this.h / 2);
-        this.addChildAt(
-          this.bgSprite,
-          Math.max(0, this.getChildIndex(this.textDisplay) - 1)
-        );
-      } else {
-        this.bgSprite.texture = tex;
-      }
-      // Создаём маску для ограничения изображения границами блока
-      if (!this.maskG) {
-        this.maskG = new Graphics();
-        this.addChildAt(this.maskG, this.getChildIndex(this.textDisplay));
-        this.bgSprite.mask = this.maskG;
-      }
-      this.updateBackgroundLayout();
-      this.redrawBackground();
-    } catch (e) {
-      console.warn('Failed to set text background:', e);
-    }
+    await this.backgroundManager.setBackground(urlOrAssetId);
   }
 
   /** Remove image background */
   clearBackground() {
-    this.bgAssetId = undefined; // Clear asset ID
-    if (this.bgSprite) {
-      this.bgSprite.destroy();
-      this.bgSprite = undefined;
-    }
-    if (this.maskG) {
-      this.maskG.destroy();
-      this.maskG = undefined;
-    }
-    this.redrawBackground();
+    this.backgroundManager.clearBackground();
   }
 
-  private updateBackgroundLayout() {
-    if (this.bgSprite) {
-      const tex = this.bgSprite.texture;
-      const tw = Math.max(1, tex.width);
-      const th = Math.max(1, tex.height);
-      const scale = Math.max(this.w / tw, this.h / th); // cover
-      this.bgSprite.scale.set(scale);
-      this.bgSprite.position.set(this.w / 2, this.h / 2);
-    }
-    // Обновляем маску под новые размеры блока
-    if (this.maskG) {
-      this.maskG.clear();
-      this.maskG.roundRect(0, 0, this.w, this.h, 6).fill(0xffffff);
-    }
-    this.redrawBackground();
-  }
+  // Removed private updateBackgroundLayout()
 
   private redrawBackground() {
     // Solid fill
     this.bgG.clear();
-    if (this.bgFillColor != null) {
-      this.bgG.roundRect(0, 0, this.w, this.h, 6).fill(this.bgFillColor);
-    }
-    // Ensure z-order: bgG and bgSprite behind text
-    if (this.children?.length) {
-      // keep handles last
-      this.addChild(this.handlesContainer);
+    if (this.backgroundManager.bgFillColor != null) {
+      this.bgG
+        .roundRect(0, 0, this.w, this.h, 6)
+        .fill(this.backgroundManager.bgFillColor);
     }
   }
 
@@ -436,83 +321,6 @@ export class TextNode extends NodeBase {
 }
 
 // Robust texture loader utilities
-async function ensureTextureValid(tex: Texture): Promise<void> {
-  // If already valid with non-zero size, resolve immediately
-  if (tex.width > 0 && tex.height > 0) return;
-  await new Promise<void>((resolve) => {
-    let settled = false;
-    const finish = () => {
-      if (!settled) {
-        settled = true;
-        resolve();
-      }
-    };
-    try {
-      const baseTex = (tex as unknown as { baseTexture?: unknown })
-        .baseTexture as unknown;
-      const onceFn = (
-        baseTex as { once?: (ev: string, cb: () => void) => void } | undefined
-      )?.once;
-      onceFn?.('loaded', finish);
-      onceFn?.('error', finish);
-      const resource = (baseTex as { resource?: unknown } | undefined)
-        ?.resource as unknown;
-      const source = (resource as { source?: unknown } | undefined)
-        ?.source as unknown;
-      const img = source instanceof Image ? source : null;
-      if (img) {
-        img.onload = finish;
-        img.onerror = finish;
-      }
-    } catch {
-      /* ignore */
-    }
-    // Safety timeout in case events do not fire
-    setTimeout(finish, 1000);
-  });
-}
-
-async function loadTextureRobust(url: string): Promise<Texture> {
-  // 1) Try Pixi Assets pipeline
-  try {
-    const t = (await Assets.load(url)) as Texture;
-    if (t) {
-      await ensureTextureValid(t);
-      return t;
-    }
-  } catch {
-    /* continue */
-  }
-  // 2) Try direct Texture.from (string URL)
-  try {
-    const t = Texture.from(url);
-    if (t) {
-      await ensureTextureValid(t);
-      return t;
-    }
-  } catch {
-    /* continue */
-  }
-  // 3) Manual HTMLImage decode as a last resort (works great for blob:/data:)
-  try {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = url;
-    if ('decode' in img && typeof img.decode === 'function') {
-      try {
-        await img.decode();
-      } catch {
-        /* older browsers */
-      }
-    }
-    const t = Texture.from(img);
-    await ensureTextureValid(t);
-    return t;
-  } catch {
-    /* continue */
-  }
-  throw new Error('Failed to load texture from URL: ' + url);
-}
 
 export class ImageNode extends NodeBase {
   public sprite: Sprite;
@@ -564,7 +372,7 @@ export class ImageNode extends NodeBase {
     }
   }
 
-  override destroy(options?: any /*IDestroyOptions*/ | boolean): void {
+  override destroy(options?: DestroyOptions | boolean): void {
     this.sprite.destroy(options);
     super.destroy(options);
   }
@@ -646,7 +454,7 @@ export class VideoNode extends NodeBase {
     }
   }
 
-  override destroy(options?: any /*IDestroyOptions*/ | boolean): void {
+  override destroy(options?: DestroyOptions | boolean): void {
     this.sprite.destroy(options);
     super.destroy(options);
   }
@@ -676,17 +484,15 @@ export class IframeNode extends NodeBase {
  * Primitive shape node capable of rendering rectangle, ellipse or 1px line.
  * Supports fill color, stroke color and stroke width.
  */
-export class ShapeNode extends NodeBase {
+export class ShapeNode extends NodeBase implements BackgroundHostNode {
   readonly type = 'shape' as const;
   shape: 'rect' | 'ellipse' | 'line' = 'rect';
   stroke = 0xffffff;
   fill = 0x000000;
+  bgAssetId = '';
   lineWidth = 2;
   private shapeG = new Graphics();
-  // Optional background sprite masked by the shape for image fills
-  private bgSprite?: Sprite;
-  private maskG?: Graphics;
-  public bgAssetId?: string; // Changed from bgImageUrl
+  private backgroundManager: NodeBackgroundManager; // New manager instance
 
   constructor(
     kind: 'rect' | 'ellipse' | 'line' = 'rect',
@@ -694,6 +500,12 @@ export class ShapeNode extends NodeBase {
   ) {
     super();
     this.shape = kind;
+    this.backgroundManager = new NodeBackgroundManager(
+      this,
+      this.assetStorage,
+      () => this.shapeG, // Primary graphics for z-ordering
+      () => this.redraw() // Callback for host to redraw its solid background
+    );
     // Insert order: background sprite (if any) -> shape graphics (stroke/fallback fill) -> handles
     // Start with shape graphics
     this.addChild(this.shapeG);
@@ -705,125 +517,40 @@ export class ShapeNode extends NodeBase {
   /** Set solid fill color for the shape (used when no background image is set). */
   setFillColor(color: number) {
     this.fill = color >>> 0;
-    // Если устанавливаем цвет заливки, очищаем фоновое изображение
-    if (this.bgSprite) {
-      this.bgSprite.destroy();
-      this.bgSprite = undefined;
-      if (this.maskG) {
-        this.maskG.destroy();
-        this.maskG = undefined;
-      }
-    }
-    this.bgAssetId = undefined; // Clear asset ID when setting solid fill
+    this.backgroundManager.setBackgroundFill(null); // Clear image background if any
     this.redraw();
   }
 
   /** Apply a background image by URL/data/blob. Only works for rect/ellipse. */
   async setBackground(urlOrAssetId: string) {
-    if (this.shape === 'line') return; // not supported for open line
-
-    let finalImageUrl: string; // This will be the URL used to load the texture
-
-    const isAssetId = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(urlOrAssetId);
-
-    if (isAssetId) {
-      const resolvedUrl = await this.assetStorage.getAssetObjectURL(urlOrAssetId);
-      if (resolvedUrl) {
-        finalImageUrl = resolvedUrl;
-        this.bgAssetId = urlOrAssetId; // Store the asset ID for serialization
-      } else {
-        console.warn(`[ShapeNode] Failed to resolve asset ID: ${urlOrAssetId}`);
-        this.bgAssetId = undefined; // Clear if resolution fails
-        return;
-      }
-    } else {
-      // It's a direct URL (http, https, data, blob)
-      finalImageUrl = urlOrAssetId;
-      this.bgAssetId = urlOrAssetId; // Store the direct URL for serialization
-    }
-
-    try {
-      // Explicitly add the URL to PixiJS Assets to ensure it's recognized
-      Assets.add({ alias: finalImageUrl, src: finalImageUrl });
-      const tex = await loadTextureRobust(finalImageUrl);
-      // Если устанавливаем изображение, очищаем цветной фон
-      // this.bgFillColor = null;
-      if (!this.bgSprite) {
-        this.bgSprite = new Sprite(tex);
-        this.bgSprite.anchor.set(0.5);
-        this.bgSprite.position.set(this.w / 2, this.h / 2);
-        // ensure background is behind the stroke graphics
-        this.addChildAt(
-          this.bgSprite,
-          Math.max(0, this.getChildIndex(this.shapeG))
-        );
-      } else {
-        this.bgSprite.texture = tex;
-      }
-      // Mask setup/update
-      if (!this.maskG) {
-        this.maskG = new Graphics();
-        this.addChildAt(this.maskG, this.getChildIndex(this.shapeG));
-        this.bgSprite.mask = this.maskG;
-      }
-      this.updateBackgroundLayout();
-      this.redraw();
-    } catch (e) {
-      console.warn('Failed to set background:', e);
-    }
+    await this.backgroundManager.setBackground(urlOrAssetId);
   }
 
   /** Remove background image and mask, falling back to solid fill. */
   clearBackground() {
-    this.bgAssetId = undefined; // Clear asset ID
-    if (this.bgSprite) {
-      this.bgSprite.destroy();
-      this.bgSprite = undefined;
-    }
-    if (this.maskG) {
-      this.maskG.destroy();
-      this.maskG = undefined;
-    }
-    this.redraw();
+    this.backgroundManager.clearBackground();
   }
 
-  /** Update bg sprite scale/position and mask shape to current box. */
-  private updateBackgroundLayout() {
-    if (!this.bgSprite) return;
-    // scale image to cover the shape bounds
-    const tex = this.bgSprite.texture;
-    const tw = Math.max(1, tex.width);
-    const th = Math.max(1, tex.height);
-    const scale = Math.max(this.w / tw, this.h / th); // cover
-    this.bgSprite.scale.set(scale);
-    this.bgSprite.position.set(this.w / 2, this.h / 2);
-
-    // (re)draw mask to the shape path
-    if (this.maskG) {
-      const m = this.maskG;
-      m.clear();
-      if (this.shape === 'rect') {
-        m.roundRect(0, 0, this.w, this.h, 6).fill(0xffffff);
-      } else if (this.shape === 'ellipse') {
-        m.ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2).fill(
-          0xffffff
-        );
-      }
-    }
-  }
+  // Removed private updateBackgroundLayout()
 
   private redraw() {
     const graphics = this.shapeG;
     graphics.clear();
     if (this.shape === 'rect') {
       // If background image exists, skip solid fill and only draw stroke on top
-      if (!this.bgSprite)
+      if (
+        this.backgroundManager.bgAssetId == null &&
+        this.backgroundManager.bgFillColor == null
+      )
         graphics.roundRect(0, 0, this.w, this.h, 6).fill(this.fill);
       graphics
         .roundRect(0, 0, this.w, this.h, 6)
         .stroke({ color: this.stroke, width: this.lineWidth });
     } else if (this.shape === 'ellipse') {
-      if (!this.bgSprite)
+      if (
+        this.backgroundManager.bgAssetId == null &&
+        this.backgroundManager.bgFillColor == null
+      )
         graphics
           .ellipse(this.w / 2, this.h / 2, this.w / 2, this.h / 2)
           .fill(this.fill);
@@ -843,7 +570,7 @@ export class ShapeNode extends NodeBase {
           cap: 'round' as const,
         });
     }
-    this.updateBackgroundLayout();
+    this.backgroundManager.updateBackgroundLayout(); // Delegate to manager
   }
 
   applyBoxSize(w: number, h: number): void {
@@ -890,19 +617,26 @@ export class GroupNode extends NodeBase {
 }
 
 /* ========================= section: brush node ============================ */
-export class BrushNode extends NodeBase {
+export class BrushNode extends NodeBase implements BackgroundHostNode {
+  // Implement BackgroundHostNode
   readonly type = 'brush' as const;
   stroke = 0xffffff;
   strokeWidth = 4;
-  private path: Point[] = [];
+  path: Point[] = [];
+  bgAssetId?: string;
+  shape?: 'rect' | 'ellipse' | 'line';
+  textDisplay?: Container;
   private g = new Graphics();
-  // Background support for closed paths
-  private bgSprite?: Sprite;
-  private maskG?: Graphics;
-  public bgAssetId?: string; // Changed from bgImageUrl
+  private backgroundManager: NodeBackgroundManager; // New manager instance
 
   constructor(private readonly assetStorage: AssetStorageService) {
     super();
+    this.backgroundManager = new NodeBackgroundManager(
+      this,
+      this.assetStorage,
+      () => this.g, // Primary graphics for z-ordering
+      () => this.redraw() // Callback for host to redraw its solid background
+    );
     this.addChild(this.g);
     this.addChild(this.handlesContainer);
     this.drawHandles(true);
@@ -916,7 +650,7 @@ export class BrushNode extends NodeBase {
 
   setPath(points: Point[]) {
     this.path = points.map((p) => new Point(p.x, p.y));
-    this.updateBackgroundLayout();
+    this.backgroundManager.updateBackgroundLayout(); // Delegate to manager
     this.redraw();
   }
 
@@ -931,95 +665,15 @@ export class BrushNode extends NodeBase {
 
   /** Установить фоновое изображение (работает только для замкнутых путей) */
   async setBackground(urlOrAssetId: string) {
-    if (!this.isPathClosed()) {
-      console.warn('Cannot set background: path is not closed');
-      return;
-    }
-
-    let finalImageUrl: string; // This will be the URL used to load the texture
-
-    const isAssetId = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(urlOrAssetId);
-
-    if (isAssetId) {
-      const resolvedUrl = await this.assetStorage.getAssetObjectURL(urlOrAssetId);
-      if (resolvedUrl) {
-        finalImageUrl = resolvedUrl;
-        this.bgAssetId = urlOrAssetId; // Store the asset ID for serialization
-      } else {
-        console.warn(`[BrushNode] Failed to resolve asset ID: ${urlOrAssetId}`);
-        this.bgAssetId = undefined; // Clear if resolution fails
-        return;
-      }
-    } else {
-      // It's a direct URL (http, https, data, blob)
-      finalImageUrl = urlOrAssetId;
-      this.bgAssetId = urlOrAssetId; // Store the direct URL for serialization
-    }
-
-    try {
-      // Explicitly add the URL to PixiJS Assets to ensure it's recognized
-      Assets.add({ alias: finalImageUrl, src: finalImageUrl });
-      const tex = await loadTextureRobust(finalImageUrl);
-      // Если устанавливаем изображение, очищаем цветной фон
-      // this.bgFillColor = null;
-      if (!this.bgSprite) {
-        this.bgSprite = new Sprite(tex);
-        this.bgSprite.anchor.set(0.5);
-        this.bgSprite.position.set(this.w / 2, this.h / 2);
-        // Добавляем спрайт позади линии
-        this.addChildAt(this.bgSprite, Math.max(0, this.getChildIndex(this.g)));
-      } else {
-        this.bgSprite.texture = tex;
-      }
-      // Создаём маску из пути
-      if (!this.maskG) {
-        this.maskG = new Graphics();
-        this.addChildAt(this.maskG, this.getChildIndex(this.g));
-        this.bgSprite.mask = this.maskG;
-      }
-      this.updateBackgroundLayout();
-    } catch (e) {
-      console.warn('Failed to set brush background:', e);
-    }
+    await this.backgroundManager.setBackground(urlOrAssetId);
   }
 
   /** Очистить фоновое изображение */
   clearBackground() {
-    this.bgAssetId = undefined; // Clear asset ID
-    if (this.bgSprite) {
-      this.bgSprite.destroy();
-      this.bgSprite = undefined;
-    }
-    if (this.maskG) {
-      this.maskG.destroy();
-      this.maskG = undefined;
-    }
+    this.backgroundManager.clearBackground();
   }
 
-  /** Обновить фон и маску */
-  private updateBackgroundLayout() {
-    if (this.bgSprite) {
-      const tex = this.bgSprite.texture;
-      const tw = Math.max(1, tex.width);
-      const th = Math.max(1, tex.height);
-      const scale = Math.max(this.w / tw, this.h / th); // cover
-      this.bgSprite.scale.set(scale);
-      this.bgSprite.position.set(this.w / 2, this.h / 2);
-    }
-    // Обновляем маску по форме пути
-    if (this.maskG && this.path.length > 0) {
-      this.maskG.clear();
-      this.maskG.moveTo(this.path[0].x, this.path[0].y);
-      for (const point of this.path) {
-        this.maskG.lineTo(point.x, point.y);
-      }
-      // Замыкаем путь для fill
-      if (this.isPathClosed()) {
-        this.maskG.closePath();
-      }
-      this.maskG.fill(0xffffff);
-    }
-  }
+  // Removed private updateBackgroundLayout()
 
   private redraw() {
     const graphics = this.g;
@@ -1044,7 +698,7 @@ export class BrushNode extends NodeBase {
     this.path = this.path.map(
       (point) => new Point(point.x * scaleX, point.y * scaleY)
     );
-    this.updateBackgroundLayout();
+    this.backgroundManager.updateBackgroundLayout(); // Delegate to manager
     this.redraw();
     this.drawHandles();
   }

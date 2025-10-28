@@ -46,7 +46,7 @@ export class TextPlugin implements EditorPlugin {
       if (typeof addText.options?.bgFillColor === 'number') {
         textNode.setBackgroundFill(addText.options.bgFillColor);
       } else if (addText.options?.bgAssetId) {
-        textNode.bgAssetId = addText.options.bgAssetId;
+        // textNode.bgAssetId = addText.options.bgAssetId;
         void textNode.setBackground(addText.options.bgAssetId);
       }
 

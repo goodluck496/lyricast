@@ -1,0 +1,185 @@
+import { Container, Graphics, Sprite } from 'pixi.js';
+import { AssetStorageService } from '../services/asset-storage.service';
+import { loadTextureRobust } from '../utils/texture-loader';
+
+// Define an interface for the host node that the manager will interact with
+export interface BackgroundHostNode {
+  type: any;
+  w: number;
+  h: number;
+  addChild(displayObject: Container): Container;
+  addChildAt(displayObject: Container, index: number): Container;
+  getChildIndex(displayObject: Container): number;
+  shape?: 'rect' | 'ellipse' | 'line';
+  path?: { x: number; y: number }[]; // For BrushNode
+  isPathClosed?: () => boolean; // For BrushNode
+  // For TextNode, it needs to know its textDisplay for z-ordering
+  textDisplay?: Container;
+}
+
+export class NodeBackgroundManager {
+  public bgFillColor: number | null = null;
+  public bgAssetId?: string;
+  private bgSprite?: Sprite;
+  private maskG?: Graphics;
+
+  constructor(
+    private hostNode: BackgroundHostNode,
+    private assetStorage: AssetStorageService,
+    private getPrimaryGraphicsForZOrder: () => Container, // e.g., textDisplay for TextNode, shapeG for ShapeNode
+    private redrawHostBackground?: () => void // Callback for host node to redraw its own solid background
+  ) {}
+
+  private isAssetId(source: string): boolean {
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+      source
+    );
+  }
+
+  /** Set solid background color behind text/shape */
+  setBackgroundFill(color: number | null) {
+    this.bgFillColor = color == null ? null : color >>> 0;
+    // Если устанавливаем цвет, очищаем фоновое изображение
+    if (this.bgFillColor != null && this.bgSprite) {
+      this.bgSprite.destroy();
+      this.bgSprite = undefined;
+      if (this.maskG) {
+        this.maskG.destroy();
+        this.maskG = undefined;
+      }
+    }
+    this.bgAssetId = undefined; // Clear asset ID when setting solid fill
+    this.redrawHostBackground?.(); // Ask host to redraw its solid background
+  }
+
+  /** Apply an image background (URL/blob/data). */
+  async setBackground(urlOrAssetId: string) {
+    // Specific check for ShapeNode line type
+    if (this.hostNode.shape === 'line') return; // not supported for open line
+    // Specific check for BrushNode if path is not closed
+    if (this.hostNode.isPathClosed && !this.hostNode.isPathClosed()) {
+      console.warn('Cannot set background: path is not closed');
+      return;
+    }
+
+    let finalImageUrl: string; // This will be the URL used to load the texture
+
+    if (this.isAssetId(urlOrAssetId)) {
+      const resolvedUrl = await this.assetStorage.getAssetObjectURL(
+        urlOrAssetId
+      );
+      if (resolvedUrl) {
+        finalImageUrl = resolvedUrl;
+        this.bgAssetId = urlOrAssetId; // Store the asset ID for serialization
+      } else {
+        console.warn(
+          `[NodeBackgroundManager] Failed to resolve asset ID: ${urlOrAssetId}`
+        );
+        this.bgAssetId = undefined; // Clear if resolution fails
+        return;
+      }
+    } else {
+      // It's a direct URL (http, https, data, blob)
+      finalImageUrl = urlOrAssetId;
+      this.bgAssetId = urlOrAssetId; // Store the direct URL for serialization
+    }
+
+    try {
+      const tex = await loadTextureRobust(finalImageUrl);
+      // Если устанавливаем изображение, очищаем цветной фон
+      this.bgFillColor = null;
+
+      if (!this.bgSprite) {
+        this.bgSprite = new Sprite(tex);
+        this.bgSprite.anchor.set(0.5);
+        // Position will be set in updateBackgroundLayout
+        // Add sprite behind the primary graphics (textDisplay or shapeG)
+        const primaryGraphicsIndex = this.hostNode.getChildIndex(
+          this.getPrimaryGraphicsForZOrder()
+        );
+        this.hostNode.addChildAt(
+          this.bgSprite,
+          Math.max(0, primaryGraphicsIndex)
+        );
+      } else {
+        this.bgSprite.texture = tex;
+      }
+      // Создаём маску для ограничения изображения границами блока
+      if (!this.maskG) {
+        this.maskG = new Graphics();
+        const primaryGraphicsIndex = this.hostNode.getChildIndex(
+          this.getPrimaryGraphicsForZOrder()
+        );
+        this.hostNode.addChildAt(this.maskG, Math.max(0, primaryGraphicsIndex));
+        this.bgSprite.mask = this.maskG;
+      }
+      this.updateBackgroundLayout();
+      this.redrawHostBackground?.(); // Ask host to redraw its solid background (to clear it)
+    } catch (e) {
+      console.warn('Failed to set background:', e);
+    }
+  }
+
+  /** Remove image background */
+  clearBackground() {
+    this.bgAssetId = undefined; // Clear asset ID
+    if (this.bgSprite) {
+      this.bgSprite.destroy();
+      this.bgSprite = undefined;
+    }
+    if (this.maskG) {
+      this.maskG.destroy();
+      this.maskG = undefined;
+    }
+    this.redrawHostBackground?.(); // Ensure solid fill is redrawn if it was active
+  }
+
+  /** Update bg sprite scale/position and mask shape to current box. */
+  updateBackgroundLayout() {
+    if (this.bgSprite) {
+      const tex = this.bgSprite.texture;
+      const tw = Math.max(1, tex.width);
+      const th = Math.max(1, tex.height);
+      const scale = Math.max(this.hostNode.w / tw, this.hostNode.h / th); // cover
+      this.bgSprite.scale.set(scale);
+      this.bgSprite.position.set(this.hostNode.w / 2, this.hostNode.h / 2);
+    }
+    // (re)draw mask to the shape path
+    if (this.maskG) {
+      const m = this.maskG;
+      m.clear();
+      // Handle TextNode mask as a rectangle
+      if (this.hostNode.type === 'text') {
+        m.roundRect(0, 0, this.hostNode.w, this.hostNode.h, 6).fill(0xffffff);
+      } else if (this.hostNode.shape === 'rect') {
+        m.roundRect(0, 0, this.hostNode.w, this.hostNode.h, 6).fill(0xffffff);
+      } else if (this.hostNode.shape === 'ellipse') {
+        m.ellipse(
+          this.hostNode.w / 2,
+          this.hostNode.h / 2,
+          this.hostNode.w / 2,
+          this.hostNode.h / 2
+        ).fill(0xffffff);
+      } else if (this.hostNode.path && this.hostNode.path.length > 0) {
+        // For BrushNode
+        m.moveTo(this.hostNode.path[0].x, this.hostNode.path[0].y);
+        for (const point of this.hostNode.path) {
+          m.lineTo(point.x, point.y);
+        }
+        if (this.hostNode.isPathClosed && this.hostNode.isPathClosed()) {
+          m.closePath();
+        }
+        m.fill(0xffffff);
+      }
+    }
+  }
+
+  // This method is primarily for solid fill, or to ensure z-order
+  // The actual drawing of solid fill will be handled by the host node's main graphics
+  // if it supports it (e.g., ShapeNode, TextNode with bgG)
+  // For TextNode, it needs to redraw its bgG
+  // For ShapeNode, it needs to redraw its shapeG
+  // For BrushNode, it needs to redraw its g
+  // This manager only handles the sprite/mask for image backgrounds
+  // The host node is responsible for calling this.updateBackgroundLayout() and its own redraw logic
+}

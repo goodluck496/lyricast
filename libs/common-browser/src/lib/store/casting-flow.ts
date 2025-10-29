@@ -167,12 +167,14 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
   const onOpenedPage$ = createEffect(() =>
     actions$.pipe(
       ofType(openPageAction),
-      switchMap(() => bridge.queueEvents),
-      withLatestFrom(store.select(selectCastingProcess)),
-      filter(
-        ([event]) => !!event && event.event === APP_COMMON_ACTIONS.openedPage
-      ),
-      map(([, data]) => {
+      switchMap(() => bridge.queueEvents.pipe(
+        filter(
+          (event) => !!event && event.event === APP_COMMON_ACTIONS.openedPage
+        ),
+        // Теперь, когда openedPage пришел, получаем актуальный selectCastingProcess
+        withLatestFrom(store.select(selectCastingProcess))
+      )),
+      map(([eventData, data]) => { // eventData - это EventData | null, data - это State
         if (!data) {
           return pauseCastingAction() as Action;
         }

@@ -6,6 +6,7 @@ import {
   ElementRef,
   HostListener,
   inject,
+  OnDestroy,
   OnInit,
   Renderer2,
   signal,
@@ -14,6 +15,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import {
+  FreeSlideStartCastingPayload,
   selectFreeSlideCastingPaused,
   selectFreeSlideCastingProcess,
   selectFreeSlideCastingStarted,
@@ -22,7 +24,7 @@ import {
 import { AppActions, BridgeService, Pages } from '@lyri-cast/common-browser';
 
 import { filterEmpty } from '@lyri-cast/common';
-import { combineLatest, filter, map, take } from 'rxjs';
+import { filter, map, take } from 'rxjs';
 import {
   FreeSlide,
   SerializedIframeNode,
@@ -35,7 +37,6 @@ import { Actions, ofType } from '@ngrx/effects';
 import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
 import {
   Application,
-  Assets,
   Container,
   Graphics,
   HTMLText,
@@ -54,7 +55,9 @@ import { AssetStorageService } from '@lyri-cast/form';
   styleUrls: ['./free-slide-casting.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
+export class FreeSlideCastingComponent
+  implements OnInit, AfterViewInit, OnDestroy
+{
   private readonly store = inject(Store);
   private readonly actions$ = inject(Actions);
   private readonly bridge = inject(BridgeService);
@@ -69,6 +72,9 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
 
   private app!: Application;
   private scene!: Container;
+  private previousSlideAssetIds: Set<string> = new Set();
+  private previousSlideLoadedUrls = new Set<string>;
+  private previousSlideCreatedTextures: Set<Texture> = new Set(); // <-- Добавляем это свойство // <-- Добавляем это свойство для URL, загруженных через Assets.load
 
   hideContent = signal(false);
 
@@ -86,17 +92,45 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
         this.hideContent.set(!isCasting);
       });
 
-    combineLatest([
-      this.store.select(selectFreeSlideCastingProcess).pipe(filterEmpty()),
-      this.store.select(selectFreeSlideNavigateState),
-    ])
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(([process, navigate]) => {
-        const slideIndex = navigate?.index ?? process.fromIndex;
-        const slide = process.slides[slideIndex];
-        if (slide) {
-          this.renderSlide(slide);
+    // --- НОВОЕ ДОБАВЛЕНИЕ ---
+    // Подписываемся на selectFreeSlideCastingProcess для инициализации первого слайда
+    this.store
+      .select(selectFreeSlideCastingProcess)
+      .pipe(
+        filter(
+          (process): process is FreeSlideStartCastingPayload =>
+            !!process && process.slides.length > 0
+        ), // <-- Используем FreeSlideStartCastingPayload
+        take(1),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((process) => {
+        // Явно приводим process к ожидаемому типу (теперь это FreeSlideStartCastingPayload)
+        const typedProcess = process as FreeSlideStartCastingPayload;
+        const firstSlide = typedProcess.slides[typedProcess.fromIndex];
+        if (firstSlide) {
+          console.log(
+            '[Casting] Initializing first slide from casting process:',
+            firstSlide
+          );
+          this.renderSlide(firstSlide);
         }
+      });
+    // --- КОНЕЦ НОВОГО ДОБАВЛЕНИЯ ---
+
+    // Эту подписку можно оставить, она обрабатывает переключения слайдов
+    this.store
+      .select(selectFreeSlideNavigateState)
+      .pipe(
+        filter(
+          (navigate): navigate is { slide: FreeSlide; index: number } =>
+            !!navigate?.slide
+        ), // <-- Добавляем type predicate
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((navigate) => {
+        const slideToRender = navigate.slide; // Теперь TypeScript знает, что navigate.slide не null
+        this.renderSlide(slideToRender);
       });
 
     this.store
@@ -119,11 +153,15 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
   }
 
   async ngAfterViewInit() {
-    await this.initPixi();
+    await this.initPixiAndScene(); // <-- Возвращаем эту строку
     this.bridge.windowSrv.electronContext.send({
       event: 'OPENED_PAGE',
       payload: { state: 'after-view-init', page: Pages.CASTING },
     });
+  }
+
+  ngOnDestroy(): void {
+    this.app?.destroy(true);
   }
 
   @HostListener('window:resize', ['$event'])
@@ -158,16 +196,22 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
     }
   }
 
-  private async initPixi() {
+  private async initPixiAndScene() {
+    // Если app уже существует, уничтожаем его и удаляем canvas
+    if (this.app) {
+      console.log('[Casting] Destroying existing PixiJS Application.');
+      this.app.destroy(true); // Уничтожаем все, включая canvas
+      this.pixiHostRef.nativeElement.innerHTML = ''; // Убедимся, что canvas удален из DOM
+    }
+
     this.app = new Application();
 
-    // Получаем реальные размеры контейнера
     const containerWidth =
       this.pixiHostRef.nativeElement.clientWidth || window.innerWidth;
     const containerHeight =
       this.pixiHostRef.nativeElement.clientHeight || window.innerHeight;
 
-    console.log('[Casting] initPixi - container dimensions:', {
+    console.log('[Casting] initPixiAndScene - container dimensions:', {
       clientWidth: this.pixiHostRef.nativeElement.clientWidth,
       clientHeight: this.pixiHostRef.nativeElement.clientHeight,
       windowWidth: window.innerWidth,
@@ -180,8 +224,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       height: containerHeight,
       backgroundAlpha: 0, // Прозрачный фон
       antialias: true,
-      resolution: 1, // Explicitly set resolution to 1 to match editor's canvas
-      // НЕ используем resizeTo при инициализации, т.к. элемент может быть 0x0
+      resolution: 1,
     });
 
     this.pixiHostRef.nativeElement.appendChild(this.app.canvas);
@@ -196,11 +239,34 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
 
   private async renderSlide(slide: FreeSlide) {
     console.log('[Casting] renderSlide called with slide:', slide);
-    // Clear previous content and reset scale
-    this.scene.removeChildren();
-    this.scene.scale.set(1, 1);
-    this.scene.position.set(0, 0);
-    this.domOverlayRef.nativeElement.innerHTML = '';
+
+    // 1. Пересоздаем Application и Scene для полной очистки
+    await this.initPixiAndScene();
+
+    // 3. Отзываем objectURLs для ассетов предыдущего слайда
+    if (this.previousSlideAssetIds.size > 0) {
+      console.log(
+        '[Casting] Revoking previous slide asset URLs:',
+        this.previousSlideAssetIds
+      );
+      for (const assetId of this.previousSlideAssetIds) {
+        this.assetStorage.revokeAssetObjectURL(assetId);
+      }
+      this.previousSlideAssetIds.clear();
+    }
+    // 5. Принудительно уничтожаем текстуры, созданные loadTextureRobustCasting для предыдущего слайда
+    if (this.previousSlideCreatedTextures.size > 0) {
+      console.log(
+        '[Casting] Destroying previous slide custom-loaded textures:',
+        this.previousSlideCreatedTextures
+      );
+      for (const texture of this.previousSlideCreatedTextures) {
+        if (!texture.destroyed) {
+          texture.destroy(true); // Уничтожаем текстуру и ее базовую текстуру
+        }
+      }
+      this.previousSlideCreatedTextures.clear();
+    }
 
     if (!slide.htmlString) {
       console.warn('[Casting] No htmlString in slide!');
@@ -216,66 +282,81 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
         return;
       }
 
-      // --- PRE-LOADING STAGE ---
       const urlsToLoad: string[] = [];
+      const currentSlideAssetIds: Set<string> = new Set();
+      const currentSlideLoadedUrls: Set<string> = new Set();
+      const currentSlideCreatedTextures: Set<Texture> = new Set(); // <-- Добавляем это для текущего слайда // <-- Добавляем это для текущего слайда
 
       for (const node of data.nodes) {
         if (node.type === 'image' || node.type === 'video') {
           if (node.assetId) {
+            currentSlideAssetIds.add(node.assetId);
             const objectURL = await this.assetStorage.getAssetObjectURL(
               node.assetId
             );
-            if (objectURL) urlsToLoad.push(objectURL);
+            if (objectURL) {
+              urlsToLoad.push(objectURL);
+              currentSlideLoadedUrls.add(objectURL); // Сохраняем URL для Assets.unload
+            }
           } else if (node.url) {
             urlsToLoad.push(node.url);
+            currentSlideLoadedUrls.add(node.url); // Сохраняем URL для Assets.unload
           }
         }
         if (node.type === 'text' && node.bgAssetId) {
           let sourceIdentifier = node.bgAssetId;
           if (this.isUUID(sourceIdentifier)) {
+            currentSlideAssetIds.add(sourceIdentifier);
             const objectURL = await this.assetStorage.getAssetObjectURL(
               sourceIdentifier
             );
-            if (objectURL) urlsToLoad.push(objectURL);
+            if (objectURL) {
+              urlsToLoad.push(objectURL);
+              currentSlideLoadedUrls.add(objectURL); // Сохраняем URL для Assets.unload
+            }
           } else {
-            // It's already a direct URL (http, https, data, blob)
             urlsToLoad.push(sourceIdentifier);
+            currentSlideLoadedUrls.add(sourceIdentifier); // Сохраняем URL для Assets.unload
           }
         }
         if (node.type === 'shape' && node.bgAssetId) {
           let sourceIdentifier = node.bgAssetId;
           if (this.isUUID(sourceIdentifier)) {
+            currentSlideAssetIds.add(sourceIdentifier);
             const objectURL = await this.assetStorage.getAssetObjectURL(
               sourceIdentifier
             );
-            if (objectURL) urlsToLoad.push(objectURL);
+            if (objectURL) {
+              urlsToLoad.push(objectURL);
+              currentSlideLoadedUrls.add(objectURL); // Сохраняем URL для Assets.unload
+            }
           } else {
-            // It's already a direct URL (http, https, data, blob)
             urlsToLoad.push(sourceIdentifier);
+            currentSlideLoadedUrls.add(sourceIdentifier); // Сохраняем URL для Assets.unload
           }
         }
         if (node.type === 'brush' && node.bgAssetId) {
           let sourceIdentifier = node.bgAssetId;
           if (this.isUUID(sourceIdentifier)) {
+            currentSlideAssetIds.add(sourceIdentifier);
             const objectURL = await this.assetStorage.getAssetObjectURL(
               sourceIdentifier
             );
-            if (objectURL) urlsToLoad.push(objectURL);
+            if (objectURL) {
+              urlsToLoad.push(objectURL);
+              currentSlideLoadedUrls.add(objectURL); // Сохраняем URL для Assets.unload
+            }
           } else {
-            // It's already a direct URL (http, https, data, blob)
             urlsToLoad.push(sourceIdentifier);
+            currentSlideLoadedUrls.add(sourceIdentifier); // Сохраняем URL для Assets.unload
           }
         }
       }
 
-      if (urlsToLoad.length > 0) {
-        const uniqueUrls = [
-          ...new Set(urlsToLoad.filter((url) => !url.startsWith('blob:'))),
-        ];
-        if (uniqueUrls.length > 0) {
-          await Assets.load(uniqueUrls);
-        }
-      }
+      // Сохраняем assetId текущего слайда для следующей очистки
+      this.previousSlideAssetIds = currentSlideAssetIds;
+      this.previousSlideLoadedUrls = currentSlideLoadedUrls;
+      this.previousSlideCreatedTextures = currentSlideCreatedTextures; // <-- Сохраняем текстуры для следующей очистки // <-- Сохраняем URL для Assets.unload
 
       // --- SYNCHRONOUS BUILD STAGE ---
       const canvasWidth = this.app.renderer.width;
@@ -292,7 +373,9 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       const iframeNodes: SerializedIframeNode[] = [];
 
       for (const nodeData of data.nodes) {
-        console.log(`[Casting Debug] Processing node: type=${nodeData.type}, id=${nodeData.id}`);
+        console.log(
+          `[Casting Debug] Processing node: type=${nodeData.type}, id=${nodeData.id}`
+        );
         let node: any | ViewContainer;
 
         let bgSource: string | undefined;
@@ -318,8 +401,12 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
               fontSize: fontSize * scaleFactor, // Use scaled fontSize
               align: nodeData.style.align || 'center',
               wordWrap: true,
-              wordWrapWidth: Math.max(4, (nodeData.width - (nodeData.padding || 0) * 2) * scaleFactor), // Use scaled wordWrapWidth
-              lineHeight: (fontSize * scaleFactor) * (nodeData.style.lineHeight || 1.2), // Use scaled fontSize
+              wordWrapWidth: Math.max(
+                4,
+                (nodeData.width - (nodeData.padding || 0) * 2) * scaleFactor
+              ), // Use scaled wordWrapWidth
+              lineHeight:
+                fontSize * scaleFactor * (nodeData.style.lineHeight || 1.2), // Use scaled fontSize
               cssOverrides: [
                 'p { margin: 0; }',
                 'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
@@ -354,6 +441,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
                     bgSource,
                     'background'
                   );
+                  currentSlideCreatedTextures.add(bgTexture); // <-- Добавляем текстуру в Set
                   const bgSprite = new Sprite(bgTexture);
                   const scaleToCover = Math.max(
                     scaledWidth / bgTexture.width,
@@ -416,6 +504,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
                 source,
                 nodeDataNew.type
               );
+              currentSlideCreatedTextures.add(texture); // <-- Добавляем текстуру в Set
               node = new Sprite(texture);
               node.width = nodeData.width * scaleFactor;
               node.height = nodeData.height * scaleFactor;
@@ -480,10 +569,8 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
                   bgSource,
                   'background'
                 );
-                console.log(
-                  `[Casting] loadTextureRobustCasting for shape ${nodeData.id} returned texture:`,
-                  bgTexture
-                );
+                currentSlideCreatedTextures.add(bgTexture); // <-- Добавляем текстуру в Set
+                console.log(bgTexture);
                 if (!bgTexture || ('valid' in bgTexture && !bgTexture.valid))
                   console.error('[Casting Debug] Shape bgTexture invalid!');
                 const bgSprite = new Sprite(bgTexture);
@@ -528,8 +615,7 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
                 mainGraphics
                   .roundRect(0, 0, scaledWidth, scaledHeight, 6 * scaleFactor)
                   .fill(nodeData.fill);
-
-            } else if (nodeData.shape === 'ellipse') {
+              } else if (nodeData.shape === 'ellipse') {
                 mainGraphics
                   .ellipse(
                     scaledWidth / 2,
@@ -698,7 +784,9 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
           }
           node.rotation = nodeData.rotation;
           node.alpha = nodeData.alpha;
-          console.log(`[Casting Debug] Adding node to scene: type=${nodeData.type}, id=${nodeData.id}, x=${node.x}, y=${node.y}, alpha=${node.alpha}`);
+          console.log(
+            `[Casting Debug] Adding node to scene: type=${nodeData.type}, id=${nodeData.id}, x=${node.x}, y=${node.y}, alpha=${node.alpha}`
+          );
           if (nodeData.type === 'text') {
           }
           this.scene.addChild(node);
@@ -710,57 +798,45 @@ export class FreeSlideCastingComponent implements OnInit, AfterViewInit {
       this.scene.x = (canvasWidth - scaledSceneWidth) / 2;
       this.scene.y = (canvasHeight - scaledSceneHeight) / 2;
 
-                  for (const iframeData of iframeNodes) {
+      for (const iframeData of iframeNodes) {
+        const iframe = this.renderer.createElement('iframe');
 
-                    const iframe = this.renderer.createElement('iframe');
+        this.renderer.setAttribute(iframe, 'src', iframeData.url);
 
-                    this.renderer.setAttribute(iframe, 'src', iframeData.url);
+        this.renderer.setStyle(iframe, 'position', 'absolute');
 
-                    this.renderer.setStyle(iframe, 'position', 'absolute');
+        const absoluteLeft = this.scene.x + iframeData.x * scaleFactor;
 
-                    const absoluteLeft = this.scene.x + iframeData.x * scaleFactor;
+        const absoluteTop = this.scene.y + iframeData.y * scaleFactor;
 
-                    const absoluteTop = this.scene.y + iframeData.y * scaleFactor;
+        this.renderer.setStyle(iframe, 'left', `${absoluteLeft}px`);
 
-                    this.renderer.setStyle(iframe, 'left', `${absoluteLeft}px`);
+        this.renderer.setStyle(iframe, 'top', `${absoluteTop}px`);
 
-                    this.renderer.setStyle(iframe, 'top', `${absoluteTop}px`);
+        this.renderer.setStyle(
+          iframe,
 
-                    this.renderer.setStyle(
+          'width',
 
-                      iframe,
+          `${iframeData.width * scaleFactor}px`
+        );
 
-                      'width',
+        this.renderer.setStyle(
+          iframe,
 
-                      `${iframeData.width * scaleFactor}px`
+          'height',
 
-                    );
+          `${iframeData.height * scaleFactor}px`
+        );
 
-                    this.renderer.setStyle(
+        this.renderer.setStyle(iframe, 'border', 'none');
 
-                      iframe,
-
-                      'height',
-
-                      `${iframeData.height * scaleFactor}px`
-
-                    );
-
-                    this.renderer.setStyle(iframe, 'border', 'none');
-
-                    this.renderer.appendChild(this.domOverlayRef.nativeElement, iframe);
-
-                  }
-
-
-
-                } catch (e) {
-
-                  console.error('[Casting] Failed to render slide content:', e);
-
-                }
-
-              }
+        this.renderer.appendChild(this.domOverlayRef.nativeElement, iframe);
+      }
+    } catch (e) {
+      console.error('[Casting] Failed to render slide content:', e);
+    }
+  }
 }
 
 async function loadTextureRobustCasting(

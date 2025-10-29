@@ -1,4 +1,12 @@
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  inject,
+  ViewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
 import { Store } from '@ngrx/store';
@@ -51,7 +59,8 @@ export class FreeSlideComponent implements AfterViewInit {
   slideService = inject(FreeSlideService);
   destroyRef = inject(DestroyRef);
 
-  @ViewChild(PixiSlideEditorV2Component) pixiEditor!: PixiSlideEditorV2Component;
+  @ViewChild(PixiSlideEditorV2Component)
+  pixiEditor!: PixiSlideEditorV2Component;
 
   currentSlideId = '';
   currentSlideIndex = 1;
@@ -78,6 +87,7 @@ export class FreeSlideComponent implements AfterViewInit {
     this.currentSlideIndex = slide.index;
 
     if (this.pixiEditor) {
+      this.pixiEditor.clearAllNodes();
       if (slide.htmlString) {
         try {
           const slideData = JSON.parse(slide.htmlString);
@@ -120,7 +130,7 @@ export class FreeSlideComponent implements AfterViewInit {
     }
     const editorState = this.pixiEditor.serializer.serializeState();
     const htmlString = JSON.stringify(editorState);
-    console.log('[FreeSlide] Saving slide:', this.currentSlideName, htmlString);
+    console.log('[FreeSlide] Saving slide:', this.currentSlideName);
 
     this.slideService.updateSlide({
       id: this.currentSlideId,
@@ -177,10 +187,7 @@ export class FreeSlideComponent implements AfterViewInit {
 
     // Автосохранение с задержкой 3 секунды после изменений
     this.autoSave$
-      .pipe(
-        debounceTime(3000),
-        takeUntilDestroyed(this.destroyRef)
-      )
+      .pipe(debounceTime(3000), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.onSaveSlide();
       });

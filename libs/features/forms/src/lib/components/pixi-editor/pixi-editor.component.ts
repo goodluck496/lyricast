@@ -847,6 +847,19 @@ export class PixiSlideEditorV2Component
       for (const nodeId of allNodeIds) {
         const nodeState = allNodes[nodeId];
         if (nodeState) {
+          // Revoke object URLs for assets associated with the node
+          if (nodeState.ref instanceof ImageNode && nodeState.ref.assetId) {
+            this.assetStorage.revokeAssetObjectURL(nodeState.ref.assetId);
+          } else if (nodeState.ref instanceof VideoNode && nodeState.ref.assetId) {
+            this.assetStorage.revokeAssetObjectURL(nodeState.ref.assetId);
+          } else if (nodeState.ref instanceof TextNode && nodeState.ref.backgroundImageUrl) {
+            this.assetStorage.revokeAssetObjectURL(nodeState.ref.backgroundImageUrl);
+          } else if (nodeState.ref instanceof ShapeNode && nodeState.ref.bgAssetId) {
+            this.assetStorage.revokeAssetObjectURL(nodeState.ref.bgAssetId);
+          } else if (nodeState.ref instanceof BrushNode && nodeState.ref.bgAssetId) {
+            this.assetStorage.revokeAssetObjectURL(nodeState.ref.bgAssetId);
+          }
+
           this.world.removeChild(nodeState.ref);
           nodeState.destroy$?.next();
           nodeState.destroy$?.complete();

@@ -35,20 +35,20 @@ export class ImageNode extends NodeBase {
     }
   }
 
-  async setImage(source: string) {
+  async setImage(source: string): Promise<void> {
     try {
       const texture = await loadTextureRobust(source);
       this.sprite.texture = texture;
       this.sprite.width = texture.width;
       this.sprite.height = texture.height;
-      this.applyBoxSize(texture.width, texture.height);
+      // УДАЛЯЕМ ЭТУ СТРОКУ: this.applyBoxSize(texture.width, texture.height);
     } catch (e) {
       console.error('Failed to load image:', source, e);
       // Fallback to a placeholder or clear the image
       this.sprite.texture = Texture.WHITE;
       this.sprite.width = 100;
       this.sprite.height = 100;
-      this.applyBoxSize(100, 100);
+      // УДАЛЯЕМ ЭТУ СТРОКУ: this.applyBoxSize(100, 100);
     }
   }
 
@@ -62,11 +62,15 @@ export class ImageNode extends NodeBase {
     this.h = h;
     this.drawFrame();
     this.drawHandles();
-    if (this.sprite.texture) {
+    if (this.sprite.texture && this.sprite.texture.width > 0 && this.sprite.texture.height > 0) {
       const { width, height } = this.sprite.texture;
       const scale = Math.min(this.w / width, this.h / height);
       this.sprite.position.set(this.w / 2, this.h / 2);
       this.sprite.scale.set(scale);
+    } else {
+      // Если текстура еще не загружена или имеет нулевые размеры, используем дефолтные
+      this.sprite.position.set(this.w / 2, this.h / 2);
+      this.sprite.scale.set(1); // Или другой дефолтный масштаб
     }
   }
 }

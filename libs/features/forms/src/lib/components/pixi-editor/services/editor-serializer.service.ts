@@ -22,12 +22,14 @@ import {
   SerializedVideoNode,
 } from '@lyri-cast/entities';
 import { CommandBusService } from './command-bus.service';
+import { SceneViewportService } from './scene-viewport.service';
 
 @Injectable()
 export class EditorSerializerService {
   private readonly store = inject(EditorStore);
   private readonly assetStorage = inject(AssetStorageService);
   private readonly bus = inject(CommandBusService);
+  private readonly sceneViewport = inject(SceneViewportService);
 
   // These will be provided by the editor component during serialization/deserialization
   // to avoid circular dependencies or passing the entire component.
@@ -46,16 +48,10 @@ export class EditorSerializerService {
 
     // Вычисляем offset сцены (где начинается рамка aspectRatio)
     // ВАЖНО: offset вычисляется БЕЗ учета zoom, т.к. sceneWidth/Height уже учитывают zoom
-    const canvasWidth = this.app.renderer.width;
-    const canvasHeight = this.app.renderer.height;
-    const zoom = state.zoom;
-
-    // sceneWidth и sceneHeight уже в "мировых" координатах (без zoom)
-    // Но offset нужно вычислять в тех же координатах, что и ноды
-    // Ноды находятся в мировых координатах world, которые масштабируются zoom
-    // Используем baseSceneWidth/Height для сериализации, чтобы всегда получать "полные" координаты
-    const sceneOffsetX = (canvasWidth / zoom - this.baseSceneWidth) / 2;
-    const sceneOffsetY = (canvasHeight / zoom - this.baseSceneHeight) / 2;
+    // Get the current scene bounds from SceneViewportService
+    const sceneBounds = this.sceneViewport.getSceneBounds();
+    const sceneOffsetX = sceneBounds.x;
+    const sceneOffsetY = sceneBounds.y;
 
     const serializableNodes = Object.values(state.nodes)
       .map((nodeState) => {
@@ -142,8 +138,8 @@ export class EditorSerializerService {
       nodes: serializableNodes,
       zoom: state.zoom,
       sceneBounds: {
-        width: this.baseSceneWidth, // Используем базовые размеры без zoom
-        height: this.baseSceneHeight,
+        width: this.sceneViewport.baseSceneWidth, // Use baseSceneWidth for serialization
+        height: this.sceneViewport.baseSceneHeight, // Use baseSceneHeight for serialization
       },
     };
 
@@ -211,11 +207,10 @@ export class EditorSerializerService {
     if (!data || !data.nodes) return;
 
     // Вычисляем offset сцены для восстановления абсолютных координат
-    const canvasWidth = this.app.renderer.width;
-    const canvasHeight = this.app.renderer.height;
-    const zoom = this.store.snapshot((s) => s.zoom);
-    const sceneOffsetX = (canvasWidth / zoom - this.sceneWidth) / 2;
-    const sceneOffsetY = (canvasHeight / zoom - this.sceneHeight) / 2;
+    // Get the current scene bounds from SceneViewportService
+    const sceneBounds = this.sceneViewport.getSceneBounds();
+    const sceneOffsetX = sceneBounds.x;
+    const sceneOffsetY = sceneBounds.y;
 
     data.nodes.forEach((nodeData) => {
       const options = {

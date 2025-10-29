@@ -41,13 +41,42 @@ export class MediaPlugin implements EditorPlugin {
         return;
       }
 
-      const imageNode = new ImageNode(source);
-      imageNode.x = addImage.x ?? 120;
-      imageNode.y = addImage.y ?? 100;
-      imageNode.applyBoxSize(addImage.options?.width ?? 400, addImage.options?.height ?? 300);
+      const imageNode = new ImageNode(); // Создаем без initialSource
       // Set assetId or url on the node for serialization
       if (addImage.assetId) imageNode.assetId = addImage.assetId;
       else if (addImage.url) imageNode.url = addImage.url;
+
+      // Ждем загрузки текстуры и получения фактических размеров
+      await imageNode.setImage(source);
+
+      const originalWidth = imageNode.sprite.texture.width;
+      const originalHeight = imageNode.sprite.texture.height;
+
+      // Если размеры переданы в команде, используем их
+      let targetWidth = addImage.options?.width ?? originalWidth;
+      let targetHeight = addImage.options?.height ?? originalHeight;
+
+      // Если размеры не были переданы (т.е. это вставка из буфера или без явных опций),
+      // подгоняем под сцену
+      if (!addImage.options?.width && !addImage.options?.height) {
+        const sceneBounds = ctx.getSceneBounds();
+        const padding = 50; // Отступ от краев сцены
+        const maxWidth = sceneBounds.width - padding * 2;
+        const maxHeight = sceneBounds.height - padding * 2;
+
+        if (originalWidth > maxWidth || originalHeight > maxHeight) {
+          const scale = Math.min(maxWidth / originalWidth, maxHeight / originalHeight);
+          targetWidth = originalWidth * scale;
+          targetHeight = originalHeight * scale;
+        }
+      }
+
+      imageNode.applyBoxSize(targetWidth, targetHeight);
+
+      // Позиционируем в центре сцены, если координаты не заданы
+      const sceneBounds = ctx.getSceneBounds();
+      imageNode.x = addImage.x ?? (sceneBounds.x + (sceneBounds.width - imageNode.w) / 2);
+      imageNode.y = addImage.y ?? (sceneBounds.y + (sceneBounds.height - imageNode.h) / 2);
 
       const nodeState = { id: imageNode.id, type: 'image' as const, ref: imageNode, destroy$: new Subject<void>() };
             

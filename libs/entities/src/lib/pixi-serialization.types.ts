@@ -58,13 +58,19 @@ export type SerializedBrushNode = SerializedNodeBase & {
   bgAssetId?: string; // ID фонового изображения в AssetStorageService
 };
 
+export type SerializedGroupNode = SerializedNodeBase & {
+  type: 'group';
+  url: string;
+};
+
 export type SerializedNode =
   | SerializedTextNode
   | SerializedImageNode
   | SerializedVideoNode
   | SerializedIframeNode
   | SerializedShapeNode
-  | SerializedBrushNode;
+  | SerializedBrushNode
+  | SerializedGroupNode;
 
 export type SerializedState = {
   nodes: SerializedNode[];

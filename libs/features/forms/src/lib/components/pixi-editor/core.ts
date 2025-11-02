@@ -4,6 +4,7 @@ import { EditorStore } from './services/editor-store.service';
 import { CommandBusService } from './services/command-bus.service';
 import { EditorUtilsService } from './services/editor-utils.service';
 import { HistoryService } from './services/history.service';
+import { NodeFactoryService } from './services/node-factory.service'; // <-- Добавлен импорт
 import { EditorConfig } from './types';
 import { OverlayService } from './services/overlay.service';
 import { GuideLayer } from './guides';
@@ -75,6 +76,9 @@ export interface EditorContext {
 
   /** Сервис управления историей изменений (Undo/Redo) */
   history: HistoryService;
+
+  /** Фабрика для создания узлов */
+  nodeFactory: NodeFactoryService; // <-- Новое поле
 
   /** Функция для получения текущих границ сцены */
   getSceneBounds: () => { x: number; y: number; width: number; height: number };

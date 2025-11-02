@@ -77,11 +77,15 @@ export abstract class NodeBase extends Container {
   /** Словарь хэндлов по их названиям */
   handleRects: Partial<Record<HandleName, Graphics>> = {};
 
+  /** Флаг, указывающий, что узел находится в режиме кастинга (только просмотр) */
+  isCastingMode = false;
+
   /**
    * Конструктор базового узла.
    * Инициализирует рамку и контейнер хэндлов.
+   * @param isCastingMode - Если true, узел будет в режиме только просмотра (без интерактивных элементов).
    */
-  constructor() {
+  constructor(isCastingMode = false) {
     super();
     this.addChild(this.frame, this.handlesContainer);
     this.eventMode = 'static';

@@ -27,7 +27,8 @@ export class NodeBackgroundManager {
     private hostNode: BackgroundHostNode,
     private assetStorage: AssetStorageService,
     private getPrimaryGraphicsForZOrder: () => Container, // e.g., textDisplay for TextNode, shapeG for ShapeNode
-    private redrawHostBackground?: () => void // Callback for host node to redraw its own solid background
+    private redrawHostBackground?: () => void, // Callback for host node to redraw its own solid background
+    private readonly scaleFactor: number = 1 // <-- Добавить scaleFactor
   ) {}
 
   private isAssetId(source: string): boolean {
@@ -140,7 +141,11 @@ export class NodeBackgroundManager {
       const tex = this.bgSprite.texture;
       const tw = Math.max(1, tex.width);
       const th = Math.max(1, tex.height);
-      const scale = Math.max(this.hostNode.w / tw, this.hostNode.h / th); // cover
+      // Используем this.scaleFactor для демасштабирования текстуры, чтобы получить ее "логические" размеры
+      const logicalTextureWidth = tw * this.scaleFactor;
+      const logicalTextureHeight = th * this.scaleFactor;
+
+      const scale = Math.max(this.hostNode.w / logicalTextureWidth, this.hostNode.h / logicalTextureHeight); // cover
       this.bgSprite.scale.set(scale);
       this.bgSprite.position.set(this.hostNode.w / 2, this.hostNode.h / 2);
     }

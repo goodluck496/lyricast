@@ -3,8 +3,8 @@ import { TextNode } from './text.node';
 
 export class GroupNode extends NodeBase {
   readonly type = 'group' as const;
-  constructor() {
-    super();
+  constructor(isCastingMode: boolean = false) {
+    super(isCastingMode);
     this.drawHandles(true);
   }
   get childrenIds(): string[] {

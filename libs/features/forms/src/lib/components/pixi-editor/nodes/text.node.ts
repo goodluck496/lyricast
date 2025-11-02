@@ -39,7 +39,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
   }
 
   private fitScheduled = false;
-  public readonly textDisplay = new HTMLText({ text: '' }); // Make public for BackgroundHostNode
+  public readonly textDisplay: HTMLText; // <-- Объявить тип без инициализации
   private readonly bgG = new Graphics(); // Keep for solid fill drawing
   bgAssetId?: string; // наверно можно удалить
   private backgroundManager: NodeBackgroundManager; // New manager instance
@@ -47,9 +47,11 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
   constructor(
     private readonly app: Application,
     private readonly fitter: TextFitService,
-    private readonly assetStorage: AssetStorageService
+    private readonly assetStorage: AssetStorageService,
+    isCastingMode = false
   ) {
-    super();
+    super(isCastingMode);
+    this.textDisplay = new HTMLText({ text: '' }); // <-- Удалить масштабирование
     this.backgroundManager = new NodeBackgroundManager(
       this,
       this.assetStorage,

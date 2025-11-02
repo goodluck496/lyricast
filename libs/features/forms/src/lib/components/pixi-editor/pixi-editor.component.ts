@@ -731,6 +731,7 @@ export class PixiSlideEditorV2Component
       guides: this.guides,
       cfg: this.cfg,
       history: this.history,
+      nodeFactory: this.nodeFactory, // <-- Добавлено
       getSceneBounds: () => this.sceneViewport.getSceneBounds(),
     };
     this.plugins.forEach((plugin) => plugin.init(ctx));

@@ -1,5 +1,6 @@
 import { InjectionToken } from '@angular/core';
 import { TextAlign } from './enums';
+import { TextStyleFontWeight } from 'pixi.js';
 
 /**
  * Типы и токены для конфигурации редактора PixiJS.
@@ -27,7 +28,7 @@ export interface UiTextStyles {
   actualFontSize?: number
 
   /** Насыщенность шрифта (например, '400', '600', '700') */
-  weight: string;
+  weight:  TextStyleFontWeight;
 
   /** Цвет заливки в формате Pixi.js (например, 0xffffff для белого) */
   color: number;
@@ -105,7 +106,7 @@ export interface TextDefaults {
   family: string;
 
   /** Насыщенность шрифта по умолчанию */
-  weight: string;
+  weight: TextStyleFontWeight;
 
   /** Выравнивание текста по умолчанию */
   align: TextAlign;

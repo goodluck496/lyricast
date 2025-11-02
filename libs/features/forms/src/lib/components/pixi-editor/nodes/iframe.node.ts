@@ -5,8 +5,8 @@ export class IframeNode extends NodeBase {
   readonly type = 'iframe' as const;
   url = 'about:blank';
 
-  constructor(url?: string) {
-    super();
+  constructor(url?: string, isCastingMode: boolean = false) {
+    super(isCastingMode);
     if (url) this.url = url;
     this.drawFrame();
     this.drawHandles(true);

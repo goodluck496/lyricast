@@ -12,8 +12,8 @@ export class ImageNode extends NodeBase {
     return this.assetId || this.url;
   }
 
-  constructor(initialSource?: string) {
-    super();
+  constructor(initialSource?: string, isCastingMode = false, scale: number = 1) {
+    super(isCastingMode);
     this.sprite = new Sprite(Texture.WHITE);
     this.sprite.anchor.set(0.5);
     this.addChild(this.sprite);

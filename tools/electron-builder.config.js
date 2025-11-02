@@ -6,36 +6,36 @@ const isPublishEnabled = CI && GITHUB_TOKEN;
 module.exports = {
   // npmRebuild: false,
   appId: 'com.lyricast.app',
-  productName: 'LyriCast',         // Человекочитаемое имя
-  executableName: 'lyricast',      // Имя бинарника без спецсимволов
+  productName: 'LyriCast', // Человекочитаемое имя
+  executableName: 'lyricast', // Имя бинарника без спецсимволов
   npmRebuild: true,
   files: [
     'dist/apps/browser/**/*',
     'dist/apps/backend/**/*',
     'dist/apps/electron/**',
     'node_modules/**',
-    'package.json'
+    'package.json',
   ],
   win: {
-    target: 'nsis',
-    icon: 'assets/build/icons'
+    target: [{ target: 'nsis', arch: ['ia32'] }],
+    icon: 'assets/build/icons/builded/icons/png/256x256.png',
   },
   linux: {
     target: ['AppImage', 'deb', 'rpm'],
     category: 'AudioVideo',
-    icon: 'assets/build/icons',
-    packageName: 'lyricast',       // имя DEB/RPM пакета (без @ и /)
-    artifactName: 'lyricast_${version}_${arch}.${ext}' // куда писать файлы
+    icon: 'assets/build/icons/lyriicon.ico',
+    // packageName: 'lyricast',       // под виндой не собирается если раскомментировать.  имя DEB/RPM пакета (без @ и /)
+    artifactName: 'lyricast_${version}_${arch}.${ext}', // куда писать файлы
   },
   asar: true,
   asarUnpack: [
     'resources/backend/**',
     '**/*.node',
     '**/better-sqlite3/**',
-    '**/chokidar/**'
+    '**/chokidar/**',
   ],
   directories: {
-    output: 'dist'
+    output: 'dist',
   },
   compression: 'maximum',
   extraResources: [
@@ -46,8 +46,12 @@ module.exports = {
     // },
     {
       from: 'assets/complete-jsons',
-      to: 'assets/complete-jsons'
-    }
+      to: 'assets/complete-jsons',
+    },
+    {
+      from: 'assets/build/icons',
+      to: 'assets/icons',
+    },
 
     // todo самое плохое решение,  но рабочее,
     //  чтобы в вместо битого package.json в backend копировать сразу модули
@@ -58,15 +62,15 @@ module.exports = {
   ],
   publish: isPublishEnabled
     ? [
-      {
-        provider: 'github',
-        owner: 'goodluck496', // Замените на ваш GitHub username или организацию
-        repo: 'lyricast',
-        private: true,
-        releaseType: 'draft',
-        publishAutoUpdate: true
-      }
-    ]
+        {
+          provider: 'github',
+          owner: 'goodluck496', // Замените на ваш GitHub username или организацию
+          repo: 'lyricast',
+          private: true,
+          releaseType: 'draft',
+          publishAutoUpdate: true,
+        },
+      ]
     : null,
 
   // Настройки для генерации обновлений
@@ -79,14 +83,14 @@ module.exports = {
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
     shortcutName: 'Lyricast',
-    include: 'installer.nsh',
-    artifactName: '${productName}-Setup-${version}.${ext}'
+    // include: 'installer.nsh',
+    artifactName: '${productName}-Setup-${version}.${ext}',
   },
   // Настройки для автоматической загрузки релизов на GitHub
   releaseInfo: {
     releaseName: 'v${version}',
-    releaseNotes: 'New version ${version}'
-  }
+    releaseNotes: 'New version ${version}',
+  },
 
   // todo при package electron вырезает зависимости из package.json который копирует в backend,
   //  GPT говорит что чинится так, но не работает

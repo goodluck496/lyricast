@@ -78,6 +78,7 @@ import { BibleSidebarData } from '../../types';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { SvgIconComponent } from '@lyri-cast/svg-icons';
 import { ButtonDirective } from 'primeng/button';
+import { LoadingStatusService } from '@lyri-cast/common-browser';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -112,6 +113,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   private readonly actions$ = inject(Actions);
   private readonly sidebarService =
     inject<SidebarService<BibleSidebarData>>(SidebarService);
+  private readonly loadingStatusService = inject(LoadingStatusService);
 
   bibleFormGroup = new FormGroup({
     translate: new FormControl<IUiLyriListItem<BibleTranslateShort> | null>(
@@ -192,7 +194,12 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   setBooks$ = this.actions$
     .pipe(
       ofType(BibleActions.setBooks),
-      delay(1000),
+      delay(500),
+      tap(() => {
+        if (!this.firstLoad) {
+          this.loadingStatusService.finishInitialLoading();
+        }
+      }),
       map((payload) => {
         const firstBook = payload.data[0];
         if (firstBook && !this.firstLoad) {

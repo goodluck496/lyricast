@@ -43,7 +43,9 @@ Thumbs.db
 
 .angular
 .vercel
-assets/**/*
+assets/complete-jsons/**/*
+assets/raw/**/*
+assets/sqlRaw/**/*
 .vscode/**/*
 llm-docs/**/*
 temp-scripts/**/*

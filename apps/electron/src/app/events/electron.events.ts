@@ -77,8 +77,8 @@ ipcMain.handle(
         .forEach(([key, browserWindow]) => {
           App.onClose(key as AppWindowTypes);
 
-          if (!browserWindow.isDestroyed()) {
-            browserWindow.destroy();
+          if (browserWindow && !browserWindow.isDestroyed()) {
+            browserWindow?.destroy();
           }
         });
     } else {

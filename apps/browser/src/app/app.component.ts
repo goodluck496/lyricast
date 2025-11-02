@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, inject, OnInit, signal } from '@angular/core';
 import {
   ActivatedRoute,
   NavigationEnd,
@@ -8,11 +8,12 @@ import {
 import { MenuItem } from 'primeng/api';
 import { TabMenuModule } from 'primeng/tabmenu';
 import { TabViewModule } from 'primeng/tabview';
-import { filter, map } from 'rxjs';
+import { filter, map, take } from 'rxjs';
 import { Store } from '@ngrx/store';
 import {
   AppActions,
   BridgeService,
+  LoadingStatusService,
   Pages,
   PageTitlesMap,
   selectAppInit,
@@ -20,6 +21,7 @@ import {
 } from '@lyri-cast/common-browser';
 import { AsyncPipe } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
+import { SplashScreenComponent } from './components/splash-screen/splash-screen.component';
 
 @Component({
   standalone: true,
@@ -29,6 +31,7 @@ import { ButtonDirective } from 'primeng/button';
     TabViewModule,
     AsyncPipe,
     ButtonDirective,
+    SplashScreenComponent,
   ],
   selector: 'lyri-root',
   templateUrl: './app.component.html',
@@ -39,10 +42,13 @@ export class AppComponent implements OnInit {
   bridge = inject(BridgeService);
   store = inject(Store);
   settingsSrv = inject(SettingsService);
+  loadingStatusService = inject(LoadingStatusService);
 
   cdr = inject(ChangeDetectorRef);
   route = inject(ActivatedRoute);
   router = inject(Router);
+
+  isLoading = signal(true);
 
   activePage?: MenuItem;
 
@@ -65,27 +71,43 @@ export class AppComponent implements OnInit {
     },
   ];
 
-  firstRun = false;
-
   isNotCastingPage$ = this.router.events.pipe(
     filter((route) => route instanceof NavigationEnd),
     map((data) => !data.url.includes(Pages.CASTING))
   );
 
+  constructor() {
+    effect(() => {
+      if (!this.loadingStatusService.isInitialLoading()) {
+        this.isLoading.set(false);
+      }
+    }, {allowSignalWrites: true});
+  }
+
   ngOnInit() {
-    this.isNotCastingPage$.pipe(filter(() => !this.firstRun)).subscribe(() => {
-      const isRoot = this.router.isActive('/', {
-        paths: 'exact',
-        queryParams: 'exact',
-        fragment: 'ignored',
-        matrixParams: 'ignored',
-      });
-      if (isRoot) {
-        this.onGo();
-      } else {
-        this.onGo(this.router.url);
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      take(1)
+    ).subscribe((event: NavigationEnd) => {
+      const isBibleFeature = event.urlAfterRedirects.includes(Pages.BIBLE_FEATURE);
+      const isCastingPage = event.urlAfterRedirects.includes(Pages.CASTING);
+
+      if (isCastingPage || !isBibleFeature) {
+        this.isLoading.set(false);
       }
     });
+
+    const isRoot = this.router.isActive('/', {
+      paths: 'exact',
+      queryParams: 'exact',
+      fragment: 'ignored',
+      matrixParams: 'ignored',
+    });
+    if (isRoot) {
+      this.onGo();
+    } else {
+      this.onGo(this.router.url);
+    }
 
     this.settingsSrv.init();
 
@@ -97,7 +119,6 @@ export class AppComponent implements OnInit {
   }
 
   onGo(url: string = ['/', Pages.MAIN, Pages.BIBLE_FEATURE].join('/')) {
-    this.firstRun = true;
     this.router.navigateByUrl(url);
   }
 }

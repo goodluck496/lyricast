@@ -84,8 +84,8 @@ export default class App {
           ([key, browserWindow]) => {
             App.onClose(key as AppWindowTypes);
 
-            if (!browserWindow.isDestroyed() && browserWindow.destroy) {
-              browserWindow.destroy();
+            if (browserWindow && !browserWindow.isDestroyed() && browserWindow.destroy) {
+              browserWindow?.destroy();
             }
           }
         );
@@ -149,7 +149,7 @@ export default class App {
             return;
           }
 
-          if (openedWindow.isDestroyed()) {
+          if (!openedWindow || openedWindow.isDestroyed()) {
             return;
           }
 
@@ -271,6 +271,7 @@ export default class App {
       width: width,
       height: height,
       show: false,
+      icon: join(__dirname, '..', '..', '..', 'assets', 'build', 'icons', 'lyriicon.ico'),
       fullscreen: false,
       backgroundMaterial: 'none',
       backgroundColor: '#000',

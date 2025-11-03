@@ -15,7 +15,11 @@ import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { Store } from '@ngrx/store';
 import { Actions } from '@ngrx/effects';
 import { map, take } from 'rxjs';
-import { selectOpenedWindow, SidebarService, AppActions } from '@lyri-cast/common-browser';
+import {
+  AppActions,
+  selectOpenedWindow,
+  SidebarService,
+} from '@lyri-cast/common-browser';
 import { AppWindowTypes } from '@lyri-cast/common-electron';
 
 import { SvgIconComponent } from '@lyri-cast/svg-icons';
@@ -29,7 +33,7 @@ import {
 import { FreeSlideService } from '../../pages/free-slide-page/free-slide.service';
 import { filterEmpty } from '@lyri-cast/common';
 
-import { DynamicDialogModule, DialogService } from 'primeng/dynamicdialog';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { StorageManagementComponent } from '../management/storage-management/storage-management.component';
 
 @Component({
@@ -73,6 +77,7 @@ export class FreeSlideSidebarComponent {
       header: 'Asset Storage Management',
       width: '70vw',
       height: '70vh',
+      dismissableMask: true,
     });
   }
 
@@ -92,7 +97,10 @@ export class FreeSlideSidebarComponent {
 
           console.log('[Sidebar] Selected slide:', slide);
           console.log('[Sidebar] Total slides:', currentSlides.length);
-          console.log('[Sidebar] Slide htmlString length:', slide.htmlString?.length);
+          console.log(
+            '[Sidebar] Slide htmlString length:',
+            slide.htmlString?.length
+          );
 
           this.store.dispatch(
             FreeSlideActions[FreeSlideActionsEnum.openCasting]({
@@ -141,9 +149,11 @@ export class FreeSlideSidebarComponent {
     console.log('onStopCasting called');
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
     // Закрываем окно кастинга
-    this.store.dispatch(AppActions.closeWindow({
-      windowType: AppWindowTypes.CASTING,
-    }));
+    this.store.dispatch(
+      AppActions.closeWindow({
+        windowType: AppWindowTypes.CASTING,
+      })
+    );
   }
 
   onPauseCasting() {

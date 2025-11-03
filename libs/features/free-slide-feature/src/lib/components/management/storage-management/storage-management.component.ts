@@ -90,9 +90,11 @@ export class StorageManagementComponent implements OnInit, OnDestroy {
     this.totalRecords = this.allAssets.length;
     this.loadedAssets = Array.from({ length: this.totalRecords });
 
+    // Manually calculate usage for accuracy, as the estimate can be stale.
+    this.totalUsage = this.allAssets.reduce((sum, asset) => sum + asset.size, 0);
+
     if (navigator.storage && navigator.storage.estimate) {
       const estimate = await navigator.storage.estimate();
-      this.totalUsage = estimate.usage || 0;
       this.totalQuota = estimate.quota || 0;
     }
     this.loading = false;

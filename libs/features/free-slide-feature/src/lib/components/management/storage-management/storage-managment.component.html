@@ -11,7 +11,7 @@
       tooltipPosition="top"
     ></progress>
     <span class="summary-text"
-      >{{ formatBytes(totalUsage) }} / {{ formatBytes(totalQuota) }}</span
+    >{{ formatBytes(totalUsage) }} / {{ formatBytes(totalQuota) }}</span
     >
   </div>
 
@@ -65,18 +65,20 @@
           <p-tableCheckbox [value]="asset"></p-tableCheckbox>
         </td>
         <td>
-          <img
-            *ngIf="asset.type.startsWith('image/')"
-            [src]="asset.url"
-            class="preview-img"
-          />
+          @if (asset.type.startsWith('image/')) {
+            <img
+              [src]="asset.url"
+              class="preview-img"
+            />
+          }
+
         </td>
         <td style="word-break: break-all">{{ asset.id }}</td>
         <td>{{ asset.type }}</td>
         <td>{{ formatBytes(asset.size) }}</td>
         <td>{{ asset.timestamp | date : 'dd.MM.yyyy HH:mm:ss' }}</td>
         <td>
-          <div style="width: 100%; height: 100%; display: flex; gap: 0.5rem">
+          <div style="width: 100%; height: 100%; display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
             <button
               pButton
               type="button"
@@ -109,7 +111,7 @@
       ></button>
     </div>
     <div class="p-toolbar-group-end">
-        <span class="selected-count">{{selectedAssets.length}} item(s) selected</span>
+      <span class="selected-count">{{ selectedAssets.length }} item(s) selected</span>
     </div>
   </p-toolbar>
 </div>

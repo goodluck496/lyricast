@@ -156,6 +156,9 @@ export class FreeSlideComponent implements AfterViewInit {
       htmlString: htmlString,
       previewAssetId: assetId,
     });
+
+    // Notify that save is complete
+    this.slideService.saveCompleted$.next();
   }
 
   async onDuplicateSlide() {

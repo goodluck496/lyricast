@@ -87,6 +87,7 @@ function createOpenCastingEffect<State>({
   actions$,
   openCastingAction,
   openPageAction,
+  startCastingAction, // << Add startCastingAction here
   selectOpenedWindow,
   getDisplayForCasting,
   window,
@@ -100,11 +101,19 @@ function createOpenCastingEffect<State>({
     actions$.pipe(
       ofType(openCastingAction),
       withLatestFrom(store.select(selectOpenedWindow)),
-      switchMap(([, windowData]) => {
+      switchMap(([action, windowData]) => {
+        // The action itself is the payload with fresh data
+        const freshData = action as any;
+
         if (windowData) {
-          return of(openPageAction(castingPath) as Action);
+          // If window already exists, just update the store and tell it to open the page
+          return concat(
+            of(startCastingAction(freshData) as Action),
+            of(openPageAction(castingPath) as Action)
+          );
         }
 
+        // If window doesn't exist, create it, then update store and open page
         return getDisplayForCasting().pipe(
           switchMap((display) =>
             from(
@@ -126,7 +135,13 @@ function createOpenCastingEffect<State>({
               filter(
                 (event) => !!event && event.event === APP_COMMON_ACTIONS.appInit
               ),
-              map(() => openPageAction(castingPath) as Action)
+              // Once window is ready, update store and open page
+              switchMap(() =>
+                concat(
+                  of(startCastingAction(freshData) as Action),
+                  of(openPageAction(castingPath) as Action)
+                )
+              )
             )
           )
         );

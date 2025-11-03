@@ -83,24 +83,17 @@ export class FreeSlideSidebarComponent {
 
   onStartCasting() {
     console.log('[Sidebar] Starting casting...');
-    // Запрашиваем сохранение текущего слайда перед трансляцией
-    this.slideService.requestSaveCurrentSlide$.next();
 
-    // Даём время на сохранение, затем запускаем трансляцию
-    setTimeout(() => {
+    // Listen for the save to complete, then proceed with casting
+    this.slideService.saveCompleted$.pipe(take(1)).subscribe(() => {
+      console.log('[Sidebar] Save completed, proceeding with casting.');
+
       this.store
         .select(selectFreeSlideSelected)
         .pipe(filterEmpty(), take(1))
         .subscribe((slide) => {
-          // Получаем актуальные данные слайдов из сервиса
+          // Get the latest slides data from the service
           const currentSlides = this.slideService.slides$.value;
-
-          console.log('[Sidebar] Selected slide:', slide);
-          console.log('[Sidebar] Total slides:', currentSlides.length);
-          console.log(
-            '[Sidebar] Slide htmlString length:',
-            slide.htmlString?.length
-          );
 
           this.store.dispatch(
             FreeSlideActions[FreeSlideActionsEnum.openCasting]({
@@ -110,39 +103,10 @@ export class FreeSlideSidebarComponent {
             })
           );
         });
-    }, 50);
+    });
 
-    /*this.store
-      .select(selectSelectedBibleVerse)
-      .pipe(
-        take(1),
-        filterEmpty(),
-        withLatestFrom(this.sectionList$, this.sidebarService.data$)
-      )
-      .subscribe(([verse, sections, sidebarData]) => {
-        if (!sidebarData || !sidebarData.bibleForm) {
-          return;
-        }
-        const groupValue = sidebarData.bibleForm;
-
-        if (groupValue.book && groupValue.chapter && sections.length) {
-          this.store.dispatch(
-            BibleActions.openCasting({
-              book: groupValue.book.baseEntity,
-              chapter: groupValue.chapter.baseEntity,
-              fromIndex: verse.number,
-              content: sections[0].content.map((el) => {
-                return {
-                  ...el,
-                  text: [el.text],
-                  bookTitle: groupValue?.book?.baseEntity
-                    ?.title as BibleBookTitle,
-                };
-              }),
-            })
-          );
-        }
-      });*/
+    // Request the current slide to be saved
+    this.slideService.requestSaveCurrentSlide$.next();
   }
 
   onStopCasting() {

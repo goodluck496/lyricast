@@ -10,6 +10,7 @@ export class FreeSlideService {
 
   // Событие для запроса сохранения текущего слайда
   requestSaveCurrentSlide$ = new Subject<void>();
+  saveCompleted$ = new Subject<void>();
 
   constructor() {
     this._addFirstSlide();

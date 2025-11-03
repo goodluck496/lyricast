@@ -100,7 +100,6 @@ export class FreeSlideCastingComponent
           (process): process is FreeSlideStartCastingPayload =>
             !!process && process.slides.length > 0
         ),
-        take(1),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((process) => {
@@ -144,7 +143,7 @@ export class FreeSlideCastingComponent
   }
 
   async ngAfterViewInit() {
-    await this.initPixiAndScene();
+    await this.initPixiApp();
     this.nodeFactory.app = this.app;
     this.bridge.windowSrv.electronContext.send({
       event: 'OPENED_PAGE',
@@ -184,12 +183,7 @@ export class FreeSlideCastingComponent
     }
   }
 
-  private async initPixiAndScene() {
-    if (this.app) {
-      this.app.destroy(true);
-      this.pixiHostRef.nativeElement.innerHTML = '';
-    }
-
+  private async initPixiApp() {
     this.app = new Application();
 
     const containerWidth =
@@ -208,11 +202,12 @@ export class FreeSlideCastingComponent
     this.pixiHostRef.nativeElement.appendChild(this.app.canvas);
     this.scene = new Container();
     this.app.stage.addChild(this.scene);
-    this.nodeFactory.app = this.app;
   }
 
   private async renderSlide(slide: FreeSlide) {
-    await this.initPixiAndScene();
+    // Clear the scene and DOM overlay before rendering new content
+    this.scene.removeChildren();
+    this.domOverlayRef.nativeElement.innerHTML = '';
 
     if (this.previousSlideAssetIds.size > 0) {
       for (const assetId of this.previousSlideAssetIds) {

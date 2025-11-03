@@ -23,6 +23,7 @@ export class FreeSlideService {
       index: values.length,
       name: 'Название слайда',
       htmlString: '',
+      previewAssetId: '',
       createdAtTime: Date.now(),
       groupId: '',
     };
@@ -34,7 +35,9 @@ export class FreeSlideService {
     return newSlide;
   }
 
-  updateSlide(slide: Pick<FreeSlide, 'id' | 'index' | 'name' | 'htmlString'>) {
+  updateSlide(
+    slide: Partial<FreeSlide> & Pick<FreeSlide, 'id'>
+  ) {
     const foundSlide = this.slidesMap.get(slide.id);
 
     if (!foundSlide) {
@@ -55,12 +58,13 @@ export class FreeSlideService {
   }
 
   private _addFirstSlide() {
-    const firstSlide = {
+    const firstSlide: FreeSlide = {
       id: uuid(),
       index: 0,
       name: 'Название слайда',
       createdAtTime: Date.now(),
       htmlString: '',
+      previewAssetId: '',
       groupId: '',
     };
     this.slidesMap.set(firstSlide.id, firstSlide);

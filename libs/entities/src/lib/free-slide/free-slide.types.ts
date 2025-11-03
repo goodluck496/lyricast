@@ -9,4 +9,5 @@ export type FreeSlide = {
   groupId: string;
 
   htmlString: string;
+  previewAssetId?: string;
 }

@@ -1,94 +1,72 @@
-import {
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  DestroyRef,
-  effect,
-  ElementRef,
-  HostBinding,
-  inject,
-  input,
-  viewChild,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, Input, OnChanges, SimpleChanges, } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FreeSlide } from '@lyri-cast/entities';
-import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
-import Reveal from 'reveal.js';
-import { Store } from '@ngrx/store';
-import { selectFreeSlideSelected } from '@lyri-cast/free-slide-store';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AssetStorageService } from '@lyri-cast/form';
+import { BehaviorSubject } from 'rxjs';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 @Component({
   selector: 'lyri-preview-slide',
   standalone: true,
-  imports: [CommonModule, Ng2FittextModule],
-  templateUrl: './preview-slide.component.html',
-  styleUrl: './preview-slide.component.scss',
+  imports: [CommonModule],
+  template: `
+    @if (previewUrl$ | async; as url) {
+      <img [src]="url" class="preview-image" alt="Slide preview" />
+    } @else {
+      <div class="placeholder">
+        <span>{{ slide?.index }}</span>
+      </div>
+    }
+  `,
+  styles: [
+    `
+      :host {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+
+      .preview-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        background-color: #333;
+        color: #fff;
+      }
+    `,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PreviewSlideComponent {
-  public elRef = inject(ElementRef<HTMLElement>);
-  private cdr = inject(ChangeDetectorRef);
-  private destroyRef = inject(DestroyRef);
-  private store = inject(Store);
-  private selectedSlide$ = this.store.select(selectFreeSlideSelected);
+export class PreviewSlideComponent implements OnChanges {
+  private assetStorage = inject(AssetStorageService);
+  private sanitizer = inject(DomSanitizer);
 
-  deckRef?: Reveal.Api;
-  deck?: Reveal.Api;
+  @Input() slide?: FreeSlide;
+  @Input() selected = false;
 
-  slide = input.required<FreeSlide>();
+  previewUrl$ = new BehaviorSubject<SafeUrl | null>(null);
 
-  selected = input.required<boolean>();
-
-  slideText = '';
-
-  fitTextRef = viewChild(Ng2FittextDirective);
-
-  constructor() {
-    this.selectedSlide$.pipe(takeUntilDestroyed()).subscribe(async (slide) => {
-      if (!slide) {
-        return;
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['slide']) {
+      const assetId = this.slide?.previewAssetId;
+      if (assetId) {
+        this.assetStorage.getAssetObjectURL(assetId).then((url) => {
+          if (url) {
+            this.previewUrl$.next(this.sanitizer.bypassSecurityTrustUrl(url));
+          }
+        });
+      } else {
+        this.previewUrl$.next(null);
       }
-      this.slideText = slide.htmlString;
-
-      // await this.initDeck();
-      await this.initReveal();
-    });
-  }
-
-  @HostBinding('attr.data-selected')
-  get selectedSlide(): boolean {
-    return this.selected();
-  }
-
-  async initReveal(): Promise<void> {
-    // this.cdr.detectChanges();
-    // this.deckRef?.layout();
-    // this.deckRef?.sync();
-
-    setTimeout(() => {
-      this.fitTextRef()?.el.nativeElement.dispatchEvent(new Event('input'));
-    }, 10);
-  }
-
-  async initDeck(): Promise<void> {
-    try {
-      this.deckRef = new Reveal(this.elRef.nativeElement);
-      this.deck = await this.deckRef?.initialize({
-        width: 400,
-        height: 260,
-        margin: -1,
-        transition: 'fade',
-        disableLayout: true,
-        embedded: true,
-        overview: false,
-        keyboard: false,
-      });
-      await this.initReveal();
-      this.cdr.detectChanges();
-    } catch (err) {
-      this.initDeck();
-      console.error(err);
     }
   }
 }

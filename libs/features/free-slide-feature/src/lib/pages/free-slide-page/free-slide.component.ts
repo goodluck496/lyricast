@@ -29,7 +29,7 @@ import {
   FreeSlideActionsEnum,
   selectFreeSlideCastingStarted,
 } from '@lyri-cast/free-slide-store';
-import { PixiSlideEditorV2Component } from '@lyri-cast/form';
+import { AssetStorageService, PixiSlideEditorV2Component } from '@lyri-cast/form';
 
 @Component({
   selector: 'lyri-free-slide',
@@ -58,6 +58,7 @@ export class FreeSlideComponent implements AfterViewInit {
   actions$ = inject(Actions);
   slideService = inject(FreeSlideService);
   destroyRef = inject(DestroyRef);
+  assetStorage = inject(AssetStorageService);
 
   @ViewChild(PixiSlideEditorV2Component)
   pixiEditor!: PixiSlideEditorV2Component;
@@ -71,15 +72,19 @@ export class FreeSlideComponent implements AfterViewInit {
   // Автосохранение с debounce при изменениях в редакторе
   private autoSave$ = new Subject<void>();
 
-  onAddNewSlide() {
+  async onAddNewSlide() {
     const newSlide = this.slideService.addSlide();
-    this.onSelectSlide(newSlide);
+    await this.onSelectSlide(newSlide);
   }
 
-  onSelectSlide(slide: FreeSlide) {
+  async onSelectSlide(slide: FreeSlide) {
     // Автосохранение текущего слайда перед переключением
-    if (this.currentSlideId && this.pixiEditor) {
-      this.onSaveSlide();
+    if (
+      this.currentSlideId &&
+      this.pixiEditor &&
+      this.currentSlideId !== slide.id
+    ) {
+      await this.onSaveSlide();
     }
 
     this.currentSlideName = slide.name;
@@ -123,13 +128,25 @@ export class FreeSlideComponent implements AfterViewInit {
       });
   }
 
-  onSaveSlide() {
+  async onSaveSlide() {
     if (!this.pixiEditor) {
       console.warn('[FreeSlide] Cannot save: pixiEditor is not ready');
       return;
     }
     const editorState = this.pixiEditor.serializer.serializeState();
     const htmlString = JSON.stringify(editorState);
+    const blob = await this.pixiEditor.generateSnapshot();
+
+    let assetId: string | undefined;
+    const currentSlide = this.slideService.slidesMap.get(this.currentSlideId);
+
+    if (blob) {
+      if (currentSlide?.previewAssetId) {
+        await this.assetStorage.deleteAsset(currentSlide.previewAssetId);
+      }
+      assetId = await this.assetStorage.saveAsset(blob, 'image/jpeg');
+    }
+
     console.log('[FreeSlide] Saving slide:', this.currentSlideName);
 
     this.slideService.updateSlide({
@@ -137,10 +154,16 @@ export class FreeSlideComponent implements AfterViewInit {
       name: this.currentSlideName,
       index: this.currentSlideIndex,
       htmlString: htmlString,
+      previewAssetId: assetId,
     });
   }
 
-  onDeleteSelected() {
+  async onDeleteSelected() {
+    const slideToDelete = this.slideService.slidesMap.get(this.currentSlideId);
+    if (slideToDelete?.previewAssetId) {
+      await this.assetStorage.deleteAsset(slideToDelete.previewAssetId);
+    }
+
     const nextSlide = this.slideService.getSlideByIndex(
       this.currentSlideIndex + 1
     );
@@ -151,12 +174,21 @@ export class FreeSlideComponent implements AfterViewInit {
     this.slideService.removeSlide(this.currentSlideId);
 
     if (nextSlide) {
-      this.onSelectSlide(nextSlide);
+      await this.onSelectSlide(nextSlide);
     } else if (prevSlide) {
-      this.onSelectSlide(prevSlide);
+      await this.onSelectSlide(prevSlide);
     } else {
       const list = Array.from(this.slideService.slidesMap.values());
-      this.onSelectSlide(list[list.length - 1]);
+      if (list.length > 0) {
+        await this.onSelectSlide(list[list.length - 1]);
+      } else {
+        // Handle case where no slides are left
+        this.currentSlideId = '';
+        this.currentSlideIndex = -1;
+        this.currentSlideName = '';
+        this.pixiEditor.clearAllNodes();
+        this.cdr.markForCheck();
+      }
     }
   }
 
@@ -209,8 +241,8 @@ export class FreeSlideComponent implements AfterViewInit {
       const firstSlide = slides[0];
       if (firstSlide) {
         // Небольшая задержка для завершения инициализации PixiJS
-        setTimeout(() => {
-          this.onSelectSlide(firstSlide);
+        setTimeout(async () => {
+          await this.onSelectSlide(firstSlide);
         }, 150);
       }
     });

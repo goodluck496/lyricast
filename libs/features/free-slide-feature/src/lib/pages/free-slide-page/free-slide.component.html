@@ -10,10 +10,13 @@
         <ng-scrollbar>
           <div class="free-slide__preview-list">
             @for (slide of slides$ | async; track slide.id) {
-              <lyri-preview-slide [slide]="slide"
-                                  [selected]="slide.index === currentSlideIndex"
-                                  class="free-slide__preview-slide"
-                                  (click)="onSelectSlide(slide)">
+              <lyri-preview-slide
+                [slide]="slide"
+                [selected]="slide.index === currentSlideIndex"
+                class="free-slide__preview-slide"
+                [class.selected]="slide.index === currentSlideIndex"
+                (click)="onSelectSlide(slide)"
+              >
               </lyri-preview-slide>
             }
           </div>

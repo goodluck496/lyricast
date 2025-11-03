@@ -12,12 +12,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import {
-  Application,
-  Container,
-  FederatedPointerEvent,
-  TilingSprite,
-} from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Rectangle, TilingSprite, } from 'pixi.js';
 import { EDITOR_CONFIG } from './types';
 import { EDITOR_PLUGINS, EditorContext } from './core';
 import { EditorStore, NodeState } from './services/editor-store.service';
@@ -829,6 +824,29 @@ export class PixiSlideEditorV2Component
       this.overlay.attachIframe(ref);
       this.overlay.setIframeInteractive(true);
     }
+  }
+
+  public async generateSnapshot(options?: { resolution?: number }): Promise<Blob | null> {
+    const bounds = this.sceneViewport.getSceneBounds();
+    if (bounds.width <= 0 || bounds.height <= 0) {
+      return null;
+    }
+
+    const canvas = await this.app.renderer.extract.canvas({
+      target: this.world,
+      frame: new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height),
+      resolution: options?.resolution ?? 0.25,
+    });
+
+    if (canvas) {
+      return new Promise((resolve) => {
+        if(canvas) {
+          canvas.toBlob?.((data) => resolve(data), 'image/jpeg', 0.8);
+        }
+      });
+    }
+
+    return null;
   }
 
   onContextMenu(e: MouseEvent) {

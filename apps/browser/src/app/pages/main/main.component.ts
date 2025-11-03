@@ -16,6 +16,7 @@ import { TabViewModule } from 'primeng/tabview';
 
 import { TabMenuModule } from 'primeng/tabmenu';
 import {
+  FreeSlidePages,
   MainComponentService,
   PAGE_CONTAINER_TEMPLATES,
   Pages,
@@ -93,8 +94,8 @@ export class MainComponent implements OnInit {
       visible: true,
     },
     {
-      routerLink: ['./', Pages.FREE_SLIDE_FEATURE, Pages.FREE_SLIDE],
-      label: PageTitlesMap.get(Pages.FREE_SLIDE) ?? Pages.FREE_SLIDE,
+      routerLink: ['./', Pages.FREE_SLIDE_FEATURE, FreeSlidePages.MAIN],
+      label: PageTitlesMap.get(Pages.FREE_SLIDE) ?? FreeSlidePages.SLIDE,
       icon: 'storyboard',
       visible: true,
     },

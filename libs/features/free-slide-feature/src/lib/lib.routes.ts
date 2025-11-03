@@ -1,5 +1,5 @@
 import { Route } from '@angular/router';
-import { Pages } from '@lyri-cast/common-browser';
+import { FreeSlidePages, Pages } from '@lyri-cast/common-browser';
 import { inject } from '@angular/core';
 import { provideState, Store } from '@ngrx/store';
 import {
@@ -16,10 +16,17 @@ export const freeSlideFeatureRoutes: Route[] = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: Pages.FREE_SLIDE,
+    redirectTo: FreeSlidePages.MAIN,
   },
   {
-    path: Pages.FREE_SLIDE,
+    path: FreeSlidePages.MAIN,
+    loadComponent: () =>
+      import('./pages/free-slide-main/free-slide-main.component').then(
+        (c) => c.FreeSlideMainComponent
+      ),
+  },
+  {
+    path: FreeSlidePages.SLIDE,
     loadComponent: () =>
       import('./pages/free-slide-page/free-slide.component').then(
         (c) => c.FreeSlideComponent

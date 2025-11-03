@@ -24,7 +24,7 @@ export class PageContainerComponent implements AfterContentInit {
   mainComponentService = inject(MainComponentService);
   destroyRef = inject(DestroyRef);
 
-  pagePath = input.required<Array<Pages>>();
+  pagePath = input.required<Array<Pages | string>>();
   router = inject(Router);
 
   templates = contentChildren(PrimeTemplate, {

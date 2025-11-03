@@ -12,6 +12,11 @@ export enum Pages {
   SETTINGS = 'settings',
 }
 
+export enum FreeSlidePages {
+  MAIN = 'main',
+  SLIDE = 'slide',
+}
+
 export const PageTitlesMap: Map<Pages, string> = new Map([
   [Pages.MAIN, ''],
   [Pages.SONGS, 'Песни'],

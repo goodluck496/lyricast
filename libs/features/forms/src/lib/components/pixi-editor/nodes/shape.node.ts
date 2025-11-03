@@ -23,8 +23,7 @@ export class ShapeNode extends NodeBase implements BackgroundHostNode {
   constructor(
     kind: 'rect' | 'ellipse' | 'line' = 'rect',
     private readonly assetStorage: AssetStorageService,
-    isCastingMode = false,
-    private readonly scaleFactor = 1 // <-- Добавить scaleFactor
+    isCastingMode = false
   ) {
     super(isCastingMode);
     this.shape = kind;
@@ -32,8 +31,7 @@ export class ShapeNode extends NodeBase implements BackgroundHostNode {
       this,
       this.assetStorage,
       () => this.shapeG, // Primary graphics for z-ordering
-      () => this.redraw(), // Callback for host to redraw its solid background
-      this.scaleFactor // <-- Передаем scaleFactor
+      () => this.redraw() // Callback for host to redraw its solid background
     );
     // Insert order: background sprite (if any) -> shape graphics (stroke/fallback fill) -> handles
     // Start with shape graphics

@@ -21,14 +21,13 @@ export class BrushNode extends NodeBase implements BackgroundHostNode {
   private g = new Graphics();
   private backgroundManager: NodeBackgroundManager; // New manager instance
 
-  constructor(private readonly assetStorage: AssetStorageService, isCastingMode = false, private readonly scaleFactor = 1) {
+  constructor(private readonly assetStorage: AssetStorageService, isCastingMode = false) {
     super(isCastingMode);
     this.backgroundManager = new NodeBackgroundManager(
       this,
       this.assetStorage,
       () => this.g, // Primary graphics for z-ordering
-      () => this.redraw(), // Callback for host to redraw its solid background
-      this.scaleFactor // <-- Передаем scaleFactor
+      () => this.redraw()
     );
     this.addChild(this.g);
     this.addChild(this.handlesContainer);
@@ -72,11 +71,11 @@ export class BrushNode extends NodeBase implements BackgroundHostNode {
     const graphics = this.g;
     graphics.clear();
     if (!this.path.length) return;
-    graphics.moveTo(this.path[0].x * this.scaleFactor, this.path[0].y * this.scaleFactor); // <-- Умножаем на scaleFactor
-    for (const point of this.path) graphics.lineTo(point.x * this.scaleFactor, point.y * this.scaleFactor); // <-- Умножаем на scaleFactor
+    graphics.moveTo(this.path[0].x, this.path[0].y);
+    for (const point of this.path) graphics.lineTo(point.x, point.y);
     graphics.stroke({
       color: this.stroke,
-      width: this.strokeWidth * this.scaleFactor, // <-- Умножаем на scaleFactor
+      width: this.strokeWidth,
       cap: 'round' as const,
       join: 'round' as const,
     });

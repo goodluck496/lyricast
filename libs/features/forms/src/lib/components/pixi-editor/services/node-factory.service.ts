@@ -49,81 +49,72 @@ export class NodeFactoryService {
    */
   async createNodeFromSerialized(
     nodeData: SerializedNode,
-    options?: { isCastingMode?: boolean } // <-- Удалить scaleFactor
+    options?: { isCastingMode?: boolean; scaleFactor?: number }
   ): Promise<NodeBase | undefined> {
     const isCastingMode = options?.isCastingMode || false;
-    // const scaleFactor = options?.scaleFactor || 1; // <-- Удалить
+    const scaleFactor = options?.scaleFactor || 1;
     let node: NodeBase | undefined;
 
+    const scaledWidth = nodeData.width * scaleFactor;
+    const scaledHeight = nodeData.height * scaleFactor;
+
     switch (nodeData.type) {
-      case 'text':
-        {
-          const textNode = new TextNode(
-            this.app,
-            this.textFit,
-            this.assetStorage,
-            isCastingMode
-            // scaleFactor // <-- Удалить
-          );
-          textNode.textHtml = nodeData.textHtml;
-          if (nodeData.style) {
-            textNode.style = { ...nodeData.style };
-            // actualFontSize передается для восстановления, applyBoxSize его использует
-            textNode.style.actualFontSize = nodeData.actualFontSize;
-          }
-          if (typeof nodeData.bgFillColor === 'number') {
-            textNode.setBackgroundFill(nodeData.bgFillColor);
-          } else if (nodeData.bgAssetId) {
-            void textNode.setBackground(nodeData.bgAssetId);
-          }
-          textNode.applyBoxSize(nodeData.width, nodeData.height);
-          // В режиме кастинга всегда вызываем layout для корректного отображения
-          if (isCastingMode || !nodeData.actualFontSize) {
-            void textNode.layout();
-          }
-          node = textNode;
+      case 'text': {
+        const textNode = new TextNode(
+          this.app,
+          this.textFit,
+          this.assetStorage,
+          isCastingMode
+        );
+        textNode.textHtml = nodeData.textHtml;
+        if (nodeData.style) {
+          textNode.style = { ...nodeData.style };
+          textNode.style.actualFontSize =
+            (nodeData.actualFontSize || 32) * scaleFactor;
         }
+        if (typeof nodeData.bgFillColor === 'number') {
+          textNode.setBackgroundFill(nodeData.bgFillColor);
+        } else if (nodeData.bgAssetId) {
+          await textNode.setBackground(nodeData.bgAssetId);
+        }
+        textNode.applyBoxSize(scaledWidth, scaledHeight);
+        node = textNode;
         break;
+      }
       case 'image': {
-        const imageNode = new ImageNode(undefined, isCastingMode); // <-- Удалить scaleFactor
+        const imageNode = new ImageNode(undefined, isCastingMode);
         imageNode.assetId = nodeData.assetId;
         imageNode.url = nodeData.url;
+        let source = nodeData.url;
         if (nodeData.assetId) {
-          const objectURL = await this.assetStorage.getAssetObjectURL(
-            nodeData.assetId
-          );
-          if (objectURL) {
-            void imageNode.setImage(objectURL);
-          }
-        } else if (nodeData.url) {
-          void imageNode.setImage(nodeData.url);
+          source = await this.assetStorage.getAssetObjectURL(nodeData.assetId);
         }
-        imageNode.applyBoxSize(nodeData.width, nodeData.height);
+        if (source) {
+          await imageNode.setImage(source);
+        }
+        imageNode.applyBoxSize(scaledWidth, scaledHeight);
         node = imageNode;
         break;
       }
       case 'video': {
-        const videoNode = new VideoNode(undefined, isCastingMode); // <-- Удалить scaleFactor
+        const videoNode = new VideoNode(undefined, isCastingMode);
         videoNode.assetId = nodeData.assetId;
         videoNode.url = nodeData.url ?? '';
-        if (nodeData.assetId) {
-          const objectURL = await this.assetStorage.getAssetObjectURL(
-            nodeData.assetId
-          );
-          if (objectURL) {
-            void videoNode.setVideo(objectURL);
-          }
-        } else if (nodeData.url) {
-          void videoNode.setVideo(nodeData.url);
+        let source : string | undefined = videoNode.url;
+        const assetId = nodeData.assetId ?? '';
+        if (assetId) {
+          source = await this.assetStorage.getAssetObjectURL(assetId);
         }
-        videoNode.applyBoxSize(nodeData.width, nodeData.height);
+        if (source) {
+          await videoNode.setVideo(source);
+        }
+        videoNode.applyBoxSize(scaledWidth, scaledHeight);
         node = videoNode;
         break;
       }
-
       case 'iframe': {
         const iframeNode = new IframeNode(nodeData.url, isCastingMode);
-        iframeNode.applyBoxSize(nodeData.width, nodeData.height);
+        iframeNode.applyBoxSize(scaledWidth, scaledHeight);
         node = iframeNode;
         break;
       }
@@ -132,37 +123,45 @@ export class NodeFactoryService {
           nodeData.shape,
           this.assetStorage,
           isCastingMode
-        ); // <-- Удалить scaleFactor
+        );
         shapeNode.fill = nodeData.fill;
         shapeNode.stroke = nodeData.stroke;
-        shapeNode.lineWidth = nodeData.lineWidth;
+        shapeNode.lineWidth = nodeData.lineWidth * scaleFactor;
         if (nodeData.bgAssetId) {
-          void shapeNode.setBackground(nodeData.bgAssetId);
+          await shapeNode.setBackground(nodeData.bgAssetId);
         }
-        shapeNode.applyBoxSize(nodeData.width, nodeData.height);
+        shapeNode.applyBoxSize(scaledWidth, scaledHeight);
         node = shapeNode;
         break;
       }
       case 'brush': {
-        const brushNode = new BrushNode(this.assetStorage, isCastingMode); // <-- Удалить scaleFactor
+        const brushNode = new BrushNode(this.assetStorage, isCastingMode);
         brushNode.stroke = nodeData.stroke;
-        brushNode.strokeWidth = nodeData.strokeWidth;
+        brushNode.strokeWidth = nodeData.strokeWidth * scaleFactor;
+
+        // Set w and h BEFORE calling methods that use them for layout
+        brushNode.w = scaledWidth;
+        brushNode.h = scaledHeight;
+
         if (nodeData.path) {
-          // Передаем путь без масштабирования
-          brushNode.setPath(nodeData.path.map((p) => new Point(p.x, p.y)));
+          const scaledPath = nodeData.path.map(
+            (p) => new Point(p.x * scaleFactor, p.y * scaleFactor)
+          );
+          brushNode.setPath(scaledPath);
         }
         if (nodeData.bgAssetId) {
-          void brushNode.setBackground(nodeData.bgAssetId);
+          await brushNode.setBackground(nodeData.bgAssetId);
         }
-        brushNode.applyBoxSize(nodeData.width, nodeData.height);
         node = brushNode;
         break;
       }
       case 'group': {
-        // Явно приводим nodeData к SerializedNodeBase, чтобы получить доступ к width/height
         const groupNodeData = nodeData as SerializedNodeBase;
         node = new GroupNode(isCastingMode);
-        node.applyBoxSize(groupNodeData.width, groupNodeData.height);
+        node.applyBoxSize(
+          groupNodeData.width * scaleFactor,
+          groupNodeData.height * scaleFactor
+        );
         break;
       }
     }

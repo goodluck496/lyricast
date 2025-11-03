@@ -15,17 +15,19 @@ export class FreeSlideService {
     this._addFirstSlide();
   }
 
-  addSlide() {
+  addSlide(slideData?: Partial<FreeSlide>): FreeSlide {
     const values = Array.from(this.slidesMap.values());
 
     const newSlide: FreeSlide = {
+      // First, apply all data from the copy
+      ...(slideData || {}),
+      // Then, forcefully override the ID and index to ensure it's a new, unique slide
       id: uuid(),
+      name: slideData ? slideData?.name ?? 'Дубль' : 'Новый слайд',
+      htmlString: slideData?.htmlString ?? '',
       index: values.length,
-      name: 'Название слайда',
-      htmlString: '',
-      previewAssetId: '',
+      // Set creation time to now, overriding the copied time
       createdAtTime: Date.now(),
-      groupId: '',
     };
 
     this.slidesMap.set(newSlide.id, newSlide);

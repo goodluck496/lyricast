@@ -22,6 +22,7 @@ import {
 import { AsyncPipe } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
 import { SplashScreenComponent } from './components/splash-screen/splash-screen.component';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   standalone: true,
@@ -50,6 +51,7 @@ export class AppComponent implements OnInit {
 
   isLoading = signal(true);
 
+
   activePage?: MenuItem;
 
   pages: MenuItem[] = [
@@ -75,6 +77,7 @@ export class AppComponent implements OnInit {
     filter((route) => route instanceof NavigationEnd),
     map((data) => !data.url.includes(Pages.CASTING))
   );
+  $isNotCastingPage = toSignal(this.isNotCastingPage$);
 
   constructor() {
     effect(() => {

@@ -1,65 +1,63 @@
-@if (backendReady) {
-
-  <div class="page__wrapper">
-    <div class="page__menu">
-      @for (page of pages; track page.label) {
-        @if(page.visible) {
-          @if (!page.disabled) {
-            <div class="page__menu-item"
-                 [routerLink]="page.routerLink"
-                 routerLinkActive="page__menu-item--active">
-              @if (page.icon) {
-                <lyri-icon [name]="page.icon"></lyri-icon>
-              }
-              {{ page.label }}
-            </div>
-          } @else {
-            <div class="page__menu-item page__menu-item--disabled">
-              @if (page.icon) {
-                <lyri-icon [name]="page.icon"></lyri-icon>
-              }
-              {{ page.label }}
-            </div>
-          }
-        }
-
-
-      }
-    </div>
-    <div class="page__content">
-      <div class="page__header">
-        <div class="page__header-search">
-          <lyri-search-feature />
-        </div>
-        <div class="page__header-controls">
-          @if (mainCompService.templatesMap$ | async; as templateMap) {
-            @if (templateMap.get(PAGE_CONTAINER_TEMPLATES.PAGE_HEADER); as headControlTemplate) {
-              <ng-container
-                *ngTemplateOutlet="headControlTemplate.template"></ng-container>
+<div class="page__wrapper">
+  <div class="page__menu">
+    @for (page of pages; track page.label) {
+      @if (page.visible) {
+        @if (!page.disabled) {
+          <div class="page__menu-item"
+               [routerLink]="page.routerLink"
+               routerLinkActive="page__menu-item--active">
+            @if (page.icon) {
+              <lyri-icon [name]="page.icon"></lyri-icon>
             }
+            {{ page.label }}
+          </div>
+        } @else {
+          <div class="page__menu-item page__menu-item--disabled">
+            @if (page.icon) {
+              <lyri-icon [name]="page.icon"></lyri-icon>
+            }
+            {{ page.label }}
+          </div>
+        }
+      }
 
+
+    }
+  </div>
+  <div class="page__content">
+    <div class="page__header">
+      <div class="page__header-search">
+        <lyri-search-feature />
+      </div>
+      <div class="page__header-controls">
+        @if (mainCompService.templatesMap$ | async; as templateMap) {
+          @if (templateMap.get(PAGE_CONTAINER_TEMPLATES.PAGE_HEADER); as headControlTemplate) {
+            <ng-container
+              *ngTemplateOutlet="headControlTemplate.template"></ng-container>
           }
 
-        </div>
-      </div>
-      <router-outlet></router-outlet>
-    </div>
-    <div class="page__sidebar">
-      @if (mainCompService.templatesMap$ | async; as templateMap) {
-        @if (templateMap.get(PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR); as sidebarTemplate) {
-          <ng-container
-            *ngTemplateOutlet="sidebarTemplate.template"></ng-container>
         }
 
-      }
+      </div>
     </div>
+    <router-outlet></router-outlet>
   </div>
+  <div class="page__sidebar">
+    @if (mainCompService.templatesMap$ | async; as templateMap) {
+      @if (templateMap.get(PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR); as sidebarTemplate) {
+        <ng-container
+          *ngTemplateOutlet="sidebarTemplate.template"></ng-container>
+      }
 
-} @else {
-  <div class="page__loading-wrapper">
-    <p-progressSpinner></p-progressSpinner>
+    }
   </div>
-}
+</div>
+
+<!--} @else {-->
+<!--  <div class="page__loading-wrapper">-->
+<!--    <p-progressSpinner></p-progressSpinner>-->
+<!--  </div>-->
+<!--}-->
 
 
 

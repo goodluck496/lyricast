@@ -119,7 +119,6 @@ export class MainComponent implements OnInit {
     },
   ];
 
-  backendReady = false;
   protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
 
   constructor(icons: IconsService) {
@@ -145,12 +144,6 @@ export class MainComponent implements OnInit {
       .subscribe(() => {
         window.dispatchEvent(new Event('resize'));
       });
-
-    setTimeout(() => {
-      //заглушка, убрать по удалению бека
-      this.backendReady = true;
-      this.cdr.detectChanges();
-    }, 1000);
 
     // убрать т.к. воркеры стартуют до открытия фронта
     // this.repeatCheckBackend().subscribe((res) => {

@@ -158,10 +158,58 @@ export class FreeSlideComponent implements AfterViewInit {
     });
   }
 
+  async onDuplicateSlide() {
+    // 1. Ensure the current state is saved so we copy the latest version.
+    await this.onSaveSlide();
+
+    const originalSlide = this.slideService.slidesMap.get(this.currentSlideId);
+    if (!originalSlide) return;
+
+    // --- New Naming Logic ---
+    const baseName = originalSlide.name.replace(
+      /\s*\(\s*copy(\s\d+)?\s*\)$/,
+      ''
+    );
+    let newName = `${baseName} (copy)`;
+    let copyNum = 2;
+    const allNames = new Set(
+      Array.from(this.slideService.slidesMap.values()).map((s) => s.name)
+    );
+    while (allNames.has(newName)) {
+      newName = `${baseName} (copy ${copyNum})`;
+      copyNum++;
+    }
+    // --- End New Naming Logic ---
+
+    const duplicatedData: Partial<FreeSlide> = {
+      ...originalSlide,
+      name: newName,
+    };
+
+    const newSlide = this.slideService.addSlide(duplicatedData);
+    await this.onSelectSlide(newSlide);
+  }
+
   async onDeleteSelected() {
+    if (this.currentSlideIndex === 0) {
+      console.warn('[FreeSlide] Cannot delete the first slide.');
+      return;
+    }
+
     const slideToDelete = this.slideService.slidesMap.get(this.currentSlideId);
     if (slideToDelete?.previewAssetId) {
-      await this.assetStorage.deleteAsset(slideToDelete.previewAssetId);
+      // Check if any other slide uses this asset
+      const allSlides = Array.from(this.slideService.slidesMap.values());
+      const isAssetReused = allSlides.some(
+        (s) =>
+          s.id !== slideToDelete.id &&
+          s.previewAssetId === slideToDelete.previewAssetId
+      );
+
+      if (!isAssetReused) {
+        // Only delete if it's not reused
+        await this.assetStorage.deleteAsset(slideToDelete.previewAssetId);
+      }
     }
 
     const nextSlide = this.slideService.getSlideByIndex(
@@ -193,7 +241,19 @@ export class FreeSlideComponent implements AfterViewInit {
   }
 
   onResetSlide() {
-    this.onSaveSlide();
+    const currentSlide = this.slideService.slidesMap.get(this.currentSlideId);
+    if (currentSlide && this.pixiEditor) {
+      this.pixiEditor.clearAllNodes();
+      if (currentSlide.htmlString) {
+        try {
+          const slideData = JSON.parse(currentSlide.htmlString);
+          this.pixiEditor.serializer.deserializeState(slideData);
+        } catch (e) {
+          console.error('Error parsing slide data on reset', e);
+          this.pixiEditor.clearAllNodes();
+        }
+      }
+    }
   }
 
   /**
@@ -231,7 +291,10 @@ export class FreeSlideComponent implements AfterViewInit {
         this.pixiEditor.bus.commands$
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe(() => {
-            this.autoSave$.next();
+            // Only trigger autosave if it is not the first slide
+            if (this.currentSlideIndex !== 0) {
+              this.autoSave$.next();
+            }
           });
       }
     }, 200);

@@ -37,8 +37,9 @@
           <ng-template pTemplate="footer">
             <div class="free-slide__footer">
               <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div>
+                <div class="flex gap-2">
                   <button pButton (click)="onAddNewSlide()">Добавить еще слайд</button>
+                  <button pButton (click)="onDuplicateSlide()" class="p-button-secondary">Дублировать</button>
                 </div>
                 <div>
                   @if (currentSlideIndex === 0) {

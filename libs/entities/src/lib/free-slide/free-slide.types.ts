@@ -6,8 +6,8 @@ export type FreeSlide = {
   name: string;
 
   createdAtTime: number;
-  groupId: string;
-
   htmlString: string;
+
+  groupId?: string;
   previewAssetId?: string;
 }

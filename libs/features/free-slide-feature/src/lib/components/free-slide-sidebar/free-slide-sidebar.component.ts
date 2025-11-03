@@ -78,8 +78,13 @@ export class FreeSlideSidebarComponent {
   castingIsPaused$ = this.store.select(selectFreeSlideCastingPaused);
   liveSyncEnabled$ = this.slideService.liveSyncEnabled$.asObservable();
 
-  onLiveSyncToggle(event: ToggleButtonChangeEvent ) {
-    this.slideService.toggleLiveSync(!!event.checked);
+  onLiveSyncToggle(event: ToggleButtonChangeEvent) {
+    const isEnabled = !!event.checked;
+    this.slideService.toggleLiveSync(isEnabled);
+
+    if (isEnabled) {
+      this.slideService.requestSaveCurrentSlide$.next();
+    }
   }
 
   openStorageManagement() {

@@ -29,6 +29,9 @@ import {
 import { FreeSlideService } from '../../pages/free-slide-page/free-slide.service';
 import { filterEmpty } from '@lyri-cast/common';
 
+import { DynamicDialogModule, DialogService } from 'primeng/dynamicdialog';
+import { StorageManagementComponent } from '../management/storage-management/storage-management.component';
+
 @Component({
   selector: 'lyri-free-slide-sidebar',
   standalone: true,
@@ -38,9 +41,11 @@ import { filterEmpty } from '@lyri-cast/common';
     NavigatorFeatureComponent,
     SvgIconComponent,
     FreeSlideCastingPreviewComponent,
+    DynamicDialogModule,
   ],
   templateUrl: './free-slide-sidebar.component.html',
   styleUrl: './free-slide-sidebar.component.scss',
+  providers: [DialogService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FreeSlideSidebarComponent {
@@ -52,17 +57,24 @@ export class FreeSlideSidebarComponent {
   private readonly store = inject<Store<BibleState>>(Store<BibleState>);
   private readonly actions$ = inject(Actions);
   private readonly sidebarService = inject<SidebarService<any>>(SidebarService);
-  private slideService = inject(FreeSlideService);
+  private readonly slideService = inject(FreeSlideService);
+  private readonly dialogService = inject(DialogService);
 
-  openedCastingWindow$ = this.store
-    .select(selectOpenedWindow)
-    .pipe(
-      map((e) => {
-        console.log('openedCastingWindow$', e, !!e);
-        return !!e;
-      })
-    );
+  openedCastingWindow$ = this.store.select(selectOpenedWindow).pipe(
+    map((e) => {
+      console.log('openedCastingWindow$', e, !!e);
+      return !!e;
+    })
+  );
   castingIsPaused$ = this.store.select(selectFreeSlideCastingPaused);
+
+  openStorageManagement() {
+    this.dialogService.open(StorageManagementComponent, {
+      header: 'Asset Storage Management',
+      width: '70vw',
+      height: '70vh',
+    });
+  }
 
   onStartCasting() {
     console.log('[Sidebar] Starting casting...');

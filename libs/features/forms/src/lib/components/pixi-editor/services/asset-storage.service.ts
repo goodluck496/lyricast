@@ -62,16 +62,32 @@ export class AssetStorageService {
     return transaction.objectStore(this.storeName);
   }
 
+  private async calculateHash(blob: Blob): Promise<string> {
+    const buffer = await blob.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
   async saveAsset(
     blob: Blob,
     mimeType: string,
     originalUrl?: string
   ): Promise<string> {
+    const id = await this.calculateHash(blob);
+
+    // Check if asset with this hash already exists
+    const existingRecord = await this.getAssetRecord(id);
+    if (existingRecord) {
+      console.log(`[AssetStorageService] Asset with hash ${id} already exists. Reusing.`);
+      return id; // Return existing ID
+    }
+
+    // If not, save the new asset
     const db = await this.openDb();
     return new Promise((resolve, reject) => {
-      const id = uuidv4(); // Generate unique ID
       const record: AssetRecord = {
-        id,
+        id, // Use hash as ID
         mimeType,
         data: blob,
         originalUrl,
@@ -83,9 +99,7 @@ export class AssetStorageService {
       const request = store.add(record);
 
       request.onsuccess = () => {
-        console.log(
-          `[AssetStorageService] Asset saved with ID: ${id}, mimeType: ${mimeType}`
-        );
+        console.log(`[AssetStorageService] Asset saved with hash ID: ${id}`);
         resolve(id);
       };
       request.onerror = (event) => {
@@ -98,7 +112,7 @@ export class AssetStorageService {
     });
   }
 
-  async getAssetBlob(id: string): Promise<Blob | undefined> {
+  async getAssetRecord(id: string): Promise<AssetRecord | undefined> {
     const db = await this.openDb();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(this.storeName, 'readonly');
@@ -106,25 +120,29 @@ export class AssetStorageService {
       const request = store.get(id);
 
       request.onsuccess = () => {
-        const record = request.result as AssetRecord;
-        if (record) {
-          console.log(
-            `[AssetStorageService] Asset blob retrieved for ID: ${id}, mimeType: ${record.mimeType}`
-          );
-          resolve(record.data);
-        } else {
-          console.warn(`[AssetStorageService] No asset found for ID: ${id}`);
-          resolve(undefined);
-        }
+        resolve(request.result as AssetRecord);
       };
       request.onerror = (event) => {
         console.error(
-          '[AssetStorageService] Error getting asset blob:',
+          '[AssetStorageService] Error getting asset record:',
           (event.target as IDBRequest).error
         );
         reject((event.target as IDBRequest).error);
       };
     });
+  }
+
+  async getAssetBlob(id: string): Promise<Blob | undefined> {
+    const record = await this.getAssetRecord(id);
+    if (record) {
+      console.log(
+        `[AssetStorageService] Asset blob retrieved for ID: ${id}, mimeType: ${record.mimeType}`
+      );
+      return record.data;
+    }
+
+    console.warn(`[AssetStorageService] No asset found for ID: ${id}`);
+    return undefined;
   }
 
   async getAssetObjectURL(id: string): Promise<string | undefined> {
@@ -180,6 +198,27 @@ export class AssetStorageService {
           (event.target as IDBRequest).error
         );
         reject((event.target as IDBRequest).error);
+      };
+    });
+  }
+
+  async getAllAssets(): Promise<AssetRecord[]> {
+    const db = await this.openDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(this.storeName, 'readonly');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        resolve(request.result.sort((a: AssetRecord,b: AssetRecord) => b.timestamp - a.timestamp) as AssetRecord[]);
+      };
+
+      request.onerror = () => {
+        console.error(
+          '[AssetStorageService] Error getting all assets:',
+          request.error
+        );
+        reject(request.error);
       };
     });
   }

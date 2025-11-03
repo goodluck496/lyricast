@@ -219,7 +219,7 @@ export class FreeSlideComponent implements AfterViewInit {
 
     // Автосохранение с задержкой 3 секунды после изменений
     this.autoSave$
-      .pipe(debounceTime(3000), takeUntilDestroyed(this.destroyRef))
+      .pipe(debounceTime(2000), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.onSaveSlide();
       });

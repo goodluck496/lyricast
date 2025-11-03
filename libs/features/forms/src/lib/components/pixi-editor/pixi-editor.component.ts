@@ -12,7 +12,13 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Application, Container, FederatedPointerEvent, Rectangle, TilingSprite, } from 'pixi.js';
+import {
+  Application,
+  Container,
+  FederatedPointerEvent,
+  Rectangle,
+  TilingSprite,
+} from 'pixi.js';
 import { EDITOR_CONFIG } from './types';
 import { EDITOR_PLUGINS, EditorContext } from './core';
 import { EditorStore, NodeState } from './services/editor-store.service';
@@ -826,27 +832,46 @@ export class PixiSlideEditorV2Component
     }
   }
 
-  public async generateSnapshot(options?: { resolution?: number }): Promise<Blob | null> {
-    const bounds = this.sceneViewport.getSceneBounds();
-    if (bounds.width <= 0 || bounds.height <= 0) {
-      return null;
-    }
+  public async generateSnapshot(options?: {
+    resolution?: number;
+  }): Promise<Blob | null> {
+    const originalSelectedIds = this.store.snapshot(
+      (state) => state.selectedIds
+    );
 
-    const canvas = await this.app.renderer.extract.canvas({
-      target: this.world,
-      frame: new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height),
-      resolution: options?.resolution ?? 0.25,
-    });
+    try {
+      // Hide selection and handles if anything is selected
+      if (originalSelectedIds.length > 0) {
+        this.bus.emit({ t: 'SELECT', ids: [] });
+        // Wait for the event loop to process UI updates (especially for the HTML overlay)
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
 
-    if (canvas) {
-      return new Promise((resolve) => {
-        if(canvas) {
-          canvas.toBlob?.((data) => resolve(data), 'image/jpeg', 0.8);
-        }
+      // Take the snapshot
+      const bounds = this.sceneViewport.getSceneBounds();
+      if (bounds.width <= 0 || bounds.height <= 0) {
+        return null;
+      }
+
+      const canvas = await this.app.renderer.extract.canvas({
+        target: this.world,
+        frame: new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height),
+        resolution: options?.resolution ?? 0.25,
       });
-    }
 
-    return null;
+      if (canvas) {
+        return new Promise((resolve) => {
+          canvas.toBlob?.((data) => resolve(data), 'image/jpeg', 0.8);
+        });
+      }
+
+      return null;
+    } finally {
+      // Restore selection state, regardless of whether the snapshot succeeded
+      if (originalSelectedIds.length > 0) {
+        this.bus.emit({ t: 'SELECT', ids: originalSelectedIds });
+      }
+    }
   }
 
   onContextMenu(e: MouseEvent) {
@@ -869,13 +894,27 @@ export class PixiSlideEditorV2Component
           // Revoke object URLs for assets associated with the node
           if (nodeState.ref instanceof ImageNode && nodeState.ref.assetId) {
             this.assetStorage.revokeAssetObjectURL(nodeState.ref.assetId);
-          } else if (nodeState.ref instanceof VideoNode && nodeState.ref.assetId) {
+          } else if (
+            nodeState.ref instanceof VideoNode &&
+            nodeState.ref.assetId
+          ) {
             this.assetStorage.revokeAssetObjectURL(nodeState.ref.assetId);
-          } else if (nodeState.ref instanceof TextNode && nodeState.ref.backgroundImageUrl) {
-            this.assetStorage.revokeAssetObjectURL(nodeState.ref.backgroundImageUrl);
-          } else if (nodeState.ref instanceof ShapeNode && nodeState.ref.bgAssetId) {
+          } else if (
+            nodeState.ref instanceof TextNode &&
+            nodeState.ref.backgroundImageUrl
+          ) {
+            this.assetStorage.revokeAssetObjectURL(
+              nodeState.ref.backgroundImageUrl
+            );
+          } else if (
+            nodeState.ref instanceof ShapeNode &&
+            nodeState.ref.bgAssetId
+          ) {
             this.assetStorage.revokeAssetObjectURL(nodeState.ref.bgAssetId);
-          } else if (nodeState.ref instanceof BrushNode && nodeState.ref.bgAssetId) {
+          } else if (
+            nodeState.ref instanceof BrushNode &&
+            nodeState.ref.bgAssetId
+          ) {
             this.assetStorage.revokeAssetObjectURL(nodeState.ref.bgAssetId);
           }
 

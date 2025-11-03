@@ -194,7 +194,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   setBooks$ = this.actions$
     .pipe(
       ofType(BibleActions.setBooks),
-      delay(500),
+      delay(0),
       tap(() => {
         if (!this.firstLoad) {
           this.loadingStatusService.finishInitialLoading();

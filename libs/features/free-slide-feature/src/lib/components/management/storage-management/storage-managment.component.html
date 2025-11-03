@@ -1,0 +1,116 @@
+<div class="storage-management">
+  <p-toast></p-toast>
+  <p-confirmDialog [style]="{ width: '450px' }"></p-confirmDialog>
+
+  <div class="storage-summary">
+    <span class="summary-label">Storage:</span>
+    <progress
+      [value]="totalUsage"
+      [max]="totalQuota"
+      pTooltip="{{ getUsagePercentage() }}% used"
+      tooltipPosition="top"
+    ></progress>
+    <span class="summary-text"
+      >{{ formatBytes(totalUsage) }} / {{ formatBytes(totalQuota) }}</span
+    >
+  </div>
+
+  <div class="storage-actions">
+    <button
+      pButton
+      type="button"
+      label="Refresh"
+      icon="pi pi-refresh"
+      (click)="loadInitialAssets()"
+    ></button>
+    <button
+      pButton
+      type="button"
+      label="Clear All Assets"
+      class="p-button-danger"
+      icon="pi pi-trash"
+      (click)="confirmClearAll()"
+    ></button>
+  </div>
+  <p-table
+    [value]="loadedAssets"
+    [(selection)]="selectedAssets"
+    dataKey="id"
+    [lazy]="true"
+    (onLazyLoad)="loadAssetsChunk($event)"
+    [selectionMode]="'multiple'"
+    [scrollable]="true"
+    scrollHeight="40vh"
+    [virtualScroll]="true"
+    [virtualScrollItemSize]="62"
+    [totalRecords]="totalRecords"
+    [loading]="loading"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th style="width: 3rem">
+          <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+        </th>
+        <th style="width:15%">Preview</th>
+        <th>Asset ID</th>
+        <th>Type</th>
+        <th>Size</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-asset let-rowIndex="rowIndex">
+      <tr [pSelectableRow]="asset" [pSelectableRowIndex]="rowIndex">
+        <td>
+          <p-tableCheckbox [value]="asset"></p-tableCheckbox>
+        </td>
+        <td>
+          <img
+            *ngIf="asset.type.startsWith('image/')"
+            [src]="asset.url"
+            class="preview-img"
+          />
+        </td>
+        <td style="word-break: break-all">{{ asset.id }}</td>
+        <td>{{ asset.type }}</td>
+        <td>{{ formatBytes(asset.size) }}</td>
+        <td>{{ asset.timestamp | date : 'dd.MM.yyyy HH:mm:ss' }}</td>
+        <td>
+          <div style="width: 100%; height: 100%; display: flex; gap: 0.5rem">
+            <button
+              pButton
+              type="button"
+              pTooltip="Copy as Data URL"
+              tooltipPosition="top"
+              class="p-button-info"
+              icon="pi pi-copy"
+              (click)="copyAssetToClipboard(asset)"
+            ></button>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="7">No assets found in storage.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+
+  <p-toolbar *ngIf="selectedAssets.length > 0" styleClass="context-toolbar">
+    <div class="p-toolbar-group-start">
+      <button
+        pButton
+        type="button"
+        [label]="'Delete (' + selectedAssets.length + ')'"
+        icon="pi pi-trash"
+        class="p-button-danger"
+        (click)="confirmDeleteSelected()"
+      ></button>
+    </div>
+    <div class="p-toolbar-group-end">
+        <span class="selected-count">{{selectedAssets.length}} item(s) selected</span>
+    </div>
+  </p-toolbar>
+</div>
+

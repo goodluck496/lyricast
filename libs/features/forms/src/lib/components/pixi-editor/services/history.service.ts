@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 
 /**
  * Интерфейс для команды, которую можно отменить и повторить.
@@ -37,6 +37,10 @@ export class HistoryService {
   
   /** Текущая позиция в истории */
   private currentIndex = -1;
+
+  /** Subject to announce when any command is executed */
+  private readonly commandExecutedSubject = new Subject<HistoryCommand>();
+  readonly commandExecuted$ = this.commandExecutedSubject.asObservable();
   
   /** Observable для отслеживания возможности отмены */
   private canUndoSubject = new BehaviorSubject<boolean>(false);
@@ -72,6 +76,7 @@ export class HistoryService {
     }
     
     this.updateState();
+    this.commandExecutedSubject.next(command);
   }
   
   /**

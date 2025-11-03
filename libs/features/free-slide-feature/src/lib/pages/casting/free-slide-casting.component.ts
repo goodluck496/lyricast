@@ -24,7 +24,7 @@ import {
 import { AppActions, BridgeService, Pages } from '@lyri-cast/common-browser';
 
 import { filterEmpty } from '@lyri-cast/common';
-import { filter, map, take } from 'rxjs';
+import { filter, map, take, withLatestFrom } from 'rxjs';
 import {
   FreeSlide,
   SerializedIframeNode,
@@ -33,7 +33,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Actions, ofType } from '@ngrx/effects';
 import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
-import { Application, Container, Texture } from 'pixi.js';
+import { Application, Container } from 'pixi.js';
 import {
   AssetStorageService,
   DEFAULT_CONFIG,
@@ -93,34 +93,30 @@ export class FreeSlideCastingComponent
         this.hideContent.set(!isCasting);
       });
 
+    // Unified stream to determine which slide to render
     this.store
       .select(selectFreeSlideCastingProcess)
       .pipe(
-        filter(
-          (process): process is FreeSlideStartCastingPayload =>
-            !!process && process.slides.length > 0
-        ),
+        filter((process): process is FreeSlideStartCastingPayload => !!process),
+        withLatestFrom(this.store.select(selectFreeSlideNavigateState)),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((process) => {
-        const typedProcess = process as FreeSlideStartCastingPayload;
-        const firstSlide = typedProcess.slides[typedProcess.fromIndex];
-        if (firstSlide) {
-          this.renderSlide(firstSlide);
-        }
-      });
+      .subscribe(([process, navigate]) => {
+        let slideToRender: FreeSlide | undefined;
 
-    this.store
-      .select(selectFreeSlideNavigateState)
-      .pipe(
-        filter(
-          (navigate): navigate is { slide: FreeSlide; index: number } =>
-            !!navigate?.slide
-        ),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe((navigate) => {
-        this.renderSlide(navigate.slide);
+        if (navigate?.slide) {
+          // If a navigation or live update has occurred, find the latest version of that slide
+          slideToRender = process.slides.find(
+            (s) => s.id === navigate.slide.id
+          );
+        } else {
+          // Otherwise, use the initial slide from the process
+          slideToRender = process.slides[process.fromIndex];
+        }
+
+        if (slideToRender) {
+          this.renderSlide(slideToRender);
+        }
       });
 
     this.store
@@ -231,7 +227,11 @@ export class FreeSlideCastingComponent
         if ('assetId' in node && node.assetId) {
           currentSlideAssetIds.add(node.assetId);
         }
-        if ('bgAssetId' in node && node.bgAssetId && this.isUUID(node.bgAssetId)) {
+        if (
+          'bgAssetId' in node &&
+          node.bgAssetId &&
+          this.isUUID(node.bgAssetId)
+        ) {
           currentSlideAssetIds.add(node.bgAssetId);
         }
       }

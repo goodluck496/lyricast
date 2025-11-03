@@ -19,7 +19,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { FreeSlideService } from './free-slide.service';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
-import { debounceTime, first, Subject, take } from 'rxjs';
+import { debounceTime, first, Subject, take, combineLatest } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgScrollbar } from 'ngx-scrollbar';
 import { PreviewSlideComponent } from '../../components/preview-slide/preview-slide.component';
@@ -27,7 +27,9 @@ import { FreeSlideSidebarComponent } from '../../components/free-slide-sidebar/f
 import {
   FreeSlideActions,
   FreeSlideActionsEnum,
+  selectFreeSlideCastingProcess,
   selectFreeSlideCastingStarted,
+  selectFreeSlideNavigateState,
 } from '@lyri-cast/free-slide-store';
 import { AssetStorageService, PixiSlideEditorV2Component } from '@lyri-cast/form';
 
@@ -157,6 +159,37 @@ export class FreeSlideComponent implements AfterViewInit {
       previewAssetId: assetId,
     });
 
+    // Live-sync logic: if casting is active for this slide, dispatch an update.
+    combineLatest([
+      this.store.select(selectFreeSlideNavigateState),
+      this.store.select(selectFreeSlideCastingProcess),
+    ])
+      .pipe(take(1))
+      .subscribe(([navigate, process]) => {
+        if (!process) return; // Not casting
+
+        // Determine the ID of the slide currently on the casting screen
+        let castedSlideId: string | undefined;
+        if (navigate?.slide) {
+          castedSlideId = navigate.slide.id;
+        } else {
+          // If no navigation has happened, the casted slide is the initial one
+          castedSlideId = process.slides[process.fromIndex]?.id;
+        }
+
+        // If the slide we just saved is the one on the casting screen, dispatch the update
+        if (castedSlideId === this.currentSlideId) {
+          const updatedSlide = this.slideService.slidesMap.get(this.currentSlideId);
+          const liveSyncEnabled = this.slideService.liveSyncEnabled$.value;
+
+          if (updatedSlide && liveSyncEnabled) {
+            this.store.dispatch(
+              FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide]({ slide: updatedSlide })
+            );
+          }
+        }
+      });
+
     // Notify that save is complete
     this.slideService.saveCompleted$.next();
   }
@@ -244,18 +277,9 @@ export class FreeSlideComponent implements AfterViewInit {
   }
 
   onResetSlide() {
-    const currentSlide = this.slideService.slidesMap.get(this.currentSlideId);
-    if (currentSlide && this.pixiEditor) {
+    if (this.pixiEditor) {
       this.pixiEditor.clearAllNodes();
-      if (currentSlide.htmlString) {
-        try {
-          const slideData = JSON.parse(currentSlide.htmlString);
-          this.pixiEditor.serializer.deserializeState(slideData);
-        } catch (e) {
-          console.error('Error parsing slide data on reset', e);
-          this.pixiEditor.clearAllNodes();
-        }
-      }
+      this.onSaveSlide();
     }
   }
 
@@ -290,14 +314,11 @@ export class FreeSlideComponent implements AfterViewInit {
     // Подписка на изменения в редакторе (команды)
     // Запускаем автосохранение при любых изменениях
     setTimeout(() => {
-      if (this.pixiEditor?.bus) {
-        this.pixiEditor.bus.commands$
+      if (this.pixiEditor?.history) {
+        this.pixiEditor.history.commandExecuted$
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe(() => {
-            // Only trigger autosave if it is not the first slide
-            if (this.currentSlideIndex !== 0) {
-              this.autoSave$.next();
-            }
+            this.autoSave$.next();
           });
       }
     }, 200);

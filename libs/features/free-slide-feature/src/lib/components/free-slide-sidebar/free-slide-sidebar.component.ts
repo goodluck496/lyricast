@@ -35,6 +35,9 @@ import { filterEmpty } from '@lyri-cast/common';
 
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { StorageManagementComponent } from '../management/storage-management/storage-management.component';
+import { ToggleButtonModule } from 'primeng/togglebutton';
+import { FormsModule } from '@angular/forms';
+import { ToggleButtonChangeEvent } from 'primeng/togglebutton/togglebutton.interface';
 
 @Component({
   selector: 'lyri-free-slide-sidebar',
@@ -46,6 +49,8 @@ import { StorageManagementComponent } from '../management/storage-management/sto
     SvgIconComponent,
     FreeSlideCastingPreviewComponent,
     DynamicDialogModule,
+    ToggleButtonModule,
+    FormsModule,
   ],
   templateUrl: './free-slide-sidebar.component.html',
   styleUrl: './free-slide-sidebar.component.scss',
@@ -71,6 +76,11 @@ export class FreeSlideSidebarComponent {
     })
   );
   castingIsPaused$ = this.store.select(selectFreeSlideCastingPaused);
+  liveSyncEnabled$ = this.slideService.liveSyncEnabled$.asObservable();
+
+  onLiveSyncToggle(event: ToggleButtonChangeEvent ) {
+    this.slideService.toggleLiveSync(!!event.checked);
+  }
 
   openStorageManagement() {
     this.dialogService.open(StorageManagementComponent, {

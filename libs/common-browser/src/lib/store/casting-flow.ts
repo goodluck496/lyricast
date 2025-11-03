@@ -44,6 +44,8 @@ export interface CastingFlowOptions<State> {
    */
   slideNavigateAction: ActionCreator;
 
+  liveUpdateSlideAction: ActionCreator;
+
   selectCastingProcess: (state: State) => unknown;
 
   selectOpenedWindow: (state: State) => unknown;
@@ -87,7 +89,6 @@ function createOpenCastingEffect<State>({
   actions$,
   openCastingAction,
   openPageAction,
-  startCastingAction, // << Add startCastingAction here
   selectOpenedWindow,
   getDisplayForCasting,
   window,
@@ -101,19 +102,11 @@ function createOpenCastingEffect<State>({
     actions$.pipe(
       ofType(openCastingAction),
       withLatestFrom(store.select(selectOpenedWindow)),
-      switchMap(([action, windowData]) => {
-        // The action itself is the payload with fresh data
-        const freshData = action as any;
-
+      switchMap(([, windowData]) => {
         if (windowData) {
-          // If window already exists, just update the store and tell it to open the page
-          return concat(
-            of(startCastingAction(freshData) as Action),
-            of(openPageAction(castingPath) as Action)
-          );
+          return of(openPageAction(castingPath) as Action);
         }
 
-        // If window doesn't exist, create it, then update store and open page
         return getDisplayForCasting().pipe(
           switchMap((display) =>
             from(
@@ -135,13 +128,7 @@ function createOpenCastingEffect<State>({
               filter(
                 (event) => !!event && event.event === APP_COMMON_ACTIONS.appInit
               ),
-              // Once window is ready, update store and open page
-              switchMap(() =>
-                concat(
-                  of(startCastingAction(freshData) as Action),
-                  of(openPageAction(castingPath) as Action)
-                )
-              )
+              map(() => openPageAction(castingPath) as Action)
             )
           )
         );
@@ -162,7 +149,8 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     actions$,
     actionSource,
     store,
-    selectCastingProcess
+    selectCastingProcess,
+    liveUpdateSlideAction
   } = options;
 
   const openCasting$ = createOpenCastingEffect(options);
@@ -242,6 +230,14 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     bridgeEventNameExtractorCb: extractEventName
   });
 
+  const liveUpdateSlide$ = createBridgeEffect({
+    actions$,
+    action: liveUpdateSlideAction,
+    bridge,
+    label: 'liveUpdateSlide',
+    bridgeEventNameExtractorCb: extractEventName
+  });
+
   return {
     openCasting$,
     onOpenPage$,
@@ -251,5 +247,6 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     stopCasting$,
     castingStarted$,
     slideNavigate$,
+    liveUpdateSlide$,
   };
 }

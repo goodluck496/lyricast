@@ -21,6 +21,8 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
     FreeSlideActions[FreeSlideActionsEnum.castingStarted](),
   [FreeSlideActionsEnum.slideNavigate]: (eventData) =>
     FreeSlideActions[FreeSlideActionsEnum.slideNavigate](eventData.payload as any),
+  [FreeSlideActionsEnum.liveUpdateSlide]: (eventData) =>
+    FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide](eventData.payload as any),
   [FreeSlideActionsEnum.stopCasting]: () => FreeSlideActions[FreeSlideActionsEnum.stopCasting](),
   [FreeSlideActionsEnum.pauseCasting]: () => FreeSlideActions[FreeSlideActionsEnum.pauseCasting](),
 };

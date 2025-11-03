@@ -12,6 +12,7 @@ export const FreeSlideActionsEnum = {
   pauseCasting: '[FREE_SLIDE]pauseCasting',
   slideNavigate: '[FREE_SLIDE]slideNavigate',
   selectSlide: '[FREE_SLIDE]selectSlide',
+  liveUpdateSlide: '[FREE_SLIDE]liveUpdateSlide',
 } as const;
 
 export type FreeSlideActionsEnumKeys = keyof typeof FreeSlideActionsEnum;
@@ -42,5 +43,6 @@ export const FreeSlideActions = createActionGroup({
     [FreeSlideActionsEnum.castingStarted]: emptyProps(),
     [FreeSlideActionsEnum.slideNavigate]: props<FreeSlideNavigatePayload>(),
     [FreeSlideActionsEnum.selectSlide]: props<FreeSlide>(),
+    [FreeSlideActionsEnum.liveUpdateSlide]: props<{ slide: FreeSlide }>(),
   },
 });

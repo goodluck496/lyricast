@@ -82,5 +82,22 @@ export const FreeSlideReducers = createReducer<FreeSlideState>(
         ...state,
         freeSlideSelected: payload,
       } satisfies FreeSlideState)
+  ),
+  on(
+    FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide],
+    (state: FreeSlideState, { slide: updatedSlide }) => {
+      if (!state.freeSlideCastingProcess) {
+        return state;
+      }
+      return {
+        ...state,
+        freeSlideCastingProcess: {
+          ...state.freeSlideCastingProcess,
+          slides: state.freeSlideCastingProcess.slides.map((slide) =>
+            slide.id === updatedSlide.id ? updatedSlide : slide
+          ),
+        },
+      };
+    }
   )
 );

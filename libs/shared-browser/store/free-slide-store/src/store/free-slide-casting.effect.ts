@@ -45,6 +45,7 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
     stopCastingAction: FreeSlideActions[FreeSlideActionsEnum.stopCasting],
     pauseCastingAction: FreeSlideActions[FreeSlideActionsEnum.pauseCasting],
     slideNavigateAction: FreeSlideActions[FreeSlideActionsEnum.slideNavigate],
+    liveUpdateSlideAction: FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide],
     selectCastingProcess: selectFreeSlideCastingProcess,
     selectOpenedWindow,
     getDisplayForCasting: () => this.settingsSrv.getDisplayForCasting(),
@@ -62,6 +63,7 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
   stopCasting$ = this.base.stopCasting$;
   castingStarted$ = this.base.castingStarted$;
   slideNavigate$ = this.base.slideNavigate$;
+  liveUpdateSlide$ = this.base.liveUpdateSlide$;
 
 
 

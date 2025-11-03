@@ -11,9 +11,14 @@ export class FreeSlideService {
   // Событие для запроса сохранения текущего слайда
   requestSaveCurrentSlide$ = new Subject<void>();
   saveCompleted$ = new Subject<void>();
+  liveSyncEnabled$ = new BehaviorSubject<boolean>(true);
 
   constructor() {
     this._addFirstSlide();
+  }
+
+  toggleLiveSync(enabled: boolean) {
+    this.liveSyncEnabled$.next(enabled);
   }
 
   addSlide(slideData?: Partial<FreeSlide>): FreeSlide {

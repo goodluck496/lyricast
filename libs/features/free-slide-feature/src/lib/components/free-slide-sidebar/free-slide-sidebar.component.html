@@ -1,31 +1,50 @@
 <div class="control-sidebar__wrapper">
   <lyri-free-slide-casting-preview></lyri-free-slide-casting-preview>
 
-  <div class="control-sidebar__actions">
-
-    @if ((castingIsPaused$ | async)) {
-      <button pButton class="flex flex-w-center flex-h-center" (click)="onStartCasting()" severity="success">
-        <lyri-icon name="play" style="width: 14px; height: 14px"></lyri-icon>
-        Транслировать
-      </button>
-    } @else {
-      <button pButton class="flex flex-w-center flex-h-center" (click)="onPauseCasting()" severity="danger">
-        <lyri-icon name="stop" style="width: 14px; height: 14px"></lyri-icon>
-        Остановить
-      </button>
-    }
+  <div class="control-sidebar__actions flex flex-column">
 
     <div class="flex">
-      <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false" (click)="onStopCasting()">Закрыть</button>
+      @if ((castingIsPaused$ | async)) {
+        <button pButton class="flex flex-w-center flex-h-center" (click)="onStartCasting()" severity="success">
+          <lyri-icon name="play" style="width: 14px; height: 14px"></lyri-icon>
+          Транслировать
+        </button>
+      } @else {
+        <button pButton class="flex flex-w-center flex-h-center" (click)="onPauseCasting()" severity="danger">
+          <lyri-icon name="stop" style="width: 14px; height: 14px"></lyri-icon>
+          Остановить
+        </button>
+      }
+      <p-toggleButton
+        [ngModel]="liveSyncEnabled$ | async"
+        onLabel="LiveSync On"
+        offLabel="LiveSync Off"
+        (onChange)="onLiveSyncToggle($event)"
+        onIcon="pi pi-sync"
+        offIcon="pi pi-ban">
+      </p-toggleButton>
+
+    </div>
+
+    <div class="flex">
+      <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false" (click)="onStopCasting()">
+        Закрыть
+      </button>
     </div>
   </div>
+
+  <div class="control-sidebar__actions flex">
+
+  </div>
+
 
   <lyri-navigator-feature class="control-sidebar__navigator" />
 
   <div class="control-sidebar__divider"></div>
 
   <div class="control-sidebar__actions">
-      <button pButton (click)="openStorageManagement()" label="Manage Storage" icon="pi pi-database" class="p-button-secondary"></button>
+    <button pButton (click)="openStorageManagement()" label="Manage Storage" icon="pi pi-database"
+            class="p-button-secondary"></button>
   </div>
 </div>
 

@@ -70,8 +70,6 @@ export class FreeSlideService {
 
   updateSlide(slide: Partial<Slide> & Pick<Slide, 'id'>) {
     const foundSlide = this.slidesMap.get(slide.id);
-
-    console.log('updateSlide', foundSlide);
     if (!foundSlide) {
       return;
     }

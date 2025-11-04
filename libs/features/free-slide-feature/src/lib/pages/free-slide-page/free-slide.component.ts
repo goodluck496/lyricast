@@ -51,6 +51,7 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import { FreeSlideApiService } from '@lyri-cast/free-slide';
 import { PrimeTemplate } from 'primeng/api';
+import { Ripple } from 'primeng/ripple';
 
 @Component({
   selector: 'lyri-free-slide',
@@ -69,6 +70,7 @@ import { PrimeTemplate } from 'primeng/api';
     FreeSlideSidebarComponent,
     PixiSlideEditorV2Component,
     PrimeTemplate,
+    Ripple,
   ],
   templateUrl: './free-slide.component.html',
   styleUrl: './free-slide.component.scss',
@@ -109,9 +111,8 @@ export class FreeSlideComponent implements AfterViewInit {
     FreeSlidePages.SLIDE,
     this.presentationId(),
   ]);
-  // Автосохранение с debounce при изменениях в редакторе
-  private autoSave$ = new Subject<void>();
-  slideNameChanged$ = new Subject<string>();
+
+  private saveTrigger$ = new Subject<void>();
 
   async onAddNewSlide() {
     const newSlide = this.slideService.addSlide();
@@ -357,20 +358,28 @@ export class FreeSlideComponent implements AfterViewInit {
         this.onSaveSlide();
       });
 
-    this.slideForm.valueChanges
+    // Единый триггер для автосохранения
+    this.saveTrigger$
       .pipe(
-        debounceTime(2000),
+        debounceTime(1500),
         takeUntil(this.changePresentation$),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => {
-        if (this.slideForm.dirty) {
-          this.onSaveSlide();
-        }
+        this.onSaveSlide();
       });
 
-    // Подписка на изменения в редакторе (команды)
-    // Запускаем автосохранение при любых изменениях
+    // При изменении названия слайда - запускаем триггер сохранения
+    this.slideForm.valueChanges
+      .pipe(
+        takeUntil(this.changePresentation$),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.saveTrigger$.next();
+      });
+
+    // При любом изменении в редакторе - запускаем триггер сохранения
     setTimeout(() => {
       if (this.pixiEditor?.history) {
         this.pixiEditor.history.commandExecuted$
@@ -379,7 +388,7 @@ export class FreeSlideComponent implements AfterViewInit {
             takeUntilDestroyed(this.destroyRef)
           )
           .subscribe(() => {
-            this.slideForm.markAsDirty();
+            this.saveTrigger$.next();
           });
       }
     }, 200);
@@ -439,4 +448,5 @@ export class FreeSlideComponent implements AfterViewInit {
   protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
   protected readonly Pages = Pages;
   protected readonly FreeSlidePages = FreeSlidePages;
+  protected readonly window = window;
 }

@@ -152,17 +152,10 @@ export class AssetStorageService {
       );
       return this.objectURLMap.get(id);
     }
-
-    console.log(
-      `[AssetStorageService] Generating new object URL for ID: ${id}`
-    );
     const blob = await this.getAssetBlob(id);
     if (blob) {
       const objectURL = URL.createObjectURL(blob);
       this.objectURLMap.set(id, objectURL);
-      console.log(
-        `[AssetStorageService] Generated object URL: ${objectURL} for ID: ${id}`
-      );
       return objectURL;
     }
     console.warn(

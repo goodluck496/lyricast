@@ -41,7 +41,6 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
   private fitScheduled = false;
   public readonly textDisplay: HTMLText; // <-- Объявить тип без инициализации
   private readonly bgG = new Graphics(); // Keep for solid fill drawing
-  bgAssetId?: string; // наверно можно удалить
   private backgroundManager: NodeBackgroundManager; // New manager instance
 
   constructor(

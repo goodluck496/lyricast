@@ -24,7 +24,7 @@
 
     }
   </div>
-  <div class="page__content">
+  <div class="page__content" [class.page__content--without-sidebar]="mainCompService.$disableSidebar()">
     <div class="page__header">
       <div class="page__header-search">
         <lyri-search-feature />
@@ -42,15 +42,18 @@
     </div>
     <router-outlet></router-outlet>
   </div>
-  <div class="page__sidebar">
-    @if (mainCompService.templatesMap$ | async; as templateMap) {
-      @if (templateMap.get(PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR); as sidebarTemplate) {
-        <ng-container
-          *ngTemplateOutlet="sidebarTemplate.template"></ng-container>
-      }
+  @if (!mainCompService.$disableSidebar()) {
+    <div class="page__sidebar">
+      @if (mainCompService.templatesMap$ | async; as templateMap) {
+        @if (templateMap.get(PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR); as sidebarTemplate) {
+          <ng-container
+            *ngTemplateOutlet="sidebarTemplate.template"></ng-container>
+        }
 
-    }
-  </div>
+      }
+    </div>
+  }
+
 </div>
 
 <!--} @else {-->

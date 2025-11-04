@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { PrimeTemplate } from 'primeng/api';
 import { BehaviorSubject, Observable } from 'rxjs';
 
@@ -13,6 +13,8 @@ export class MainComponentService {
     new Map()
   );
   templatesMap$: Observable<Map<string, PrimeTemplate | null>> = this._templates.asObservable();
+
+  $disableSidebar = signal(false)
 
   setTemplates(type: PAGE_CONTAINER_TEMPLATES, template: PrimeTemplate): void {
     const oldTempl = this._templates.value;

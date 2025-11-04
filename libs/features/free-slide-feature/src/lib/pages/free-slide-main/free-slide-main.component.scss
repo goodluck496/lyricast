@@ -1,31 +1,51 @@
-.presentations-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1rem;
-  padding: 1rem;
+
+.free-slide {
+
+  &__create-new {
+    width: 100px;
+    height: 100px;
+    border: 1px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    border-radius: 12px;
+    font-size: 100px;
+    text-align: center;
+    padding: 0 0 25px;
+  }
 }
 
 .presentation-card {
+  width: 200px;
+  height: 200px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  overflow: hidden;
   cursor: pointer;
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  background-size: cover;
+  background-position: center;
+  color: white; // Change text color to be visible on dark overlay
+
+
+  .card-overlay {
+    background-color: rgba(0, 0, 0, 0.5);
+    height: 100%;
+    width: 100%;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
 
   &:hover {
     transform: translateY(-5px);
-    box-shadow: 0 4px 20px 0 rgba(0,0,0,.12);
+    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, .12);
   }
 }
 
-.create-new-card {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px; /* Adjust as needed */
-
-  button {
-    width: 100%;
-    height: 100%;
-  }
-}
 
 .empty-state {
   grid-column: 1 / -1;

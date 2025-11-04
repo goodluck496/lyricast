@@ -1,7 +1,7 @@
 <lyri-page-container [pagePath]="$pagePath()">
 
   <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
-    назад
+    <button pButton pRipple (click)="window.history.back()">Назад</button>
   </ng-template>
 
   <ng-container page-content>

@@ -1,5 +1,9 @@
 import { Route } from '@angular/router';
-import { FreeSlidePages, Pages } from '@lyri-cast/common-browser';
+import {
+  FreeSlidePages,
+  MainComponentService,
+  Pages,
+} from '@lyri-cast/common-browser';
 import { inject } from '@angular/core';
 import { provideState, Store } from '@ngrx/store';
 import {
@@ -24,6 +28,13 @@ export const freeSlideFeatureRoutes: Route[] = [
       import('./pages/free-slide-main/free-slide-main.component').then(
         (c) => c.FreeSlideMainComponent
       ),
+    canActivate: [
+      () => {
+        const mainCmpService = inject(MainComponentService);
+
+        mainCmpService.$disableSidebar.set(true);
+      },
+    ],
   },
   {
     path: `${FreeSlidePages.SLIDE}/:id`,
@@ -34,10 +45,19 @@ export const freeSlideFeatureRoutes: Route[] = [
     canDeactivate: [
       () => {
         const store = inject(Store);
+        const mainCmpService = inject(MainComponentService);
+
+        mainCmpService.$disableSidebar.set(false);
 
         store.dispatch(FreeSlideActions[FreeSlideActionsEnum.pauseCasting]());
         return true;
       },
+    ],
+    canActivate: [
+      () => {
+        const mainCmpService = inject(MainComponentService);
+        mainCmpService.$disableSidebar.set(false);
+      }
     ],
     providers: [
       provideState(FreeSlideFeatureName, FreeSlideReducers),

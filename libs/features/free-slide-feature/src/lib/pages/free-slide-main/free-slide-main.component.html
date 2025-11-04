@@ -4,34 +4,41 @@
   </ng-template>
 
   <ng-container page-content>
-    <div *ngIf="presentations$ | async as presentations" class="presentations-grid">
-      <!-- "Create New" Card -->
-      <p-card class="presentation-card create-new-card">
-        <ng-template pTemplate="content">
-          <button pButton type="button" icon="pi pi-plus" label="Create New" (click)="onCreateNew()"></button>
-        </ng-template>
-      </p-card>
-
-      <!-- Presentation Cards -->
-      <p-card *ngFor="let presentation of presentations" class="presentation-card" (click)="onSelect(presentation)">
-        <ng-template pTemplate="header">
-          <h4>{{ presentation.title }}</h4>
-        </ng-template>
-        <ng-template pTemplate="content">
-          <p>Slides: {{ presentation.slides.length }}</p>
-        </ng-template>
-      </p-card>
-
-      <!-- Empty State -->
-      <div *ngIf="presentations.length === 0" class="empty-state">
-        <h3>No presentations yet.</h3>
-        <p>Get started by creating a new one.</p>
+    <div class="flex flex-column">
+      <div class="flex flex-h-center">
+        <button pButton pRipple (click)="onCreateNew()" severity="success">Новая презентация</button>
+        <button pButton pRipple disabled>Создать из песни</button>
+        <button pButton pRipple disabled>Создать из Книги</button>
       </div>
+      <ng-scrollbar externalViewport cdkVirtualScrollViewport style="width: 100%; height: calc(100% - 100px);">
+        <div class="flex flex-wrap">
+          @if (presentations$ | async; as presentations) {
+
+            @for (presentation of presentations; track presentation.id) {
+              <div class="presentation-card"
+                   [style.background-image]="presentation.previewUrl ? 'url(\'' + presentation.previewUrl + '\')' : null"
+                   (click)="onSelect(presentation)"
+              >
+                <div class="card-overlay flex flex-column">
+                  <h4>{{ presentation.title }}</h4>
+                  <p>Слайдов: {{ presentation.slides.length }}</p>
+                </div>
+              </div>
+            } @empty {
+              <!-- Empty State -->
+              <div class="empty-state">
+                <h3>No presentations yet.</h3>
+                <p>Get started by creating a new one.</p>
+              </div>
+            }
+
+
+          }
+        </div>
+
+      </ng-scrollbar>
     </div>
-
   </ng-container>
-
-
   <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR">
     --
   </ng-template>

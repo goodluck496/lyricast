@@ -155,30 +155,24 @@ export class TextPlugin implements EditorPlugin {
 
     ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_TEXT_BACKGROUND'), takeUntil(this.destroy$)).subscribe(async (cmd) => {
       const setBgCmd = cmd as Extract<EditorCommand, { t: 'SET_TEXT_BACKGROUND' }>;
-      let source: string | undefined;
 
-      console.log('setBgCmd.assetId', setBgCmd.assetId);
+      let persistentSource: string | undefined;
+
       if (setBgCmd.assetId) {
-        source = await this.assetStorage.getAssetObjectURL(setBgCmd.assetId);
-        applyToSelection((t) => { t.bgAssetId = setBgCmd.assetId; });
+        persistentSource = setBgCmd.assetId;
       } else if (setBgCmd.url) {
-        // If it's a data URL, convert to Blob and save as asset
         if (setBgCmd.url.startsWith('data:')) {
           const mimeType = setBgCmd.url.substring(setBgCmd.url.indexOf(':') + 1, setBgCmd.url.indexOf(';'));
           const base64 = setBgCmd.url.split(',')[1];
           const blob = ctx.utils.base64ToBlob(base64, mimeType);
-          const assetId = await this.assetStorage.saveAsset(blob, mimeType);
-          source = await this.assetStorage.getAssetObjectURL(assetId);
-          // Update the node's bgAssetId for serialization
-          applyToSelection((t) => { t.bgAssetId = assetId; });
+          persistentSource = await this.assetStorage.saveAsset(blob, mimeType);
         } else {
-          source = setBgCmd.url;
-          applyToSelection((t) => { t.bgAssetId = setBgCmd.url; });
+          persistentSource = setBgCmd.url;
         }
       }
 
-      if (source) {
-        applyToSelection((t) => { void t.setBackground(source!); });
+      if (persistentSource) {
+        applyToSelection((t) => { void t.setBackground(persistentSource!); });
       }
     });
     ctx.bus.commands$.pipe(filter((c) => c.t === 'CLEAR_TEXT_BACKGROUND'), takeUntil(this.destroy$)).subscribe(() => {

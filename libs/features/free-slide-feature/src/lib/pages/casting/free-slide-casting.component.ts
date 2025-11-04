@@ -26,7 +26,7 @@ import { AppActions, BridgeService, Pages } from '@lyri-cast/common-browser';
 import { filterEmpty } from '@lyri-cast/common';
 import { filter, map, take, withLatestFrom } from 'rxjs';
 import {
-  FreeSlide,
+  Slide,
   SerializedIframeNode,
   SerializedState,
 } from '@lyri-cast/entities';
@@ -102,7 +102,7 @@ export class FreeSlideCastingComponent
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(([process, navigate]) => {
-        let slideToRender: FreeSlide | undefined;
+        let slideToRender: Slide | undefined;
 
         if (navigate?.slide) {
           // If a navigation or live update has occurred, find the latest version of that slide
@@ -200,7 +200,7 @@ export class FreeSlideCastingComponent
     this.app.stage.addChild(this.scene);
   }
 
-  private async renderSlide(slide: FreeSlide) {
+  private async renderSlide(slide: Slide) {
     // Clear the scene and DOM overlay before rendering new content
     this.scene.removeChildren();
     this.domOverlayRef.nativeElement.innerHTML = '';
@@ -212,12 +212,12 @@ export class FreeSlideCastingComponent
       this.previousSlideAssetIds.clear();
     }
 
-    if (!slide.htmlString) {
+    if (!slide.content) {
       return;
     }
 
     try {
-      const data: SerializedState = JSON.parse(slide.htmlString);
+      const data: SerializedState = JSON.parse(slide.content);
       if (!data || !data.nodes) {
         return;
       }

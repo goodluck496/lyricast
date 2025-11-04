@@ -49,3 +49,5 @@ assets/sqlRaw/**/*
 .vscode/**/*
 llm-docs/**/*
 temp-scripts/**/*
+
+data

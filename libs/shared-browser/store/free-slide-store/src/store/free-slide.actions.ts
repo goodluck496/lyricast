@@ -1,6 +1,6 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
 import { Pages } from '@lyri-cast/common-browser';
-import { FreeSlide } from '@lyri-cast/entities';
+import { Slide } from '@lyri-cast/entities';
 
 export const FreeSlideActionsEnum = {
   openPage: '[FREE_SLIDE]openPage',
@@ -19,12 +19,12 @@ export type FreeSlideActionsEnumKeys = keyof typeof FreeSlideActionsEnum;
 
 export type FreeSlideStartCastingPayload = {
   slideId: string;
-  slides: FreeSlide[];
+  slides: Slide[];
   fromIndex: number;
 };
 
 export type FreeSlideNavigatePayload = {
-  slide: FreeSlide;
+  slide: Slide;
   direction?: 'next' | 'prev';
   index?: number;
 };
@@ -42,7 +42,7 @@ export const FreeSlideActions = createActionGroup({
     [FreeSlideActionsEnum.pauseCasting]: emptyProps(),
     [FreeSlideActionsEnum.castingStarted]: emptyProps(),
     [FreeSlideActionsEnum.slideNavigate]: props<FreeSlideNavigatePayload>(),
-    [FreeSlideActionsEnum.selectSlide]: props<FreeSlide>(),
-    [FreeSlideActionsEnum.liveUpdateSlide]: props<{ slide: FreeSlide }>(),
+    [FreeSlideActionsEnum.selectSlide]: props<Slide>(),
+    [FreeSlideActionsEnum.liveUpdateSlide]: props<{ slide: Slide }>(),
   },
 });

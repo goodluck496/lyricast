@@ -1,0 +1,34 @@
+.presentations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.presentation-card {
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 20px 0 rgba(0,0,0,.12);
+  }
+}
+
+.create-new-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px; /* Adjust as needed */
+
+  button {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 2rem;
+}

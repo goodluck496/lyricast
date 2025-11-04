@@ -1,3 +1,40 @@
 <lyri-page-container [pagePath]="[Pages.MAIN, Pages.FREE_SLIDE_FEATURE, FreeSlidePages.MAIN]">
-  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER"></ng-template>
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
+    <h2>Free-Form Presentations</h2>
+  </ng-template>
+
+  <ng-container page-content>
+    <div *ngIf="presentations$ | async as presentations" class="presentations-grid">
+      <!-- "Create New" Card -->
+      <p-card class="presentation-card create-new-card">
+        <ng-template pTemplate="content">
+          <button pButton type="button" icon="pi pi-plus" label="Create New" (click)="onCreateNew()"></button>
+        </ng-template>
+      </p-card>
+
+      <!-- Presentation Cards -->
+      <p-card *ngFor="let presentation of presentations" class="presentation-card" (click)="onSelect(presentation)">
+        <ng-template pTemplate="header">
+          <h4>{{ presentation.title }}</h4>
+        </ng-template>
+        <ng-template pTemplate="content">
+          <p>Slides: {{ presentation.slides.length }}</p>
+        </ng-template>
+      </p-card>
+
+      <!-- Empty State -->
+      <div *ngIf="presentations.length === 0" class="empty-state">
+        <h3>No presentations yet.</h3>
+        <p>Get started by creating a new one.</p>
+      </div>
+    </div>
+
+  </ng-container>
+
+
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR">
+    --
+  </ng-template>
+
+
 </lyri-page-container>

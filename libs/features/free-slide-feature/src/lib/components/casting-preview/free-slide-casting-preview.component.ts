@@ -63,7 +63,7 @@ export class FreeSlideCastingPreviewComponent
     this.selectedSlide$
       .pipe(filterEmpty(), takeUntilDestroyed())
       .subscribe((data: FreeSlideNavigatePayload) => {
-        this.slideText = data.slide.htmlString;
+        this.slideText = data.slide.content;
         this.initReveal();
       });
 

@@ -5,14 +5,14 @@ import {
   FreeSlideNavigatePayload,
   FreeSlideStartCastingPayload,
 } from './free-slide.actions';
-import { FreeSlide } from '@lyri-cast/entities';
+import { Slide } from '@lyri-cast/entities';
 
 export interface FreeSlideState {
   freeSlideCastingProcess: FreeSlideStartCastingPayload | null;
   freeSlideCastingStarted: boolean;
   freeSlideCastingPaused: boolean;
   freeSlideNavigateState: FreeSlideNavigatePayload | null;
-  freeSlideSelected: FreeSlide | null;
+  freeSlideSelected: Slide | null;
 }
 
 export const freeSlideInitialState: FreeSlideState = {

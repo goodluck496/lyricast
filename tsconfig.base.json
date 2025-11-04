@@ -33,6 +33,9 @@
       ],
       "@lyri-cast/entities": ["libs/entities/src/index.ts"],
       "@lyri-cast/form": ["libs/features/forms/src/index.ts"],
+      "@lyri-cast/free-slide": [
+        "libs/shared-browser/data-access/free-slide/src/index.ts"
+      ],
       "@lyri-cast/free-slide-domain": [
         "libs/domains/free-slide-domain/src/index.ts"
       ],

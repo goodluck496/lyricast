@@ -149,8 +149,8 @@ export class BrushPlugin implements EditorPlugin {
           addBrush.options?.strokeWidth ?? 4
         );
         if (addBrush.options?.bgAssetId) {
-          // This will be resolved by deserializeState later
           brushNode.bgAssetId = addBrush.options.bgAssetId;
+          void brushNode.setBackground(addBrush.options.bgAssetId);
         }
 
         const destroy$ = new Subject<void>();

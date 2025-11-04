@@ -31,9 +31,8 @@ export class NodeBackgroundManager {
   ) {}
 
   private isAssetId(source: string): boolean {
-    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-      source
-    );
+    // Check for SHA-256 hash (64 hex characters)
+    return /^[0-9a-fA-F]{64}$/.test(source);
   }
 
   /** Set solid background color behind text/shape */

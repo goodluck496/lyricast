@@ -1,4 +1,4 @@
-<lyri-page-container [pagePath]="[Pages.MAIN, Pages.FREE_SLIDE_FEATURE, Pages.FREE_SLIDE]">
+<lyri-page-container [pagePath]="$pagePath()">
 
   <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
     назад
@@ -24,10 +24,12 @@
         </ng-scrollbar>
       </div>
       <div class="free-slide__contents">
+        <form [formGroup]="slideForm">
         <p-card class="free-slide">
           <ng-template pTemplate="header">
             <div class="free-slide__header">
-              {{ currentSlideIndex }}. <input pInputText [(ngModel)]="currentSlideName"
+              {{ currentSlideIndex }}. <input pInputText
+                                              formControlName="name"
                                               class="free-slide__name-input" />
             </div>
 
@@ -61,6 +63,7 @@
           </ng-template>
 
         </p-card>
+        </form>
       </div>
     </div>
 

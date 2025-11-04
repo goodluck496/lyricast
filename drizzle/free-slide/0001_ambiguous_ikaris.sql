@@ -1,1 +1,0 @@
-ALTER TABLE `slides` ADD `preview_asset_id` text NOT NULL;

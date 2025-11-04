@@ -24,7 +24,6 @@ export const freeSlideFeatureRoutes: Route[] = [
       import('./pages/free-slide-main/free-slide-main.component').then(
         (c) => c.FreeSlideMainComponent
       ),
-
   },
   {
     path: `${FreeSlidePages.SLIDE}/:id`,
@@ -36,9 +35,8 @@ export const freeSlideFeatureRoutes: Route[] = [
       () => {
         const store = inject(Store);
 
-        store.dispatch(
-          FreeSlideActions[FreeSlideActionsEnum.pauseCasting]()
-        );
+        store.dispatch(FreeSlideActions[FreeSlideActionsEnum.pauseCasting]());
+        return true;
       },
     ],
     providers: [

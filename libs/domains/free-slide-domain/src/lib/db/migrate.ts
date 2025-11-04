@@ -4,7 +4,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
 export function runMigrations(dbPath: string) {
   const sqlite = new Database(dbPath);
-  console.log('RUN MIGRATE');
+  console.log('run migrate');
   const db = drizzle(sqlite);
   migrate(db, { migrationsFolder: 'drizzle/free-slide' }); // синхронно применит все .sql
   return db;

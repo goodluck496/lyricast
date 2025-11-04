@@ -3,13 +3,14 @@ import { relations } from 'drizzle-orm';
 
 export const presentations = sqliteTable('presentations', {
   id: text('id').primaryKey(),
-  title: text('title').notNull(),
+  title: text('title').notNull().default('Презентация'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
 export const slides = sqliteTable('slides', {
   id: text('id').primaryKey(),
+  name: text('name').notNull().default('Слайд 1'),
   content: text('content').notNull(),
   index: integer('index').notNull(),
   previewAssetId: text('preview_asset_id').notNull().default(''),

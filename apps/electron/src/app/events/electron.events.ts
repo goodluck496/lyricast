@@ -67,7 +67,7 @@ ipcMain.handle(
 ipcMain.handle(
   ElectronActionEvents.CLOSE_WINDOW,
   (event, args: CloseWindowArgs) => {
-    console.log('close ', event, args);
+    console.log('close window ',event.processId , args);
     if (!App.openedWindows[args.type]) {
       return;
     }

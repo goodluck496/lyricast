@@ -62,6 +62,7 @@ export class FreeSlideService {
       if (data.slides && data.slides.length > 0) {
         const newSlides: NewSlide[] = data.slides.map((slideDto, index) => ({
           id: uuidv4(),
+          name: slideDto.name,
           content: slideDto.content,
           index: slideDto.index ?? index,
           presentationId: presentationId,
@@ -79,6 +80,7 @@ export class FreeSlideService {
       const createdSlides: schema.Slide[] = (data.slides || []).map(
         (slideDto, index) => ({
           id: 'temp-id', // This is not the real ID
+          name: slideDto.name,
           content: slideDto.content,
           index: slideDto.index ?? index,
           presentationId: presentationId,
@@ -89,7 +91,7 @@ export class FreeSlideService {
       return {
         ...newPresentation,
         slides: createdSlides,
-      };
+      } as PresentationWithSlides;
     });
   }
 
@@ -127,6 +129,7 @@ export class FreeSlideService {
           const insertValues: InferInsertModel<typeof slides> = {
             id: slideId,
             presentationId: id,
+            name: rest.name ?? '',
             index: rest.index ?? 0,
             content: rest.content ?? '',
             previewAssetId: rest.previewAssetId ?? '',

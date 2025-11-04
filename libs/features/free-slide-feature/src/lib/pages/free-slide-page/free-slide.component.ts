@@ -3,8 +3,10 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  computed,
   DestroyRef,
   inject,
+  signal,
   ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -12,9 +14,13 @@ import { ButtonDirective } from 'primeng/button';
 import { Store } from '@ngrx/store';
 import { SlideDto } from '@lyri-cast/entities';
 import { Actions } from '@ngrx/effects';
-import { FormsModule } from '@angular/forms';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { PageContainerComponent } from '@lyri-cast/ui-lib';
-import { PAGE_CONTAINER_TEMPLATES, Pages } from '@lyri-cast/common-browser';
+import {
+  FreeSlidePages,
+  PAGE_CONTAINER_TEMPLATES,
+  Pages,
+} from '@lyri-cast/common-browser';
 import { DropdownModule } from 'primeng/dropdown';
 import { FreeSlideService } from './free-slide.service';
 import { CardModule } from 'primeng/card';
@@ -44,6 +50,7 @@ import {
 } from '@lyri-cast/form';
 import { ActivatedRoute } from '@angular/router';
 import { FreeSlideApiService } from '@lyri-cast/free-slide';
+import { PrimeTemplate } from 'primeng/api';
 
 @Component({
   selector: 'lyri-free-slide',
@@ -52,6 +59,7 @@ import { FreeSlideApiService } from '@lyri-cast/free-slide';
     CommonModule,
     ButtonDirective,
     FormsModule,
+    ReactiveFormsModule,
     PageContainerComponent,
     DropdownModule,
     CardModule,
@@ -60,6 +68,7 @@ import { FreeSlideApiService } from '@lyri-cast/free-slide';
     PreviewSlideComponent,
     FreeSlideSidebarComponent,
     PixiSlideEditorV2Component,
+    PrimeTemplate,
   ],
   templateUrl: './free-slide.component.html',
   styleUrl: './free-slide.component.scss',
@@ -76,19 +85,33 @@ export class FreeSlideComponent implements AfterViewInit {
   destroyRef = inject(DestroyRef);
   assetStorage = inject(AssetStorageService);
 
+  containerPagePath: (string | Pages)[] = [];
+
   changePresentation$ = new Subject<void>();
 
   @ViewChild(PixiSlideEditorV2Component)
   pixiEditor!: PixiSlideEditorV2Component;
 
+  slideForm = new FormGroup({
+    name: new FormControl('', { nonNullable: true }),
+  });
+
   currentSlideId = '';
   currentSlideIndex = 1;
-  currentSlideName = '';
 
   slides$ = this.slideService.slides$.asObservable();
 
+  presentationId = signal<string>('');
+
+  $pagePath = computed(() => [
+    Pages.MAIN,
+    Pages.FREE_SLIDE_FEATURE,
+    FreeSlidePages.SLIDE,
+    this.presentationId(),
+  ]);
   // Автосохранение с debounce при изменениях в редакторе
   private autoSave$ = new Subject<void>();
+  slideNameChanged$ = new Subject<string>();
 
   async onAddNewSlide() {
     const newSlide = this.slideService.addSlide();
@@ -106,7 +129,9 @@ export class FreeSlideComponent implements AfterViewInit {
     }
     console.log('on select slide', slide);
 
-    this.currentSlideName = slide.name;
+    this.slideForm.patchValue({ name: slide.name }, { emitEvent: false });
+    this.slideForm.markAsPristine();
+
     this.currentSlideId = slide.id;
     this.currentSlideIndex = slide.index;
 
@@ -166,17 +191,19 @@ export class FreeSlideComponent implements AfterViewInit {
       assetId = await this.assetStorage.saveAsset(blob, 'image/jpeg');
     }
 
-    console.log('[FreeSlide] Saving slide:', this.currentSlideName);
+    console.log('[FreeSlide] Saving slide:', this.slideForm.getRawValue().name);
 
     // const { id } = RouteParamsReducerHelper.reduceSnapshot(this.route.snapshot);
 
     this.slideService.updateSlide({
       id: this.currentSlideId,
-      name: this.currentSlideName,
+      name: this.slideForm.getRawValue().name,
       index: this.currentSlideIndex,
       content: htmlString,
       previewAssetId: assetId,
     });
+
+    this.slideForm.markAsPristine();
 
     // Live-sync logic: if casting is active for this slide, dispatch an update.
     combineLatest([
@@ -292,7 +319,7 @@ export class FreeSlideComponent implements AfterViewInit {
         // Handle case where no slides are left
         this.currentSlideId = '';
         this.currentSlideIndex = -1;
-        this.currentSlideName = '';
+        // this.currentSlideName = '';
         this.pixiEditor.clearAllNodes();
         this.cdr.markForCheck();
       }
@@ -330,15 +357,16 @@ export class FreeSlideComponent implements AfterViewInit {
         this.onSaveSlide();
       });
 
-    // Автосохранение с задержкой 3 секунды после изменений
-    this.autoSave$
+    this.slideForm.valueChanges
       .pipe(
         debounceTime(2000),
         takeUntil(this.changePresentation$),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => {
-        this.onSaveSlide();
+        if (this.slideForm.dirty) {
+          this.onSaveSlide();
+        }
       });
 
     // Подписка на изменения в редакторе (команды)
@@ -351,7 +379,7 @@ export class FreeSlideComponent implements AfterViewInit {
             takeUntilDestroyed(this.destroyRef)
           )
           .subscribe(() => {
-            this.autoSave$.next();
+            this.slideForm.markAsDirty();
           });
       }
     }, 200);
@@ -384,6 +412,14 @@ export class FreeSlideComponent implements AfterViewInit {
   updateSlideInService(presentationId: string) {
     this.changePresentation$.next();
 
+    this.presentationId.set(presentationId);
+    this.containerPagePath = [
+      Pages.FREE_SLIDE,
+      FreeSlidePages.SLIDE,
+      presentationId,
+    ];
+    this.cdr.markForCheck();
+
     this.api
       .getById(presentationId)
       .pipe(first(), takeUntilDestroyed(this.destroyRef))
@@ -402,4 +438,5 @@ export class FreeSlideComponent implements AfterViewInit {
 
   protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
   protected readonly Pages = Pages;
+  protected readonly FreeSlidePages = FreeSlidePages;
 }

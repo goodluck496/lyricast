@@ -18,7 +18,7 @@ module.exports = {
   ],
   win: {
     target: [{ target: 'nsis', arch: ['ia32'] }],
-    icon: 'assets/build/icons/builded/icons/png/256x256.png',
+    icon: 'assets/build/icons/lyriicon.ico',
   },
   linux: {
     target: ['AppImage', 'deb', 'rpm'],
@@ -51,6 +51,10 @@ module.exports = {
     {
       from: 'assets/build/icons',
       to: 'assets/icons',
+    },
+    {
+      from: 'data',
+      to: 'assets/databases',
     },
 
     // todo самое плохое решение,  но рабочее,

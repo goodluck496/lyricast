@@ -2,7 +2,10 @@ import { Injectable } from '@angular/core';
 import { EditorContext, EditorPlugin,  } from '../core';
 import { filter, takeUntil } from 'rxjs/operators';
 import { EditorCommand } from '../services/command-bus.service';
-import { AddNodeCommand } from '../services/history-commands';
+import {
+  AddNodeCommand,
+  ChangeBackgroundCommand,
+} from '../services/history-commands';
 import { Subject } from 'rxjs';
 import { FederatedPointerEvent } from 'pixi.js';
 import { TextFitService } from '../services/text-fit.service';
@@ -155,25 +158,21 @@ export class TextPlugin implements EditorPlugin {
 
     ctx.bus.commands$.pipe(filter((c) => c.t === 'SET_TEXT_BACKGROUND'), takeUntil(this.destroy$)).subscribe(async (cmd) => {
       const setBgCmd = cmd as Extract<EditorCommand, { t: 'SET_TEXT_BACKGROUND' }>;
+      const source = setBgCmd.url || setBgCmd.assetId;
+      if (!source) return;
 
-      let persistentSource: string | undefined;
+      applyToSelection(async (textNode) => {
+        const newAssetId = await this.assetStorage.ensureAssetIsLocal(source);
 
-      if (setBgCmd.assetId) {
-        persistentSource = setBgCmd.assetId;
-      } else if (setBgCmd.url) {
-        if (setBgCmd.url.startsWith('data:')) {
-          const mimeType = setBgCmd.url.substring(setBgCmd.url.indexOf(':') + 1, setBgCmd.url.indexOf(';'));
-          const base64 = setBgCmd.url.split(',')[1];
-          const blob = ctx.utils.base64ToBlob(base64, mimeType);
-          persistentSource = await this.assetStorage.saveAsset(blob, mimeType);
-        } else {
-          persistentSource = setBgCmd.url;
+        if (newAssetId) {
+          const command = new ChangeBackgroundCommand(
+            textNode,
+            textNode.backgroundImageUrl, // old assetId
+            newAssetId                 // new assetId
+          );
+          ctx.history.execute(command);
         }
-      }
-
-      if (persistentSource) {
-        applyToSelection((t) => { void t.setBackground(persistentSource!); });
-      }
+      });
     });
     ctx.bus.commands$.pipe(filter((c) => c.t === 'CLEAR_TEXT_BACKGROUND'), takeUntil(this.destroy$)).subscribe(() => {
       applyToSelection((t) => t.clearBackground());

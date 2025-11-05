@@ -345,12 +345,15 @@ export class PixiSlideEditorV2Component
         }
       });
 
-    // Keep grid size on resize
-    fromEvent(window, 'resize')
-      .pipe(auditTime(0), takeUntil(this.destroy$))
+    // Keep grid size and scene bounds on renderer resize
+    this.utils
+      .fromPixi(this.app.stage, 'resize')
+      .pipe(auditTime(16), takeUntil(this.destroy$)) // auditTime to prevent excessive calls
       .subscribe(() => {
+        if (!this.app || this.app.stage.destroyed) return;
         this.grid.width = this.app.renderer.width;
         this.grid.height = this.app.renderer.height;
+        this.sceneViewport.updateSceneBounds();
       });
 
     // Global command handlers
@@ -811,6 +814,7 @@ export class PixiSlideEditorV2Component
 
   onAspectRatioChange(ratio: '16:9' | '4:3' | 'none') {
     this.aspectRatio = ratio;
+    this.sceneViewport.aspectRatio = ratio;
     this.sceneViewport.updateSceneBounds();
     // Update serializer with new scene dimensions
     this.serializer.sceneWidth = this.sceneViewport.sceneWidth;
@@ -879,8 +883,28 @@ export class PixiSlideEditorV2Component
     this.ctxMenu?.open(e.clientX, e.clientY);
   }
 
+  public resetViewport(): void {
+    if (this.world && this.app) {
+      this.app.stage.x = 0;
+      this.app.stage.y = 0;
+      this.app.stage.pivot.set(0, 0);
+
+      this.world.x = 0;
+      this.world.y = 0;
+      this.world.pivot.set(0, 0);
+      this.world.scale.set(1);
+
+      if (this.grid) {
+        this.grid.tilePosition.set(0, 0);
+      }
+
+      this.store.setZoom(1);
+      this.sceneViewport.updateSceneBounds(); // Also recalculate the visual bounds
+    }
+  }
+
   /**
-   * Очищает все ноды со сцены.
+   * Очищает все ноды со сцены, сбрасывает viewport и историю.
    */
   clearAllNodes() {
     const allNodeIds = Object.keys(this.store.snapshot((s) => s.nodes));
@@ -927,6 +951,11 @@ export class PixiSlideEditorV2Component
       this.store.resetNodes();
       this.bus.emit({ t: 'SELECT', ids: [] });
     }
+
+    // Сбрасываем viewport и историю, чтобы гарантировать чистое состояние
+    // после перезагрузки слайда.
+    this.resetViewport();
+    this.history.clear();
   }
 }
 

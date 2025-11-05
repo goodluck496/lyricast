@@ -61,38 +61,44 @@ export class NodeBackgroundManager {
       return;
     }
 
-    let finalImageUrl: string; // This will be the URL used to load the texture
+    const oldAssetId = this.bgAssetId;
+    let assetIdToLoad: string;
 
     if (this.isAssetId(urlOrAssetId)) {
-      const resolvedUrl = await this.assetStorage.getAssetObjectURL(
-        urlOrAssetId
-      );
-      if (resolvedUrl) {
-        finalImageUrl = resolvedUrl;
-        this.bgAssetId = urlOrAssetId; // Store the asset ID for serialization
-      } else {
-        console.warn(
-          `[NodeBackgroundManager] Failed to resolve asset ID: ${urlOrAssetId}`
-        );
-        this.bgAssetId = undefined; // Clear if resolution fails
+      assetIdToLoad = urlOrAssetId;
+    } else {
+      // It's a direct URL (http, https, data, blob). Import it.
+      try {
+        assetIdToLoad = await this.assetStorage.importAssetFromUrl(urlOrAssetId);
+      } catch (e) {
+        console.error(`[NodeBackgroundManager] Failed to import asset from URL: ${urlOrAssetId}`, e);
         return;
       }
-    } else {
-      // It's a direct URL (http, https, data, blob)
-      finalImageUrl = urlOrAssetId;
-      this.bgAssetId = urlOrAssetId; // Store the direct URL for serialization
+    }
+
+    // If the new asset is the same as the old one, do nothing.
+    if (assetIdToLoad === oldAssetId) {
+      return;
+    }
+
+    // Now, we for sure have an asset ID. Let's resolve it to a local URL.
+    const resolvedUrl = await this.assetStorage.getAssetObjectURL(assetIdToLoad);
+    if (!resolvedUrl) {
+      console.warn(
+        `[NodeBackgroundManager] Failed to resolve asset ID: ${assetIdToLoad}`
+      );
+      return;
     }
 
     try {
-      const tex = await loadTextureRobust(finalImageUrl);
-      // Если устанавливаем изображение, очищаем цветной фон
-      this.bgFillColor = null;
+      const tex = await loadTextureRobust(resolvedUrl);
+      // If we successfully loaded the new texture, we can now update the state.
+      this.bgAssetId = assetIdToLoad; // Store the new asset ID for serialization
+      this.bgFillColor = null; // Clear any solid fill
 
       if (!this.bgSprite) {
         this.bgSprite = new Sprite(tex);
         this.bgSprite.anchor.set(0.5);
-        // Position will be set in updateBackgroundLayout
-        // Add sprite behind the primary graphics (textDisplay or shapeG)
         const primaryGraphicsIndex = this.hostNode.getChildIndex(
           this.getPrimaryGraphicsForZOrder()
         );
@@ -103,7 +109,7 @@ export class NodeBackgroundManager {
       } else {
         this.bgSprite.texture = tex;
       }
-      // Создаём маску для ограничения изображения границами блока
+
       if (!this.maskG) {
         this.maskG = new Graphics();
         const primaryGraphicsIndex = this.hostNode.getChildIndex(
@@ -112,10 +118,22 @@ export class NodeBackgroundManager {
         this.hostNode.addChildAt(this.maskG, Math.max(0, primaryGraphicsIndex));
         this.bgSprite.mask = this.maskG;
       }
+
       this.updateBackgroundLayout();
       this.redrawHostBackground?.(); // Ask host to redraw its solid background (to clear it)
+
+      // Now that the new background is successfully set, delete the old asset.
+      if (oldAssetId && oldAssetId !== assetIdToLoad) {
+        try {
+          await this.assetStorage.deleteAsset(oldAssetId);
+        } catch (e) {
+          console.warn(`[NodeBackgroundManager] Failed to delete old asset ${oldAssetId}`, e);
+        }
+      }
+
     } catch (e) {
       console.warn('Failed to set background:', e);
+      // If loading the new texture fails, we do not change bgAssetId, so the old one remains.
     }
   }
 

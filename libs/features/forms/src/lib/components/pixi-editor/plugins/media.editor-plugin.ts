@@ -28,23 +28,33 @@ export class MediaPlugin implements EditorPlugin {
   init(ctx: EditorContext): void {
     // ADD_IMAGE
     ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_IMAGE'), takeUntil(this.destroy$)).subscribe(async (cmd) => {
-      const addImage = cmd as Extract<EditorCommand, { t: 'ADD_IMAGE' }>;
-      let source: string | undefined;
-      if (addImage.assetId) {
-        source = await this.assetStorage.getAssetObjectURL(addImage.assetId);
-      } else if (addImage.url) {
-        source = addImage.url;
+      const addImage = cmd as Extract<EditorCommand, { t: 'ADD_IMAGE' }>
+      let assetId: string | undefined = addImage.assetId;
+
+      // If an external URL is provided, import it first.
+      if (addImage.url) {
+        try {
+          assetId = await this.assetStorage.importAssetFromUrl(addImage.url);
+        } catch (e) {
+          console.error(`[MediaPlugin] Failed to import image from URL: ${addImage.url}`, e);
+          return;
+        }
       }
 
+      if (!assetId) {
+        console.warn('ADD_IMAGE command executed without a valid assetId or importable URL.');
+        return;
+      }
+
+      // Now we have a local assetId, get its svc:// URL for loading.
+      const source = await this.assetStorage.getAssetObjectURL(assetId);
       if (!source) {
-        console.warn('ADD_IMAGE command received without assetId or url.');
+        console.error(`[MediaPlugin] Failed to get object URL for assetId: ${assetId}`);
         return;
       }
 
       const imageNode = new ImageNode(); // Создаем без initialSource
-      // Set assetId or url on the node for serialization
-      if (addImage.assetId) imageNode.assetId = addImage.assetId;
-      else if (addImage.url) imageNode.url = addImage.url;
+      imageNode.assetId = assetId; // Store the definitive local asset ID
 
       // Ждем загрузки текстуры и получения фактических размеров
       await imageNode.setImage(source);

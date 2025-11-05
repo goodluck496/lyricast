@@ -33,8 +33,6 @@ import {
 import { FreeSlideService } from '../../pages/free-slide-page/free-slide.service';
 import { filterEmpty } from '@lyri-cast/common';
 
-import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
-import { StorageManagementComponent } from '../management/storage-management/storage-management.component';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { FormsModule } from '@angular/forms';
 import { ToggleButtonChangeEvent } from 'primeng/togglebutton/togglebutton.interface';
@@ -48,13 +46,11 @@ import { ToggleButtonChangeEvent } from 'primeng/togglebutton/togglebutton.inter
     NavigatorFeatureComponent,
     SvgIconComponent,
     FreeSlideCastingPreviewComponent,
-    DynamicDialogModule,
     ToggleButtonModule,
     FormsModule,
   ],
   templateUrl: './free-slide-sidebar.component.html',
   styleUrl: './free-slide-sidebar.component.scss',
-  providers: [DialogService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FreeSlideSidebarComponent {
@@ -67,7 +63,6 @@ export class FreeSlideSidebarComponent {
   private readonly actions$ = inject(Actions);
   private readonly sidebarService = inject<SidebarService<any>>(SidebarService);
   private readonly slideService = inject(FreeSlideService);
-  private readonly dialogService = inject(DialogService);
 
   openedCastingWindow$ = this.store.select(selectOpenedWindow).pipe(
     map((e) => {
@@ -85,15 +80,6 @@ export class FreeSlideSidebarComponent {
     if (isEnabled) {
       this.slideService.requestSaveCurrentSlide$.next();
     }
-  }
-
-  openStorageManagement() {
-    this.dialogService.open(StorageManagementComponent, {
-      header: 'Asset Storage Management',
-      width: '70vw',
-      height: '70vh',
-      dismissableMask: true,
-    });
   }
 
   onStartCasting() {

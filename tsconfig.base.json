@@ -17,6 +17,13 @@
     "baseUrl": ".",
     "paths": {
       "@lyri-cast/*": ["libs/*/src/index.ts"],
+      "@lyri-cast/asset-domain": ["libs/domains/asset-domain/src/index.ts"],
+      "@lyri-cast/asset-management": [
+        "libs/features/asset-management/src/index.ts"
+      ],
+      "@lyri-cast/assets": [
+        "libs/shared-browser/data-access/assets/src/index.ts"
+      ],
       "@lyri-cast/bible-domain": ["libs/domains/bible-domain/src/index.ts"],
       "@lyri-cast/bible-feature": ["libs/features/bible-feature/src/index.ts"],
       "@lyri-cast/bible-store": [

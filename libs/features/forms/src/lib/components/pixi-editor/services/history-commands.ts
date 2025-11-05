@@ -1,8 +1,47 @@
 import { Container } from 'pixi.js';
 import { HistoryCommand } from './history.service';
 import { EditorStore, NodeState } from './editor-store.service';
-import { NodeBase, TextNode } from '../nodes';
+import { NodeBase, ShapeNode, TextNode } from '../nodes';
 import { CommandBusService } from './command-bus.service';
+
+/**
+ * A host node that supports background operations.
+ * This is a minimal interface required by ChangeBackgroundCommand.
+ */
+interface BackgroundCapableNode extends NodeBase {
+  setBackground(source: string): Promise<void>;
+  clearBackground(): void;
+  readonly bgAssetId?: string;
+}
+
+/**
+ * Команда изменения фона узла (изображением).
+ */
+export class ChangeBackgroundCommand implements HistoryCommand {
+  readonly type = 'CHANGE_BACKGROUND';
+
+  constructor(
+    private nodeRef: BackgroundCapableNode,
+    private oldAssetId: string | undefined,
+    private newAssetId: string
+  ) {}
+
+  execute(): void {
+    void this.nodeRef.setBackground(this.newAssetId);
+  }
+
+  undo(): void {
+    if (this.oldAssetId) {
+      void this.nodeRef.setBackground(this.oldAssetId);
+    } else {
+      this.nodeRef.clearBackground();
+    }
+  }
+
+  get description(): string {
+    return `Изменить фон узла`;
+  }
+}
 
 /**
  * Команда добавления узла на сцену.

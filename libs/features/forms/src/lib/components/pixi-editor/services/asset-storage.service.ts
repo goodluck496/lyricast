@@ -1,7 +1,10 @@
-import { Injectable } from '@angular/core';
-import { v4 as uuidv4 } from 'uuid';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { AssetsApiService } from '@lyri-cast/shared-browser/data-access/assets';
+import { firstValueFrom, map } from 'rxjs';
 
-interface AssetRecord {
+// This interface is kept for backward compatibility with consumers of this service.
+export interface AssetRecord {
   id: string;
   mimeType: string;
   data: Blob;
@@ -11,233 +14,149 @@ interface AssetRecord {
 
 @Injectable({ providedIn: 'root' })
 export class AssetStorageService {
-  private dbName = 'PixiEditorAssets';
-  private storeName = 'assets';
-  private db: IDBDatabase | null = null;
-  private objectURLMap = new Map<string, string>(); // assetId -> objectURL
+  private readonly assetsApiService = inject(AssetsApiService);
+  private readonly http = inject(HttpClient);
 
-  constructor() {
-    this.openDb();
-  }
-
-  private async openDb(): Promise<IDBDatabase> {
-    if (this.db) {
-      console.log('[AssetStorageService] Using existing IndexedDB connection.');
-      return this.db;
-    }
-
-    return new Promise((resolve, reject) => {
-      console.log('[AssetStorageService] Opening IndexedDB...');
-      const request = indexedDB.open(this.dbName, 1);
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        db.createObjectStore(this.storeName, { keyPath: 'id' });
-        console.log(
-          '[AssetStorageService] IndexedDB upgrade needed, object store created.'
-        );
-      };
-
-      request.onsuccess = (event) => {
-        this.db = (event.target as IDBOpenDBRequest).result;
-        console.log('[AssetStorageService] IndexedDB opened successfully.');
-        resolve(this.db);
-      };
-
-      request.onerror = (event) => {
-        console.error(
-          '[AssetStorageService] IndexedDB error:',
-          (event.target as IDBOpenDBRequest).error
-        );
-        reject((event.target as IDBOpenDBRequest).error);
-      };
-    });
-  }
-
-  private async getObjectStore(
-    mode: IDBTransactionMode
-  ): Promise<IDBObjectStore> {
-    const db = await this.openDb();
-    const transaction = db.transaction(this.storeName, mode);
-    return transaction.objectStore(this.storeName);
-  }
-
-  private async calculateHash(blob: Blob): Promise<string> {
-    const buffer = await blob.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  }
-
+  /**
+   * Saves an asset using the asset worker.
+   * @param blob The data to save.
+   * @param mimeType The MIME type of the blob.
+   * @param originalUrl The original URL of the asset, used to derive a filename.
+   * @returns A promise that resolves with the ID of the saved asset.
+   */
   async saveAsset(
-    blob: Blob,
+    blobOrFile: Blob | File,
     mimeType: string,
     originalUrl?: string
   ): Promise<string> {
-    const id = await this.calculateHash(blob);
+    let fileToUpload: File;
 
-    // Check if asset with this hash already exists
-    const existingRecord = await this.getAssetRecord(id);
-    if (existingRecord) {
-      console.log(`[AssetStorageService] Asset with hash ${id} already exists. Reusing.`);
-      return id; // Return existing ID
+    if (blobOrFile instanceof File) {
+      // If it's already a File (e.g., from clipboard), use it directly.
+      // We create a new file just to ensure a consistent name if the original has none.
+      const fileName = blobOrFile.name || `asset-${Date.now()}`;
+      fileToUpload = new File([blobOrFile], fileName, { type: blobOrFile.type });
+    } else {
+      // It's a generic Blob (e.g., from an HTTP request), so create a new File.
+      let filename = `asset-${Date.now()}`;
+      if (originalUrl) {
+        try {
+          const url = new URL(originalUrl);
+          const pathname = url.pathname;
+          const lastSegment = pathname.substring(pathname.lastIndexOf('/') + 1);
+          if (lastSegment) {
+            filename = decodeURIComponent(lastSegment);
+          }
+        } catch (e) {
+          filename = originalUrl.substring(originalUrl.lastIndexOf('/') + 1) || filename;
+        }
+      }
+      fileToUpload = new File([blobOrFile], filename, { type: mimeType });
     }
 
-    // If not, save the new asset
-    const db = await this.openDb();
-    return new Promise((resolve, reject) => {
-      const record: AssetRecord = {
-        id, // Use hash as ID
-        mimeType,
-        data: blob,
-        originalUrl,
-        timestamp: Date.now(),
-      };
-
-      const transaction = db.transaction(this.storeName, 'readwrite');
-      const store = transaction.objectStore(this.storeName);
-      const request = store.add(record);
-
-      request.onsuccess = () => {
-        console.log(`[AssetStorageService] Asset saved with hash ID: ${id}`);
-        resolve(id);
-      };
-      request.onerror = (event) => {
-        console.error(
-          '[AssetStorageService] Error saving asset:',
-          (event.target as IDBRequest).error
-        );
-        reject((event.target as IDBRequest).error);
-      };
-    });
+    const asset$ = this.assetsApiService.uploadAsset(fileToUpload).pipe(map((dto) => dto.id));
+    return firstValueFrom(asset$);
   }
 
-  async getAssetRecord(id: string): Promise<AssetRecord | undefined> {
-    const db = await this.openDb();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(this.storeName, 'readonly');
-      const store = transaction.objectStore(this.storeName);
-      const request = store.get(id);
-
-      request.onsuccess = () => {
-        resolve(request.result as AssetRecord);
-      };
-      request.onerror = (event) => {
-        console.error(
-          '[AssetStorageService] Error getting asset record:',
-          (event.target as IDBRequest).error
-        );
-        reject((event.target as IDBRequest).error);
-      };
-    });
-  }
-
+  /**
+   * Retrieves the raw blob data for an asset.
+   */
   async getAssetBlob(id: string): Promise<Blob | undefined> {
-    const record = await this.getAssetRecord(id);
-    if (record) {
-      console.log(
-        `[AssetStorageService] Asset blob retrieved for ID: ${id}, mimeType: ${record.mimeType}`
-      );
-      return record.data;
+    const url = this.assetsApiService.getAssetUrl(id);
+    try {
+      const blob$ = this.http.get(url, { responseType: 'blob' });
+      return await firstValueFrom(blob$);
+    } catch (error) {
+      console.error(`[AssetStorageService] Failed to fetch asset blob for ID: ${id}`, error);
+      return undefined;
     }
-
-    console.warn(`[AssetStorageService] No asset found for ID: ${id}`);
-    return undefined;
   }
 
+  /**
+   * Returns a persistent URL to the asset.
+   */
   async getAssetObjectURL(id: string): Promise<string | undefined> {
-    if (this.objectURLMap.has(id)) {
-      console.log(
-        `[AssetStorageService] Returning cached object URL for ID: ${id}`
-      );
-      return this.objectURLMap.get(id);
-    }
-    const blob = await this.getAssetBlob(id);
-    if (blob) {
-      const objectURL = URL.createObjectURL(blob);
-      this.objectURLMap.set(id, objectURL);
-      return objectURL;
-    }
-    console.warn(
-      `[AssetStorageService] Could not generate object URL, blob not found for ID: ${id}`
-    );
-    return undefined;
+    // The new service provides a direct, persistent URL.
+    // We wrap it in a resolved promise to maintain API compatibility.
+    const url = this.assetsApiService.getAssetUrl(id);
+    return Promise.resolve(url);
   }
 
-  revokeAssetObjectURL(id: string): void {
-    const objectURL = this.objectURLMap.get(id);
-    if (objectURL) {
-      URL.revokeObjectURL(objectURL);
-      this.objectURLMap.delete(id);
-      console.log(`[AssetStorageService] Revoked object URL for ID: ${id}`);
-    }
-  }
-
-  async deleteAsset(id: string): Promise<void> {
-    const db = await this.openDb();
-    return new Promise((resolve, reject) => {
-      this.revokeAssetObjectURL(id); // Revoke object URL before deleting
-      const transaction = db.transaction(this.storeName, 'readwrite');
-      const store = transaction.objectStore(this.storeName);
-      const request = store.delete(id);
-
-      request.onsuccess = () => {
-        console.log(`[AssetStorageService] Asset deleted for ID: ${id}`);
-        resolve();
-      };
-      request.onerror = (event) => {
-        console.error(
-          '[AssetStorageService] Error deleting asset:',
-          (event.target as IDBRequest).error
-        );
-        reject((event.target as IDBRequest).error);
-      };
-    });
-  }
-
+  /**
+   * This method is deprecated and will be removed.
+   * It returns an empty array and logs a warning.
+   */
   async getAllAssets(): Promise<AssetRecord[]> {
-    const db = await this.openDb();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(this.storeName, 'readonly');
-      const store = transaction.objectStore(this.storeName);
-      const request = store.getAll();
-
-      request.onsuccess = () => {
-        resolve(request.result.sort((a: AssetRecord,b: AssetRecord) => b.timestamp - a.timestamp) as AssetRecord[]);
-      };
-
-      request.onerror = () => {
-        console.error(
-          '[AssetStorageService] Error getting all assets:',
-          request.error
-        );
-        reject(request.error);
-      };
-    });
+    console.warn('[AssetStorageService] getAllAssets() is deprecated and returns an empty array. Please update consumer code to use AssetsApiService directly.');
+    // Returning an empty array to avoid breaking existing code that might call this.
+    return Promise.resolve([]);
   }
 
+  /**
+   * Deletes an asset.
+   */
+  async deleteAsset(id: string): Promise<void> {
+    const delete$ = this.assetsApiService.deleteAsset(id);
+    return firstValueFrom(delete$);
+  }
+
+  /**
+   * This method is deprecated. The backend does not support clearing all assets.
+   */
   async clearAllAssets(): Promise<void> {
-    const db = await this.openDb();
-    return new Promise((resolve, reject) => {
-      // Revoke all active object URLs
-      this.objectURLMap.forEach((_, id) => this.revokeAssetObjectURL(id));
-      this.objectURLMap.clear();
-
-      const transaction = db.transaction(this.storeName, 'readwrite');
-      const store = transaction.objectStore(this.storeName);
-      const request = store.clear();
-
-      request.onsuccess = () => {
-        console.log('[AssetStorageService] All assets cleared.');
-        resolve();
-      };
-      request.onerror = (event) => {
-        console.error(
-          '[AssetStorageService] Error clearing all assets:',
-          (event.target as IDBRequest).error
-        );
-        reject((event.target as IDBRequest).error);
-      };
-    });
+    console.warn('[AssetStorageService] clearAllAssets() is deprecated and does nothing.');
+    return Promise.resolve();
   }
+
+  /**
+   * This method is no longer needed as the new URLs are not temporary.
+   */
+  revokeAssetObjectURL(id: string): void {
+    // No-op for compatibility.
+  }
+
+  /**
+   * Imports an asset from a given URL, saves it locally, and returns the new asset ID.
+   * @param url The URL of the asset to import.
+   * @returns A promise that resolves with the new asset ID.
+   */
+  async importAssetFromUrl(url: string): Promise<string> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get(url, { observe: 'response', responseType: 'blob' })
+      );
+      const blob = response.body;
+      const mimeType = response.headers.get('Content-Type');
+
+      if (!blob) {
+        throw new Error('Failed to fetch blob from URL');
+      }
+
+      return await this.saveAsset(blob, mimeType || 'application/octet-stream', url);
+    } catch (error) {
+      console.error(`[AssetStorageService] Failed to import asset from URL: ${url}`, error);
+      throw error; // Re-throw to allow the caller to handle it
+    }
+  }
+
+  /**
+   * Ensures an asset is stored locally.
+   * If the source is a URL, it imports it.
+   * If the source is already a local asset ID, it returns it directly.
+   * @param source The asset ID or URL.
+   * @returns A promise that resolves with the local asset ID.
+   */
+  public async ensureAssetIsLocal(source: string): Promise<string> {
+    if (source.startsWith('http') || source.startsWith('data:')) {
+      return this.importAssetFromUrl(source);
+    }
+    // Otherwise, assume it's already a local asset ID
+    return Promise.resolve(source);
+  }
+
+  // The following methods from the original service are removed as they are no longer relevant:
+  // - openDb
+  // - getObjectStore
+  // - calculateHash
+  // - getAssetRecord
 }

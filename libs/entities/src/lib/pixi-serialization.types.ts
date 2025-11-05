@@ -79,4 +79,5 @@ export type SerializedState = {
     width: number;
     height: number;
   };
+  aspectRatio: '16:9' | '4:3' | 'none';
 };

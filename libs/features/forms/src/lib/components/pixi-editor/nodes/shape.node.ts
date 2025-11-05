@@ -15,10 +15,13 @@ export class ShapeNode extends NodeBase implements BackgroundHostNode {
   shape: 'rect' | 'ellipse' | 'line' = 'rect';
   stroke = 0xffffff;
   fill = 0x000000;
-  bgAssetId = '';
   lineWidth = 2;
   private shapeG = new Graphics();
   private backgroundManager: NodeBackgroundManager; // New manager instance
+
+  get bgAssetId(): string | undefined {
+    return this.backgroundManager.bgAssetId;
+  }
 
   constructor(
     kind: 'rect' | 'ellipse' | 'line' = 'rect',

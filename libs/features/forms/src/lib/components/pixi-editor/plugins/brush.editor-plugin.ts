@@ -5,7 +5,11 @@ import { BrushNode, GroupNode, NodeBase } from '../nodes';
 import { Subject } from 'rxjs';
 import { DragResizeService } from '../services/drag-resize.service';
 import { FederatedPointerEvent, Point } from 'pixi.js';
-import { AddNodeCommand, EditorCommand } from '../services';
+import {
+  AddNodeCommand,
+  ChangeBackgroundCommand,
+  EditorCommand,
+} from '../services';
 import { AssetStorageService } from '../services/asset-storage.service';
 
 /**
@@ -206,41 +210,21 @@ export class BrushPlugin implements EditorPlugin {
           EditorCommand,
           { t: 'SET_BRUSH_BACKGROUND' }
         >;
-        let source: string | undefined;
+        const source = setBgCmd.assetId || setBgCmd.url;
+        if (!source) return;
 
-        if (setBgCmd.assetId) {
-          source = await this.assetStorage.getAssetObjectURL(setBgCmd.assetId);
-          applyToSelection((b) => {
-            b.bgAssetId = setBgCmd.assetId;
-          });
-        } else if (setBgCmd.url) {
-          // If it's a data URL, convert to Blob and save as asset
-          if (setBgCmd.url.startsWith('data:')) {
-            const mimeType = setBgCmd.url.substring(
-              setBgCmd.url.indexOf(':') + 1,
-              setBgCmd.url.indexOf(';')
+        applyToSelection(async (brushNode) => {
+          const newAssetId = await this.assetStorage.ensureAssetIsLocal(source);
+
+          if (newAssetId) {
+            const command = new ChangeBackgroundCommand(
+              brushNode,
+              brushNode.bgAssetId, // old assetId
+              newAssetId           // new assetId
             );
-            const base64 = setBgCmd.url.split(',')[1];
-            const blob = ctx.utils.base64ToBlob(base64, mimeType);
-            const assetId = await this.assetStorage.saveAsset(blob, mimeType);
-            source = await this.assetStorage.getAssetObjectURL(assetId);
-            // Update the node's bgAssetId for serialization
-            applyToSelection((b) => {
-              b.bgAssetId = assetId;
-            });
-          } else {
-            source = setBgCmd.url;
-            applyToSelection((b) => {
-              b.bgAssetId = setBgCmd.url;
-            });
+            ctx.history.execute(command);
           }
-        }
-
-        if (source) {
-          applyToSelection((b) => {
-            void b.setBackground(source!);
-          });
-        }
+        });
       });
 
     ctx.bus.commands$

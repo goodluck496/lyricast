@@ -38,6 +38,23 @@ export async function ensureTextureValid(tex: Texture): Promise<void> {
 }
 
 export async function loadTextureRobust(url: string): Promise<Texture> {
+  if (url.startsWith('svc://')) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch svc:// URL. Status: ${response.status} ${response.statusText}`);
+      }
+      const blob = await response.blob();
+      const bitmap = await createImageBitmap(blob);
+      const texture = Texture.from(bitmap);
+      await ensureTextureValid(texture);
+      return texture;
+    } catch (e) {
+      console.error('[texture-loader] Failed to load texture from svc:// URL:', url, e);
+      throw e; // Re-throw the specific error
+    }
+  }
+
   // Prioritize manual HTMLImage decode for blob: and data: URLs
   if (url.startsWith('blob:') || url.startsWith('data:')) {
     try {

@@ -211,6 +211,18 @@ export default class App {
   }
 
   private static async onReady() {
+    // Pass necessary paths and flags to worker processes via environment variables
+    process.env.IS_PACKAGED = String(app.isPackaged);
+    process.env.USER_DATA_PATH = app.getPath('userData');
+
+    // In development, we need the project root to find the 'data' folder.
+    // In production, we need the resources path.
+    if (app.isPackaged) {
+      process.env.SOURCE_DATA_PATH = process.resourcesPath;
+    } else {
+      process.env.SOURCE_DATA_PATH = process.cwd(); // Project root
+    }
+
     const isDev = !app.isPackaged;
 
     App.workers = new WorkersRegistry([
@@ -230,6 +242,12 @@ export default class App {
         name: 'free-slide',
         rootApiPath: 'free-slide',
         distSubdir: 'free-slide-service',
+        devWatch: isDev,
+      },
+      {
+        name: 'assets',
+        rootApiPath: 'assets',
+        distSubdir: 'asset-service',
         devWatch: isDev,
       },
     ]);

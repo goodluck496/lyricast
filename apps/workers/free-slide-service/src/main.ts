@@ -11,7 +11,7 @@ type Msg =
   | { t: 'error'; error: string; stack?: string }
   | { t: 'dispose' };
 
-const log = new Logger('BibleWorker');
+const log = new Logger('FreeSlideWorker');
 
 async function bootstrap() {
   try {

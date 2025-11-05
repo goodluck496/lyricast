@@ -54,6 +54,8 @@ export class SceneViewportService {
     // Учитываем текущий zoom и позицию world
     const zoom = this.store.snapshot((s) => s.zoom);
 
+    console.log(`[UPDATE SCENE BOUNDS] Initial - canvasW: ${canvasWidth}, canvasH: ${canvasHeight}, zoom: ${zoom}, aspectRatio: ${this.aspectRatio}`);
+
     if (this.aspectRatio === 'none') {
       // Для 'none' используем размеры canvas
       this.sceneWidth = canvasWidth / zoom;
@@ -61,10 +63,8 @@ export class SceneViewportService {
       // Базовые размеры без zoom (при zoom=1)
       this.baseSceneWidth = canvasWidth;
       this.baseSceneHeight = canvasHeight;
-      return;
-    }
-
-    if (this.aspectRatio === '16:9') {
+      // No return here, continue to drawing
+    } else if (this.aspectRatio === '16:9') {
       // Вычисляем размеры для 16:9
       const ratio = 16 / 9;
       if (canvasWidth / canvasHeight > ratio) {
@@ -79,10 +79,20 @@ export class SceneViewportService {
         this.sceneWidth = (canvasWidth * 0.9) / zoom; // 90% ширины canvas с учетом zoom
         this.sceneHeight = this.sceneWidth / ratio;
         // Базовые размеры при zoom=1
-        this.baseSceneHeight = canvasWidth * 0.9;
-        this.baseSceneWidth = this.baseSceneWidth / ratio;
+        this.baseSceneWidth = canvasWidth * 0.9;
+        this.baseSceneHeight = this.baseSceneWidth / ratio;
       }
     } else {
+    //   // 4:3
+    //   const ratio = 4 / 3;
+    //   if (canvasWidth / canvasHeight > ratio) {
+    //     this.sceneHeight = canvasHeight / zoom;
+    //     this.sceneWidth = this.sceneHeight * ratio;
+    //     // Базовые размеры при zoom=1
+    //     this.baseSceneHeight = canvasHeight;
+    //     this.baseSceneWidth = this.baseSceneHeight * ratio;
+    //   }
+    // } else {
       // 4:3
       const ratio = 4 / 3;
       if (canvasWidth / canvasHeight > ratio) {
@@ -95,10 +105,12 @@ export class SceneViewportService {
         this.sceneWidth = (canvasWidth * 0.9) / zoom;
         this.sceneHeight = this.sceneWidth / ratio;
         // Базовые размеры при zoom=1
-        this.baseSceneHeight = canvasWidth * 0.9;
-        this.baseSceneWidth = this.baseSceneWidth / ratio;
+        this.baseSceneWidth = canvasWidth * 0.9;
+        this.baseSceneHeight = this.baseSceneWidth / ratio;
       }
     }
+
+    console.log(`[UPDATE SCENE BOUNDS] Calculated - sceneW: ${this.sceneWidth}, sceneH: ${this.sceneHeight}`);
 
     // Создаём контейнер для границ
     const bounds = new Container();
@@ -110,6 +122,8 @@ export class SceneViewportService {
     // Центрируем сцену относительно видимой области world
     const x = (canvasWidth / zoom - sceneWidth) / 2;
     const y = (canvasHeight / zoom - sceneHeight) / 2;
+
+    console.log(`[UPDATE SCENE BOUNDS] Final offset - x: ${x}, y: ${y}`);
 
     // Рисуем границы (пунктирная линия)
     g.setStrokeStyle({ width: 2 / zoom, color: 0xff6b6b, alpha: 0.8 });
@@ -153,6 +167,9 @@ export class SceneViewportService {
     this.sceneBounds = bounds;
     // Добавляем границы поверх всего, но под handles
     this.world.addChild(bounds);
+
+    console.log(`[UPDATE SCENE BOUNDS] Red frame container position (relative to world): bounds.x: ${bounds.x}, bounds.y: ${bounds.y}`);
+    console.log(`[UPDATE SCENE BOUNDS] Red frame drawing offset (relative to bounds): drawX: ${x}, drawY: ${y}`);
   }
 
   createGridTexture(size = 20, line = 1, alpha = 0.08) {

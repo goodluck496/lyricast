@@ -128,6 +128,11 @@ export class FreeSlideComponent implements AfterViewInit {
     ) {
       await this.onSaveSlide();
     }
+
+    if (this.pixiEditor) {
+      this.pixiEditor.resetViewport(); // FORCE RESET VIEWPORT
+    }
+
     console.log('on select slide', slide);
 
     this.slideForm.patchValue({ name: slide.name }, { emitEvent: false });
@@ -141,6 +146,12 @@ export class FreeSlideComponent implements AfterViewInit {
       if (slide.content) {
         try {
           const slideData = JSON.parse(slide.content);
+
+          // Restore aspect ratio BEFORE deserializing nodes
+          if (slideData.aspectRatio) {
+            this.pixiEditor.onAspectRatioChange(slideData.aspectRatio);
+          }
+
           // Trigger preloading in the background, but don't await it to avoid blocking UI
           void this.pixiEditor.serializer.preloadAssets(slideData);
           this.pixiEditor.serializer.deserializeState(slideData);
@@ -420,6 +431,7 @@ export class FreeSlideComponent implements AfterViewInit {
 
   updateSlideInService(presentationId: string) {
     this.changePresentation$.next();
+    this.slideService.clear(); // Synchronously clear the state before async operations
 
     this.presentationId.set(presentationId);
     this.containerPagePath = [

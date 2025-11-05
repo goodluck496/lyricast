@@ -44,6 +44,18 @@ export class FreeSlideService {
     this.liveSyncEnabled$.next(enabled);
   }
 
+  clear() {
+    this.currentPresentation$.next({
+      id: '',
+      title: '',
+      slides: [],
+      createdAt: 0,
+      updatedAt: 0,
+    });
+    this.slidesMap.clear();
+    this.slides$.next([]);
+  }
+
   addSlide(slideData?: Partial<Slide>): Slide {
     const values = Array.from(this.slidesMap.values());
 

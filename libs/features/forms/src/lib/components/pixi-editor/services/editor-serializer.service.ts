@@ -135,12 +135,13 @@ export class EditorSerializerService {
       .filter((n) => n !== null);
 
     const result: SerializedState = {
-      nodes: serializableNodes,
+      nodes: serializableNodes as SerializedNode[],
       zoom: state.zoom,
       sceneBounds: {
         width: this.sceneViewport.baseSceneWidth, // Use baseSceneWidth for serialization
         height: this.sceneViewport.baseSceneHeight, // Use baseSceneHeight for serialization
       },
+      aspectRatio: this.aspectRatio,
     };
 
     return result;

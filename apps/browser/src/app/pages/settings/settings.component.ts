@@ -11,11 +11,19 @@ import { AppDisplay } from '@lyri-cast/common-electron';
 import { CardModule } from 'primeng/card';
 import { ButtonDirective } from 'primeng/button';
 import { Observable } from 'rxjs';
+import { DividerModule } from 'primeng/divider';
+import { AssetManagementComponent } from '@lyri-cast/asset-management';
 
 @Component({
   selector: 'lyri-settings',
   standalone: true,
-  imports: [CommonModule, CardModule, ButtonDirective],
+  imports: [
+    CommonModule,
+    CardModule,
+    ButtonDirective,
+    DividerModule,
+    AssetManagementComponent,
+  ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

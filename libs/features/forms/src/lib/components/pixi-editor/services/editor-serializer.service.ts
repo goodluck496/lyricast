@@ -46,22 +46,16 @@ export class EditorSerializerService {
   serializeState(): SerializedState {
     const state = this.store.snapshot((s) => s);
 
-    // Вычисляем offset сцены (где начинается рамка aspectRatio)
-    // ВАЖНО: offset вычисляется БЕЗ учета zoom, т.к. sceneWidth/Height уже учитывают zoom
-    // Get the current scene bounds from SceneViewportService
-    const sceneBounds = this.sceneViewport.getSceneBounds();
-    const sceneOffsetX = sceneBounds.x;
-    const sceneOffsetY = sceneBounds.y;
+
 
     const serializableNodes = Object.values(state.nodes)
       .map((nodeState) => {
         const node = nodeState.ref as NodeBase;
-        // Сохраняем координаты относительно начала сцены (рамки aspectRatio)
         const baseData: SerializedNodeBase = {
           id: node.id,
           type: nodeState.type as SerializedNode['type'],
-          x: node.x - sceneOffsetX,
-          y: node.y - sceneOffsetY,
+          x: node.x, // Serialize position relative to the world container
+          y: node.y,
           width: node.w,
           height: node.h,
           rotation: node.rotation,
@@ -72,8 +66,8 @@ export class EditorSerializerService {
           return {
             id: node.id,
             type: 'text',
-            x: node.x - sceneOffsetX,
-            y: node.y - sceneOffsetY,
+            x: node.x,
+            y: node.y,
             alpha: node.alpha,
             width: node.w,
             height: node.h,
@@ -207,12 +201,6 @@ export class EditorSerializerService {
     // this.clearAllNodes(); // This should be handled by the component
     if (!data || !data.nodes) return;
 
-    // Вычисляем offset сцены для восстановления абсолютных координат
-    // Get the current scene bounds from SceneViewportService
-    const sceneBounds = this.sceneViewport.getSceneBounds();
-    const sceneOffsetX = sceneBounds.x;
-    const sceneOffsetY = sceneBounds.y;
-
     data.nodes.forEach((nodeData) => {
       const options = {
         width: nodeData.width,
@@ -221,9 +209,9 @@ export class EditorSerializerService {
         alpha: nodeData.alpha,
       };
 
-      // Восстанавливаем абсолютные координаты, добавляя offset сцены
-      const absoluteX = nodeData.x + sceneOffsetX;
-      const absoluteY = nodeData.y + sceneOffsetY;
+      // Координаты теперь абсолютны относительно world, который уже сдвинут
+      const absoluteX = nodeData.x;
+      const absoluteY = nodeData.y;
 
       switch (nodeData.type) {
         case 'text':

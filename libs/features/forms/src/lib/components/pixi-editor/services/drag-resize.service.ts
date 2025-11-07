@@ -101,12 +101,12 @@ export class DragResizeService {
             let clampedY = snapped.y;
 
             // Clamp X
-            clampedX = Math.max(sceneBounds.x, clampedX);
-            clampedX = Math.min(sceneBounds.x + sceneBounds.width - nodeWidth, clampedX);
+            clampedX = Math.max(0, clampedX);
+            clampedX = Math.min(sceneBounds.width - nodeWidth, clampedX);
 
             // Clamp Y
-            clampedY = Math.max(sceneBounds.y, clampedY);
-            clampedY = Math.min(sceneBounds.y + sceneBounds.height - nodeHeight, clampedY);
+            clampedY = Math.max(0, clampedY);
+            clampedY = Math.min(sceneBounds.height - nodeHeight, clampedY);
             // --- CLAMPING LOGIC FOR DRAGGING --- END
 
             return { x: clampedX, y: clampedY, startX: startState.origin.x, startY: startState.origin.y };
@@ -209,40 +209,20 @@ export class DragResizeService {
               let clampedW = nextW;
               let clampedH = nextH;
 
-              // Calculate current node bounds after potential snap
-              const nodeLeft = clampedX;
-              const nodeTop = clampedY;
-              let nodeRight = clampedX + clampedW;
-              let nodeBottom = clampedY + clampedH;
-
               // Clamp dimensions to be at least minW/minH
               clampedW = Math.max(minW, clampedW);
               clampedH = Math.max(minH, clampedH);
 
-              // Clamp position and size to scene bounds
-              // Adjust right/bottom if they exceed scene bounds
-              if (nodeRight > sceneBounds.x + sceneBounds.width) {
-                clampedW = Math.max(minW, sceneBounds.x + sceneBounds.width - nodeLeft);
-                nodeRight = nodeLeft + clampedW; // Update nodeRight after clamping width
-              }
-              if (nodeBottom > sceneBounds.y + sceneBounds.height) {
-                clampedH = Math.max(minH, sceneBounds.y + sceneBounds.height - nodeTop);
-                nodeBottom = nodeTop + clampedH; // Update nodeBottom after clamping height
-              }
+              // Clamp position and size to scene bounds (in world coordinates)
+              clampedX = Math.max(0, clampedX);
+              clampedY = Math.max(0, clampedY);
 
-              // Adjust left/top if they go below scene bounds
-              if (nodeLeft < sceneBounds.x) {
-                clampedX = sceneBounds.x;
-                clampedW = Math.max(minW, nodeRight - clampedX);
+              if (clampedX + clampedW > sceneBounds.width) {
+                clampedW = sceneBounds.width - clampedX;
               }
-              if (nodeTop < sceneBounds.y) {
-                clampedY = sceneBounds.y;
-                clampedH = Math.max(minH, nodeBottom - clampedY);
+              if (clampedY + clampedH > sceneBounds.height) {
+                clampedH = sceneBounds.height - clampedY;
               }
-
-              // Re-clamp dimensions to ensure they don't exceed scene dimensions
-              clampedW = Math.min(clampedW, sceneBounds.width);
-              clampedH = Math.min(clampedH, sceneBounds.height);
 
               // Ensure minimum width/height after all clamping
               clampedW = Math.max(minW, clampedW);

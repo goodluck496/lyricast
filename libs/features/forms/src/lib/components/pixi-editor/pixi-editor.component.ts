@@ -353,6 +353,7 @@ export class PixiSlideEditorV2Component
         if (!this.app || this.app.stage.destroyed) return;
         this.grid.width = this.app.renderer.width;
         this.grid.height = this.app.renderer.height;
+        this.sceneViewport.resetCanonicalDimensions(); // <-- СБРОС КЭША
         this.sceneViewport.updateSceneBounds();
       });
 
@@ -889,17 +890,18 @@ export class PixiSlideEditorV2Component
       this.app.stage.y = 0;
       this.app.stage.pivot.set(0, 0);
 
-      this.world.x = 0;
-      this.world.y = 0;
+      this.world.position.set(0, 0);
       this.world.pivot.set(0, 0);
       this.world.scale.set(1);
-
-      if (this.grid) {
-        this.grid.tilePosition.set(0, 0);
-      }
-
       this.store.setZoom(1);
-      this.sceneViewport.updateSceneBounds(); // Also recalculate the visual bounds
+
+      // updateSceneBounds теперь сам установит правильные world.x и world.y
+      this.sceneViewport.updateSceneBounds();
+
+      // Обновляем позицию сетки, чтобы она соответствовала сдвигу world
+      if (this.grid) {
+        this.grid.tilePosition.set(-this.world.x, -this.world.y);
+      }
     }
   }
 

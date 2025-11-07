@@ -129,10 +129,6 @@ export class FreeSlideComponent implements AfterViewInit {
       await this.onSaveSlide();
     }
 
-    if (this.pixiEditor) {
-      this.pixiEditor.resetViewport(); // FORCE RESET VIEWPORT
-    }
-
     console.log('on select slide', slide);
 
     this.slideForm.patchValue({ name: slide.name }, { emitEvent: false });

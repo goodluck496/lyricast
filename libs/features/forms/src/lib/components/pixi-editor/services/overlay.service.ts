@@ -121,7 +121,6 @@ export class OverlayService {
       const currentNode = this.editingTextNode;
       const origHtml = this.originalHTML ?? '';
 
-      console.log('finish?', commit);
       try {
         if (commit && currentNode && comp) {
           const newHTML: string = comp.getHTML();

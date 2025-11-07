@@ -88,7 +88,7 @@ export class TextPlugin implements EditorPlugin {
       ctx.utils
         .fromPixi<FederatedPointerEvent>(textNode, 'pointertap')
         .pipe(filter((evt) => evt.detail >= 2), takeUntil(this.destroy$))
-        .subscribe(() => ctx.overlay.attachTextarea(textNode));
+        .subscribe(() => ctx.overlay.attachHtmlEditor(textNode));
     });
 
     // APPLY_STYLE to selected nodes (Text/Brush/Shapes; supports groups)

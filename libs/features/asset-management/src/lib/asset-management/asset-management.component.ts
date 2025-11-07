@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
@@ -36,20 +42,20 @@ export class AssetManagementComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
 
-  assets: AssetDto[] = [];
+  assets = signal<AssetDto[]>([]);
   selectedAssets: AssetDto[] = [];
-  loading = false;
+  loading = signal(false);
 
   ngOnInit() {
     this.loadAssets();
   }
 
   loadAssets() {
-    this.loading = true;
+    this.loading.set(true);
     this.selectedAssets = [];
     this.assetsApiService.getAssets().subscribe((assets) => {
-      this.assets = assets;
-      this.loading = false;
+      this.assets.set(assets);
+      this.loading.set(false);
     });
   }
 
@@ -112,7 +118,7 @@ export class AssetManagementComponent implements OnInit {
         })
       )
       .subscribe((assets) => {
-        this.assets = assets;
+        this.assets.set(assets);
         this.selectedAssets = [];
       });
   }

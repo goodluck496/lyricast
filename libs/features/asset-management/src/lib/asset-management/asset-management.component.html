@@ -24,13 +24,13 @@
   </div>
 
   <p-table
-    [value]="assets"
+    [value]="assets()"
     [(selection)]="selectedAssets"
     dataKey="id"
     [selectionMode]="'multiple'"
     [scrollable]="true"
     scrollHeight="40vh"
-    [loading]="loading"
+    [loading]="loading()"
   >
     <ng-template pTemplate="header">
       <tr>
@@ -44,8 +44,8 @@
         <th>Created</th>
       </tr>
     </ng-template>
-    <ng-template pTemplate="body" let-asset>
-      <tr [pSelectableRow]="asset">
+    <ng-template pTemplate="body" let-asset let-rowIndex="rowIndex">
+      <tr [pSelectableRow]="asset" [pSelectableRowIndex]="rowIndex">
         <td>
           <p-tableCheckbox [value]="asset"></p-tableCheckbox>
         </td>

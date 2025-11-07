@@ -61,7 +61,6 @@ export class AssetDomainService {
   }
 
   async findOne(id: string): Promise<Asset | undefined> {
-    console.log(id);
     return this.db.select().from(schema.assets).where(eq(schema.assets.id, id)).get();
   }
 

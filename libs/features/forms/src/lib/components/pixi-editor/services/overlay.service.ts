@@ -25,7 +25,6 @@ export class OverlayService {
 
   private hostEl?: HTMLDivElement;
 
-  // textarea → заменим на rich editor
   private editorHostEl?: HTMLDivElement;
   private editorRef?: ComponentRef<HtmlEditorComponent>;
   private editingTextNode?: TextNode;
@@ -61,13 +60,7 @@ export class OverlayService {
     } catch {}
   }
 
-  /** === Html Editor вместо textarea === */
-  attachTextarea(node: TextNode, opts?: { onClose?: () => void }) {
-    // <<== Оставляем API, но под капотом — rich text
-    this.attachHtmlEditor(node, opts);
-  }
-
-  private attachHtmlEditor(node: TextNode, opts?: { onClose?: () => void }) {
+  public attachHtmlEditor(node: TextNode, opts?: { onClose?: () => void }) {
     if (!this.hostEl) return;
 
     // 1) контейнер под редактор

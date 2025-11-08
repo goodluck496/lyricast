@@ -114,6 +114,18 @@ export class FreeSlideComponent implements AfterViewInit {
 
   private saveTrigger$ = new Subject<void>();
 
+  private async waitForEditorReady(timeoutMs = 5000): Promise<boolean> {
+    const start = Date.now();
+    return await new Promise<boolean>((resolve) => {
+      const check = () => {
+        if (this.pixiEditor && this.pixiEditor.app) return resolve(true);
+        if (Date.now() - start > timeoutMs) return resolve(false);
+        setTimeout(check, 30);
+      };
+      check();
+    });
+  }
+
   async onAddNewSlide() {
     const newSlide = this.slideService.addSlide();
     await this.onSelectSlide(newSlide);
@@ -139,7 +151,9 @@ export class FreeSlideComponent implements AfterViewInit {
     this.currentSlideId = slide.id;
     this.currentSlideIndex = slide.index;
 
-    if (this.pixiEditor && this.pixiEditor.app) {
+    // Дожидаемся инициализации PixiJS перед очисткой/десериализацией
+    const ready = await this.waitForEditorReady();
+    if (this.pixiEditor && ready && this.pixiEditor.app) {
       this.pixiEditor.clearAllNodes();
       if (slide.content) {
         try {

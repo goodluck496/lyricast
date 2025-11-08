@@ -75,6 +75,7 @@ export class FreeSlideCastingComponent
   private app!: Application;
   private scene!: Container;
   private previousSlideAssetIds: Set<string> = new Set();
+  private renderVersion = 0; // инкрементируем для каждого нового рендера, чтобы отменять предыдущие
 
   hideContent = signal(false);
 
@@ -209,6 +210,10 @@ export class FreeSlideCastingComponent
   }
 
   private async renderSlide(slide: Slide) {
+    // Версионный токен для отмены конкурирующих рендеров (live-sync может прислать несколько событий подряд)
+    const currentVersion = ++this.renderVersion;
+    const isStale = () => currentVersion !== this.renderVersion;
+
     // Aggressively clear the stage to prevent artifacts
     this.app.stage.removeChildren();
     this.app.stage.addChild(this.scene);
@@ -216,6 +221,7 @@ export class FreeSlideCastingComponent
 
     // Clear the scene and DOM overlay before rendering new content
     this.domOverlayRef.nativeElement.innerHTML = '';
+    if (isStale()) return; // если уже начался новый рендер, выходим
 
     if (this.previousSlideAssetIds.size > 0) {
       for (const assetId of this.previousSlideAssetIds) {
@@ -233,6 +239,7 @@ export class FreeSlideCastingComponent
       if (!data || !data.nodes) {
         return;
       }
+      if (isStale()) return;
 
       const currentSlideAssetIds = new Set<string>();
       for (const node of data.nodes) {
@@ -248,6 +255,7 @@ export class FreeSlideCastingComponent
         }
       }
       this.previousSlideAssetIds = currentSlideAssetIds;
+      if (isStale()) return;
 
       const canvasWidth = this.app.renderer.width;
       const canvasHeight = this.app.renderer.height;
@@ -272,7 +280,7 @@ export class FreeSlideCastingComponent
           isCastingMode: true,
           scaleFactor: scaleFactor,
         });
-
+        if (isStale()) return; // после await проверяем, не устарел ли рендер
         if (node) {
           node.x = nodeData.x * scaleFactor;
           node.y = nodeData.y * scaleFactor;
@@ -288,6 +296,7 @@ export class FreeSlideCastingComponent
       this.scene.y = (canvasHeight - scaledSceneHeight) / 2;
 
       this.domOverlayRef.nativeElement.innerHTML = '';
+      if (isStale()) return;
       for (const iframeData of iframeNodes) {
         const iframe = this.renderer.createElement('iframe');
         this.renderer.setAttribute(iframe, 'src', iframeData.url);

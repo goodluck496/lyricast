@@ -56,6 +56,10 @@ module.exports = {
       from: 'data',
       to: 'assets/databases',
     },
+    {
+      from: 'drizzle',
+      to: 'drizzle',
+    },
 
     // todo самое плохое решение,  но рабочее,
     //  чтобы в вместо битого package.json в backend копировать сразу модули

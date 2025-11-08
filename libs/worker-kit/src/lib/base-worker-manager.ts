@@ -187,13 +187,18 @@ export class BaseHttpWorkerManager extends EventEmitter {
 
   /** Старт воркера и подписки на события */
   private spawn(entryAbsPath: string) {
+    const workerCwd = app.isPackaged
+      ? process.resourcesPath
+      : process.cwd();
+
     const w = new Worker(entryAbsPath, {
+      cwd: workerCwd,
       env: {
         ...process.env,
         isProd: String(app.isPackaged),
         assetsPath: resolveWorkersAssets(),
       },
-    });
+    } as any);
     let oldPort = 0;
     w.on('message', (m: BootMsg) => {
       if (m?.t === 'ready') {

@@ -1,13 +1,27 @@
-import { app, BrowserWindow, BrowserWindowConstructorOptions, screen, shell } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  BrowserWindowConstructorOptions,
+  screen,
+  session,
+  shell,
+} from 'electron';
 import { rendererAppName, rendererAppPort } from './constants';
 import { environment } from '../environments/environment';
 import { join } from 'path';
 import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
 import * as process from 'node:process';
 import { ElectronAppEvents, ElectronCommonEvents } from './events/events.types';
-import { debounceTime, distinctUntilChanged, fromEvent, Subscription } from 'rxjs';
+import {
+  debounceTime,
+  distinctUntilChanged,
+  fromEvent,
+  Subscription,
+} from 'rxjs';
 import { WorkersRegistry } from '@lyri-cast/worker-kit';
 import { registerSvcProtocol } from './api/svc.protocol';
+import { startFileServer } from './server';
+import * as http from 'http';
 
 export const DEFAULT_WEB_PREF = {
   contextIsolation: true,
@@ -23,6 +37,8 @@ export default class App {
   static application: Electron.App;
   static BrowserWindow: typeof BrowserWindow;
   static workers: WorkersRegistry;
+  static fileServer: http.Server | null = null;
+  static fileServerPort: number | null = null;
 
   static openedWindows: Partial<
     Record<AppWindowTypes, Electron.BrowserWindow>
@@ -84,7 +100,11 @@ export default class App {
           ([key, browserWindow]) => {
             App.onClose(key as AppWindowTypes);
 
-            if (browserWindow && !browserWindow.isDestroyed() && browserWindow.destroy) {
+            if (
+              browserWindow &&
+              !browserWindow.isDestroyed() &&
+              browserWindow.destroy
+            ) {
               browserWindow?.destroy();
             }
           }
@@ -121,10 +141,7 @@ export default class App {
     if (!App.application.isPackaged) {
       urlObject = new URL(`http://localhost:${rendererAppPort}`);
     } else {
-      urlObject = new URL(
-        join(__dirname, '..', rendererAppName, 'index.html'),
-        'file:'
-      );
+      urlObject = new URL(`http://localhost:${App.fileServerPort}`);
     }
 
     const openedWindow = App.openedWindows[windowType];
@@ -191,6 +208,14 @@ export default class App {
       ElectronAppEvents.WINDOW_ALL_CLOSED,
       App.onWindowAllClosed
     ); // Quit when all windows are closed.
+    App.application.on('before-quit', () => {
+      if (App.workers) {
+        App.workers.disposeAll();
+      }
+      if (App.fileServer) {
+        App.fileServer.close();
+      }
+    });
 
     App.application.on(ElectronAppEvents.READY, App.onReady); // App is ready to load data
     App.application.on(ElectronAppEvents.ACTIVATE, App.onActivate); // App is activated
@@ -211,6 +236,46 @@ export default class App {
   }
 
   private static async onReady() {
+    if (App.application.isPackaged) {
+      try {
+        const { server, port } = await startFileServer();
+        App.fileServer = server;
+        App.fileServerPort = port;
+      } catch (e) {
+        console.error('[FileServer] Failed to start file server', e);
+        // Optional: Add error handling, like showing a dialog to the user
+        App.application.quit();
+        return;
+      }
+    }
+
+    // Clear YouTube cookies as a potential fix for embed errors
+    const clearYouTubeCookies = async () => {
+      const youtubeDomains = [
+        'https://youtube.com',
+        'https://www.youtube-nocookie.com',
+      ];
+      const ses = session.defaultSession;
+
+      for (const domain of youtubeDomains) {
+        try {
+          const cookies = await ses.cookies.get({ url: domain });
+          for (const cookie of cookies) {
+            await ses.cookies.remove(domain, cookie.name);
+          }
+          console.log(
+            `[CookieClear] Cleared ${cookies.length} cookies for ${domain}`
+          );
+        } catch (error) {
+          console.error(
+            `[CookieClear] Failed to clear cookies for ${domain}`,
+            error
+          );
+        }
+      }
+    };
+    await clearYouTubeCookies();
+
     // Pass necessary paths and flags to worker processes via environment variables
     process.env.IS_PACKAGED = String(app.isPackaged);
     process.env.USER_DATA_PATH = app.getPath('userData');
@@ -289,13 +354,36 @@ export default class App {
       width: width,
       height: height,
       show: false,
-      icon: join(__dirname, '..', '..', '..', 'assets', 'build', 'icons', 'lyriicon.ico'),
+      icon: join(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        'assets',
+        'build',
+        'icons',
+        'lyriicon.ico'
+      ),
       fullscreen: false,
       backgroundMaterial: 'none',
       backgroundColor: '#000',
       webPreferences: {
         ...DEFAULT_WEB_PREF,
       },
+    });
+
+    // Set a Content Security Policy
+    App.openedWindows[
+      windowType
+    ].webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.youtube-nocookie.com https://player.vimeo.com; frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com;",
+          ],
+        },
+      });
     });
 
     // App.mainWindow.setMenu(null);

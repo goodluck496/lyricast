@@ -80,14 +80,17 @@ export class FreeSlideService {
     return newSlide;
   }
 
-  updateSlide(slide: Partial<Slide> & Pick<Slide, 'id'>) {
+  updateSlide(
+    slide: Partial<Slide> & Pick<Slide, 'id'>,
+    options: { suppressUiUpdate?: boolean } = {}
+  ) {
     const foundSlide = this.slidesMap.get(slide.id);
     if (!foundSlide) {
       return;
     }
 
     this.slidesMap.set(slide.id, { ...foundSlide, ...slide });
-    this._updateSlides();
+    this._updateSlides({ suppressUiUpdate: options.suppressUiUpdate });
   }
 
   getSlideByIndex(index: number): Slide | undefined {
@@ -113,9 +116,15 @@ export class FreeSlideService {
     this._updateSlides();
   }
 
-  private _updateSlides() {
+  notifyUiUpdate() {
+    this.slides$.next(Array.from(this.slidesMap.values()));
+  }
+
+  private _updateSlides(options: { suppressUiUpdate?: boolean } = {}) {
     const slides = Array.from(this.slidesMap.values());
-    this.slides$.next(slides);
+    if (!options.suppressUiUpdate) {
+      this.slides$.next(slides);
+    }
 
     const presentation = this.currentPresentation$.value;
 

@@ -58,21 +58,6 @@ export const FreeSlideReducers = createReducer<FreeSlideState>(
       ({
         ...state,
         freeSlideNavigateState: payload,
-        freeSlideCastingProcess: state.freeSlideCastingProcess
-          ? {
-              ...state.freeSlideCastingProcess,
-              slides: state.freeSlideCastingProcess.slides.map((slide) => {
-                if (payload.slide.id === slide.id) {
-                  /**
-                   *  момент навигации слайд мог быть изменен, нужно подменить в сторе
-                   */
-                  return payload.slide;
-                }
-
-                return slide;
-              }),
-            }
-          : null,
       } satisfies FreeSlideState)
   ),
   on(
@@ -89,14 +74,23 @@ export const FreeSlideReducers = createReducer<FreeSlideState>(
       if (!state.freeSlideCastingProcess) {
         return state;
       }
+
+      const isNavigatedSlide =
+        state.freeSlideNavigateState?.slide.id === updatedSlide.id;
+
       return {
         ...state,
+        // Update the master list of slides
         freeSlideCastingProcess: {
           ...state.freeSlideCastingProcess,
           slides: state.freeSlideCastingProcess.slides.map((slide) =>
             slide.id === updatedSlide.id ? updatedSlide : slide
           ),
         },
+        // If it's the active slide, update the navigate state as well to keep it fresh
+        freeSlideNavigateState: isNavigatedSlide
+          ? { ...(state.freeSlideNavigateState as FreeSlideNavigatePayload), slide: updatedSlide }
+          : state.freeSlideNavigateState,
       };
     }
   )

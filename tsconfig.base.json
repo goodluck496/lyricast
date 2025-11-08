@@ -31,7 +31,12 @@
       ],
       "@lyri-cast/common": ["libs/common/src/index.ts"],
       "@lyri-cast/common-browser": ["libs/common-browser/src/index.ts"],
-      "@lyri-cast/common-electron": ["libs/common-electron/src/index.ts"],
+            "@lyri-cast/common-electron": [
+              "libs/common-electron/src/index.ts"
+            ],
+            "@lyri-cast/common-workers": [
+              "libs/common-workers/src/index.ts"
+            ],
       "@lyri-cast/data-access-bible": [
         "libs/shared-browser/data-access/bible/src/index.ts"
       ],

@@ -51,3 +51,4 @@ llm-docs/**/*
 temp-scripts/**/*
 
 data
+drizzle/**/*

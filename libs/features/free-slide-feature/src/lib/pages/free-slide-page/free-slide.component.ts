@@ -126,7 +126,9 @@ export class FreeSlideComponent implements AfterViewInit {
       this.pixiEditor &&
       this.currentSlideId !== slide.id
     ) {
-      await this.onSaveSlide();
+      await this.onSaveSlide({ isNavigatingAway: true });
+    } else if (this.currentSlideId === slide.id) {
+      return;
     }
 
     console.log('on select slide', slide);
@@ -178,9 +180,13 @@ export class FreeSlideComponent implements AfterViewInit {
           })
         );
       });
+
+    // Manually trigger UI update for the slide list after navigation is complete
+    this.slideService.notifyUiUpdate();
+    this.cdr.markForCheck();
   }
 
-  async onSaveSlide() {
+  async onSaveSlide(options: { isNavigatingAway?: boolean } = {}) {
     if (!this.pixiEditor) {
       console.warn('[FreeSlide] Cannot save: pixiEditor is not ready');
       return;
@@ -203,50 +209,55 @@ export class FreeSlideComponent implements AfterViewInit {
 
     // const { id } = RouteParamsReducerHelper.reduceSnapshot(this.route.snapshot);
 
-    this.slideService.updateSlide({
-      id: this.currentSlideId,
-      name: this.slideForm.getRawValue().name,
-      index: this.currentSlideIndex,
-      content: htmlString,
-      previewAssetId: assetId,
-    });
+    this.slideService.updateSlide(
+      {
+        id: this.currentSlideId,
+        name: this.slideForm.getRawValue().name,
+        index: this.currentSlideIndex,
+        content: htmlString,
+        previewAssetId: assetId,
+      },
+      { suppressUiUpdate: !!options.isNavigatingAway }
+    );
 
     this.slideForm.markAsPristine();
 
     // Live-sync logic: if casting is active for this slide, dispatch an update.
-    combineLatest([
-      this.store.select(selectFreeSlideNavigateState),
-      this.store.select(selectFreeSlideCastingProcess),
-    ])
-      .pipe(take(1))
-      .subscribe(([navigate, process]) => {
-        if (!process) return; // Not casting
+    if (!options.isNavigatingAway) {
+      combineLatest([
+        this.store.select(selectFreeSlideNavigateState),
+        this.store.select(selectFreeSlideCastingProcess),
+      ])
+        .pipe(take(1))
+        .subscribe(([navigate, process]) => {
+          if (!process) return; // Not casting
 
-        // Determine the ID of the slide currently on the casting screen
-        let castedSlideId: string | undefined;
-        if (navigate?.slide) {
-          castedSlideId = navigate.slide.id;
-        } else {
-          // If no navigation has happened, the casted slide is the initial one
-          castedSlideId = process.slides[process.fromIndex]?.index.toString();
-        }
-
-        // If the slide we just saved is the one on the casting screen, dispatch the update
-        if (castedSlideId === this.currentSlideId) {
-          const updatedSlide = this.slideService.slidesMap.get(
-            this.currentSlideId
-          );
-          const liveSyncEnabled = this.slideService.liveSyncEnabled$.value;
-
-          if (updatedSlide && liveSyncEnabled) {
-            this.store.dispatch(
-              FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide]({
-                slide: updatedSlide,
-              })
-            );
+          // Determine the ID of the slide currently on the casting screen
+          let castedSlideId: string | undefined;
+          if (navigate?.slide) {
+            castedSlideId = navigate.slide.id;
+          } else {
+            // If no navigation has happened, the casted slide is the initial one
+            castedSlideId = process.slides[process.fromIndex]?.id;
           }
-        }
-      });
+
+          // If the slide we just saved is the one on the casting screen, dispatch the update
+          if (castedSlideId === this.currentSlideId) {
+            const updatedSlide = this.slideService.slidesMap.get(
+              this.currentSlideId
+            );
+            const liveSyncEnabled = this.slideService.liveSyncEnabled$.value;
+
+            if (updatedSlide && liveSyncEnabled) {
+              this.store.dispatch(
+                FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide]({
+                  slide: updatedSlide,
+                })
+              );
+            }
+          }
+        });
+    }
 
     // Notify that save is complete
     this.slideService.saveCompleted$.next();

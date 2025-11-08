@@ -5,6 +5,7 @@ import * as schema from './schema';
 import path from 'path';
 import fs from 'fs';
 import { runMigrations } from './migrate';
+import { getDbPath } from '@lyri-cast/common-workers';
 
 export const DB_PROVIDER_TOKEN = 'ASSET_DB_PROVIDER';
 
@@ -14,51 +15,37 @@ export const databaseProvider: Provider = {
     const dbName = 'assets.sqlite';
     const assetsDirName = 'user-assets';
 
-    // Read paths and flags from environment variables set by the main process
+    const { dbPath, isNewDb } = getDbPath({
+      dbName,
+      copyFromSourceInProd: true,
+    });
+
     const isPackaged = process.env.IS_PACKAGED === 'true';
+
+    // Run migrations for new databases or in development
+    if (isNewDb || !isPackaged) {
+      runMigrations(dbPath);
+    }
+
     const userDataPath = process.env.USER_DATA_PATH;
     const sourceDataPath = process.env.SOURCE_DATA_PATH;
 
     if (!sourceDataPath || !userDataPath) {
-      throw new Error('Database paths are not configured. Required environment variables are missing.');
+      throw new Error(
+        'Database paths are not configured. Required environment variables are missing.'
+      );
     }
 
-    let dbPath: string;
     let assetsPath: string;
 
     if (isPackaged) {
-      // PRODUCTION LOGIC
-      const destinationDbPath = path.join(userDataPath, 'databases', dbName);
       assetsPath = path.join(userDataPath, assetsDirName);
-
-      if (!fs.existsSync(destinationDbPath)) {
-        // In production, we start with an empty database.
-        // The assets directory will be created if it doesn't exist.
-        const destinationDir = path.dirname(destinationDbPath);
-        if (!fs.existsSync(destinationDir)) {
-          fs.mkdirSync(destinationDir, { recursive: true });
-        }
-      }
-      dbPath = destinationDbPath;
     } else {
-      // DEVELOPMENT LOGIC
-      // sourceDataPath is the project root in dev mode.
-      dbPath = path.resolve(sourceDataPath, 'data', dbName);
       assetsPath = path.resolve(sourceDataPath, 'data', assetsDirName);
     }
 
-    // Ensure database and asset directories exist
-    const dbDir = path.dirname(dbPath);
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
-    }
     if (!fs.existsSync(assetsPath)) {
       fs.mkdirSync(assetsPath, { recursive: true });
-    }
-
-    // Run migrations only in development mode
-    if(!isPackaged) {
-      runMigrations(dbPath);
     }
 
     const sqlite = new Database(dbPath);

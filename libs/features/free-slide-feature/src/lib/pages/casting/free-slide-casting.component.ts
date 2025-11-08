@@ -15,7 +15,6 @@ import {
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import {
-  FreeSlideStartCastingPayload,
   selectFreeSlideCastingPaused,
   selectFreeSlideCastingProcess,
   selectFreeSlideCastingStarted,
@@ -24,11 +23,11 @@ import {
 import { AppActions, BridgeService, Pages } from '@lyri-cast/common-browser';
 
 import { filterEmpty } from '@lyri-cast/common';
-import { filter, map, take, withLatestFrom } from 'rxjs';
+import { combineLatest, filter, map, take } from 'rxjs';
 import {
-  Slide,
   SerializedIframeNode,
   SerializedState,
+  Slide,
 } from '@lyri-cast/entities';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Actions, ofType } from '@ngrx/effects';
@@ -94,22 +93,31 @@ export class FreeSlideCastingComponent
       });
 
     // Unified stream to determine which slide to render
-    this.store
-      .select(selectFreeSlideCastingProcess)
+    combineLatest([
+      this.store.select(selectFreeSlideCastingProcess),
+      this.store.select(selectFreeSlideNavigateState),
+    ])
       .pipe(
-        filter((process): process is FreeSlideStartCastingPayload => !!process),
-        withLatestFrom(this.store.select(selectFreeSlideNavigateState)),
+        filter(([process]) => !!process),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(([process, navigate]) => {
         let slideToRender: Slide | undefined;
 
-        if (navigate?.slide) {
+        if (navigate?.slide && process) {
           // If a navigation or live update has occurred, find the latest version of that slide
-          slideToRender = process.slides.find(
+          const foundSlide = process.slides.find(
             (s) => s.id === navigate.slide.id
           );
-        } else {
+
+          // The slide from the navigate state could be more up-to-date after a live update.
+          // If the content differs, prioritize the slide from the navigate state.
+          if (foundSlide && navigate.slide.content !== foundSlide.content) {
+            slideToRender = navigate.slide;
+          } else {
+            slideToRender = foundSlide;
+          }
+        } else if (process) {
           // Otherwise, use the initial slide from the process
           slideToRender = process.slides[process.fromIndex];
         }
@@ -201,8 +209,12 @@ export class FreeSlideCastingComponent
   }
 
   private async renderSlide(slide: Slide) {
-    // Clear the scene and DOM overlay before rendering new content
+    // Aggressively clear the stage to prevent artifacts
+    this.app.stage.removeChildren();
+    this.app.stage.addChild(this.scene);
     this.scene.removeChildren();
+
+    // Clear the scene and DOM overlay before rendering new content
     this.domOverlayRef.nativeElement.innerHTML = '';
 
     if (this.previousSlideAssetIds.size > 0) {

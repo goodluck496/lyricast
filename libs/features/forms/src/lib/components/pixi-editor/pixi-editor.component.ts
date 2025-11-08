@@ -958,6 +958,7 @@ export class PixiSlideEditorV2Component
     // после перезагрузки слайда.
     this.resetViewport();
     this.history.clear();
+    this.overlay.detachIframe();
   }
 }
 

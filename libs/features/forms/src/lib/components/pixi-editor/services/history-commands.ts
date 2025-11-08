@@ -27,16 +27,13 @@ export class ChangeBackgroundCommand implements HistoryCommand {
   ) {}
 
   execute(): void {
-    (this.nodeRef as unknown as { bgAssetId?: string }).bgAssetId = this.newAssetId;
     void this.nodeRef.setBackground(this.newAssetId);
   }
 
   undo(): void {
     if (this.oldAssetId) {
-      (this.nodeRef as unknown as { bgAssetId?: string }).bgAssetId = this.oldAssetId;
       void this.nodeRef.setBackground(this.oldAssetId);
     } else {
-      (this.nodeRef as unknown as { bgAssetId?: string }).bgAssetId = undefined;
       this.nodeRef.clearBackground();
     }
   }

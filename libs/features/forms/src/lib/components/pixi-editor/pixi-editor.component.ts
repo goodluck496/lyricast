@@ -209,7 +209,7 @@ export class PixiSlideEditorV2Component
     this.grid = grid;
 
     // Guides layer
-    this.guides = new GuideLayer(this.world, this.cfg);
+    this.guides = new GuideLayer(this.world, this.cfg, this.sceneViewport);
     this.world.addChild(this.guides);
 
     // Overlay host

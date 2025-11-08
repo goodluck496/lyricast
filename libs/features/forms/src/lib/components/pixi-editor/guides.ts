@@ -1,6 +1,7 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import { DEFAULT_CONFIG, EditorConfig } from './types';
 import { NodeBase } from './nodes';
+import { SceneViewportService } from './services/scene-viewport.service';
 
 export type GuideLine = { t: 'v'; x: number } | { t: 'h'; y: number };
 
@@ -9,7 +10,11 @@ export class GuideLayer extends Container {
   enabled = true;
   threshold = DEFAULT_CONFIG.guides.threshold;
 
-  constructor(private readonly world: Container & { app: Application }, private readonly cfg: EditorConfig) {
+  constructor(
+    private readonly world: Container & { app: Application },
+    private readonly cfg: EditorConfig,
+    private readonly sceneViewport: SceneViewportService
+  ) {
     super();
     this.addChild(this.lines);
     this.enabled = cfg.guides.enabled;
@@ -26,10 +31,15 @@ export class GuideLayer extends Container {
       vy.push(c.y, c.y + c.h / 2, c.y + c.h);
     }
 
-    const stageW = this.world.app.renderer.width / (this.world.scale.x || 1);
-    const stageH = this.world.app.renderer.height / (this.world.scale.y || 1);
-    vx.push(stageW / 2);
-    vy.push(stageH / 2);
+    const sceneW = this.sceneViewport.sceneWidth;
+    const sceneH = this.sceneViewport.sceneHeight;
+    vx.push(sceneW / 2);
+    vy.push(sceneH / 2);
+
+    // const stageW = this.world.app.renderer.width / (this.world.scale.x || 1);
+    // const stageH = this.world.app.renderer.height / (this.world.scale.y || 1);
+    // vx.push(stageW / 2);
+    // vy.push(stageH / 2);
 
     return { vx, vy };
   }
@@ -49,7 +59,10 @@ export class GuideLayer extends Container {
     for (const gx of vx) {
       for (let i = 0; i < 3; i++) {
         const d = Math.abs(anchorsX[i] - gx);
-        if (d < bestDx && d <= this.threshold) { bestDx = d; selX = { gx, i }; }
+        if (d < bestDx && d <= this.threshold) {
+          bestDx = d;
+          selX = { gx, i };
+        }
       }
     }
 
@@ -68,7 +81,10 @@ export class GuideLayer extends Container {
     for (const gy of vy) {
       for (let i = 0; i < 3; i++) {
         const d = Math.abs(anchorsY[i] - gy);
-        if (d < bestDy && d <= this.threshold) { bestDy = d; selY = { gy, i }; }
+        if (d < bestDy && d <= this.threshold) {
+          bestDy = d;
+          selY = { gy, i };
+        }
       }
     }
 
@@ -91,9 +107,15 @@ export class GuideLayer extends Container {
 
     for (const l of lines) {
       if (l.t === 'v') {
-        this.lines.moveTo(l.x, 0).lineTo(l.x, stageH).stroke({ color, width: 1, alpha: this.cfg.guides.alpha });
+        this.lines
+          .moveTo(l.x, 0)
+          .lineTo(l.x, stageH)
+          .stroke({ color, width: 1, alpha: this.cfg.guides.alpha });
       } else {
-        this.lines.moveTo(0, l.y).lineTo(stageW, l.y).stroke({ color, width: 1, alpha: this.cfg.guides.alpha });
+        this.lines
+          .moveTo(0, l.y)
+          .lineTo(stageW, l.y)
+          .stroke({ color, width: 1, alpha: this.cfg.guides.alpha });
       }
     }
   }

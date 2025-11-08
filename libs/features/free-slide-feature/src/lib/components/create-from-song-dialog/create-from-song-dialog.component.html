@@ -1,0 +1,55 @@
+<p-dialog
+  header="Создать из песни"
+  [visible]="true"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '820px', maxWidth: '95vw' }"
+  (onHide)="onCancel()"
+>
+  <div class="dialog__body">
+    <div class="row">
+      <label>Справочник</label>
+      <p-dropdown
+        [options]="songBooksDict"
+        optionLabel="title"
+        appendTo="body"
+        (onChange)="onSelectBook($event.value)"
+      ></p-dropdown>
+    </div>
+
+    <div class="row">
+      <label>Песня</label>
+      <lyri-list-box
+        [items]="(currentSongsList$ | async) || []"
+        [formControl]="selectedSongControl"
+        [loading]="isLoading()"
+        style="width: 100%; height: 260px;"
+      >
+        <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
+          <div class="list-item__wrapper">
+            <div class="list-item__number" [innerHTML]="data.searchKey"></div>
+            <div class="list-item__title">
+              <span class="list-item__title-content">{{ data.title }}</span>
+            </div>
+          </div>
+        </ng-template>
+      </lyri-list-box>
+    </div>
+
+    <div class="row row--inline">
+      <p-checkbox
+        [binary]="true"
+        [ngModel]="insertChorusBetweenVerses()"
+        (onChange)="insertChorusBetweenVerses.set($event.checked)"
+      ></p-checkbox>
+      <span>Вставлять припев между куплетами</span>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button pButton type="button" (click)="onCancel()">Отмена</button>
+    <button pButton type="button" severity="success" (click)="onCreate()" [disabled]="!(fullSong$ | async)">Создать</button>
+  </ng-template>
+</p-dialog>

@@ -5,6 +5,7 @@ import {
   DestroyRef,
   inject,
   OnInit,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PageContainerComponent } from '@lyri-cast/ui-lib';
@@ -26,6 +27,8 @@ import { Ripple } from 'primeng/ripple';
 import { AssetStorageService } from '@lyri-cast/form';
 import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
+import { CreateFromSongDialogComponent } from '../../components/create-from-song-dialog/create-from-song-dialog.component';
+import { PresentationDto } from '@lyri-cast/entities';
 
 export type PresentationWithPreview = Presentation & {
   inEdit: boolean;
@@ -45,6 +48,7 @@ export type PresentationWithPreview = Presentation & {
     FormsModule,
     InputTextModule,
     NgScrollbarModule,
+    CreateFromSongDialogComponent,
   ],
   templateUrl: './free-slide-main.component.html',
   styleUrl: './free-slide-main.component.scss',
@@ -63,6 +67,8 @@ export class FreeSlideMainComponent implements OnInit {
   private readonly assetStorage = inject(AssetStorageService);
 
   presentations$ = new BehaviorSubject<PresentationWithPreview[]>([]);
+
+  showCreateFromSong = signal(false);
 
   ngOnInit() {
     this.loadPresentations();
@@ -110,6 +116,28 @@ export class FreeSlideMainComponent implements OnInit {
           relativeTo: this.route,
         });
       });
+  }
+
+  onOpenCreateFromSong() {
+    this.showCreateFromSong.set(true);
+    this.cdr.markForCheck();
+  }
+
+  onCancelCreateFromSong() {
+    this.showCreateFromSong.set(false);
+    this.cdr.markForCheck();
+  }
+
+  onConfirmCreateFromSong(dto: PresentationDto) {
+    this.api.create({ title: dto.title, slides: [] }).subscribe((data) => {
+      // ensure previewAssetId and indices are saved
+      this.api.update(data.id, { slides: dto.slides }).subscribe(() => {
+        this.showCreateFromSong.set(false);
+        this.router.navigate(['..', FreeSlidePages.SLIDE, data.id], {
+          relativeTo: this.route,
+        });
+      });
+    });
   }
 
   onSelect(presentation: Presentation) {

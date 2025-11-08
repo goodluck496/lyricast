@@ -7,9 +7,15 @@
     <div class="flex flex-column" style="height: 100%; width: 100%;">
       <div class="flex flex-h-center">
         <button pButton pRipple (click)="onCreateNew()" severity="success">Новая презентация</button>
-        <button pButton pRipple disabled>Создать из песни</button>
+        <button pButton pRipple (click)="onOpenCreateFromSong()">Создать из песни</button>
         <button pButton pRipple disabled>Создать из Книги</button>
       </div>
+      @if (showCreateFromSong()) {
+        <lyri-create-from-song-dialog
+          (cancel)="onCancelCreateFromSong()"
+          (create)="onConfirmCreateFromSong($event)"
+        ></lyri-create-from-song-dialog>
+      }
       <ng-scrollbar style="width: 100%; height: calc(100% - 100px);">
         <div class="presentation-card-container">
           @if (presentations$ | async; as presentations) {

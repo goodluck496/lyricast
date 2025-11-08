@@ -4,7 +4,7 @@ import { Presentation, Slide } from '@lyri-cast/entities';
 import { v4 as uuid } from 'uuid';
 import { FreeSlideApiService } from '@lyri-cast/free-slide';
 
-@Injectable()
+@Injectable({ providedIn: 'root' })
 export class FreeSlideService {
   private readonly api = inject(FreeSlideApiService);
 
@@ -23,6 +23,10 @@ export class FreeSlideService {
   requestSaveCurrentSlide$ = new Subject<void>();
   saveCompleted$ = new Subject<void>();
   liveSyncEnabled$ = new BehaviorSubject<boolean>(true);
+
+  // Live preview for sidebar: updated immediately from editor snapshots (not from DB)
+  livePreviewObjectUrl$ = new BehaviorSubject<string | null>(null);
+  private lastPreviewObjectUrl: string | null = null;
 
   constructor() {
     // this._addFirstSlide();
@@ -44,6 +48,14 @@ export class FreeSlideService {
     this.liveSyncEnabled$.next(enabled);
   }
 
+  setLivePreviewObjectUrl(url: string | null) {
+    if (this.lastPreviewObjectUrl && this.lastPreviewObjectUrl !== url) {
+      try { URL.revokeObjectURL(this.lastPreviewObjectUrl); } catch {}
+    }
+    this.lastPreviewObjectUrl = url;
+    this.livePreviewObjectUrl$.next(url);
+  }
+
   clear() {
     this.currentPresentation$.next({
       id: '',
@@ -54,6 +66,7 @@ export class FreeSlideService {
     });
     this.slidesMap.clear();
     this.slides$.next([]);
+    this.setLivePreviewObjectUrl(null);
   }
 
   addSlide(slideData?: Partial<Slide>): Slide {

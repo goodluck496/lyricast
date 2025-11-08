@@ -113,6 +113,7 @@ export class FreeSlideComponent implements AfterViewInit {
   ]);
 
   private saveTrigger$ = new Subject<void>();
+  private previewTrigger$ = new Subject<void>();
 
   private async waitForEditorReady(timeoutMs = 5000): Promise<boolean> {
     const start = Date.now();
@@ -124,6 +125,18 @@ export class FreeSlideComponent implements AfterViewInit {
       };
       check();
     });
+  }
+
+  private async updateLivePreview() {
+    try {
+      if (!this.pixiEditor) return;
+      // Более высокое разрешение превью для сайдбара
+      const blob = await this.pixiEditor.generateSnapshot({ resolution: 0.6 });
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        this.slideService.setLivePreviewObjectUrl(url);
+      }
+    } catch {}
   }
 
   async onAddNewSlide() {
@@ -393,12 +406,23 @@ export class FreeSlideComponent implements AfterViewInit {
     // Единый триггер для автосохранения
     this.saveTrigger$
       .pipe(
-        debounceTime(1500),
+        debounceTime(800),
         takeUntil(this.changePresentation$),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => {
         this.onSaveSlide();
+      });
+
+    // Быстрый превью-апдейт (без записи в БД), чтобы sidebar обновлялся почти мгновенно
+    this.previewTrigger$
+      .pipe(
+        debounceTime(80),
+        takeUntil(this.changePresentation$),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.updateLivePreview();
       });
 
     // При изменении названия слайда - запускаем триггер сохранения
@@ -408,6 +432,7 @@ export class FreeSlideComponent implements AfterViewInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => {
+        this.previewTrigger$.next();
         this.saveTrigger$.next();
       });
 
@@ -420,6 +445,7 @@ export class FreeSlideComponent implements AfterViewInit {
             takeUntilDestroyed(this.destroyRef)
           )
           .subscribe(() => {
+            this.previewTrigger$.next();
             this.saveTrigger$.next();
           });
       }

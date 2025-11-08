@@ -22,6 +22,7 @@ import { WorkersRegistry } from '@lyri-cast/worker-kit';
 import { registerSvcProtocol } from './api/svc.protocol';
 import { startFileServer } from './server';
 import * as http from 'http';
+import { runDatabaseMigrations } from './migrations';
 
 export const DEFAULT_WEB_PREF = {
   contextIsolation: true,
@@ -236,6 +237,20 @@ export default class App {
   }
 
   private static async onReady() {
+    // Pass necessary paths and flags to worker processes via environment variables
+    process.env.IS_PACKAGED = String(app.isPackaged);
+    process.env.USER_DATA_PATH = app.getPath('userData');
+
+    // In development, we need the project root to find the 'data' folder.
+    // In production, we need the resources path.
+    if (app.isPackaged) {
+      process.env.SOURCE_DATA_PATH = process.resourcesPath;
+    } else {
+      process.env.SOURCE_DATA_PATH = process.cwd(); // Project root
+    }
+
+    await runDatabaseMigrations();
+
     if (App.application.isPackaged) {
       try {
         const { server, port } = await startFileServer();
@@ -275,18 +290,6 @@ export default class App {
       }
     };
     await clearYouTubeCookies();
-
-    // Pass necessary paths and flags to worker processes via environment variables
-    process.env.IS_PACKAGED = String(app.isPackaged);
-    process.env.USER_DATA_PATH = app.getPath('userData');
-
-    // In development, we need the project root to find the 'data' folder.
-    // In production, we need the resources path.
-    if (app.isPackaged) {
-      process.env.SOURCE_DATA_PATH = process.resourcesPath;
-    } else {
-      process.env.SOURCE_DATA_PATH = process.cwd(); // Project root
-    }
 
     const isDev = !app.isPackaged;
 

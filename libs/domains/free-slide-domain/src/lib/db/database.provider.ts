@@ -10,20 +10,16 @@ export const DB_PROVIDER_TOKEN = 'DB_PROVIDER';
 export const databaseProvider: Provider = {
   provide: DB_PROVIDER_TOKEN,
   useFactory: async () => {
-    const { dbPath, isNewDb } = getDbPath({
-      dbName: 'free-slides.sqlite',
+    const dbName = 'free-slide.sqlite';
+
+    const { dbPath } = getDbPath({
+      dbName,
       copyFromSourceInProd: true,
     });
 
-    const isPackaged = process.env.IS_PACKAGED === 'true';
-
-    // Run migrations for new databases or in development
-    if (isNewDb || !isPackaged) {
-      runMigrations(dbPath);
-    }
-
     const sqlite = new Database(dbPath);
     sqlite.pragma('journal_mode = WAL');
+
     return drizzle(sqlite, { schema });
   },
 };

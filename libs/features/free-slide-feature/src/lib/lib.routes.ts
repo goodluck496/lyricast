@@ -35,6 +35,13 @@ export const freeSlideFeatureRoutes: Route[] = [
         mainCmpService.$disableSidebar.set(true);
       },
     ],
+    canDeactivate: [
+      () => {
+        const mainCmpService = inject(MainComponentService);
+
+        mainCmpService.$disableSidebar.set(false);
+      },
+    ]
   },
   {
     path: `${FreeSlidePages.SLIDE}/:id`,

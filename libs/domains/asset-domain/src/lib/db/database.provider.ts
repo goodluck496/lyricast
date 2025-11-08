@@ -15,17 +15,13 @@ export const databaseProvider: Provider = {
     const dbName = 'assets.sqlite';
     const assetsDirName = 'user-assets';
 
-    const { dbPath, isNewDb } = getDbPath({
+    const { dbPath } = getDbPath({
       dbName,
       copyFromSourceInProd: true,
     });
 
-    const isPackaged = process.env.IS_PACKAGED === 'true';
-
-    // Run migrations for new databases or in development
-    if (isNewDb || !isPackaged) {
-      runMigrations(dbPath);
-    }
+    const sqlite = new Database(dbPath);
+    sqlite.pragma('journal_mode = WAL');
 
     const userDataPath = process.env.USER_DATA_PATH;
     const sourceDataPath = process.env.SOURCE_DATA_PATH;
@@ -38,7 +34,7 @@ export const databaseProvider: Provider = {
 
     let assetsPath: string;
 
-    if (isPackaged) {
+    if (process.env.IS_PACKAGED === 'true') {
       assetsPath = path.join(userDataPath, assetsDirName);
     } else {
       assetsPath = path.resolve(sourceDataPath, 'data', assetsDirName);
@@ -48,8 +44,6 @@ export const databaseProvider: Provider = {
       fs.mkdirSync(assetsPath, { recursive: true });
     }
 
-    const sqlite = new Database(dbPath);
-    sqlite.pragma('journal_mode = WAL');
     return drizzle(sqlite, { schema });
   },
 };

@@ -1,16 +1,20 @@
-import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import Database from 'better-sqlite3';
+import * as path from 'path';
 
-export function runMigrations(dbPath: string) {
-  const sqlite = new Database(dbPath);
-  console.log(`[MIGRATE][asset] Running migrations for db at: ${dbPath}`);
+export function runMigrations(sqlite: Database.Database) {
+  console.log(`[MIGRATE][asset] Running migrations...`);
   const db = drizzle(sqlite);
   try {
-    migrate(db, { migrationsFolder: 'drizzle/asset' }); // a new folder for asset migrations
+    const migrationsFolder = path.join(
+      process.env.SOURCE_DATA_PATH,
+      'drizzle',
+      'asset'
+    );
+    migrate(db, { migrationsFolder });
     console.log('[MIGRATE][asset] Migrations applied successfully.');
   } catch (error) {
     console.error('[MIGRATE][asset] Error applying migrations:', error);
   }
-  return db;
 }

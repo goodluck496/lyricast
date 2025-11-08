@@ -140,6 +140,10 @@ export class PixiSlideEditorV2Component
 
     // Инициализируем границы сцены при запуске
     this.sceneViewport.updateSceneBounds();
+    // Синхронизируем смещение сетки с позицией world, чтобы сетка начиналась от границ контейнера
+    if (this.grid) {
+      this.grid.tilePosition.set(-this.world.x, -this.world.y);
+    }
 
     // Update serializer with new scene dimensions
     this.serializer.baseSceneWidth = this.sceneViewport.baseSceneWidth;
@@ -355,6 +359,10 @@ export class PixiSlideEditorV2Component
         this.grid.height = this.app.renderer.height;
         this.sceneViewport.resetCanonicalDimensions(); // <-- СБРОС КЭША
         this.sceneViewport.updateSceneBounds();
+        // Обновляем смещение тайлинга сетки после пересчёта границ
+        if (this.grid) {
+          this.grid.tilePosition.set(-this.world.x, -this.world.y);
+        }
       });
 
     // Global command handlers
@@ -488,6 +496,10 @@ export class PixiSlideEditorV2Component
         this.world.scale.set(zoomCommand.z);
         this.guides.draw([]);
         this.sceneViewport.updateSceneBounds(); // Обновляем границы при изменении zoom
+        // Синхронизируем смещение сетки с позицией world
+        if (this.grid) {
+          this.grid.tilePosition.set(-this.world.x, -this.world.y);
+        }
         const selectedId = this.store.snapshot((state) => state.selectedIds)[0];
         if (selectedId) {
           const nodeRef = this.store.snapshot((state) => state.nodes)[
@@ -750,6 +762,10 @@ export class PixiSlideEditorV2Component
 
     // Инициализируем размеры сцены сразу после создания app
     this.sceneViewport.updateSceneBounds();
+    // Синхронизируем сетку после первичного центрирования world
+    if (this.grid) {
+      this.grid.tilePosition.set(-this.world.x, -this.world.y);
+    }
   }
 
   emit(cmd: EditorCommand) {
@@ -817,6 +833,10 @@ export class PixiSlideEditorV2Component
     this.aspectRatio = ratio;
     this.sceneViewport.aspectRatio = ratio;
     this.sceneViewport.updateSceneBounds();
+    // Сетку синхронизируем с новой позицией world
+    if (this.grid) {
+      this.grid.tilePosition.set(-this.world.x, -this.world.y);
+    }
     // Update serializer with new scene dimensions
     this.serializer.sceneWidth = this.sceneViewport.sceneWidth;
     this.serializer.sceneHeight = this.sceneViewport.sceneHeight;
@@ -858,9 +878,10 @@ export class PixiSlideEditorV2Component
         return null;
       }
 
+      // Кадр в локальных координатах контейнера world, чтобы избежать смещения превью
       const canvas = await this.app.renderer.extract.canvas({
         target: this.world,
-        frame: new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height),
+        frame: new Rectangle(0, 0, bounds.width, bounds.height),
         resolution: options?.resolution ?? 0.25,
       });
 

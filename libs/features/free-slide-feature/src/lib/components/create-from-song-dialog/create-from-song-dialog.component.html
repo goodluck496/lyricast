@@ -6,17 +6,31 @@
   [draggable]="false"
   [resizable]="false"
   [style]="{ width: '820px', maxWidth: '95vw' }"
+  [blockScroll]="true"
   (onHide)="onCancel()"
 >
   <div class="dialog__body">
-    <div class="row">
-      <label>Справочник</label>
-      <p-dropdown
-        [options]="songBooksDict"
-        optionLabel="title"
-        appendTo="body"
-        (onChange)="onSelectBook($event.value)"
-      ></p-dropdown>
+    <div class="form-grid">
+      <div class="form-grid__item">
+        <label>Справочник</label>
+        <p-dropdown
+          [options]="songBooksDict"
+          optionLabel="title"
+          appendTo="body"
+          (onChange)="onSelectBook($event.value)"
+        ></p-dropdown>
+      </div>
+
+      <div class="form-grid__item">
+        <label>Разделить блоки</label>
+        <p-dropdown
+          [options]="splitOptions"
+          [ngModel]="splitCount()"
+          appendTo="body"
+          (onChange)="splitCount.set($event.value)"
+        ></p-dropdown>
+      </div>
+
     </div>
 
     <div class="row">
@@ -36,15 +50,6 @@
           </div>
         </ng-template>
       </lyri-list-box>
-    </div>
-
-    <div class="row row--inline">
-      <p-checkbox
-        [binary]="true"
-        [ngModel]="insertChorusBetweenVerses()"
-        (onChange)="insertChorusBetweenVerses.set($event.checked)"
-      ></p-checkbox>
-      <span>Вставлять припев между куплетами</span>
     </div>
   </div>
 

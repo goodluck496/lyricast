@@ -117,6 +117,8 @@ export class FreeSlideComponent implements AfterViewInit {
   // Track last saved content hash per slide to avoid redundant preview uploads
   private lastContentHashBySlideId = new Map<string, string>();
 
+  private loadVersion = 0;
+
   private async waitForEditorReady(timeoutMs = 5000): Promise<boolean> {
     const start = Date.now();
     return await new Promise<boolean>((resolve) => {
@@ -171,6 +173,7 @@ export class FreeSlideComponent implements AfterViewInit {
     if (this.pixiEditor && ready && this.pixiEditor.app) {
       this.pixiEditor.clearAllNodes();
       if (slide.content) {
+        const version = ++this.loadVersion;
         try {
           const slideData = JSON.parse(slide.content);
 
@@ -179,9 +182,14 @@ export class FreeSlideComponent implements AfterViewInit {
             this.pixiEditor.onAspectRatioChange(slideData.aspectRatio);
           }
 
-          // Trigger preloading in the background, but don't await it to avoid blocking UI
-          void this.pixiEditor.serializer.preloadAssets(slideData);
+          // Preload assets so text/metrics are ready before layout
+          await this.pixiEditor.serializer.preloadAssets(slideData);
+          // Clear current nodes to avoid races when switching quickly
+          this.pixiEditor.clearAllNodes();
           this.pixiEditor.serializer.deserializeState(slideData);
+          // Ensure text auto-fit after loading scene
+          await this.pixiEditor.fitAllTextNodes();
+          if (version !== this.loadVersion) return; // stale load, abort
         } catch (e) {
           console.error('Error parsing slide data, clearing editor', e);
           this.pixiEditor.clearAllNodes();

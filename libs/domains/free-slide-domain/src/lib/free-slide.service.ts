@@ -99,6 +99,14 @@ export class FreeSlideService {
     id: string,
     data: Partial<PresentationDto>
   ): Promise<PresentationWithSlides> {
+    // Ensure presentation exists to avoid FK failures on slides upsert
+    const exists = await this.db.query.presentations.findFirst({
+      where: eq(presentations.id, id),
+    });
+    if (!exists) {
+      throw new NotFoundException(`Presentation with ID ${id} not found`);
+    }
+
     this.db.transaction(
       (tx) => {
         // 1) Заголовок

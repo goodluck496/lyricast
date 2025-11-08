@@ -758,6 +758,38 @@ export class PixiSlideEditorV2Component
   }
 
   /**
+   * Triggers layout() for all TextNode instances currently present on the scene.
+   * Useful after bulk deserialization to ensure auto-fitting to scene size.
+   */
+  public async fitAllTextNodes(): Promise<void> {
+    const nodes = this.store.snapshot((s) => s.nodes);
+    const bounds = this.sceneViewport.getSceneBounds();
+    const tasks: Promise<void>[] = [];
+    for (const id of Object.keys(nodes)) {
+      const ref = nodes[id]?.ref as NodeBase | undefined;
+      if (ref instanceof TextNode) {
+        // Resize text node to exactly match scene bounds, then relayout
+        try {
+          ref.x = 0;
+          ref.y = 0;
+          ref.applyBoxSize(bounds.width, bounds.height);
+          const rafOnce = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+          tasks.push(
+            (async () => {
+              await rafOnce();
+              await ref.layout();
+              await rafOnce();
+            })()
+          );
+        } catch {}
+      }
+    }
+    if (tasks.length) {
+      await Promise.allSettled(tasks);
+    }
+  }
+
+  /**
    * Отменяет последнее действие в истории.
    */
   onUndo() {

@@ -51,3 +51,21 @@
 .list-item__wrapper { display: flex; gap: 10px; }
 .list-item__number { width: 40px; opacity: 0.7; }
 .list-item__title-content { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+.form-grid__item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-grid__item--inline {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+}

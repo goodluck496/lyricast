@@ -114,6 +114,8 @@ export class FreeSlideComponent implements AfterViewInit {
 
   private saveTrigger$ = new Subject<void>();
   private previewTrigger$ = new Subject<void>();
+  // Track last saved content hash per slide to avoid redundant preview uploads
+  private lastContentHashBySlideId = new Map<string, string>();
 
   private async waitForEditorReady(timeoutMs = 5000): Promise<boolean> {
     const start = Date.now();
@@ -220,16 +222,36 @@ export class FreeSlideComponent implements AfterViewInit {
     }
     const editorState = this.pixiEditor.serializer.serializeState();
     const htmlString = JSON.stringify(editorState);
-    const blob = await this.pixiEditor.generateSnapshot();
+    // Compute a simple content hash based on serialized editor state
+    const contentHash = htmlString;
 
+    // Reuse existing preview asset if content hasn't changed
     let assetId: string | undefined;
     const currentSlide = this.slideService.slidesMap.get(this.currentSlideId);
 
-    if (blob) {
-      if (currentSlide?.previewAssetId) {
-        await this.assetStorage.deleteAsset(currentSlide.previewAssetId);
+    const lastHash = this.lastContentHashBySlideId.get(this.currentSlideId);
+    if (lastHash !== contentHash) {
+      const blob = await this.pixiEditor.generateSnapshot();
+      if (blob) {
+        // Upload new preview first; backend deduplicates by content hash
+        const newAssetId = await this.assetStorage.saveAsset(blob, 'image/jpeg');
+        const oldAssetId = currentSlide?.previewAssetId;
+
+        // If old asset exists and differs from new one, delete it only if not reused elsewhere
+        if (oldAssetId && oldAssetId !== newAssetId) {
+          const isReused = Array.from(this.slideService.slidesMap.values()).some(
+            (s) => s.id !== this.currentSlideId && s.previewAssetId === oldAssetId
+          );
+          if (!isReused) {
+            await this.assetStorage.deleteAsset(oldAssetId);
+          }
+        }
+
+        assetId = newAssetId;
       }
-      assetId = await this.assetStorage.saveAsset(blob, 'image/jpeg');
+    } else {
+      // No visual change; keep existing preview asset
+      assetId = currentSlide?.previewAssetId;
     }
 
     console.log('[FreeSlide] Saving slide:', this.slideForm.getRawValue().name);
@@ -248,6 +270,9 @@ export class FreeSlideComponent implements AfterViewInit {
     );
 
     this.slideForm.markAsPristine();
+
+    // Update content hash after successful update attempt
+    this.lastContentHashBySlideId.set(this.currentSlideId, contentHash);
 
     // Live-sync logic: if casting is active for this slide, dispatch an update.
     if (!options.isNavigatingAway) {
@@ -471,12 +496,17 @@ export class FreeSlideComponent implements AfterViewInit {
       .subscribe((paramsMap) => {
         const presentationId = paramsMap.get('id');
         if (presentationId) {
+          // Fire and forget; updateSlideInService handles async save-before-switch
           this.updateSlideInService(presentationId);
         }
       });
   }
 
-  updateSlideInService(presentationId: string) {
+  async updateSlideInService(presentationId: string) {
+    // Save current slide immediately to avoid losing debounced changes (e.g., title)
+    if (this.currentSlideId && this.pixiEditor) {
+      await this.onSaveSlide({ isNavigatingAway: true });
+    }
     this.changePresentation$.next();
     this.slideService.clear(); // Synchronously clear the state before async operations
 

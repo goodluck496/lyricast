@@ -58,11 +58,13 @@ export class BrushNode extends NodeBase implements BackgroundHostNode {
   /** Установить фоновое изображение (работает только для замкнутых путей) */
   async setBackground(urlOrAssetId: string) {
     await this.backgroundManager.setBackground(urlOrAssetId);
+    this.bgAssetId = this.backgroundManager.bgAssetId;
   }
 
   /** Очистить фоновое изображение */
   clearBackground() {
     this.backgroundManager.clearBackground();
+    this.bgAssetId = undefined;
   }
 
   // Removed private updateBackgroundLayout()

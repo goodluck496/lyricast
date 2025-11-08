@@ -141,7 +141,7 @@ export class FreeSlideService {
           // Набор для обновления (update) — без createdAt/id/presentationId
           const updateSet: Partial<InferInsertModel<typeof slides>> = {
             index: rest.index,
-            // name: rest.name,
+            name: rest.name,
             content: rest.content,
             previewAssetId: rest.previewAssetId,
             // groupId: rest.groupId,

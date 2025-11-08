@@ -139,7 +139,6 @@ export class NodeFactoryService {
         brushNode.stroke = nodeData.stroke;
         brushNode.strokeWidth = nodeData.strokeWidth * scaleFactor;
 
-        // Set w and h BEFORE calling methods that use them for layout
         brushNode.w = scaledWidth;
         brushNode.h = scaledHeight;
 
@@ -148,6 +147,11 @@ export class NodeFactoryService {
             (p) => new Point(p.x * scaleFactor, p.y * scaleFactor)
           );
           brushNode.setPath(scaledPath);
+          if (nodeData.bgAssetId && !brushNode.isPathClosed()) {
+            const first = scaledPath[0];
+            const closedPath = [...scaledPath, new Point(first.x, first.y)];
+            brushNode.setPath(closedPath);
+          }
         }
         if (nodeData.bgAssetId) {
           await brushNode.setBackground(nodeData.bgAssetId);

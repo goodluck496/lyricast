@@ -16,6 +16,7 @@ import { TabViewModule } from 'primeng/tabview';
 
 import { TabMenuModule } from 'primeng/tabmenu';
 import {
+  FreeSlidePages,
   MainComponentService,
   PAGE_CONTAINER_TEMPLATES,
   Pages,
@@ -93,8 +94,8 @@ export class MainComponent implements OnInit {
       visible: true,
     },
     {
-      routerLink: ['./', Pages.FREE_SLIDE_FEATURE, Pages.FREE_SLIDE],
-      label: PageTitlesMap.get(Pages.FREE_SLIDE) ?? Pages.FREE_SLIDE,
+      routerLink: ['./', Pages.FREE_SLIDE_FEATURE, FreeSlidePages.MAIN],
+      label: PageTitlesMap.get(Pages.FREE_SLIDE) ?? FreeSlidePages.SLIDE,
       icon: 'storyboard',
       visible: true,
     },
@@ -115,11 +116,10 @@ export class MainComponent implements OnInit {
       routerLink: ['./', Pages.TEST],
       label: PageTitlesMap.get(Pages.TEST) || Pages.TEST,
       icon: 'opened_book',
-      visible: false,
+      visible: true,
     },
   ];
 
-  backendReady = false;
   protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
 
   constructor(icons: IconsService) {
@@ -145,12 +145,6 @@ export class MainComponent implements OnInit {
       .subscribe(() => {
         window.dispatchEvent(new Event('resize'));
       });
-
-    setTimeout(() => {
-      //заглушка, убрать по удалению бека
-      this.backendReady = true;
-      this.cdr.detectChanges();
-    }, 1000);
 
     // убрать т.к. воркеры стартуют до открытия фронта
     // this.repeatCheckBackend().subscribe((res) => {

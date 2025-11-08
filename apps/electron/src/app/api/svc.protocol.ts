@@ -15,14 +15,16 @@ function filterHeaders(src: Headers): Headers {
   const out = new Headers();
   src.forEach((v, k) => {
     const lk = k.toLowerCase();
-    if (lk === 'host' || lk === 'connection') return; // не прокидываем
+    // не прокидываем hop-by-hop и конфликтующие заголовки
+    if (lk === 'host' || lk === 'connection' || lk === 'content-length' || lk === 'transfer-encoding' || lk === 'expect') {
+      return;
+    }
     out.set(k, v);
   });
   return out;
 }
 
 export function registerSvcProtocol(registry: WorkersRegistry) {
-  // напоминание: схему объяви до whenReady():
   // protocol.registerSchemesAsPrivileged([{ scheme:'svc', privileges:{ secure:true, standard:true, supportFetchAPI:true, corsEnabled:true } }]);
 
   protocol.handle('svc', async (req: Request): Promise<Response> => {
@@ -37,39 +39,61 @@ export function registerSvcProtocol(registry: WorkersRegistry) {
               req.headers.get('access-control-request-headers') ?? '*',
             'access-control-allow-methods':
               req.headers.get('access-control-request-method') ?? '*',
+            // по ситуации:
+            // 'access-control-allow-credentials': 'true',
           },
         });
       }
 
       const { worker, path } = parseSvc(req.url);
       const workerReg = registry.get(worker);
-      const base = workerReg.getBaseUrl(); // http://127.0.0.1:<port>
-      const targetUrl = [base, workerReg.spec.rootApiPath, path].join('/');
 
-      // Заголовки и тело запроса
+      // корректнее собирать URL через URL(), чтобы не словить // или пропущенные /
+      const baseUrl = new URL(workerReg.getBaseUrl()); // напр. http://127.0.0.1:3001/
+      const root = workerReg.spec.rootApiPath?.replace(/^\/|\/$/g, '') ?? '';
+      const rel = path.replace(/^\/+/g, '');
+      const targetUrl = new URL([root, rel].filter(Boolean).join('/'), baseUrl).toString();
+
+      // Заголовки
       const headers = filterHeaders(req.headers);
-      const body =
-        req.method === 'GET' || req.method === 'HEAD' || req.body == null
-          ? undefined
-          : (req.body as ReadableStream<Uint8Array>);
 
-      // Проксируем в воркер обычным fetch (Node 22)
-      const upstream = await fetch(targetUrl, {
+      // Тело запроса: для GET/HEAD вовсе не передаём body
+      let body: RequestInit['body'] | undefined = undefined;
+      if (req.method !== 'GET' && req.method !== 'HEAD' && req.body != null) {
+        // В Node нужен duplex: 'half' при наличии body
+        body = req.body as unknown as ReadableStream<Uint8Array>;
+      }
+
+      // Готовим init без мутирующих полей
+      const init: RequestInit = {
         method: req.method,
         headers,
-        body, // передаём поток как есть, без чтения
-      });
+        // body добавим ниже, чтобы не тащить его в GET/HEAD
+      };
+      if (body != null) {
+        (init as any).duplex = 'half'; // <-- критично для Node fetch
+        (init as any).body = body;
+      }
 
-      // Возвращаем web-совместимый Response
+      const upstream = await fetch(targetUrl, init);
+
+      // Проксируем ответ как поток + вернём CORS заголовок
+      const respHeaders = new Headers(upstream.headers);
+      // если ждёшь вызовы из браузера (Angular) — добавь CORS в обычные ответы тоже
+      respHeaders.set('access-control-allow-origin', '*');
+      // при необходимости:
+      // respHeaders.set('access-control-allow-credentials', 'true');
+
       return new Response(upstream.body ?? null, {
         status: upstream.status,
-        headers: upstream.headers,
+        headers: respHeaders,
       });
     } catch (e) {
+      console.log('svc proxy error:', e);
       const msg = e instanceof Error ? e.message : 'svc proxy error';
       return new Response(msg, {
         status: 502,
-        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        headers: { 'content-type': 'text/plain; charset=utf-8', 'access-control-allow-origin': '*' },
       });
     }
   });

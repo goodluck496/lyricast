@@ -1,34 +1,6 @@
-<!--@if((isNotCastingPage$ | async); as castingPage) {-->
-<!--  {{castingPage}}-->
-<!--  <p-tabMenu class="page__tab-menu" [model]="pages" [activeItem]="activePage" (activeItemChange)="activePage = $event">-->
-
-<!--    <ng-template pTemplate="item" let-item>-->
-<!--      @if (item.routerLink) {-->
-<!--        <a [routerLink]="item.routerLink" class="p-menuitem-link">-->
-<!--          <span [class]="item.icon"></span>-->
-<!--          <span class="ml-2">-->
-<!--                    {{ item.label }}-->
-<!--                </span>-->
-<!--        </a>-->
-<!--      } @else {-->
-<!--        {{item.label}}-->
-<!--      }-->
-
-<!--    </ng-template>-->
-<!--  </p-tabMenu>-->
-
-<!--}-->
-
-<!--<div class="page__wrapper">-->
-@if((isNotCastingPage$ | async )&& !firstRun) {
-  <div style="display:flex; width: 100vw; height: 100vh; justify-content: center; align-items: center">
-    <button pButton (click)="onGo()">Начнем</button>
-  </div>
-
+@if (isLoading()) {
+  <lyri-splash-screen />
 }
 
-  <router-outlet></router-outlet>
-<!--</div>-->
-
-
+<router-outlet></router-outlet>
 

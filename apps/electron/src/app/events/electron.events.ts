@@ -67,7 +67,7 @@ ipcMain.handle(
 ipcMain.handle(
   ElectronActionEvents.CLOSE_WINDOW,
   (event, args: CloseWindowArgs) => {
-    console.log('close ', event, args);
+    console.log('close window ',event.processId , args);
     if (!App.openedWindows[args.type]) {
       return;
     }
@@ -77,8 +77,8 @@ ipcMain.handle(
         .forEach(([key, browserWindow]) => {
           App.onClose(key as AppWindowTypes);
 
-          if (!browserWindow.isDestroyed()) {
-            browserWindow.destroy();
+          if (browserWindow && !browserWindow.isDestroyed()) {
+            browserWindow?.destroy();
           }
         });
     } else {

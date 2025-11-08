@@ -26,7 +26,6 @@ import {
   LuxonDateAdapter,
   MAT_LUXON_DATE_ADAPTER_OPTIONS,
   MatLuxonDateAdapterOptions,
-  provideLuxonDateAdapter,
 } from '@angular/material-luxon-adapter';
 import {
   DateAdapter,
@@ -98,5 +97,7 @@ export const appConfig: ApplicationConfig = {
     //navigator state
     provideState(NavigatorFeatureName, NavigatorReducer),
     provideEffects(NavigatorFeatureEffects),
+    // Предоставляем EDITOR_CONFIG на корневом уровне
+    // { provide: EDITOR_CONFIG, useValue: DEFAULT_CONFIG },
   ],
 };

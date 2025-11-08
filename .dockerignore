@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.gitignore
+.cache
+*.log
+.idea
+.nx
+.angular
+.github
+.versel
+.vscode
+npm-debug.log*
+pnpm-debug.log*
+Dockerfile
+llm-docs
+temp-scripts

@@ -15,6 +15,7 @@
     height: 100%;
     width: 100%;
     display: flex;
+    overflow: hidden;
   }
 
   &__menu {
@@ -62,6 +63,10 @@
     width: calc(100% - #{var(--menu-width)} - #{var(--sidebar-width)});
     height: 100%;
     padding: 12px 0;
+
+    &--without-sidebar {
+      width: calc(100% - #{var(--menu-width)});
+    }
   }
 
   &__sidebar {

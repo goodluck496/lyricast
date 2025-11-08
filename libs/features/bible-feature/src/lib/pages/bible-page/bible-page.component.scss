@@ -13,20 +13,6 @@
       margin-top: 34px;
     }
   }
-
-  //
-  //::ng-deep {
-  //  .dash-box {
-  //
-  //    &__item {
-  //      border: 3px solid var(--dash-box-item-selected-bg);
-  //      &:hover {
-  //        --dash-box-item-selected-border
-  //      }
-  //    }
-  //
-  //  }
-  //}
 }
 
 
@@ -73,10 +59,6 @@ lyri-search-feature {
     &__title {
       font-size: 13px;
       word-break: break-all;
-
-      &:hover {
-
-      }
     }
 
     &__description {
@@ -102,6 +84,8 @@ lyri-search-feature {
       padding: 4px 0 4px 4px;
 
       border: 3px solid var(--dash-box-item-border-color);
+
+      transition: .3s;
 
       &:hover {
         --dash-box-item-border-color: #92cdff;

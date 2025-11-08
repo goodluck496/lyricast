@@ -1,0 +1,87 @@
+<div class="asset-management">
+  <p-toast></p-toast>
+  <p-confirmDialog [style]="{ width: '450px' }"></p-confirmDialog>
+
+  <div class="storage-actions">
+    <p-fileUpload
+      mode="basic"
+      name="assets[]"
+      chooseLabel="Upload"
+      icon="pi pi-upload"
+      [multiple]="true"
+      [customUpload]="true"
+      (uploadHandler)="onUpload($event)"
+      [auto]="true"
+    ></p-fileUpload>
+    <button
+      pButton
+      type="button"
+      label="Refresh"
+      icon="pi pi-refresh"
+      (click)="loadAssets()"
+      class="p-button-secondary"
+    ></button>
+  </div>
+
+  <p-table
+    [value]="assets()"
+    [(selection)]="selectedAssets"
+    dataKey="id"
+    [selectionMode]="'multiple'"
+    [scrollable]="true"
+    scrollHeight="40vh"
+    [loading]="loading()"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th style="width: 3rem">
+          <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+        </th>
+        <th style="width:15%">Preview</th>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Size</th>
+        <th>Created</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-asset let-rowIndex="rowIndex">
+      <tr [pSelectableRow]="asset" [pSelectableRowIndex]="rowIndex">
+        <td>
+          <p-tableCheckbox [value]="asset"></p-tableCheckbox>
+        </td>
+        <td>
+          @if (asset.mimeType.startsWith('image/')) {
+            <img [src]="getAssetUrl(asset)" class="preview-img" />
+          }
+        </td>
+        <td style="word-break: break-all">{{ asset.originalName }}</td>
+        <td>{{ asset.mimeType }}</td>
+        <td>{{ formatBytes(asset.size) }}</td>
+        <td>{{ asset.createdAt | date : 'dd.MM.yyyy HH:mm:ss' }}</td>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="6">No assets found.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+
+  <p-toolbar *ngIf="selectedAssets.length > 0" styleClass="context-toolbar">
+    <div class="p-toolbar-group-start">
+      <button
+        pButton
+        type="button"
+        [label]="'Delete (' + selectedAssets.length + ')'"
+        icon="pi pi-trash"
+        class="p-button-danger"
+        (click)="confirmDeleteSelected()"
+      ></button>
+    </div>
+    <div class="p-toolbar-group-end">
+      <span class="selected-count"
+        >{{ selectedAssets.length }} item(s) selected</span
+      >
+    </div>
+  </p-toolbar>
+</div>

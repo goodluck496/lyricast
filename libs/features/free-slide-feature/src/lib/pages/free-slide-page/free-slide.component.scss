@@ -42,10 +42,12 @@
     background-color: #5a5a5a;
     border: 1px solid transparent;
 
-    &--sleected {
+    &.selected {
       border: 1px solid whitesmoke;
     }
   }
+
+
 
   &__selected-slide {
 

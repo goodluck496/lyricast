@@ -12,17 +12,25 @@ import {
   WindowService,
 } from '@lyri-cast/common-browser';
 import { Actions } from '@ngrx/effects';
-import { FreeSlideActions, FreeSlideActionsEnum, FreeSlideActionSource } from './free-slide.actions';
+import {
+  FreeSlideActions,
+  FreeSlideActionsEnum,
+  FreeSlideActionSource,
+} from './free-slide.actions';
 import { EventData } from '@lyri-cast/common-electron';
 import { selectFreeSlideCastingProcess } from './free-slide.selectors';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   [FreeSlideActionsEnum.startCasting]: (eventData: EventData) =>
-    FreeSlideActions[FreeSlideActionsEnum.startCasting](eventData.payload as any),
+    FreeSlideActions[FreeSlideActionsEnum.startCasting](
+      eventData.payload as any
+    ),
   [FreeSlideActionsEnum.castingStarted]: () =>
     FreeSlideActions[FreeSlideActionsEnum.castingStarted](),
-  [FreeSlideActionsEnum.stopCasting]: () => FreeSlideActions[FreeSlideActionsEnum.stopCasting](),
-  [FreeSlideActionsEnum.pauseCasting]: () => FreeSlideActions[FreeSlideActionsEnum.pauseCasting](),
+  [FreeSlideActionsEnum.stopCasting]: () =>
+    FreeSlideActions[FreeSlideActionsEnum.stopCasting](),
+  [FreeSlideActionsEnum.pauseCasting]: () =>
+    FreeSlideActions[FreeSlideActionsEnum.pauseCasting](),
 };
 
 @Injectable()
@@ -44,6 +52,8 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
     stopCastingAction: FreeSlideActions[FreeSlideActionsEnum.stopCasting],
     pauseCastingAction: FreeSlideActions[FreeSlideActionsEnum.pauseCasting],
     slideNavigateAction: FreeSlideActions[FreeSlideActionsEnum.slideNavigate],
+    liveUpdateSlideAction:
+      FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide],
     selectCastingProcess: selectFreeSlideCastingProcess,
     selectOpenedWindow,
     getDisplayForCasting: () => this.settingsSrv.getDisplayForCasting(),
@@ -55,10 +65,11 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
 
   openCasting$ = this.base.openCasting$;
   onOpenPage$ = this.base.onOpenPage$;
+  onOpenedPage$ = this.base.onOpenedPage$;
   startCastingTrigger$ = this.base.startCastingTrigger$;
   pauseCasting$ = this.base.pauseCasting$;
   stopCasting$ = this.base.stopCasting$;
   castingStarted$ = this.base.castingStarted$;
   slideNavigate$ = this.base.slideNavigate$;
-
+  liveUpdateSlide$ = this.base.liveUpdateSlide$;
 }

@@ -5,6 +5,9 @@ const isPublishEnabled = CI && GITHUB_TOKEN;
 
 module.exports = {
   // npmRebuild: false,
+  appId: 'com.lyricast.app',
+  productName: 'LyriCast', // Человекочитаемое имя
+  executableName: 'lyricast', // Имя бинарника без спецсимволов
   npmRebuild: true,
   files: [
     'dist/apps/browser/**/*',
@@ -14,7 +17,15 @@ module.exports = {
     'package.json',
   ],
   win: {
-    target: 'nsis',
+    target: [{ target: 'nsis', arch: ['ia32'] }],
+    icon: 'assets/build/icons/lyriicon.ico',
+  },
+  linux: {
+    target: ['AppImage', 'deb', 'rpm'],
+    category: 'AudioVideo',
+    icon: 'assets/build/icons/lyriicon.ico',
+    // packageName: 'lyricast',       // под виндой не собирается если раскомментировать.  имя DEB/RPM пакета (без @ и /)
+    artifactName: 'lyricast_${version}_${arch}.${ext}', // куда писать файлы
   },
   asar: true,
   asarUnpack: [
@@ -36,6 +47,18 @@ module.exports = {
     {
       from: 'assets/complete-jsons',
       to: 'assets/complete-jsons',
+    },
+    {
+      from: 'assets/build/icons',
+      to: 'assets/icons',
+    },
+    {
+      from: 'data',
+      to: 'assets/databases',
+    },
+    {
+      from: 'drizzle',
+      to: 'drizzle',
     },
 
     // todo самое плохое решение,  но рабочее,
@@ -68,7 +91,7 @@ module.exports = {
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
     shortcutName: 'Lyricast',
-    include: 'installer.nsh',
+    // include: 'installer.nsh',
     artifactName: '${productName}-Setup-${version}.${ext}',
   },
   // Настройки для автоматической загрузки релизов на GitHub

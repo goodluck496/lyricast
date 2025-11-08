@@ -1,0 +1,40 @@
+:host {
+  ::ng-deep {
+    .p-datatable .p-datatable-tbody > tr > td {
+      max-height: 62px;
+      padding: 0;
+    }
+  }
+}
+
+.asset-management {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.storage-actions {
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.preview-img {
+  max-width: 100px;
+  max-height: 50px;
+  object-fit: contain;
+}
+
+.context-toolbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 0;
+}
+
+.selected-count {
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--text-color-secondary);
+}

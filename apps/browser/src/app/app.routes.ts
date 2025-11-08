@@ -4,13 +4,13 @@ import {
   RouterStateSnapshot,
 } from '@angular/router';
 import { MainComponent } from './pages/main/main.component';
-import { Pages } from '@lyri-cast/common-browser';
-import { Component } from '@angular/core';
+import { MainComponentService, Pages } from '@lyri-cast/common-browser';
+import { Component, inject } from '@angular/core';
 
 @Component({
   standalone: true,
   selector: 'lyri-empty-page',
-  template: ''
+  template: '',
 })
 class EmptyPageComponent {}
 
@@ -37,7 +37,9 @@ export const appRoutes: Route[] = [
       {
         path: Pages.FREE_SLIDE_FEATURE,
         loadChildren: () =>
-          import('@lyri-cast/free-slide-feature').then((c) => c.freeSlideFeatureRoutes),
+          import('@lyri-cast/free-slide-feature').then(
+            (c) => c.freeSlideFeatureRoutes
+          ),
       },
       {
         path: Pages.PROGRAMS,
@@ -52,14 +54,28 @@ export const appRoutes: Route[] = [
           import('./pages/settings/settings.component').then(
             (c) => c.SettingsComponent
           ),
+        canActivate: [
+          () => {
+            const mainCmpService = inject(MainComponentService);
+
+            mainCmpService.$disableSidebar.set(true);
+          },
+        ],
+        canDeactivate: [
+          () => {
+            const mainCmpService = inject(MainComponentService);
+
+            mainCmpService.$disableSidebar.set(false);
+          },
+        ],
       },
-      {
-        path: Pages.TEST,
-        loadComponent: () =>
-          import('./pages/test-page/test-page.component').then(
-            (c) => c.TestPageComponent
-          ),
-      },
+      // {
+      //   path: Pages.TEST,
+      //   loadComponent: () =>
+      //     import('./pages/test-page/test-pixi-editor3/test-pixi-editor3.component').then(
+      //       (c) => c.TestPixiEditorV2Component
+      //     ),
+      // },
     ],
   },
   {
@@ -75,10 +91,10 @@ export const appRoutes: Route[] = [
   {
     path: Pages.FREE_SLIDE_FEATURE,
     loadChildren: () =>
-      import('@lyri-cast/free-slide-feature').then((c) => c.freeSlideFeatureRoutes),
+      import('@lyri-cast/free-slide-feature').then(
+        (c) => c.freeSlideFeatureRoutes
+      ),
   },
 
-  {path: 'EMPTY', component: EmptyPageComponent},
+  { path: 'EMPTY', component: EmptyPageComponent },
 ];
-
-

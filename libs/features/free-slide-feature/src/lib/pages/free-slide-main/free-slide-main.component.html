@@ -1,0 +1,72 @@
+<lyri-page-container [pagePath]="[Pages.MAIN, Pages.FREE_SLIDE_FEATURE, FreeSlidePages.MAIN]">
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
+    <h2>Free-Form Presentations</h2>
+  </ng-template>
+
+  <ng-container page-content>
+    <div class="flex flex-column" style="height: 100%; width: 100%;">
+      <div class="flex flex-h-center">
+        <button pButton pRipple (click)="onCreateNew()" severity="success">Новая презентация</button>
+        <button pButton pRipple disabled>Создать из песни</button>
+        <button pButton pRipple disabled>Создать из Книги</button>
+      </div>
+      <ng-scrollbar style="width: 100%; height: calc(100% - 100px);">
+        <div class="presentation-card-container">
+          @if (presentations$ | async; as presentations) {
+
+            @for (presentation of presentations; track presentation.id) {
+              <div class="presentation-card"
+                   [style.background-image]="presentation.previewUrl ? 'url(\'' + presentation.previewUrl + '\')' : null"
+                   (click)="onSelect(presentation)"
+              >
+
+                @if (!presentation.inEdit) {
+                  <div class="presentation-card__edit-btn" (click)="onEdit($event, presentation)">
+                    <i class="pi pi-pencil" style="color: black"></i>
+                  </div>
+                } @else {
+                  <div class="presentation-card__success-btn" (click)="onEditComplete($event, presentation)">
+                    <i class="pi pi-check" style="color: black"></i>
+                  </div>
+                }
+
+                <div class="presentation-card__delete-btn" (click)="onDelete($event, presentation)">
+                  <i class="pi pi-trash" style="color: white"></i>
+                </div>
+
+                <div class="card-overlay flex flex-column">
+                  @if (presentation.inEdit) {
+                    <input type="text" pInputText
+                           [(ngModel)]="presentation.title"
+                           (click)="$event.stopPropagation()"
+                           (keydown.enter)="onEditComplete($event, presentation)"
+                           (keydown.escape)="presentation.inEdit = false"
+                    />
+                  } @else {
+                    <h4>{{ presentation.title }}</h4>
+                  }
+
+                  <p>Слайдов: {{ presentation.slides.length }}</p>
+                </div>
+              </div>
+            } @empty {
+              <!-- Empty State -->
+              <div class="empty-state">
+                <h3>No presentations yet.</h3>
+                <p>Get started by creating a new one.</p>
+              </div>
+            }
+
+
+          }
+        </div>
+
+      </ng-scrollbar>
+    </div>
+  </ng-container>
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR">
+    --
+  </ng-template>
+
+
+</lyri-page-container>

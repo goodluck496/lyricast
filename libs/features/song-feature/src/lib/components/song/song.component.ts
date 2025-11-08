@@ -39,9 +39,11 @@ export class SongComponent {
   sanitizer: DomSanitizer = inject(DomSanitizer);
 
   song = input.required<ISong>();
-  lyrics = computed<LyricForCasting[]>(() =>
-    this.songPageSelectSrv.selectedLyricsForCasting()
-  );
+  lyrics = computed<LyricForCasting[]>(() => {
+    const currentSong = this.song();
+    this.songPageSelectSrv.splitPartsCount();
+    return this.songPageSelectSrv.buildLyricsForCasting(currentSong);
+  });
   lyricItems = viewChildren<ElementRef<HTMLElement>>('lyricItem');
 
   selectedLyricLine = signal<LyricLine | null>(null);

@@ -1,6 +1,7 @@
-<lyri-page-container [pagePath]="[Pages.MAIN, Pages.FREE_SLIDE_FEATURE, Pages.FREE_SLIDE]">
+<lyri-page-container [pagePath]="$pagePath()">
 
   <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
+    <button pButton pRipple (click)="window.history.back()">Назад</button>
   </ng-template>
 
   <ng-container page-content>
@@ -10,42 +11,42 @@
         <ng-scrollbar>
           <div class="free-slide__preview-list">
             @for (slide of slides$ | async; track slide.id) {
-              <lyri-preview-slide [slide]="slide"
-                                  [selected]="slide.index === currentSlideIndex"
-                                  class="free-slide__preview-slide"
-                                  (click)="onSelectSlide(slide)">
+              <lyri-preview-slide
+                [slide]="slide"
+                [selected]="slide.index === currentSlideIndex"
+                class="free-slide__preview-slide"
+                [class.selected]="slide.index === currentSlideIndex"
+                (click)="onSelectSlide(slide)"
+              >
               </lyri-preview-slide>
             }
           </div>
         </ng-scrollbar>
       </div>
       <div class="free-slide__contents">
+        <form [formGroup]="slideForm">
         <p-card class="free-slide">
           <ng-template pTemplate="header">
             <div class="free-slide__header">
-              {{ currentSlideIndex }}. <input pInputText [(ngModel)]="currentSlideName"
+              {{ currentSlideIndex }}. <input pInputText
+                                              formControlName="name"
                                               class="free-slide__name-input" />
             </div>
 
           </ng-template>
 
-          <p-editor
-            [(ngModel)]="currentSlideHtml"
-            [formats]="quillFormats"
-            [modules]="quillModules"
-            [style]="{ height: '250px' }">
-          </p-editor>
+          <lyri-pixi-slide-editor-v2></lyri-pixi-slide-editor-v2>
 
           <ng-template pTemplate="footer">
             <div class="free-slide__footer">
               <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div>
+                <div class="flex gap-2">
                   <button pButton (click)="onAddNewSlide()">Добавить еще слайд</button>
+                  <button pButton (click)="onDuplicateSlide()" class="p-button-secondary">Дублировать</button>
                 </div>
                 <div>
                   @if (currentSlideIndex === 0) {
-                    <button pButton severity="danger" (click)="onResetSlide()"
-                            [disabled]="currentSlideHtml === '' || tempCurrentSlideHtml === ''">
+                    <button pButton severity="danger" (click)="onResetSlide()">
                       Сбросить
                     </button>
                   } @else {
@@ -62,6 +63,7 @@
           </ng-template>
 
         </p-card>
+        </form>
       </div>
     </div>
 

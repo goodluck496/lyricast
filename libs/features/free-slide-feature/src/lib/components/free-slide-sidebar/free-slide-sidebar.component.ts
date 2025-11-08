@@ -15,7 +15,12 @@ import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { Store } from '@ngrx/store';
 import { Actions } from '@ngrx/effects';
 import { map, take } from 'rxjs';
-import { selectOpenedWindow, SidebarService } from '@lyri-cast/common-browser';
+import {
+  AppActions,
+  selectOpenedWindow,
+  SidebarService,
+} from '@lyri-cast/common-browser';
+import { AppWindowTypes } from '@lyri-cast/common-electron';
 
 import { SvgIconComponent } from '@lyri-cast/svg-icons';
 import { FreeSlideCastingPreviewComponent } from '../casting-preview/free-slide-casting-preview.component';
@@ -28,6 +33,10 @@ import {
 import { FreeSlideService } from '../../pages/free-slide-page/free-slide.service';
 import { filterEmpty } from '@lyri-cast/common';
 
+import { ToggleButtonModule } from 'primeng/togglebutton';
+import { FormsModule } from '@angular/forms';
+import { ToggleButtonChangeEvent } from 'primeng/togglebutton/togglebutton.interface';
+
 @Component({
   selector: 'lyri-free-slide-sidebar',
   standalone: true,
@@ -37,6 +46,8 @@ import { filterEmpty } from '@lyri-cast/common';
     NavigatorFeatureComponent,
     SvgIconComponent,
     FreeSlideCastingPreviewComponent,
+    ToggleButtonModule,
+    FormsModule,
   ],
   templateUrl: './free-slide-sidebar.component.html',
   styleUrl: './free-slide-sidebar.component.scss',
@@ -51,62 +62,63 @@ export class FreeSlideSidebarComponent {
   private readonly store = inject<Store<BibleState>>(Store<BibleState>);
   private readonly actions$ = inject(Actions);
   private readonly sidebarService = inject<SidebarService<any>>(SidebarService);
-  private slideService = inject(FreeSlideService);
+  private readonly slideService = inject(FreeSlideService);
 
-  windowHasClose$ = this.store
-    .select(selectOpenedWindow)
-    .pipe(map((data) => !data));
+  openedCastingWindow$ = this.store.select(selectOpenedWindow).pipe(
+    map((e) => {
+      console.log('openedCastingWindow$', e, !!e);
+      return !!e;
+    })
+  );
   castingIsPaused$ = this.store.select(selectFreeSlideCastingPaused);
+  liveSyncEnabled$ = this.slideService.liveSyncEnabled$.asObservable();
+
+  onLiveSyncToggle(event: ToggleButtonChangeEvent) {
+    const isEnabled = !!event.checked;
+    this.slideService.toggleLiveSync(isEnabled);
+
+    if (isEnabled) {
+      this.slideService.requestSaveCurrentSlide$.next();
+    }
+  }
 
   onStartCasting() {
-    this.store
-      .select(selectFreeSlideSelected)
-      .pipe(filterEmpty(), take(1))
-      .subscribe((slide) => {
-        this.store.dispatch(
-          FreeSlideActions[FreeSlideActionsEnum.openCasting]({
-            slideId: slide.id,
-            slides: this.slideService.slides$.value,
-            fromIndex: slide.index,
-          })
-        );
-      });
+    console.log('[Sidebar] Starting casting...');
 
-    /*this.store
-      .select(selectSelectedBibleVerse)
-      .pipe(
-        take(1),
-        filterEmpty(),
-        withLatestFrom(this.sectionList$, this.sidebarService.data$)
-      )
-      .subscribe(([verse, sections, sidebarData]) => {
-        if (!sidebarData || !sidebarData.bibleForm) {
-          return;
-        }
-        const groupValue = sidebarData.bibleForm;
+    // Listen for the save to complete, then proceed with casting
+    this.slideService.saveCompleted$.pipe(take(1)).subscribe(() => {
+      console.log('[Sidebar] Save completed, proceeding with casting.');
 
-        if (groupValue.book && groupValue.chapter && sections.length) {
+      this.store
+        .select(selectFreeSlideSelected)
+        .pipe(filterEmpty(), take(1))
+        .subscribe((slide) => {
+          // Get the latest slides data from the service
+          const currentSlides = this.slideService.slides$.value;
+
           this.store.dispatch(
-            BibleActions.openCasting({
-              book: groupValue.book.baseEntity,
-              chapter: groupValue.chapter.baseEntity,
-              fromIndex: verse.number,
-              content: sections[0].content.map((el) => {
-                return {
-                  ...el,
-                  text: [el.text],
-                  bookTitle: groupValue?.book?.baseEntity
-                    ?.title as BibleBookTitle,
-                };
-              }),
+            FreeSlideActions[FreeSlideActionsEnum.openCasting]({
+              slideId: slide.id,
+              slides: currentSlides,
+              fromIndex: slide.index,
             })
           );
-        }
-      });*/
+        });
+    });
+
+    // Request the current slide to be saved
+    this.slideService.requestSaveCurrentSlide$.next();
   }
 
   onStopCasting() {
+    console.log('onStopCasting called');
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
+    // Закрываем окно кастинга
+    this.store.dispatch(
+      AppActions.closeWindow({
+        windowType: AppWindowTypes.CASTING,
+      })
+    );
   }
 
   onPauseCasting() {

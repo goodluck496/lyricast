@@ -3,41 +3,55 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  computed,
   DestroyRef,
   inject,
-  viewChild,
-  viewChildren,
+  signal,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
 import { Store } from '@ngrx/store';
-import { FreeSlide } from '@lyri-cast/entities';
+import { SlideDto } from '@lyri-cast/entities';
 import { Actions } from '@ngrx/effects';
-import { EditorComponent } from '@tinymce/tinymce-angular';
-import { Editor, EditorModule } from 'primeng/editor';
-import { FormsModule } from '@angular/forms';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { PageContainerComponent } from '@lyri-cast/ui-lib';
-import { PAGE_CONTAINER_TEMPLATES, Pages } from '@lyri-cast/common-browser';
+import {
+  FreeSlidePages,
+  PAGE_CONTAINER_TEMPLATES,
+  Pages,
+} from '@lyri-cast/common-browser';
 import { DropdownModule } from 'primeng/dropdown';
-
-import Quill from 'quill';
-import QuillResizeImage from 'quill-resize-image';
-import { EditorTextChangeEvent } from 'primeng/editor/editor.interface';
 import { FreeSlideService } from './free-slide.service';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
-import { first, fromEvent, take } from 'rxjs';
+import {
+  combineLatest,
+  debounceTime,
+  first,
+  Subject,
+  take,
+  takeUntil,
+} from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgScrollbar } from 'ngx-scrollbar';
 import { PreviewSlideComponent } from '../../components/preview-slide/preview-slide.component';
 import { FreeSlideSidebarComponent } from '../../components/free-slide-sidebar/free-slide-sidebar.component';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FreeSlideActions,
   FreeSlideActionsEnum,
+  selectFreeSlideCastingProcess,
   selectFreeSlideCastingStarted,
+  selectFreeSlideNavigateState,
 } from '@lyri-cast/free-slide-store';
-
-Quill.register('modules/resize', QuillResizeImage);
+import {
+  AssetStorageService,
+  PixiSlideEditorV2Component,
+} from '@lyri-cast/form';
+import { ActivatedRoute } from '@angular/router';
+import { FreeSlideApiService } from '@lyri-cast/free-slide';
+import { PrimeTemplate } from 'primeng/api';
+import { Ripple } from 'primeng/ripple';
 
 @Component({
   selector: 'lyri-free-slide',
@@ -45,8 +59,8 @@ Quill.register('modules/resize', QuillResizeImage);
   imports: [
     CommonModule,
     ButtonDirective,
-    EditorModule,
     FormsModule,
+    ReactiveFormsModule,
     PageContainerComponent,
     DropdownModule,
     CardModule,
@@ -54,6 +68,9 @@ Quill.register('modules/resize', QuillResizeImage);
     NgScrollbar,
     PreviewSlideComponent,
     FreeSlideSidebarComponent,
+    PixiSlideEditorV2Component,
+    PrimeTemplate,
+    Ripple,
   ],
   templateUrl: './free-slide.component.html',
   styleUrl: './free-slide.component.scss',
@@ -62,90 +79,121 @@ Quill.register('modules/resize', QuillResizeImage);
 })
 export class FreeSlideComponent implements AfterViewInit {
   cdr = inject(ChangeDetectorRef);
+  private readonly route = inject(ActivatedRoute);
+  private readonly api = inject(FreeSlideApiService);
   store = inject(Store);
   actions$ = inject(Actions);
   slideService = inject(FreeSlideService);
   destroyRef = inject(DestroyRef);
+  assetStorage = inject(AssetStorageService);
 
-  editor = viewChild.required(Editor);
+  containerPagePath: (string | Pages)[] = [];
 
-  init: EditorComponent['init'] = {
-    plugins: 'lists link image table code help wordcount',
-  };
+  changePresentation$ = new Subject<void>();
+
+  @ViewChild(PixiSlideEditorV2Component)
+  pixiEditor!: PixiSlideEditorV2Component;
+
+  slideForm = new FormGroup({
+    name: new FormControl('', { nonNullable: true }),
+  });
 
   currentSlideId = '';
   currentSlideIndex = 1;
-  currentSlideName = '';
-  currentSlideHtml = '';
-  /**
-   * Данное поле используется для считывания значения из редактора
-   * применять его для value редактора нельзя, будет "скакать" курсор
-   */
-  tempCurrentSlideHtml = '';
-
-  quillFormats = [
-    'header',
-    'bold',
-    'italic',
-    'underline',
-    'strike',
-    'blockquote',
-    'code-block',
-    'list',
-    'indent',
-    'script',
-    'color',
-    'background',
-    'font',
-    'align',
-    'link',
-    'image',
-    'video', // ← вот сюда
-  ];
-
-  // 2) Модули: тулбар + matcher для YouTube-ссылок
-  quillModules: any = {
-    toolbar: [
-      ['bold', 'italic', 'underline', 'strike'], // жирный, курсив, подчёркнутый и зачёркнутый
-      ['blockquote', 'code-block'], // цитата и блок кода
-      [{ header: 1 }, { header: 2 }], // заголовки
-      [{ list: 'ordered' }, { list: 'bullet' }], // списки
-      [{ script: 'sub' }, { script: 'super' }], // верхний/нижний индекс
-      [{ indent: '-1' }, { indent: '+1' }], // отступы
-      [{ direction: 'rtl' }], // направление текста
-      [{ size: ['small', false, 'large', 'huge'] }], // размер шрифта
-      [{ header: [1, 2, 3, 4, 5, 6, false] }], // заголовки 1–6
-      [{ color: [] }, { background: [] }], // цвет текста и фон
-      [{ font: [] }], // шрифты
-      [{ align: [] }], // выравнивание
-      ['clean'], // убрать форматирование
-      ['link', 'image', 'video'], // ← важно: кнопка Video
-    ],
-    resize: {},
-  };
 
   slides$ = this.slideService.slides$.asObservable();
 
-  onAddNewSlide() {
-    const newSlide = this.slideService.addSlide();
+  presentationId = signal<string>('');
 
-    this.onSelectSlide(newSlide);
+  $pagePath = computed(() => [
+    Pages.MAIN,
+    Pages.FREE_SLIDE_FEATURE,
+    FreeSlidePages.SLIDE,
+    this.presentationId(),
+  ]);
+
+  private saveTrigger$ = new Subject<void>();
+  private previewTrigger$ = new Subject<void>();
+  // Track last saved content hash per slide to avoid redundant preview uploads
+  private lastContentHashBySlideId = new Map<string, string>();
+
+  private async waitForEditorReady(timeoutMs = 5000): Promise<boolean> {
+    const start = Date.now();
+    return await new Promise<boolean>((resolve) => {
+      const check = () => {
+        if (this.pixiEditor && this.pixiEditor.app) return resolve(true);
+        if (Date.now() - start > timeoutMs) return resolve(false);
+        setTimeout(check, 30);
+      };
+      check();
+    });
   }
 
-  onSelectSlide(slide: FreeSlide) {
-    this.currentSlideName = slide.name;
-    this.currentSlideHtml = slide.htmlString;
-    this.tempCurrentSlideHtml = slide.htmlString;
+  private async updateLivePreview() {
+    try {
+      if (!this.pixiEditor) return;
+      // Более высокое разрешение превью для сайдбара
+      const blob = await this.pixiEditor.generateSnapshot({ resolution: 0.6 });
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        this.slideService.setLivePreviewObjectUrl(url);
+      }
+    } catch {}
+  }
+
+  async onAddNewSlide() {
+    const newSlide = this.slideService.addSlide();
+    await this.onSelectSlide(newSlide);
+  }
+
+  async onSelectSlide(slide: SlideDto) {
+    // Автосохранение текущего слайда перед переключением
+    if (
+      this.currentSlideId &&
+      this.pixiEditor &&
+      this.currentSlideId !== slide.id
+    ) {
+      await this.onSaveSlide({ isNavigatingAway: true });
+    } else if (this.currentSlideId === slide.id) {
+      return;
+    }
+
+    console.log('on select slide', slide);
+
+    this.slideForm.patchValue({ name: slide.name }, { emitEvent: false });
+    this.slideForm.markAsPristine();
+
     this.currentSlideId = slide.id;
     this.currentSlideIndex = slide.index;
 
-    this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.selectSlide](slide));
+    // Дожидаемся инициализации PixiJS перед очисткой/десериализацией
+    const ready = await this.waitForEditorReady();
+    if (this.pixiEditor && ready && this.pixiEditor.app) {
+      this.pixiEditor.clearAllNodes();
+      if (slide.content) {
+        try {
+          const slideData = JSON.parse(slide.content);
 
-    const quill: Quill = this.editor().getQuill();
+          // Restore aspect ratio BEFORE deserializing nodes
+          if (slideData.aspectRatio) {
+            this.pixiEditor.onAspectRatioChange(slideData.aspectRatio);
+          }
 
-    if (quill) {
-      quill.focus();
+          // Trigger preloading in the background, but don't await it to avoid blocking UI
+          void this.pixiEditor.serializer.preloadAssets(slideData);
+          this.pixiEditor.serializer.deserializeState(slideData);
+        } catch (e) {
+          console.error('Error parsing slide data, clearing editor', e);
+          this.pixiEditor.clearAllNodes();
+        }
+      } else {
+        this.pixiEditor.clearAllNodes();
+      }
     }
+
+    this.store.dispatch(
+      FreeSlideActions[FreeSlideActionsEnum.selectSlide](slide)
+    );
 
     this.store
       .select(selectFreeSlideCastingStarted)
@@ -161,18 +209,166 @@ export class FreeSlideComponent implements AfterViewInit {
           })
         );
       });
+
+    // Manually trigger UI update for the slide list after navigation is complete
+    this.slideService.notifyUiUpdate();
+    this.cdr.markForCheck();
   }
 
-  onSaveSlide() {
-    this.slideService.updateSlide({
-      id: this.currentSlideId,
-      name: this.currentSlideName,
-      index: this.currentSlideIndex,
-      htmlString: this.tempCurrentSlideHtml,
-    });
+  async onSaveSlide(options: { isNavigatingAway?: boolean } = {}) {
+    if (!this.pixiEditor) {
+      console.warn('[FreeSlide] Cannot save: pixiEditor is not ready');
+      return;
+    }
+    const editorState = this.pixiEditor.serializer.serializeState();
+    const htmlString = JSON.stringify(editorState);
+    // Compute a simple content hash based on serialized editor state
+    const contentHash = htmlString;
+
+    // Reuse existing preview asset if content hasn't changed
+    let assetId: string | undefined;
+    const currentSlide = this.slideService.slidesMap.get(this.currentSlideId);
+
+    const lastHash = this.lastContentHashBySlideId.get(this.currentSlideId);
+    if (lastHash !== contentHash) {
+      const blob = await this.pixiEditor.generateSnapshot();
+      if (blob) {
+        // Upload new preview first; backend deduplicates by content hash
+        const newAssetId = await this.assetStorage.saveAsset(blob, 'image/jpeg');
+        const oldAssetId = currentSlide?.previewAssetId;
+
+        // If old asset exists and differs from new one, delete it only if not reused elsewhere
+        if (oldAssetId && oldAssetId !== newAssetId) {
+          const isReused = Array.from(this.slideService.slidesMap.values()).some(
+            (s) => s.id !== this.currentSlideId && s.previewAssetId === oldAssetId
+          );
+          if (!isReused) {
+            await this.assetStorage.deleteAsset(oldAssetId);
+          }
+        }
+
+        assetId = newAssetId;
+      }
+    } else {
+      // No visual change; keep existing preview asset
+      assetId = currentSlide?.previewAssetId;
+    }
+
+    console.log('[FreeSlide] Saving slide:', this.slideForm.getRawValue().name);
+
+    // const { id } = RouteParamsReducerHelper.reduceSnapshot(this.route.snapshot);
+
+    this.slideService.updateSlide(
+      {
+        id: this.currentSlideId,
+        name: this.slideForm.getRawValue().name,
+        index: this.currentSlideIndex,
+        content: htmlString,
+        previewAssetId: assetId,
+      },
+      { suppressUiUpdate: !!options.isNavigatingAway }
+    );
+
+    this.slideForm.markAsPristine();
+
+    // Update content hash after successful update attempt
+    this.lastContentHashBySlideId.set(this.currentSlideId, contentHash);
+
+    // Live-sync logic: if casting is active for this slide, dispatch an update.
+    if (!options.isNavigatingAway) {
+      combineLatest([
+        this.store.select(selectFreeSlideNavigateState),
+        this.store.select(selectFreeSlideCastingProcess),
+      ])
+        .pipe(take(1))
+        .subscribe(([navigate, process]) => {
+          if (!process) return; // Not casting
+
+          // Determine the ID of the slide currently on the casting screen
+          let castedSlideId: string | undefined;
+          if (navigate?.slide) {
+            castedSlideId = navigate.slide.id;
+          } else {
+            // If no navigation has happened, the casted slide is the initial one
+            castedSlideId = process.slides[process.fromIndex]?.id;
+          }
+
+          // If the slide we just saved is the one on the casting screen, dispatch the update
+          if (castedSlideId === this.currentSlideId) {
+            const updatedSlide = this.slideService.slidesMap.get(
+              this.currentSlideId
+            );
+            const liveSyncEnabled = this.slideService.liveSyncEnabled$.value;
+
+            if (updatedSlide && liveSyncEnabled) {
+              this.store.dispatch(
+                FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide]({
+                  slide: updatedSlide,
+                })
+              );
+            }
+          }
+        });
+    }
+
+    // Notify that save is complete
+    this.slideService.saveCompleted$.next();
   }
 
-  onDeleteSelected() {
+  async onDuplicateSlide() {
+    // 1. Ensure the current state is saved so we copy the latest version.
+    await this.onSaveSlide();
+
+    const originalSlide = this.slideService.slidesMap.get(this.currentSlideId);
+    if (!originalSlide) return;
+
+    // --- New Naming Logic ---
+    const baseName = originalSlide.name.replace(
+      /\s*\(\s*copy(\s\d+)?\s*\)$/,
+      ''
+    );
+    let newName = `${baseName} (copy)`;
+    let copyNum = 2;
+    const allNames = new Set(
+      Array.from(this.slideService.slidesMap.values()).map((s) => s.name)
+    );
+    while (allNames.has(newName)) {
+      newName = `${baseName} (copy ${copyNum})`;
+      copyNum++;
+    }
+    // --- End New Naming Logic ---
+
+    const duplicatedData: Partial<SlideDto> = {
+      ...originalSlide,
+      name: newName,
+    };
+
+    const newSlide = this.slideService.addSlide(duplicatedData);
+    await this.onSelectSlide(newSlide);
+  }
+
+  async onDeleteSelected() {
+    if (this.currentSlideIndex === 0) {
+      console.warn('[FreeSlide] Cannot delete the first slide.');
+      return;
+    }
+
+    const slideToDelete = this.slideService.slidesMap.get(this.currentSlideId);
+    if (slideToDelete?.previewAssetId) {
+      // Check if any other slide uses this asset
+      const allSlides = Array.from(this.slideService.slidesMap.values());
+      const isAssetReused = allSlides.some(
+        (s) =>
+          s.id !== slideToDelete.id &&
+          s.previewAssetId === slideToDelete.previewAssetId
+      );
+
+      if (!isAssetReused) {
+        // Only delete if it's not reused
+        await this.assetStorage.deleteAsset(slideToDelete.previewAssetId);
+      }
+    }
+
     const nextSlide = this.slideService.getSlideByIndex(
       this.currentSlideIndex + 1
     );
@@ -183,51 +379,163 @@ export class FreeSlideComponent implements AfterViewInit {
     this.slideService.removeSlide(this.currentSlideId);
 
     if (nextSlide) {
-      this.onSelectSlide(nextSlide);
+      await this.onSelectSlide(nextSlide);
     } else if (prevSlide) {
-      this.onSelectSlide(prevSlide);
+      await this.onSelectSlide(prevSlide);
     } else {
       const list = Array.from(this.slideService.slidesMap.values());
-      this.onSelectSlide(list[list.length - 1]);
+      if (list.length > 0) {
+        await this.onSelectSlide(list[list.length - 1]);
+      } else {
+        // Handle case where no slides are left
+        this.currentSlideId = '';
+        this.currentSlideIndex = -1;
+        // this.currentSlideName = '';
+        this.pixiEditor.clearAllNodes();
+        this.cdr.markForCheck();
+      }
     }
   }
 
   onResetSlide() {
-    this.currentSlideHtml = '';
-    this.tempCurrentSlideHtml = '';
+    if (this.pixiEditor) {
+      this.pixiEditor.clearAllNodes();
+      this.onSaveSlide();
+    }
+  }
 
-    this.onSaveSlide();
+  /**
+   * Сохраняет текущий слайд перед трансляцией.
+   * Этот метод вызывается из сайдбара перед началом кастинга.
+   */
+  saveCurrentSlide() {
+    if (this.pixiEditor && this.currentSlideId) {
+      this.onSaveSlide();
+    }
+  }
+
+  initSubscriptions() {
+    // Сброс состояния кастинга при инициализации free-slide фичи
+    this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
+
+    // Подписка на запросы сохранения текущего слайда (например, перед трансляцией)
+    this.slideService.requestSaveCurrentSlide$
+      .pipe(
+        takeUntil(this.changePresentation$),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.onSaveSlide();
+      });
+
+    // Единый триггер для автосохранения
+    this.saveTrigger$
+      .pipe(
+        debounceTime(800),
+        takeUntil(this.changePresentation$),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.onSaveSlide();
+      });
+
+    // Быстрый превью-апдейт (без записи в БД), чтобы sidebar обновлялся почти мгновенно
+    this.previewTrigger$
+      .pipe(
+        debounceTime(80),
+        takeUntil(this.changePresentation$),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.updateLivePreview();
+      });
+
+    // При изменении названия слайда - запускаем триггер сохранения
+    this.slideForm.valueChanges
+      .pipe(
+        takeUntil(this.changePresentation$),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.previewTrigger$.next();
+        this.saveTrigger$.next();
+      });
+
+    // При любом изменении в редакторе - запускаем триггер сохранения
+    setTimeout(() => {
+      if (this.pixiEditor?.history) {
+        this.pixiEditor.history.commandExecuted$
+          .pipe(
+            takeUntil(this.changePresentation$),
+            takeUntilDestroyed(this.destroyRef)
+          )
+          .subscribe(() => {
+            this.previewTrigger$.next();
+            this.saveTrigger$.next();
+          });
+      }
+    }, 200);
+
+    // Даём время на инициализацию PixiJS редактора перед загрузкой первого слайда
+    this.slides$
+      .pipe(first(), takeUntil(this.changePresentation$))
+      .subscribe((slides) => {
+        const firstSlide = slides[0];
+        if (firstSlide) {
+          // Небольшая задержка для завершения инициализации PixiJS
+          setTimeout(async () => {
+            await this.onSelectSlide(firstSlide);
+          }, 150);
+        }
+      });
   }
 
   ngAfterViewInit() {
-    this.slides$.pipe(first()).subscribe((slides) => {
-      const firstSlide = slides[0];
-      if (firstSlide) {
-        this.onSelectSlide(firstSlide);
-      }
-    });
-    setTimeout(() => {
-      const quill: Quill = this.editor().getQuill();
-      quill.focus();
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((paramsMap) => {
+        const presentationId = paramsMap.get('id');
+        if (presentationId) {
+          // Fire and forget; updateSlideInService handles async save-before-switch
+          this.updateSlideInService(presentationId);
+        }
+      });
+  }
 
-      fromEvent(quill, 'text-change')
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe(([delta, oldContent, source]) => {
-          if (source === 'user') {
-            const editorEl = quill.root;
-            let html: string = editorEl.innerHTML;
-            if (html === '<p><br></p>') {
-              html = '';
-            }
+  async updateSlideInService(presentationId: string) {
+    // Save current slide immediately to avoid losing debounced changes (e.g., title)
+    if (this.currentSlideId && this.pixiEditor) {
+      await this.onSaveSlide({ isNavigatingAway: true });
+    }
+    this.changePresentation$.next();
+    this.slideService.clear(); // Synchronously clear the state before async operations
 
-            this.tempCurrentSlideHtml = html;
+    this.presentationId.set(presentationId);
+    this.containerPagePath = [
+      Pages.FREE_SLIDE,
+      FreeSlidePages.SLIDE,
+      presentationId,
+    ];
+    this.cdr.markForCheck();
 
-            this.onSaveSlide();
-          }
-        });
-    }, 100);
+    this.api
+      .getById(presentationId)
+      .pipe(first(), takeUntilDestroyed(this.destroyRef))
+      .subscribe((presentation) => {
+        this.slideService.setPresentation(presentation);
+        this.initSubscriptions();
+
+        const firstSlide = presentation.slides[0];
+        if (firstSlide) {
+          this.onSelectSlide(firstSlide);
+        }
+
+        this.cdr.detectChanges();
+      });
   }
 
   protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
   protected readonly Pages = Pages;
+  protected readonly FreeSlidePages = FreeSlidePages;
+  protected readonly window = window;
 }

@@ -25,6 +25,7 @@ export class SongPageSelectService {
   public selectedLyric = signal<LyricForCasting | null>(null);
   public selectedLyricsForCasting = computed(() => {
     const song = this.selectedSong();
+    this.splitPartsCount();
     if (!song) return [];
     return this.buildLyricsForCasting(song);
   });
@@ -114,18 +115,27 @@ export class SongPageSelectService {
   }
 
   private decideParts(lyric: Lyric, globalParts: SplitPartsCount, arrLen: number): number {
-    if (lyric.splitLinesCount === 0) return 1;                               // явно «не делить»
+    // Global setting takes precedence if it's not NONE
+    if (globalParts !== SPLIT_PARTS_COUNT.NONE) {
+      if (globalParts > arrLen) {
+        return 1;
+      }
+      const p = Number(globalParts || 1);
+      return Math.max(1, Math.min(p, arrLen));
+    }
+
+    // Otherwise, use local setting
+    if (lyric.splitLinesCount === 0) {
+      return 1;
+    }
     if (typeof lyric.splitLinesCount === 'number' && lyric.splitLinesCount > 0) {
-      return Math.min(lyric.splitLinesCount, arrLen);                         // локальный override
+      return Math.min(lyric.splitLinesCount, arrLen);
     }
-    if (globalParts === SPLIT_PARTS_COUNT.NONE || globalParts > arrLen) {
-      return 1;                                                               // глобально «не делить»
-    }
-    const p = Number(globalParts || 1);
-    return Math.max(1, Math.min(p, arrLen));
+
+    return 1;
   }
 
-  private buildLyricsForCasting(song: ISong): LyricForCasting[] {
+  public buildLyricsForCasting(song: ISong): LyricForCasting[] {
     const globalParts = this.splitPartsCount();
     const counts = song.lyrics.map(l => this.decideParts(l, globalParts, l.lines.length));
 
@@ -138,7 +148,7 @@ export class SongPageSelectService {
     }
 
     return song.lyrics.map((lyric, i) => {
-      const lines = this.splitArrayIntoParts(lyric, i, offsets[i]);
+      const lines = this.splitArrayIntoParts(lyric, i, offsets[i], globalParts);
       return { ...lyric, lines } as LyricForCasting;
     });
   }
@@ -147,10 +157,11 @@ export class SongPageSelectService {
   public splitArrayIntoParts(
     lyric: Lyric,
     lyricIndex: number,
-    startOffset = 0
+    startOffset = 0,
+    globalParts: SplitPartsCount
   ): LyricLine[] {
     const arr = lyric.lines;
-    const parts = this.decideParts(lyric, this.splitPartsCount(), arr.length);
+    const parts = this.decideParts(lyric, globalParts, arr.length);
 
     // один блок — весь текст подряд
     if (parts === 1) {

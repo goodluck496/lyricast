@@ -92,7 +92,7 @@ export class PixiSlideEditorV2Component
   private readonly cdr = inject(ChangeDetectorRef);
   public readonly serializer = inject(EditorSerializerService);
   private readonly nodeFactory = inject(NodeFactoryService);
-  private readonly sceneViewport = inject(SceneViewportService);
+  public readonly sceneViewport = inject(SceneViewportService);
 
   app!: Application;
   world!: Container & { app: Application };
@@ -765,6 +765,7 @@ export class PixiSlideEditorV2Component
     const nodes = this.store.snapshot((s) => s.nodes);
     const bounds = this.sceneViewport.getSceneBounds();
     const tasks: Promise<void>[] = [];
+
     for (const id of Object.keys(nodes)) {
       const ref = nodes[id]?.ref as NodeBase | undefined;
       if (ref instanceof TextNode) {
@@ -773,19 +774,31 @@ export class PixiSlideEditorV2Component
           ref.x = 0;
           ref.y = 0;
           ref.applyBoxSize(bounds.width, bounds.height);
-          const rafOnce = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+
+          // Wait for multiple frames to ensure proper text measurement
+          const waitForFrames = async (count: number) => {
+            for (let i = 0; i < count; i++) {
+              await new Promise<void>((r) => requestAnimationFrame(() => r()));
+            }
+          };
+
           tasks.push(
             (async () => {
-              await rafOnce();
+              await waitForFrames(2); // Wait for 2 frames to ensure DOM is ready
               await ref.layout();
-              await rafOnce();
+              await waitForFrames(1); // Wait one more frame for layout to settle
             })()
           );
-        } catch {}
+        } catch (e) {
+          console.warn('Failed to fit text node:', e);
+        }
       }
     }
+
     if (tasks.length) {
       await Promise.allSettled(tasks);
+      // Final wait to ensure all text measurements are complete
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
     }
   }
 

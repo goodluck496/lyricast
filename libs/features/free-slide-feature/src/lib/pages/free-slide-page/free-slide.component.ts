@@ -189,6 +189,9 @@ export class FreeSlideComponent implements AfterViewInit {
           this.pixiEditor.serializer.deserializeState(slideData);
           // Ensure text auto-fit after loading scene
           await this.pixiEditor.fitAllTextNodes();
+          // Wait for text nodes to be properly sized before updating scene bounds
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          this.pixiEditor.sceneViewport.updateSceneBounds();
           if (version !== this.loadVersion) return; // stale load, abort
         } catch (e) {
           console.error('Error parsing slide data, clearing editor', e);

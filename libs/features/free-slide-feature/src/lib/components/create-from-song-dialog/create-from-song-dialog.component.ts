@@ -109,6 +109,31 @@ export class CreateFromSongDialogComponent {
     // Scene defaults correspond to 16:9
     const sceneW = 1920;
     const sceneH = 1080;
+    const padding = 40;
+
+    // Calculate optimal font size for the text
+    let actualFontSize = 32; // default fallback
+    try {
+      // Simple approximation for font size calculation
+      // This mimics the logic in TextFitService.fitBinary
+      const maxFontSize = 240;
+      const minFontSize = 24;
+      const innerW = sceneW - padding * 2;
+      const innerH = sceneH - padding * 2;
+      
+      // Estimate based on text length and box dimensions
+      const textLength = html.replace(/<br \/>/g, '').length;
+      const estimatedFontSize = Math.min(
+        maxFontSize,
+        Math.max(
+          minFontSize,
+          Math.floor(Math.min(innerW / (textLength * 0.6), innerH / 4))
+        )
+      );
+      actualFontSize = estimatedFontSize;
+    } catch (e) {
+      console.warn('Failed to calculate font size, using default', e);
+    }
 
     const textNode = {
       id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
@@ -130,9 +155,11 @@ export class CreateFromSongDialogComponent {
         max: 240,
         color: 0xffff00,
         colorHex: '#ffff00',
+        actualFontSize: actualFontSize,
       },
-      padding: 40,
+      padding: padding,
       bgFillColor: 0x000000,
+      actualFontSize: actualFontSize,
     } as const;
 
     const state: SerializedState = {

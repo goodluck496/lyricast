@@ -106,11 +106,9 @@ export class SlideTransitionEditorComponent {
   transitionForm = new FormGroup({
     type: new FormControl<TransitionType>('none', { nonNullable: true }),
     duration: new FormControl<number>(500, { nonNullable: true }),
-    easing: new FormControl<TransitionEasing>('easeInOut', {
-      nonNullable: true,
-    }),
+    easing: new FormControl<TransitionEasing>('easeInOut', { nonNullable: true }),
     delay: new FormControl<number>(0, { nonNullable: true }),
-  });
+  }, { updateOn: 'change' });
 
   currentSlideId = signal<string>('');
   hasTransition = signal<boolean>(false);
@@ -179,13 +177,13 @@ export class SlideTransitionEditorComponent {
     this.transitionForm.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((formValue) => {
-        if (formValue.type && formValue.duration !== null && formValue.easing) {
-          const transition: SlideTransition = {
-            type: formValue.type,
-            duration: formValue.duration || 500,
-            easing: formValue.easing,
-            delay: formValue.delay || 0,
-          };
+        const type = (formValue.type || 'none') as TransitionType;
+        const duration = Number(formValue.duration ?? 500);
+        const easing = (formValue.easing || 'easeInOut') as TransitionEasing;
+        const delay = Number(formValue.delay ?? 0);
+
+        if (type && !Number.isNaN(duration) && easing) {
+          const transition: SlideTransition = { type, duration, easing, delay };
 
           if (this.useGlobalTransition) {
             // Применяем глобально для всех слайдов
@@ -225,6 +223,10 @@ export class SlideTransitionEditorComponent {
             easing: transition.easing,
             delay: transition.delay || 0,
           });
+          // При включении глобального режима — зафиксировать глобальный переход
+          this.store.dispatch(
+            FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition]({ transition })
+          );
         });
     }
   }

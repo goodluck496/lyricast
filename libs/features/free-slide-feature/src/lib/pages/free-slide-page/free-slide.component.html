@@ -9,16 +9,18 @@
     <div class="free-slide__page-wrapper">
       <div class="free-slide__preview-list-wrapper">
         <ng-scrollbar>
-          <div class="free-slide__preview-list">
+          <div class="free-slide__preview-list" cdkDropList (cdkDropListDropped)="onSlidesDrop($event)" lyriCtrlDragCopy>
             @for (slide of slides$ | async; track slide.id) {
-              <lyri-preview-slide
-                [slide]="slide"
-                [selected]="slide.index === currentSlideIndex"
-                class="free-slide__preview-slide"
-                [class.selected]="slide.index === currentSlideIndex"
-                (click)="onSelectSlide(slide)"
-              >
-              </lyri-preview-slide>
+              <div cdkDrag>
+                <lyri-preview-slide
+                  [slide]="slide"
+                  [selected]="slide.index === currentSlideIndex"
+                  class="free-slide__preview-slide"
+                  [class.selected]="slide.index === currentSlideIndex"
+                  (click)="onSelectSlide(slide)"
+                >
+                </lyri-preview-slide>
+              </div>
             }
           </div>
         </ng-scrollbar>
@@ -28,7 +30,7 @@
         <p-card class="free-slide">
           <ng-template pTemplate="header">
             <div class="free-slide__header">
-              {{ currentSlideIndex }}. <input pInputText
+              {{ currentSlideIndex + 1 }}. <input pInputText
                                               formControlName="name"
                                               class="free-slide__name-input" />
             </div>

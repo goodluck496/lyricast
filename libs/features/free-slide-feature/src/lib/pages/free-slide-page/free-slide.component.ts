@@ -52,6 +52,8 @@ import { ActivatedRoute } from '@angular/router';
 import { FreeSlideApiService } from '@lyri-cast/free-slide';
 import { PrimeTemplate } from 'primeng/api';
 import { Ripple } from 'primeng/ripple';
+import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { CtrlDragCopyDirective } from '../../directives/ctrl-drag-copy.directive';
 
 @Component({
   selector: 'lyri-free-slide',
@@ -71,6 +73,8 @@ import { Ripple } from 'primeng/ripple';
     PixiSlideEditorV2Component,
     PrimeTemplate,
     Ripple,
+    DragDropModule,
+    CtrlDragCopyDirective,
   ],
   templateUrl: './free-slide.component.html',
   styleUrl: './free-slide.component.scss',
@@ -93,6 +97,8 @@ export class FreeSlideComponent implements AfterViewInit {
 
   @ViewChild(PixiSlideEditorV2Component)
   pixiEditor!: PixiSlideEditorV2Component;
+  @ViewChild(CtrlDragCopyDirective)
+  ctrlCopyDir?: CtrlDragCopyDirective;
 
   slideForm = new FormGroup({
     name: new FormControl('', { nonNullable: true }),
@@ -541,6 +547,25 @@ export class FreeSlideComponent implements AfterViewInit {
 
         this.cdr.detectChanges();
       });
+  }
+
+  onSlidesDrop(event: CdkDragDrop<any>) {
+    const isCopy = this.ctrlCopyDir?.isCtrlPressed() ?? (event.event as MouseEvent | PointerEvent | KeyboardEvent | undefined as any)?.ctrlKey === true;
+    const prevIndex = event.previousIndex;
+    const currIndex = event.currentIndex;
+    if (prevIndex === currIndex && !isCopy) return;
+
+    if (isCopy) {
+      this.slideService.copySlide(prevIndex, currIndex);
+    } else {
+      this.slideService.reorderSlides(prevIndex, currIndex);
+    }
+
+    const selected = this.slideService.slidesMap.get(this.currentSlideId);
+    if (selected) {
+      this.currentSlideIndex = selected.index;
+      this.cdr.markForCheck();
+    }
   }
 
   protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;

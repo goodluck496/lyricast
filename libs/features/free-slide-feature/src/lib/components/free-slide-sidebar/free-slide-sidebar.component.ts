@@ -15,7 +15,7 @@ import { Router } from '@angular/router';
 import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { Store } from '@ngrx/store';
 import { Actions, ofType } from '@ngrx/effects';
-import { map, take, debounceTime, combineLatest, first } from 'rxjs';
+import { map, take, debounceTime, combineLatest, first, BehaviorSubject, withLatestFrom, filter, finalize, catchError, of } from 'rxjs';
 import {
   AppActions,
   selectOpenedWindow,
@@ -74,6 +74,8 @@ export class FreeSlideSidebarComponent {
   private readonly actions$ = inject(Actions);
   private readonly sidebarService = inject<SidebarService<any>>(SidebarService);
   private readonly slideService = inject(FreeSlideService);
+  private readonly transitionsLoaded$ = new BehaviorSubject<boolean>(false);
+  private applyingLoadedSettings = false;
 
   slideTransitionEditor = viewChild(SlideTransitionEditorComponent);
 
@@ -144,35 +146,103 @@ export class FreeSlideSidebarComponent {
   }
 
   ngOnInit(): void {
-    this.slideService.currentPresentation$.pipe(first()).subscribe((p: any) => {
-      if (!p?.id) return;
-      this.freeSlideApi.getTransitionSettings(p.id).pipe(first()).subscribe((settings: any) => {
-        const gt = settings?.globalTransition;
-        if (gt) {
-          this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition]({ transition: gt }));
-        }
-        const st = settings?.slideTransitions;
-        if (st && typeof st === 'object') {
-          for (const key of Object.keys(st)) {
-            this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.setSlideTransition]({ slideId: key, transition: st[key] }));
+    this.slideService.currentPresentation$
+      .pipe(
+        filter((p: any) => !!p?.id),
+        first()
+      )
+      .subscribe((p: any) => {
+      this.freeSlideApi
+        .getTransitionSettings(p.id)
+        .pipe(
+          first(),
+          catchError(() => of({})),
+          finalize(() => this.transitionsLoaded$.next(true))
+        )
+        .subscribe((settings: any) => {
+          // Применяем настройки из БД и игнорируем автосохранение на это время
+          this.applyingLoadedSettings = true;
+          this.transitionsLoaded$.next(true);
+          const gt = settings?.globalTransition;
+          if (gt) {
+            this.store.dispatch(
+              FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition]({ transition: gt })
+            );
+            const editor = this.slideTransitionEditor?.();
+            if (editor && editor.useGlobalTransition && editor.transitionForm) {
+              editor.transitionForm.patchValue({
+                type: gt.type,
+                duration: gt.duration,
+                easing: gt.easing,
+                delay: gt.delay || 0,
+              }, { emitEvent: false });
+            }
           }
-        }
-      });
+          const st = settings?.slideTransitions;
+          if (st && typeof st === 'object') {
+            for (const key of Object.keys(st)) {
+              this.store.dispatch(
+                FreeSlideActions[FreeSlideActionsEnum.setSlideTransition]({ slideId: key, transition: st[key] })
+              );
+            }
+          }
+          // Определяем режим редактора и патчим форму для отображения значений
+          const editor = this.slideTransitionEditor?.();
+          if (editor && editor.transitionForm) {
+            const hasGlobal = !!gt && gt.type !== 'none';
+            if (hasGlobal) {
+              editor.useGlobalTransition = true;
+              editor.transitionForm.patchValue({
+                type: gt.type,
+                duration: gt.duration,
+                easing: gt.easing,
+                delay: gt.delay || 0,
+              }, { emitEvent: false });
+            } else if (st && typeof st === 'object') {
+              this.store.select(selectFreeSlideSelected).pipe(first()).subscribe((sel: any) => {
+                const t = sel?.id ? st[sel.id] : undefined;
+                if (t) {
+                  editor.useGlobalTransition = false;
+                  editor.transitionForm.patchValue({
+                    type: t.type,
+                    duration: t.duration,
+                    easing: t.easing,
+                    delay: t.delay || 0,
+                  }, { emitEvent: false });
+                }
+              });
+            }
+          }
+          // Снимаем флаг после применения (микрозадача, чтобы actions$ успел обработать очереди)
+          setTimeout(() => { this.applyingLoadedSettings = false; }, 0);
+        });
     });
 
-    combineLatest([
-      this.store.select(selectGlobalTransition),
-      this.store.select(selectSlideTransitions),
-      this.slideService.currentPresentation$,
-    ])
-      .pipe(debounceTime(500), takeUntilDestroyed(this.destroyRef))
-      .subscribe(([globalTransition, slideTransitions, pres]: any) => {
+    this.actions$
+      .pipe(
+        ofType(
+          FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition],
+          FreeSlideActions[FreeSlideActionsEnum.setSlideTransition]
+        ),
+        debounceTime(500),
+        withLatestFrom(
+          this.store.select(selectGlobalTransition),
+          this.store.select(selectSlideTransitions),
+          this.slideService.currentPresentation$
+        ),
+        filter(([_, __gt, __st, pres]) => !this.applyingLoadedSettings && !!pres?.id),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(([__, globalTransition, slideTransitions, pres]: any) => {
         if (!pres?.id) return;
         const payload = {
           globalTransition,
           slideTransitions: slideTransitions instanceof Map ? Object.fromEntries(slideTransitions.entries()) : slideTransitions,
         };
-        this.freeSlideApi.setTransitionSettings(pres.id, payload).pipe(first()).subscribe();
+        this.freeSlideApi
+          .setTransitionSettings(pres.id, payload)
+          .pipe(first())
+          .subscribe();
       });
   }
 }

@@ -93,6 +93,30 @@ export class FreeSlideService {
     return newSlide;
   }
 
+  reorderSlides(previousIndex: number, currentIndex: number) {
+    const ordered = this._orderedSlides();
+    if (previousIndex < 0 || previousIndex >= ordered.length) return;
+    if (currentIndex < 0 || currentIndex >= ordered.length) currentIndex = ordered.length - 1;
+    const [moved] = ordered.splice(previousIndex, 1);
+    ordered.splice(currentIndex, 0, moved);
+    this._reindexAndCommit(ordered);
+  }
+
+  copySlide(fromIndex: number, toIndex: number) {
+    const ordered = this._orderedSlides();
+    if (fromIndex < 0 || fromIndex >= ordered.length) return;
+    const source = ordered[fromIndex];
+    const copy: Slide = {
+      ...source,
+      id: uuid(),
+      createdAt: Date.now(),
+      name: this._nextCopyName(source.name),
+    };
+    const insertIndex = Math.min(Math.max(toIndex, 0), ordered.length);
+    ordered.splice(insertIndex, 0, copy);
+    this._reindexAndCommit(ordered);
+  }
+
   updateSlide(
     slide: Partial<Slide> & Pick<Slide, 'id'>,
     options: { suppressUiUpdate?: boolean } = {}
@@ -148,5 +172,27 @@ export class FreeSlideService {
       })
       .pipe(first())
       .subscribe();
+  }
+
+  private _orderedSlides(): Slide[] {
+    return Array.from(this.slidesMap.values()).sort((a, b) => a.index - b.index);
+  }
+
+  private _reindexAndCommit(ordered: Slide[]) {
+    const updated = ordered.map((s, i) => ({ ...s, index: i }));
+    this.slidesMap = new Map(updated.map((s) => [s.id, s]));
+    this._updateSlides();
+  }
+
+  private _nextCopyName(baseName: string): string {
+    const strip = baseName.replace(/\s*\(\s*copy(\s\d+)?\s*\)$/i, '');
+    const names = new Set(Array.from(this.slidesMap.values()).map((s) => s.name));
+    let name = `${strip} (copy)`;
+    let n = 2;
+    while (names.has(name)) {
+      name = `${strip} (copy ${n})`;
+      n++;
+    }
+    return name;
   }
 }

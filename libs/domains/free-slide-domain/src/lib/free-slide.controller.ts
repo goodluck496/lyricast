@@ -47,6 +47,19 @@ export class FreeSlideController {
     return this.freeSlideService.update(id, data);
   }
 
+  @Get(':id/transition-settings')
+  async getTransitionSettings(@Param('id') id: string): Promise<any> {
+    return this.freeSlideService.getTransitionSettings(id);
+  }
+
+  @Put(':id/transition-settings')
+  async setTransitionSettings(
+    @Param('id') id: string,
+    @Body() settings: any
+  ): Promise<{ success: boolean }> {
+    return this.freeSlideService.setTransitionSettings(id, settings);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(@Param('id') id: string): Promise<void> {

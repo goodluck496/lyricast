@@ -31,4 +31,12 @@ export class FreeSlideApiService {
   search(query: string): Observable<Presentation[]> {
     return this.http.get<Presentation[]>(`${this.baseUrl}/search`, { params: { search: query } });
   }
+
+  getTransitionSettings(id: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/${id}/transition-settings`);
+  }
+
+  setTransitionSettings(id: string, settings: any): Observable<{ success: boolean }> {
+    return this.http.put<{ success: boolean }>(`${this.baseUrl}/${id}/transition-settings`, settings);
+  }
 }

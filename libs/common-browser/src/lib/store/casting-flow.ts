@@ -1,6 +1,6 @@
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concat, EMPTY, from, Observable, of } from 'rxjs';
-import { filter, map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
+import { filter, map, switchMap, tap, withLatestFrom, startWith, shareReplay } from 'rxjs/operators';
 import {
   APP_COMMON_ACTIONS,
   AppDisplay,
@@ -45,6 +45,15 @@ export interface CastingFlowOptions<State> {
   slideNavigateAction: ActionCreator;
 
   liveUpdateSlideAction: ActionCreator;
+
+  // Дополнительные действия (опционально) для централизованного проброса через Bridge
+  setGlobalTransitionAction?: ActionCreator;
+  setSlideTransitionAction?: ActionCreator;
+  updateTransitionSettingsAction?: ActionCreator;
+
+  // Опциональные селекторы для начальной синхронизации переходов
+  selectGlobalTransition?: (state: State) => unknown;
+  selectSlideTransitions?: (state: State) => unknown;
 
   selectCastingProcess: (state: State) => unknown;
 
@@ -150,7 +159,12 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     actionSource,
     store,
     selectCastingProcess,
-    liveUpdateSlideAction
+    liveUpdateSlideAction,
+    setGlobalTransitionAction,
+    setSlideTransitionAction,
+    updateTransitionSettingsAction,
+    selectGlobalTransition,
+    selectSlideTransitions,
   } = options;
 
   const openCasting$ = createOpenCastingEffect(options);
@@ -159,7 +173,6 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     actions$.pipe(
       ofType(openPageAction),
       tap((data) => {
-        console.log('send open page', data);
         bridge.send(APP_COMMON_ACTIONS.openPage, data);
       }),
       map(() => ({ type: '[CastingFlow] openPage sent' }))
@@ -171,13 +184,29 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     actions$.pipe(
       ofType(openPageAction),
       switchMap(() => bridge.queueEvents.pipe(
-        filter(
-          (event) => !!event && event.event === APP_COMMON_ACTIONS.openedPage
-        ),
-        // Теперь, когда openedPage пришел, получаем актуальный selectCastingProcess
-        withLatestFrom(store.select(selectCastingProcess))
+        filter((event) => !!event && event.event === APP_COMMON_ACTIONS.openedPage)
       )),
-      map(([eventData, data]) => { // eventData - это EventData | null, data - это State
+      withLatestFrom(
+        store.select(selectCastingProcess),
+        selectGlobalTransition ? store.select(selectGlobalTransition as any) : of(null),
+        selectSlideTransitions ? store.select(selectSlideTransitions as any) : of(null)
+      ),
+      tap(([_, __, globalTransition, slideTransitions]) => {
+        if (setGlobalTransitionAction && globalTransition) {
+          const eventName = extractEventName(setGlobalTransitionAction.type);
+          bridge.send(eventName, { transition: globalTransition } as any);
+        }
+        if (setSlideTransitionAction && slideTransitions) {
+          const entries: [string, any][] = slideTransitions instanceof Map
+            ? Array.from(slideTransitions.entries())
+            : Object.entries(slideTransitions as Record<string, any>);
+        	for (const [slideId, transition] of entries) {
+            const eventName = extractEventName(setSlideTransitionAction.type);
+            bridge.send(eventName, { slideId, transition } as any);
+          }
+        }
+      }),
+      map(([_, data]) => {
         if (!data) {
           return pauseCastingAction() as Action;
         }
@@ -238,6 +267,44 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     bridgeEventNameExtractorCb: extractEventName
   });
 
+  const castingReady$ = options.bridge.queueEvents.pipe(
+    filter((event) => !!event && event.event === 'castingStarted'),
+    map(() => true),
+    startWith(false),
+    shareReplay(1)
+  );
+
+  const forwardWhenReady = <A extends ActionCreator>(cfg: {
+    action: A;
+    label: string;
+  }) =>
+    createEffect(() =>
+      actions$.pipe(
+        ofType(cfg.action),
+        withLatestFrom(castingReady$),
+        filter(([, ready]) => !!ready),
+        tap(([data]) => {
+          const eventName = extractEventName(cfg.action.type);
+          bridge.send(eventName, data as any);
+        }),
+        map(() => ({ type: `[CastingFlow] ${cfg.label} sent` }))
+      )
+    );
+
+  const setGlobalTransition$ = setGlobalTransitionAction
+    ? forwardWhenReady({ action: setGlobalTransitionAction, label: 'setGlobalTransition' })
+    : (undefined as unknown as ReturnType<typeof createEffect>);
+
+  const setSlideTransition$ = setSlideTransitionAction
+    ? forwardWhenReady({ action: setSlideTransitionAction, label: 'setSlideTransition' })
+    : (undefined as unknown as ReturnType<typeof createEffect>);
+
+  const updateTransitionSettings$ = updateTransitionSettingsAction
+    ? forwardWhenReady({ action: updateTransitionSettingsAction, label: 'updateTransitionSettings' })
+    : (undefined as unknown as ReturnType<typeof createEffect>);
+
+  
+
   return {
     openCasting$,
     onOpenPage$,
@@ -248,5 +315,9 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     castingStarted$,
     slideNavigate$,
     liveUpdateSlide$,
+    // опциональные эффекты возвращаем, если были заданы
+    ...(setGlobalTransitionAction ? { setGlobalTransition$ } : {}),
+    ...(setSlideTransitionAction ? { setSlideTransition$ } : {}),
+    ...(updateTransitionSettingsAction ? { updateTransitionSettings$ } : {}),
   };
 }

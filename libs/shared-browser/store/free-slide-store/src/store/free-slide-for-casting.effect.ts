@@ -25,6 +25,20 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
     FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide](eventData.payload as any),
   [FreeSlideActionsEnum.stopCasting]: () => FreeSlideActions[FreeSlideActionsEnum.stopCasting](),
   [FreeSlideActionsEnum.pauseCasting]: () => FreeSlideActions[FreeSlideActionsEnum.pauseCasting](),
+  // Проброс настроек переходов из редактора в окно кастинга
+  [FreeSlideActionsEnum.setGlobalTransition]: (eventData) =>
+    FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition](eventData.payload as any),
+  [FreeSlideActionsEnum.setSlideTransition]: (eventData) =>
+    FreeSlideActions[FreeSlideActionsEnum.setSlideTransition](eventData.payload as any),
+  [FreeSlideActionsEnum.updateTransitionSettings]: (eventData) =>
+    FreeSlideActions[FreeSlideActionsEnum.updateTransitionSettings](eventData.payload as any),
+  // Алиасы без префикса для событий Bridge
+  setGlobalTransition: (eventData) =>
+    FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition](eventData.payload as any),
+  setSlideTransition: (eventData) =>
+    FreeSlideActions[FreeSlideActionsEnum.setSlideTransition](eventData.payload as any),
+  updateTransitionSettings: (eventData) =>
+    FreeSlideActions[FreeSlideActionsEnum.updateTransitionSettings](eventData.payload as any),
 };
 
 /**

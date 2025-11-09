@@ -160,7 +160,6 @@ export class FreeSlideComponent implements AfterViewInit {
       return;
     }
 
-    console.log('on select slide', slide);
 
     this.slideForm.patchValue({ name: slide.name }, { emitEvent: false });
     this.slideForm.markAsPristine();
@@ -265,7 +264,6 @@ export class FreeSlideComponent implements AfterViewInit {
       assetId = currentSlide?.previewAssetId;
     }
 
-    console.log('[FreeSlide] Saving slide:', this.slideForm.getRawValue().name);
 
     // const { id } = RouteParamsReducerHelper.reduceSnapshot(this.route.snapshot);
 

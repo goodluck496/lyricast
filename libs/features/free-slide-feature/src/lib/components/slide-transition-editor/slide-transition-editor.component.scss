@@ -1,0 +1,166 @@
+.transition-editor {
+  padding: 1rem;
+  height: 100%;
+  overflow-y: auto;
+
+  &__header {
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--surface-border);
+    padding-bottom: 0.75rem;
+  }
+
+  &__title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+
+  &__global-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+
+    label {
+      cursor: pointer;
+      font-size: 0.875rem;
+      color: var(--text-color);
+    }
+  }
+
+  &__subtitle {
+    color: var(--text-color-secondary);
+    font-size: 0.875rem;
+    display: block;
+    margin-top: 0.25rem;
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__label {
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 0.25rem;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  &__empty {
+    text-align: center;
+    color: var(--text-color-secondary);
+    padding: 2rem 1rem;
+  }
+}
+
+.transition-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+  padding: 0.5rem;
+}
+
+.transition-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.75rem 0.5rem;
+  border: 2px solid var(--surface-border);
+  border-radius: 8px;
+  background: var(--surface-card);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 90px;
+  position: relative;
+
+  &:hover {
+    background: var(--surface-hover);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  &.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+
+    .preset-name,
+    .preset-duration {
+      color: white;
+    }
+  }
+
+  lyri-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .preset-name {
+    font-size: 0.8rem;
+    text-align: center;
+    line-height: 1.2;
+    font-weight: 500;
+    color: var(--text-color);
+    word-break: break-word;
+  }
+
+  .preset-duration {
+    font-size: 0.7rem;
+    color: var(--text-color-secondary);
+    font-weight: 400;
+  }
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label {
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: 0.875rem;
+  }
+
+  p-slider {
+    margin-bottom: 0.5rem;
+  }
+
+  .p-inputnumber {
+    max-width: 200px;
+  }
+}
+
+// Адаптивность для мобильных устройств
+@media (max-width: 768px) {
+  .transition-presets {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+
+  .transition-preset {
+    min-height: 70px;
+    padding: 0.5rem 0.25rem;
+
+    .preset-name {
+      font-size: 0.7rem;
+    }
+  }
+}

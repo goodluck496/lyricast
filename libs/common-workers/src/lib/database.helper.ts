@@ -41,7 +41,10 @@ export function getDbPath(options: DbPathOptions): DbPathResult {
         const sourceDbPathFull = path.join(sourceDataPath, 'assets', 'databases', dbName);
 
         if (fs.existsSync(sourceDbPathFull)) {
-          fs.copyFileSync(sourceDbPathFull, destinationDbPath);
+          // Avoid copying a file onto itself when source and destination are the same
+          if (path.resolve(sourceDbPathFull) !== path.resolve(destinationDbPath)) {
+            fs.copyFileSync(sourceDbPathFull, destinationDbPath);
+          }
           isNewDb = false;
         }
       }

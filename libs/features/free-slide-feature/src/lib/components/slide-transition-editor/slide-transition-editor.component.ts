@@ -38,6 +38,7 @@ import { Ripple } from 'primeng/ripple';
 import { SvgIconComponent } from '@lyri-cast/svg-icons';
 import { ScrollPanelModule } from 'primeng/scrollpanel';
 import { CheckboxModule } from 'primeng/checkbox';
+import { NgScrollbar } from 'ngx-scrollbar';
 
 @Component({
   selector: 'lyri-slide-transition-editor',
@@ -54,6 +55,7 @@ import { CheckboxModule } from 'primeng/checkbox';
     SvgIconComponent,
     ScrollPanelModule,
     CheckboxModule,
+    NgScrollbar,
   ],
   templateUrl: './slide-transition-editor.component.html',
   styleUrls: ['./slide-transition-editor.component.scss'],
@@ -103,12 +105,17 @@ export class SlideTransitionEditorComponent {
     },
   ];
 
-  transitionForm = new FormGroup({
-    type: new FormControl<TransitionType>('none', { nonNullable: true }),
-    duration: new FormControl<number>(500, { nonNullable: true }),
-    easing: new FormControl<TransitionEasing>('easeInOut', { nonNullable: true }),
-    delay: new FormControl<number>(0, { nonNullable: true }),
-  }, { updateOn: 'change' });
+  transitionForm = new FormGroup(
+    {
+      type: new FormControl<TransitionType>('none', { nonNullable: true }),
+      duration: new FormControl<number>(500, { nonNullable: true }),
+      easing: new FormControl<TransitionEasing>('easeInOut', {
+        nonNullable: true,
+      }),
+      delay: new FormControl<number>(0, { nonNullable: true }),
+    },
+    { updateOn: 'change' }
+  );
 
   currentSlideId = signal<string>('');
   hasTransition = signal<boolean>(false);
@@ -225,7 +232,9 @@ export class SlideTransitionEditorComponent {
           });
           // При включении глобального режима — зафиксировать глобальный переход
           this.store.dispatch(
-            FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition]({ transition })
+            FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition]({
+              transition,
+            })
           );
         });
     }

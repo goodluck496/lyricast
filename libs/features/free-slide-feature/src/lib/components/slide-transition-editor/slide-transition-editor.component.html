@@ -2,8 +2,8 @@
   <div class="transition-editor__header">
     <h3 class="transition-editor__title">Эффекты переходов</h3>
     <div class="transition-editor__global-toggle">
-      <p-checkbox 
-        [(ngModel)]="useGlobalTransition" 
+      <p-checkbox
+        [(ngModel)]="useGlobalTransition"
         [binary]="true"
         inputId="globalTransition"
         (onChange)="toggleGlobalTransition()"
@@ -22,9 +22,9 @@
       <p-scrollPanel [style]="{width: '100%', height: '300px'}" styleClass="custom-scrollpanel">
         <div class="transition-presets">
           @for (preset of transitionPresets; track preset.id) {
-            <button 
+            <button
               type="button"
-              pButton 
+              pButton
               class="transition-preset"
               [class.active]="transitionForm.value.type === preset.transition.type"
               (click)="applyPreset(preset)"
@@ -45,14 +45,14 @@
       <!-- Детальные настройки -->
       <div class="transition-editor__section">
         <label class="transition-editor__label">Детальные настройки</label>
-        
+
         <div class="form-field">
           <label for="transition-type">Тип перехода</label>
-          <p-dropdown 
+          <p-dropdown
             id="transition-type"
-            [options]="transitionTypes" 
+            [options]="transitionTypes"
             formControlName="type"
-            optionLabel="label" 
+            optionLabel="label"
             optionValue="value"
             placeholder="Выберите тип перехода"
           />
@@ -61,17 +61,17 @@
         @if (transitionForm.value.type !== 'none') {
           <div class="form-field">
             <label for="transition-duration">Длительность: {{ transitionForm.value.duration }}мс</label>
-            <p-slider 
+            <p-slider
               id="transition-duration"
               formControlName="duration"
-              [min]="100" 
-              [max]="3000" 
+              [min]="100"
+              [max]="3000"
               [step]="50"
             />
-            <p-inputNumber 
+            <p-inputNumber
               formControlName="duration"
-              [min]="100" 
-              [max]="3000" 
+              [min]="100"
+              [max]="3000"
               [step]="50"
               suffix=" мс"
             />
@@ -79,11 +79,11 @@
 
           <div class="form-field">
             <label for="transition-easing">Функция сглаживания</label>
-            <p-dropdown 
+            <p-dropdown
               id="transition-easing"
-              [options]="easingOptions" 
+              [options]="easingOptions"
               formControlName="easing"
-              optionLabel="label" 
+              optionLabel="label"
               optionValue="value"
               placeholder="Выберите функцию сглаживания"
             />
@@ -91,17 +91,17 @@
 
           <div class="form-field">
             <label for="transition-delay">Задержка: {{ transitionForm.value.delay }}мс</label>
-            <p-slider 
+            <p-slider
               id="transition-delay"
               formControlName="delay"
-              [min]="0" 
-              [max]="2000" 
+              [min]="0"
+              [max]="2000"
               [step]="50"
             />
             <p-inputNumber
               formControlName="delay"
-              [min]="0" 
-              [max]="2000" 
+              [min]="0"
+              [max]="2000"
               [step]="50"
               suffix=" мс"
             />
@@ -112,9 +112,9 @@
       <!-- Кнопки управления -->
       @if (hasTransition()) {
         <div class="transition-editor__actions">
-          <button 
+          <button
             type="button"
-            pButton 
+            pButton
             severity="secondary"
             (click)="resetTransition()"
             label="Сбросить"

@@ -239,7 +239,13 @@ export default class App {
   private static async onReady() {
     // Pass necessary paths and flags to worker processes via environment variables
     process.env.IS_PACKAGED = String(app.isPackaged);
-    process.env.USER_DATA_PATH = app.getPath('userData');
+    // In packaged builds we want to use the bundled resources assets directory
+    // so that DB and assets resolve to '<resources>/assets/...'.
+    if (app.isPackaged) {
+      process.env.USER_DATA_PATH = join(process.resourcesPath, 'assets');
+    } else {
+      process.env.USER_DATA_PATH = app.getPath('userData');
+    }
 
     // In development, we need the project root to find the 'data' folder.
     // In production, we need the resources path.

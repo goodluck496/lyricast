@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
 import { BehaviorSubject, combineLatest, Subscription } from 'rxjs';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
-import { selectFreeSlideSelected } from '@lyri-cast/free-slide-store';
+import { selectFreeSlideNavigateState, selectFreeSlideSelected } from '@lyri-cast/free-slide-store';
 import { filterEmpty } from '@lyri-cast/common';
 import { AssetStorageService } from '@lyri-cast/form';
 import { FreeSlideService } from '../../pages/free-slide-page/free-slide.service';
@@ -32,8 +32,14 @@ export class FreeSlideCastingPreviewComponent implements OnDestroy {
 
   constructor() {
     const live$ = this.slideService.livePreviewObjectUrl$;
-    const selected$ = this.store.select(selectFreeSlideSelected).pipe(filterEmpty());
-    this.sub = combineLatest([live$, selected$]).subscribe(async ([liveUrl, slide]) => {
+    const selected$ = this.store.select(selectFreeSlideSelected);
+    const navigate$ = this.store.select(selectFreeSlideNavigateState);
+    this.sub = combineLatest([live$, navigate$, selected$]).subscribe(async ([liveUrl, nav, sel]) => {
+      const slide = (nav?.slide ?? sel) as any;
+      if (!slide) {
+        this.previewUrl$.next(null);
+        return;
+      }
       if (liveUrl) {
         this.previewUrl$.next(this.sanitizer.bypassSecurityTrustUrl(liveUrl));
         return;

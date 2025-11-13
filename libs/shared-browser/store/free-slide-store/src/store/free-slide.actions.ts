@@ -16,6 +16,7 @@ export const FreeSlideActionsEnum = {
   setSlideTransition: '[FREE_SLIDE]setSlideTransition',
   updateTransitionSettings: '[FREE_SLIDE]updateTransitionSettings',
   setGlobalTransition: '[FREE_SLIDE]setGlobalTransition',
+  setFreezeCasting: '[FREE_SLIDE]setFreezeCasting',
 } as const;
 
 export type FreeSlideActionsEnumKeys = keyof typeof FreeSlideActionsEnum;
@@ -64,5 +65,6 @@ export const FreeSlideActions = createActionGroup({
     [FreeSlideActionsEnum.setSlideTransition]: props<SetSlideTransitionPayload>(),
     [FreeSlideActionsEnum.updateTransitionSettings]: props<UpdateTransitionSettingsPayload>(),
     [FreeSlideActionsEnum.setGlobalTransition]: props<SetGlobalTransitionPayload>(),
+    [FreeSlideActionsEnum.setFreezeCasting]: props<{ frozen: boolean }>(),
   },
 });

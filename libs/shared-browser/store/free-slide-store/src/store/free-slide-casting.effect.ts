@@ -18,7 +18,7 @@ import {
   FreeSlideActionSource,
 } from './free-slide.actions';
 import { EventData } from '@lyri-cast/common-electron';
-import { selectFreeSlideCastingProcess, selectGlobalTransition, selectSlideTransitions } from './free-slide.selectors';
+import { selectFreeSlideCastingProcess, selectFreeSlideCastingFrozen, selectGlobalTransition, selectSlideTransitions } from './free-slide.selectors';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   [FreeSlideActionsEnum.startCasting]: (eventData: EventData) =>
@@ -64,6 +64,7 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
     selectGlobalTransition,
     selectSlideTransitions,
     selectCastingProcess: selectFreeSlideCastingProcess,
+    selectCastingFrozen: selectFreeSlideCastingFrozen,
     selectOpenedWindow,
     getDisplayForCasting: () => this.settingsSrv.getDisplayForCasting(),
     store: this.store,

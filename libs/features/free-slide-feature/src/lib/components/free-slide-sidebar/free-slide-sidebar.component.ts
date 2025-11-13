@@ -33,6 +33,7 @@ import {
   selectFreeSlideSelected,
   selectGlobalTransition,
   selectSlideTransitions,
+  selectFreeSlideCastingFrozen,
 } from '@lyri-cast/free-slide-store';
 import { FreeSlideService } from '../../pages/free-slide-page/free-slide.service';
 import { filterEmpty } from '@lyri-cast/common';
@@ -85,6 +86,7 @@ export class FreeSlideSidebarComponent {
     })
   );
   castingIsPaused$ = this.store.select(selectFreeSlideCastingPaused);
+  castingIsFrozen$ = this.store.select(selectFreeSlideCastingFrozen);
   liveSyncEnabled$ = this.slideService.liveSyncEnabled$.asObservable();
 
   onLiveSyncToggle(event: ToggleButtonChangeEvent) {
@@ -143,6 +145,11 @@ export class FreeSlideSidebarComponent {
 
   onPauseCasting() {
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.pauseCasting]());
+  }
+
+  onFreezeToggle(event: ToggleButtonChangeEvent) {
+    const frozen = !!event.checked;
+    this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.setFreezeCasting]({ frozen }));
   }
 
   ngOnInit(): void {

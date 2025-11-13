@@ -55,6 +55,9 @@ export interface CastingFlowOptions<State> {
   selectGlobalTransition?: (state: State) => unknown;
   selectSlideTransitions?: (state: State) => unknown;
 
+  // Опциональный селектор для блокировки проброса событий, когда включена "заморозка" (freeze)
+  selectCastingFrozen?: (state: State) => unknown;
+
   selectCastingProcess: (state: State) => unknown;
 
   selectOpenedWindow: (state: State) => unknown;
@@ -72,22 +75,26 @@ function createBridgeEffect<A extends ActionCreator>({
   action,
   bridge,
   label,
-  bridgeEventNameExtractorCb
+  bridgeEventNameExtractorCb,
+  blocked$
 }: {
   actions$: Actions;
   action: A;
   bridge: BridgeService;
   label: string;
-  bridgeEventNameExtractorCb: (action: string) => string
+  bridgeEventNameExtractorCb: (action: string) => string;
+  blocked$?: Observable<boolean>;
 }) {
   return createEffect(() =>
     actions$.pipe(
       ofType(action),
-      tap((data) => {
+      withLatestFrom(blocked$ ?? of(false)),
+      filter(([, blocked]) => !blocked),
+      tap(([data]) => {
         //todo узкое место, если евенты не доходят до кона кастинга,
         // тогда скорее всего неверно задан source в createActionGroup
         const eventName = bridgeEventNameExtractorCb(action.type);
-        bridge.send(eventName, data)
+        bridge.send(eventName, data as any)
       }),
       map(() => ({ type: `[CastingFlow] ${label} sent` }))
     )
@@ -165,6 +172,7 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     updateTransitionSettingsAction,
     selectGlobalTransition,
     selectSlideTransitions,
+    selectCastingFrozen,
   } = options;
 
   const openCasting$ = createOpenCastingEffect(options);
@@ -219,12 +227,14 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     return actionName.replace(`[${actionSource}] `, '');
   }
 
+  // Состояние готовности окна кастинга
   const startCastingTrigger$ = createBridgeEffect({
     actions$,
     action: startCastingAction,
     bridge,
     label: 'startCasting',
-    bridgeEventNameExtractorCb: extractEventName
+    bridgeEventNameExtractorCb: extractEventName,
+    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
   });
 
   const pauseCasting$ = createBridgeEffect({
@@ -232,7 +242,8 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     action: pauseCastingAction,
     bridge,
     label: 'pauseCasting',
-    bridgeEventNameExtractorCb: extractEventName
+    bridgeEventNameExtractorCb: extractEventName,
+    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
   });
 
   const stopCasting$ = createBridgeEffect({
@@ -240,7 +251,8 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     action: stopCastingAction,
     bridge,
     label: 'stopCasting',
-    bridgeEventNameExtractorCb: extractEventName
+    bridgeEventNameExtractorCb: extractEventName,
+    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
   });
 
   const castingStarted$ = createBridgeEffect({
@@ -248,7 +260,8 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     action: castingStartedAction,
     bridge,
     label: 'castingStarted',
-    bridgeEventNameExtractorCb: extractEventName
+    bridgeEventNameExtractorCb: extractEventName,
+    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
   });
 
   const slideNavigate$ = createBridgeEffect({
@@ -256,7 +269,8 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     action: slideNavigateAction,
     bridge,
     label: 'slideNavigate',
-    bridgeEventNameExtractorCb: extractEventName
+    bridgeEventNameExtractorCb: extractEventName,
+    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
   });
 
   const liveUpdateSlide$ = createBridgeEffect({
@@ -264,7 +278,8 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     action: liveUpdateSlideAction,
     bridge,
     label: 'liveUpdateSlide',
-    bridgeEventNameExtractorCb: extractEventName
+    bridgeEventNameExtractorCb: extractEventName,
+    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
   });
 
   const castingReady$ = options.bridge.queueEvents.pipe(
@@ -281,8 +296,11 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     createEffect(() =>
       actions$.pipe(
         ofType(cfg.action),
-        withLatestFrom(castingReady$),
-        filter(([, ready]) => !!ready),
+        withLatestFrom(
+          castingReady$,
+          selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
+        ),
+        filter(([, ready, frozen]) => !!ready && !frozen),
         tap(([data]) => {
           const eventName = extractEventName(cfg.action.type);
           bridge.send(eventName, data as any);

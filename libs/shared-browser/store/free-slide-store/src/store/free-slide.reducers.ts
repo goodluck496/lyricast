@@ -14,6 +14,7 @@ export interface FreeSlideState {
   freeSlideCastingProcess: FreeSlideStartCastingPayload | null;
   freeSlideCastingStarted: boolean;
   freeSlideCastingPaused: boolean;
+  freeSlideCastingFrozen: boolean;
   freeSlideNavigateState: FreeSlideNavigatePayload | null;
   freeSlideSelected: Slide | null;
   slideTransitions: Map<string, SlideTransition>; // slideId -> transition
@@ -24,6 +25,7 @@ export const freeSlideInitialState: FreeSlideState = {
   freeSlideCastingStarted: false,
   freeSlideCastingProcess: null,
   freeSlideCastingPaused: true,
+  freeSlideCastingFrozen: false,
   freeSlideNavigateState: null,
   freeSlideSelected: null,
   slideTransitions: new Map(),
@@ -48,6 +50,10 @@ export const FreeSlideReducers = createReducer<FreeSlideState>(
   on(FreeSlideActions[FreeSlideActionsEnum.pauseCasting], (state) => ({
     ...state,
     freeSlideCastingPaused: true,
+  })),
+  on(FreeSlideActions[FreeSlideActionsEnum.setFreezeCasting], (state, { frozen }) => ({
+    ...state,
+    freeSlideCastingFrozen: frozen,
   })),
   on(
     FreeSlideActions[FreeSlideActionsEnum.stopCasting],

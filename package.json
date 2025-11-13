@@ -6,7 +6,7 @@
   "author": "goodluck496 <nikita.a.kalinin@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "concurrently \"npm run _start:browser\" \"npm run _start-all-workers\" \"npm run _start:electron\" --kill-others --force-kill-after 5000",
+    "start": "concurrently \"npm run postinstall\" \"npm run _start:browser\" \"npm run _start-all-workers\" \"npm run _start:electron\" --kill-others --force-kill-after 5000",
     "build-win": "npm-run-all -c 01__build-win 02__build-win 03__build-win",
     "build-win-without-archive": "npm-run-all -c 01__build-win 02__build-win",
     "noop0": "---  build section  ---",

@@ -44,6 +44,21 @@ npm run start
 npm run build-win
 ````
 
+## Release process in github.com
+
+Для релиза проекта необходимо
+1) установить все зависимости
+2) выполнить команду ``npm run build-win-without-archive`` - для того чтобы собрались все приложения
+3) для удобства можно создать файл ./tools/publish-release.ps1 следующего содержания:
+````bash
+$env:GH_TOKEN = "<github PAT token>"
+$env:CI = "true"
+
+npm run publish:electron
+````
+4) запустить powershell скрипт и дождаться загрузки
+5) опубликовать релиз в github
+
 ## Сборка для linux на windows (temp, mvp v1)
 ````shell
 docker build -f Dockerfile.base -t lyricast-builder-base .
@@ -67,10 +82,7 @@ docker run --rm -i `
 
 1) не собирается проект из-за electron:build
 2) нужно выполнить ``rebuild`` внутри node_modules/better-sqlite3 - ``nodegyp rebuild``
-3) better-sqlite3 - пока удалил, на винде разработка тормозится всякими левыми зависимостями
-  - "better-sqlite3": "^11.8.1",
-  - "@types/better-sqlite3": "^7.6.12",
-4)
+
 
 ------ 
 "bible-xml": "https://github.com/Beblia/Holy-Bible-XML-Format"

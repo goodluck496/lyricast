@@ -29,4 +29,12 @@ contextBridge.exposeInMainWorld('electron', {
       callback(payload.event, payload);
     });
   },
+  onAppUpdateStatus: (callback: (status: any) => void) => {
+    ipcRenderer.on('APP_UPDATE_STATUS', (_event, payload) => {
+      callback(payload);
+    });
+  },
+  checkForAppUpdates: () => {
+    ipcRenderer.send('APP_FORCE_CHECK_UPDATE');
+  },
 } satisfies Context);

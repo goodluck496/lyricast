@@ -1,12 +1,12 @@
 {
   "name": "@lyri-cast/source",
-  "version": "2.0.0",
+  "version": "2.0.6",
   "main": "./dist/apps/electron/main.js",
   "description": "Casting bible, songs and other to projector",
   "author": "goodluck496 <nikita.a.kalinin@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "concurrently \"npm run postinstall\" \"npm run _start:browser\" \"npm run _start-all-workers\" \"npm run _start:electron\" --kill-others --force-kill-after 5000",
+    "start": "concurrently \"npm run _start:browser\" \"npm run _start-all-workers\" \"npm run _start:electron\" --kill-others --force-kill-after 5000",
     "build-win": "npm-run-all -c 01__build-win 02__build-win 03__build-win",
     "build-win-without-archive": "npm-run-all -c 01__build-win 02__build-win",
     "noop0": "---  build section  ---",
@@ -114,6 +114,7 @@
     "class-validator": "^0.14.2",
     "drizzle-orm": "^0.44.7",
     "electron-log": "^5.3.0",
+    "electron-updater": "^6.1.8",
     "imask": "^7.6.1",
     "lodash-es": "^4.17.21",
     "luxon": "^3.6.1",

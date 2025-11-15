@@ -47,5 +47,8 @@ export type Context = {
   send: (data: EventData) => void;
   receive: (cb: (event: string, payload: EventData) => void) => void;
 
+  onAppUpdateStatus: (cb: (status: any) => void) => void;
+  checkForAppUpdates: () => void;
+
   platform: string;
 };

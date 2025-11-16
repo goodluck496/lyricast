@@ -25,9 +25,9 @@ export default class ElectronEvents {
 
 // Retrieve app version
 ipcMain.handle(ElectronActionEvents.GET_APP_VERSION, () => {
-  console.log(`Fetching application version... [v${environment.version}]`);
-
-  return environment.version;
+  const v = app.getVersion();
+  console.log(`Fetching application version... [v${v}]`);
+  return v;
 });
 
 ipcMain.handle(

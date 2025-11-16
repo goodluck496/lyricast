@@ -99,6 +99,14 @@ export class FreeSlideService {
     id: string,
     data: Partial<PresentationDto>
   ): Promise<PresentationWithSlides> {
+    // Ensure presentation exists to avoid FK failures on slides upsert
+    const exists = await this.db.query.presentations.findFirst({
+      where: eq(presentations.id, id),
+    });
+    if (!exists) {
+      throw new NotFoundException(`Presentation with ID ${id} not found`);
+    }
+
     this.db.transaction(
       (tx) => {
         // 1) Заголовок
@@ -206,6 +214,36 @@ export class FreeSlideService {
     });
 
     return Array.from(uniqueResults.values());
+  }
+
+  async getTransitionSettings(id: string): Promise<any> {
+    const presentation = await this.db.query.presentations.findFirst({
+      where: eq(presentations.id, id),
+    });
+    if (!presentation) {
+      throw new NotFoundException(`Presentation with ID ${id} not found`);
+    }
+    const raw = (presentation as any).transitionSettings as string | null | undefined;
+    if (!raw) return {};
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+
+  async setTransitionSettings(id: string, settings: any): Promise<{ success: boolean }> {
+    const exists = await this.db.query.presentations.findFirst({ where: eq(presentations.id, id) });
+    if (!exists) {
+      throw new NotFoundException(`Presentation with ID ${id} not found`);
+    }
+    const raw = JSON.stringify(settings ?? {});
+    const result = await this.db
+      .update(presentations)
+      .set({ transitionSettings: raw as any, updatedAt: new Date() })
+      .where(eq(presentations.id, id))
+      .run();
+    return { success: result.changes > 0 };
   }
 }
 

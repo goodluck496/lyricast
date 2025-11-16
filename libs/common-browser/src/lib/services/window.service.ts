@@ -34,6 +34,8 @@ export class WindowService {
           closeWindow: () => Promise.resolve(void 0),
           openWindow: () => Promise.resolve(0),
           getDisplays: () => Promise.resolve([]),
+          checkForAppUpdates: () => Promise.resolve(void 0),
+          onAppUpdateStatus: (cb: (status: any) => void) => void 0,
           platform: '',
         };
   }

@@ -6,6 +6,7 @@ export const presentations = sqliteTable('presentations', {
   title: text('title').notNull().default('Презентация'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  transitionSettings: text('transition_settings').default(''),
 });
 
 export const slides = sqliteTable('slides', {

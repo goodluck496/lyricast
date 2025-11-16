@@ -1,6 +1,6 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
 import { Pages } from '@lyri-cast/common-browser';
-import { Slide } from '@lyri-cast/entities';
+import { Slide, SlideTransition } from '@lyri-cast/entities';
 
 export const FreeSlideActionsEnum = {
   openPage: '[FREE_SLIDE]openPage',
@@ -13,6 +13,10 @@ export const FreeSlideActionsEnum = {
   slideNavigate: '[FREE_SLIDE]slideNavigate',
   selectSlide: '[FREE_SLIDE]selectSlide',
   liveUpdateSlide: '[FREE_SLIDE]liveUpdateSlide',
+  setSlideTransition: '[FREE_SLIDE]setSlideTransition',
+  updateTransitionSettings: '[FREE_SLIDE]updateTransitionSettings',
+  setGlobalTransition: '[FREE_SLIDE]setGlobalTransition',
+  setFreezeCasting: '[FREE_SLIDE]setFreezeCasting',
 } as const;
 
 export type FreeSlideActionsEnumKeys = keyof typeof FreeSlideActionsEnum;
@@ -27,6 +31,20 @@ export type FreeSlideNavigatePayload = {
   slide: Slide;
   direction?: 'next' | 'prev';
   index?: number;
+};
+
+export type SetSlideTransitionPayload = {
+  slideId: string;
+  transition: SlideTransition;
+};
+
+export type UpdateTransitionSettingsPayload = {
+  slideId: string;
+  transition: Partial<SlideTransition>;
+};
+
+export type SetGlobalTransitionPayload = {
+  transition: SlideTransition;
 };
 
 export const FreeSlideActionSource = 'FREESLIDE_ACTIONS'
@@ -44,5 +62,9 @@ export const FreeSlideActions = createActionGroup({
     [FreeSlideActionsEnum.slideNavigate]: props<FreeSlideNavigatePayload>(),
     [FreeSlideActionsEnum.selectSlide]: props<Slide>(),
     [FreeSlideActionsEnum.liveUpdateSlide]: props<{ slide: Slide }>(),
+    [FreeSlideActionsEnum.setSlideTransition]: props<SetSlideTransitionPayload>(),
+    [FreeSlideActionsEnum.updateTransitionSettings]: props<UpdateTransitionSettingsPayload>(),
+    [FreeSlideActionsEnum.setGlobalTransition]: props<SetGlobalTransitionPayload>(),
+    [FreeSlideActionsEnum.setFreezeCasting]: props<{ frozen: boolean }>(),
   },
 });

@@ -1,0 +1,125 @@
+<div class="transition-editor">
+  <div class="transition-editor__header">
+    <h3 class="transition-editor__title">Эффекты переходов</h3>
+    <div class="transition-editor__global-toggle">
+      <p-checkbox
+        [(ngModel)]="useGlobalTransition"
+        [binary]="true"
+        inputId="globalTransition"
+        (onChange)="toggleGlobalTransition()"
+      />
+      <label for="globalTransition">Применить ко всем слайдам</label>
+    </div>
+    @if (totalDuration > 0) {
+      <small class="transition-editor__subtitle">Общее время: {{ totalDuration }}мс</small>
+    }
+  </div>
+
+  <form [formGroup]="transitionForm" class="transition-editor__form">
+    <!-- Пресеты переходов -->
+    <div class="transition-editor__section">
+      <label class="transition-editor__label">Готовые эффекты</label>
+      <p-scrollPanel [style]="{width: '100%', height: '300px'}" styleClass="custom-scrollpanel">
+        <div class="transition-presets">
+          @for (preset of transitionPresets; track preset.id) {
+            <button
+              type="button"
+              pButton
+              class="transition-preset"
+              [class.active]="transitionForm.value.type === preset.transition.type"
+              (click)="applyPreset(preset)"
+              pRipple
+              [title]="preset.name"
+            >
+              @if (preset.icon) {
+                <lyri-icon [name]="preset.icon"></lyri-icon>
+              }
+              <span class="preset-name">{{ preset.name }}</span>
+              <small class="preset-duration">{{ preset.transition.duration }}мс</small>
+            </button>
+          }
+        </div>
+      </p-scrollPanel>
+    </div>
+
+      <!-- Детальные настройки -->
+      <div class="transition-editor__section">
+        <label class="transition-editor__label">Детальные настройки</label>
+
+        <div class="form-field">
+          <label for="transition-type">Тип перехода</label>
+          <p-dropdown
+            id="transition-type"
+            [options]="transitionTypes"
+            formControlName="type"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Выберите тип перехода"
+          />
+        </div>
+
+        @if (transitionForm.value.type !== 'none') {
+          <div class="form-field">
+            <label for="transition-duration">Длительность: {{ transitionForm.value.duration }}мс</label>
+            <p-slider
+              id="transition-duration"
+              formControlName="duration"
+              [min]="100"
+              [max]="3000"
+              [step]="50"
+            />
+            <p-inputNumber
+              formControlName="duration"
+              [min]="100"
+              [max]="3000"
+              [step]="50"
+              suffix=" мс"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="transition-easing">Функция сглаживания</label>
+            <p-dropdown
+              id="transition-easing"
+              [options]="easingOptions"
+              formControlName="easing"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Выберите функцию сглаживания"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="transition-delay">Задержка: {{ transitionForm.value.delay }}мс</label>
+            <p-slider
+              id="transition-delay"
+              formControlName="delay"
+              [min]="0"
+              [max]="2000"
+              [step]="50"
+            />
+            <p-inputNumber
+              formControlName="delay"
+              [min]="0"
+              [max]="2000"
+              [step]="50"
+              suffix=" мс"
+            />
+          </div>
+        }
+      </div>
+
+      <!-- Кнопки управления -->
+      @if (hasTransition()) {
+        <div class="transition-editor__actions">
+          <button
+            type="button"
+            pButton
+            severity="secondary"
+            (click)="resetTransition()"
+            label="Сбросить"
+          ></button>
+        </div>
+      }
+    </form>
+</div>

@@ -1,48 +1,65 @@
 <div class="control-sidebar__wrapper">
-  <lyri-free-slide-casting-preview></lyri-free-slide-casting-preview>
+  <p-tabView>
+    <!-- Вкладка Управление -->
+    <p-tabPanel header="Управление">
+      <lyri-free-slide-casting-preview></lyri-free-slide-casting-preview>
 
-  <div class="control-sidebar__actions flex flex-column">
+      <div class="control-sidebar__actions flex flex-column">
 
-    <div class="flex">
-      @if ((castingIsPaused$ | async)) {
-        <button pButton class="flex flex-w-center flex-h-center" (click)="onStartCasting()" severity="success">
-          <lyri-icon name="play" style="width: 14px; height: 14px"></lyri-icon>
-          Транслировать
-        </button>
-      } @else {
-        <button pButton class="flex flex-w-center flex-h-center" (click)="onPauseCasting()" severity="danger">
-          <lyri-icon name="stop" style="width: 14px; height: 14px"></lyri-icon>
-          Остановить
-        </button>
-      }
-      <p-toggleButton
-        [ngModel]="liveSyncEnabled$ | async"
-        onLabel="LiveSync On"
-        offLabel="LiveSync Off"
-        (onChange)="onLiveSyncToggle($event)"
-        onIcon="pi pi-sync"
-        offIcon="pi pi-ban">
-      </p-toggleButton>
+        <div class="flex">
+          @if ((castingIsPaused$ | async)) {
+            <button pButton class="flex flex-w-center flex-h-center" (click)="onStartCasting()" severity="success">
+              <lyri-icon name="play" style="width: 14px; height: 14px"></lyri-icon>
+              Транслировать
+            </button>
+          } @else {
+            <button pButton class="flex flex-w-center flex-h-center" (click)="onPauseCasting()" severity="danger">
+              <lyri-icon name="stop" style="width: 14px; height: 14px"></lyri-icon>
+              Остановить
+            </button>
+          }
+          <p-toggleButton
+            [ngModel]="liveSyncEnabled$ | async"
+            onLabel="LiveSync On"
+            offLabel="LiveSync Off"
+            (onChange)="onLiveSyncToggle($event)"
+            onIcon="pi pi-sync"
+            offIcon="pi pi-ban">
+          </p-toggleButton>
+          <p-toggleButton
+            class="ml-2"
+            [disabled]="(openedCastingWindow$ | async) === false"
+            [ngModel]="castingIsFrozen$ | async"
+            onLabel="Freeze On"
+            offLabel="Freeze Off"
+            (onChange)="onFreezeToggle($event)"
+            onIcon="pi pi-pause-circle"
+            offIcon="pi pi-play-circle">
+          </p-toggleButton>
 
-    </div>
+        </div>
 
-    <div class="flex">
-      <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false" (click)="onStopCasting()">
-        Закрыть
-      </button>
-    </div>
-  </div>
+        <div class="flex">
+          <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false" (click)="onStopCasting()">
+            Закрыть
+          </button>
+        </div>
+      </div>
 
-  <div class="control-sidebar__actions flex">
+      <div class="control-sidebar__actions flex">
 
-  </div>
+      </div>
 
+      <lyri-navigator-feature class="control-sidebar__navigator" />
 
-  <lyri-navigator-feature class="control-sidebar__navigator" />
+      <div class="control-sidebar__divider"></div>
+    </p-tabPanel>
 
-  <div class="control-sidebar__divider"></div>
-
-
+    <!-- Вкладка Эффекты переходов -->
+    <p-tabPanel header="Эффекты переходов">
+      <lyri-slide-transition-editor></lyri-slide-transition-editor>
+    </p-tabPanel>
+  </p-tabView>
 </div>
 
 

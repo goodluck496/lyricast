@@ -4,23 +4,32 @@ import {
   FreeSlideActionsEnum,
   FreeSlideNavigatePayload,
   FreeSlideStartCastingPayload,
+  SetSlideTransitionPayload,
+  UpdateTransitionSettingsPayload,
+  SetGlobalTransitionPayload,
 } from './free-slide.actions';
-import { Slide } from '@lyri-cast/entities';
+import { Slide, SlideTransition, DEFAULT_TRANSITION } from '@lyri-cast/entities';
 
 export interface FreeSlideState {
   freeSlideCastingProcess: FreeSlideStartCastingPayload | null;
   freeSlideCastingStarted: boolean;
   freeSlideCastingPaused: boolean;
+  freeSlideCastingFrozen: boolean;
   freeSlideNavigateState: FreeSlideNavigatePayload | null;
   freeSlideSelected: Slide | null;
+  slideTransitions: Map<string, SlideTransition>; // slideId -> transition
+  globalTransition: SlideTransition; // глобальный переход для всех слайдов
 }
 
 export const freeSlideInitialState: FreeSlideState = {
   freeSlideCastingStarted: false,
   freeSlideCastingProcess: null,
   freeSlideCastingPaused: true,
+  freeSlideCastingFrozen: false,
   freeSlideNavigateState: null,
   freeSlideSelected: null,
+  slideTransitions: new Map(),
+  globalTransition: DEFAULT_TRANSITION,
 };
 
 export const FreeSlideReducers = createReducer<FreeSlideState>(
@@ -41,6 +50,10 @@ export const FreeSlideReducers = createReducer<FreeSlideState>(
   on(FreeSlideActions[FreeSlideActionsEnum.pauseCasting], (state) => ({
     ...state,
     freeSlideCastingPaused: true,
+  })),
+  on(FreeSlideActions[FreeSlideActionsEnum.setFreezeCasting], (state, { frozen }) => ({
+    ...state,
+    freeSlideCastingFrozen: frozen,
   })),
   on(
     FreeSlideActions[FreeSlideActionsEnum.stopCasting],
@@ -91,6 +104,46 @@ export const FreeSlideReducers = createReducer<FreeSlideState>(
         freeSlideNavigateState: isNavigatedSlide
           ? { ...(state.freeSlideNavigateState as FreeSlideNavigatePayload), slide: updatedSlide }
           : state.freeSlideNavigateState,
+      };
+    }
+  ),
+  on(
+    FreeSlideActions[FreeSlideActionsEnum.setSlideTransition],
+    (state: FreeSlideState, { slideId, transition }: SetSlideTransitionPayload) => {
+      const newTransitions = new Map(state.slideTransitions);
+      newTransitions.set(slideId, transition);
+      
+      return {
+        ...state,
+        slideTransitions: newTransitions,
+      };
+    }
+  ),
+  on(
+    FreeSlideActions[FreeSlideActionsEnum.updateTransitionSettings],
+    (state: FreeSlideState, { slideId, transition }: UpdateTransitionSettingsPayload) => {
+      const existingTransition = state.slideTransitions.get(slideId);
+      const updatedTransition = { ...existingTransition, ...transition };
+      
+      const newTransitions = new Map(state.slideTransitions);
+      newTransitions.set(slideId, updatedTransition as SlideTransition);
+      
+      return {
+        ...state,
+        slideTransitions: newTransitions,
+      };
+    }
+  ),
+  on(
+    FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition],
+    (state: FreeSlideState, { transition }: SetGlobalTransitionPayload) => {
+      console.log('[FreeSlideReducer] setGlobalTransition', {
+        oldTransition: state.globalTransition,
+        newTransition: transition
+      });
+      return {
+        ...state,
+        globalTransition: transition,
       };
     }
   )

@@ -51,4 +51,5 @@ llm-docs/**/*
 temp-scripts/**/*
 
 data
-drizzle/**/*
+
+tools/publish-release.ps1

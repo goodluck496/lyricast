@@ -1,35 +1,42 @@
-<h3>Дисплей для отображения презентации</h3>
-<div class="settings__displays">
+<p-tabView>
+  <p-tabPanel header="Выбор экрана">
+    <h3>Выбор экрана для отображения презентаций</h3>
+    <div class="settings__displays">
+      @if (selectedDisplay$ | async; as selectedDisplay) {
+        @for (display of displays; track display.id) {
+          <p-card class="settings__display-item">
+            <ng-template pTemplate="title">{{ display.label || 'Display - ' + display.id }}</ng-template>
 
+            <p>{{ display.bounds.width }}x{{ display.bounds.height }} \ {{ display.displayFrequency.toFixed(0) }} Гц</p>
 
-  @if (selectedDisplay$ | async; as selectedDisplay) {
-    @for (display of displays; track display.id) {
-      <p-card class="settings__display-item">
-        <ng-template pTemplate="title">{{ display.label || 'Display - ' + display.id }}</ng-template>
+            <ng-template pTemplate="footer">
+              @if (selectedDisplay.id !== display.id) {
+                <button pButton severity="primary" (click)="onSelectDisplay(display)">Выбрать</button>
+              } @else {
+                <button pButton severity="secondary" [disabled]="true">Выбрано</button>
+              }
 
-        <p>{{ display.bounds.width }}x{{ display.bounds.height }} \ {{ display.displayFrequency.toFixed(0) }} Гц</p>
+            </ng-template>
+          </p-card>
+        }
+      }
+    </div>
+  </p-tabPanel>
+  <p-tabPanel header="Обновления">
+    <div class="settings__updates">
+      <p>Текущая версия: v{{ appVersion }}</p>
+      <button pButton
+              (click)="onCheckUpdates()"
+              [disabled]="updateInProgress"
+              [label]="updateInProgress ? (updateLabel || ('Загрузка: ' + updatePercent + '%')) : 'Проверить обновления'">
+      </button>
+    </div>
+  </p-tabPanel>
+  <p-tabPanel header="Файлы презентаций">
 
-        <ng-template pTemplate="footer">
-          @if (selectedDisplay.id !== display.id) {
-            <button pButton severity="primary" (click)="onSelectDisplay(display)">Выбрать</button>
-          } @else {
-            <button pButton severity="secondary" [disabled]="true">Выбрано</button>
-          }
-
-        </ng-template>
-      </p-card>
-    }
-  }
-
-
-</div>
-
-<p-divider></p-divider>
-
-<h3>Управление ассетами</h3>
-<div class="settings__assets">
-  <lyri-asset-management></lyri-asset-management>
-</div>
-
-
+    <div class="settings__assets">
+      <lyri-asset-management></lyri-asset-management>
+    </div>
+  </p-tabPanel>
+</p-tabView>
 

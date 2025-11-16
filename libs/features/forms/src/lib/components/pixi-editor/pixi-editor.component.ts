@@ -92,7 +92,7 @@ export class PixiSlideEditorV2Component
   private readonly cdr = inject(ChangeDetectorRef);
   public readonly serializer = inject(EditorSerializerService);
   private readonly nodeFactory = inject(NodeFactoryService);
-  private readonly sceneViewport = inject(SceneViewportService);
+  public readonly sceneViewport = inject(SceneViewportService);
 
   app!: Application;
   world!: Container & { app: Application };
@@ -755,6 +755,51 @@ export class PixiSlideEditorV2Component
 
   emit(cmd: EditorCommand) {
     this.bus.emit(cmd);
+  }
+
+  /**
+   * Triggers layout() for all TextNode instances currently present on the scene.
+   * Useful after bulk deserialization to ensure auto-fitting to scene size.
+   */
+  public async fitAllTextNodes(): Promise<void> {
+    const nodes = this.store.snapshot((s) => s.nodes);
+    const bounds = this.sceneViewport.getSceneBounds();
+    const tasks: Promise<void>[] = [];
+
+    for (const id of Object.keys(nodes)) {
+      const ref = nodes[id]?.ref as NodeBase | undefined;
+      if (ref instanceof TextNode) {
+        // Resize text node to exactly match scene bounds, then relayout
+        try {
+          ref.x = 0;
+          ref.y = 0;
+          ref.applyBoxSize(bounds.width, bounds.height);
+
+          // Wait for multiple frames to ensure proper text measurement
+          const waitForFrames = async (count: number) => {
+            for (let i = 0; i < count; i++) {
+              await new Promise<void>((r) => requestAnimationFrame(() => r()));
+            }
+          };
+
+          tasks.push(
+            (async () => {
+              await waitForFrames(2); // Wait for 2 frames to ensure DOM is ready
+              await ref.layout();
+              await waitForFrames(1); // Wait one more frame for layout to settle
+            })()
+          );
+        } catch (e) {
+          console.warn('Failed to fit text node:', e);
+        }
+      }
+    }
+
+    if (tasks.length) {
+      await Promise.allSettled(tasks);
+      // Final wait to ensure all text measurements are complete
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    }
   }
 
   /**

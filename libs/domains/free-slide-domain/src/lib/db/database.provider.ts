@@ -2,7 +2,6 @@ import { Provider } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
 import * as schema from './schema';
-import { runMigrations } from './migrate';
 import { getDbPath } from '@lyri-cast/common-workers';
 
 export const DB_PROVIDER_TOKEN = 'DB_PROVIDER';

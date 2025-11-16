@@ -52,6 +52,8 @@ import { ActivatedRoute } from '@angular/router';
 import { FreeSlideApiService } from '@lyri-cast/free-slide';
 import { PrimeTemplate } from 'primeng/api';
 import { Ripple } from 'primeng/ripple';
+import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { CtrlDragCopyDirective } from '../../directives/ctrl-drag-copy.directive';
 
 @Component({
   selector: 'lyri-free-slide',
@@ -71,6 +73,8 @@ import { Ripple } from 'primeng/ripple';
     PixiSlideEditorV2Component,
     PrimeTemplate,
     Ripple,
+    DragDropModule,
+    CtrlDragCopyDirective,
   ],
   templateUrl: './free-slide.component.html',
   styleUrl: './free-slide.component.scss',
@@ -93,6 +97,8 @@ export class FreeSlideComponent implements AfterViewInit {
 
   @ViewChild(PixiSlideEditorV2Component)
   pixiEditor!: PixiSlideEditorV2Component;
+  @ViewChild(CtrlDragCopyDirective)
+  ctrlCopyDir?: CtrlDragCopyDirective;
 
   slideForm = new FormGroup({
     name: new FormControl('', { nonNullable: true }),
@@ -116,6 +122,8 @@ export class FreeSlideComponent implements AfterViewInit {
   private previewTrigger$ = new Subject<void>();
   // Track last saved content hash per slide to avoid redundant preview uploads
   private lastContentHashBySlideId = new Map<string, string>();
+
+  private loadVersion = 0;
 
   private async waitForEditorReady(timeoutMs = 5000): Promise<boolean> {
     const start = Date.now();
@@ -158,7 +166,6 @@ export class FreeSlideComponent implements AfterViewInit {
       return;
     }
 
-    console.log('on select slide', slide);
 
     this.slideForm.patchValue({ name: slide.name }, { emitEvent: false });
     this.slideForm.markAsPristine();
@@ -171,6 +178,7 @@ export class FreeSlideComponent implements AfterViewInit {
     if (this.pixiEditor && ready && this.pixiEditor.app) {
       this.pixiEditor.clearAllNodes();
       if (slide.content) {
+        const version = ++this.loadVersion;
         try {
           const slideData = JSON.parse(slide.content);
 
@@ -179,9 +187,17 @@ export class FreeSlideComponent implements AfterViewInit {
             this.pixiEditor.onAspectRatioChange(slideData.aspectRatio);
           }
 
-          // Trigger preloading in the background, but don't await it to avoid blocking UI
-          void this.pixiEditor.serializer.preloadAssets(slideData);
+          // Preload assets so text/metrics are ready before layout
+          await this.pixiEditor.serializer.preloadAssets(slideData);
+          // Clear current nodes to avoid races when switching quickly
+          this.pixiEditor.clearAllNodes();
           this.pixiEditor.serializer.deserializeState(slideData);
+          // Ensure text auto-fit after loading scene
+          await this.pixiEditor.fitAllTextNodes();
+          // Wait for text nodes to be properly sized before updating scene bounds
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          this.pixiEditor.sceneViewport.updateSceneBounds();
+          if (version !== this.loadVersion) return; // stale load, abort
         } catch (e) {
           console.error('Error parsing slide data, clearing editor', e);
           this.pixiEditor.clearAllNodes();
@@ -254,7 +270,6 @@ export class FreeSlideComponent implements AfterViewInit {
       assetId = currentSlide?.previewAssetId;
     }
 
-    console.log('[FreeSlide] Saving slide:', this.slideForm.getRawValue().name);
 
     // const { id } = RouteParamsReducerHelper.reduceSnapshot(this.route.snapshot);
 
@@ -532,6 +547,25 @@ export class FreeSlideComponent implements AfterViewInit {
 
         this.cdr.detectChanges();
       });
+  }
+
+  onSlidesDrop(event: CdkDragDrop<any>) {
+    const isCopy = this.ctrlCopyDir?.isCtrlPressed() ?? (event.event as MouseEvent | PointerEvent | KeyboardEvent | undefined as any)?.ctrlKey === true;
+    const prevIndex = event.previousIndex;
+    const currIndex = event.currentIndex;
+    if (prevIndex === currIndex && !isCopy) return;
+
+    if (isCopy) {
+      this.slideService.copySlide(prevIndex, currIndex);
+    } else {
+      this.slideService.reorderSlides(prevIndex, currIndex);
+    }
+
+    const selected = this.slideService.slidesMap.get(this.currentSlideId);
+    if (selected) {
+      this.currentSlideIndex = selected.index;
+      this.cdr.markForCheck();
+    }
   }
 
   protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;

@@ -18,7 +18,7 @@ import {
   FreeSlideActionSource,
 } from './free-slide.actions';
 import { EventData } from '@lyri-cast/common-electron';
-import { selectFreeSlideCastingProcess } from './free-slide.selectors';
+import { selectFreeSlideCastingProcess, selectFreeSlideCastingFrozen, selectGlobalTransition, selectSlideTransitions } from './free-slide.selectors';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   [FreeSlideActionsEnum.startCasting]: (eventData: EventData) =>
@@ -54,7 +54,17 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
     slideNavigateAction: FreeSlideActions[FreeSlideActionsEnum.slideNavigate],
     liveUpdateSlideAction:
       FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide],
+    // централизованный проброс переходов
+    setGlobalTransitionAction:
+      FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition],
+    setSlideTransitionAction:
+      FreeSlideActions[FreeSlideActionsEnum.setSlideTransition],
+    updateTransitionSettingsAction:
+      FreeSlideActions[FreeSlideActionsEnum.updateTransitionSettings],
+    selectGlobalTransition,
+    selectSlideTransitions,
     selectCastingProcess: selectFreeSlideCastingProcess,
+    selectCastingFrozen: selectFreeSlideCastingFrozen,
     selectOpenedWindow,
     getDisplayForCasting: () => this.settingsSrv.getDisplayForCasting(),
     store: this.store,
@@ -72,4 +82,7 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
   castingStarted$ = this.base.castingStarted$;
   slideNavigate$ = this.base.slideNavigate$;
   liveUpdateSlide$ = this.base.liveUpdateSlide$;
+  setGlobalTransition$ = this.base.setGlobalTransition$;
+  setSlideTransition$ = this.base.setSlideTransition$;
+  updateTransitionSettings$ = this.base.updateTransitionSettings$;
 }

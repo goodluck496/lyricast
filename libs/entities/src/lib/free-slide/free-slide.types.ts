@@ -1,3 +1,5 @@
+import { SlideTransition } from './transition.types';
+
 /**
  * Используем при любом фронтовом взаимодействии
  */
@@ -9,7 +11,8 @@ export type Slide = {
   index: number;
 
   previewAssetId: string,
-  groupId: number,
+  groupId: number;
+  transitionIn?: SlideTransition; // переход при появлении слайда
 };
 
 export type Presentation = {

@@ -5,6 +5,7 @@ import {
   DestroyRef,
   ElementRef,
   inject,
+  viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
@@ -13,8 +14,8 @@ import { BibleState } from '@lyri-cast/bible-store';
 import { Router } from '@angular/router';
 import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { Store } from '@ngrx/store';
-import { Actions } from '@ngrx/effects';
-import { map, take } from 'rxjs';
+import { Actions, ofType } from '@ngrx/effects';
+import { map, take, debounceTime, combineLatest, first, BehaviorSubject, withLatestFrom, filter, finalize, catchError, of } from 'rxjs';
 import {
   AppActions,
   selectOpenedWindow,
@@ -28,14 +29,22 @@ import {
   FreeSlideActions,
   FreeSlideActionsEnum,
   selectFreeSlideCastingPaused,
+  selectFreeSlideCastingStarted,
   selectFreeSlideSelected,
+  selectGlobalTransition,
+  selectSlideTransitions,
+  selectFreeSlideCastingFrozen,
 } from '@lyri-cast/free-slide-store';
 import { FreeSlideService } from '../../pages/free-slide-page/free-slide.service';
 import { filterEmpty } from '@lyri-cast/common';
+import { FreeSlideApiService } from '@lyri-cast/free-slide';
 
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { FormsModule } from '@angular/forms';
 import { ToggleButtonChangeEvent } from 'primeng/togglebutton/togglebutton.interface';
+import { TabViewModule } from 'primeng/tabview';
+import { SlideTransitionEditorComponent } from '../slide-transition-editor/slide-transition-editor.component';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'lyri-free-slide-sidebar',
@@ -48,6 +57,8 @@ import { ToggleButtonChangeEvent } from 'primeng/togglebutton/togglebutton.inter
     FreeSlideCastingPreviewComponent,
     ToggleButtonModule,
     FormsModule,
+    TabViewModule,
+    SlideTransitionEditorComponent,
   ],
   templateUrl: './free-slide-sidebar.component.html',
   styleUrl: './free-slide-sidebar.component.scss',
@@ -58,19 +69,24 @@ export class FreeSlideSidebarComponent {
   private readonly router = inject(Router);
   private readonly elRef = inject(ElementRef);
   private readonly apiSrv = inject(BibleApiService);
+  private readonly freeSlideApi = inject(FreeSlideApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly store = inject<Store<BibleState>>(Store<BibleState>);
   private readonly actions$ = inject(Actions);
   private readonly sidebarService = inject<SidebarService<any>>(SidebarService);
   private readonly slideService = inject(FreeSlideService);
+  private readonly transitionsLoaded$ = new BehaviorSubject<boolean>(false);
+  private applyingLoadedSettings = false;
+
+  slideTransitionEditor = viewChild(SlideTransitionEditorComponent);
 
   openedCastingWindow$ = this.store.select(selectOpenedWindow).pipe(
     map((e) => {
-      console.log('openedCastingWindow$', e, !!e);
       return !!e;
     })
   );
   castingIsPaused$ = this.store.select(selectFreeSlideCastingPaused);
+  castingIsFrozen$ = this.store.select(selectFreeSlideCastingFrozen);
   liveSyncEnabled$ = this.slideService.liveSyncEnabled$.asObservable();
 
   onLiveSyncToggle(event: ToggleButtonChangeEvent) {
@@ -83,12 +99,8 @@ export class FreeSlideSidebarComponent {
   }
 
   onStartCasting() {
-    console.log('[Sidebar] Starting casting...');
-
     // Listen for the save to complete, then proceed with casting
     this.slideService.saveCompleted$.pipe(take(1)).subscribe(() => {
-      console.log('[Sidebar] Save completed, proceeding with casting.');
-
       this.store
         .select(selectFreeSlideSelected)
         .pipe(filterEmpty(), take(1))
@@ -104,6 +116,17 @@ export class FreeSlideSidebarComponent {
             })
           );
         });
+
+      // this.actions$.pipe(ofType(FreeSlideActions[FreeSlideActionsEnum.openCasting])).pipe(take(1), takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      //   console.log('openedPage?');
+      // })
+      // this.store.select(selectFreeSlideCastingStarted).pipe(take(1), takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      //   console.log('started?');
+      //   const transitionEditor = this.slideTransitionEditor();
+      //   if (transitionEditor) {
+      //     transitionEditor.transitionForm.updateValueAndValidity();
+      //   }
+      // })
     });
 
     // Request the current slide to be saved
@@ -111,7 +134,6 @@ export class FreeSlideSidebarComponent {
   }
 
   onStopCasting() {
-    console.log('onStopCasting called');
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
     // Закрываем окно кастинга
     this.store.dispatch(
@@ -123,5 +145,111 @@ export class FreeSlideSidebarComponent {
 
   onPauseCasting() {
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.pauseCasting]());
+  }
+
+  onFreezeToggle(event: ToggleButtonChangeEvent) {
+    const frozen = !!event.checked;
+    this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.setFreezeCasting]({ frozen }));
+  }
+
+  ngOnInit(): void {
+    this.slideService.currentPresentation$
+      .pipe(
+        filter((p: any) => !!p?.id),
+        first()
+      )
+      .subscribe((p: any) => {
+      this.freeSlideApi
+        .getTransitionSettings(p.id)
+        .pipe(
+          first(),
+          catchError(() => of({})),
+          finalize(() => this.transitionsLoaded$.next(true))
+        )
+        .subscribe((settings: any) => {
+          // Применяем настройки из БД и игнорируем автосохранение на это время
+          this.applyingLoadedSettings = true;
+          this.transitionsLoaded$.next(true);
+          const gt = settings?.globalTransition;
+          if (gt) {
+            this.store.dispatch(
+              FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition]({ transition: gt })
+            );
+            const editor = this.slideTransitionEditor?.();
+            if (editor && editor.useGlobalTransition && editor.transitionForm) {
+              editor.transitionForm.patchValue({
+                type: gt.type,
+                duration: gt.duration,
+                easing: gt.easing,
+                delay: gt.delay || 0,
+              }, { emitEvent: false });
+            }
+          }
+          const st = settings?.slideTransitions;
+          if (st && typeof st === 'object') {
+            for (const key of Object.keys(st)) {
+              this.store.dispatch(
+                FreeSlideActions[FreeSlideActionsEnum.setSlideTransition]({ slideId: key, transition: st[key] })
+              );
+            }
+          }
+          // Определяем режим редактора и патчим форму для отображения значений
+          const editor = this.slideTransitionEditor?.();
+          if (editor && editor.transitionForm) {
+            const hasGlobal = !!gt && gt.type !== 'none';
+            if (hasGlobal) {
+              editor.useGlobalTransition = true;
+              editor.transitionForm.patchValue({
+                type: gt.type,
+                duration: gt.duration,
+                easing: gt.easing,
+                delay: gt.delay || 0,
+              }, { emitEvent: false });
+            } else if (st && typeof st === 'object') {
+              this.store.select(selectFreeSlideSelected).pipe(first()).subscribe((sel: any) => {
+                const t = sel?.id ? st[sel.id] : undefined;
+                if (t) {
+                  editor.useGlobalTransition = false;
+                  editor.transitionForm.patchValue({
+                    type: t.type,
+                    duration: t.duration,
+                    easing: t.easing,
+                    delay: t.delay || 0,
+                  }, { emitEvent: false });
+                }
+              });
+            }
+          }
+          // Снимаем флаг после применения (микрозадача, чтобы actions$ успел обработать очереди)
+          setTimeout(() => { this.applyingLoadedSettings = false; }, 0);
+        });
+    });
+
+    this.actions$
+      .pipe(
+        ofType(
+          FreeSlideActions[FreeSlideActionsEnum.setGlobalTransition],
+          FreeSlideActions[FreeSlideActionsEnum.setSlideTransition]
+        ),
+        debounceTime(500),
+        withLatestFrom(
+          this.store.select(selectGlobalTransition),
+          this.store.select(selectSlideTransitions),
+          this.slideService.currentPresentation$
+        ),
+        filter(([_, __gt, __st, pres]) => !this.applyingLoadedSettings && !!pres?.id),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(([__, globalTransition, slideTransitions, pres]: any) => {
+        if (!pres?.id) return;
+        const payload = {
+          globalTransition,
+          slideTransitions: slideTransitions instanceof Map ? Object.fromEntries(slideTransitions.entries()) : slideTransitions,
+        };
+        this.freeSlideApi
+          .setTransitionSettings(pres.id, payload)
+          .pipe(first())
+          .subscribe();
+      });
   }
 }

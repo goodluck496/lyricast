@@ -1,0 +1,71 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  width: 800px;
+  max-width: calc(100vw - 40px);
+  background: #1e1e2d;
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.dialog__header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.dialog__body {
+  padding: 16px 20px;
+}
+
+.dialog__footer {
+  padding: 12px 20px 18px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.row {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.list-item__wrapper { display: flex; gap: 10px; }
+.list-item__number { width: 40px; opacity: 0.7; }
+.list-item__title-content { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+.form-grid__item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-grid__item--inline {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+}

@@ -11,7 +11,7 @@ module.exports = {
   npmRebuild: true,
   files: [
     'dist/apps/browser/**/*',
-    'dist/apps/backend/**/*',
+    'dist/apps/workers/**/*',
     'dist/apps/electron/**',
     'node_modules/**',
     'package.json',
@@ -51,10 +51,6 @@ module.exports = {
     {
       from: 'assets/build/icons',
       to: 'assets/icons',
-    },
-    {
-      from: 'data',
-      to: 'assets/databases',
     },
     {
       from: 'drizzle',

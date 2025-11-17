@@ -15,7 +15,7 @@ import fs from 'fs';
 
 @Injectable()
 export class BibleByFilesService {
-  assetsPath = path.resolve(__dirname, 'assets', 'complete-jsons', 'bibles');
+  assetsPath = path.resolve(process.cwd(), 'assets', 'complete-jsons', 'bibles');
   assetsPathNew = '';
 
   biblesCache: Record<string, BibleTranslate> = {};

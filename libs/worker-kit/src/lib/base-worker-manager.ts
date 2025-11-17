@@ -134,7 +134,10 @@ export class BaseHttpWorkerManager extends EventEmitter {
 
   /** Ждём первичной готовности (или повторной — после makeReadyDeferred) */
   async waitReady(timeoutMs = this.readyTimeoutMs): Promise<void> {
-    if (this.port) return; // уже готов
+    if (this.port) {
+      console.log('already ready', this.spec.name, this.port, '->', 'waitReady');
+      return;
+    } // уже готов
     const p = this.readyDeferred?.p ?? Promise.resolve();
     if (timeoutMs <= 0) {
       await p;
@@ -191,15 +194,23 @@ export class BaseHttpWorkerManager extends EventEmitter {
       ? process.resourcesPath
       : process.cwd();
 
+    console.log(`[SPAWNING WORKER] Path: ${entryAbsPath}, CWD: ${workerCwd}`);
+
     const w = new Worker(entryAbsPath, {
       cwd: workerCwd,
       env: {
         ...process.env,
+        IS_PACKAGED: process.env.IS_PACKAGED,
+        SOURCE_DATA_PATH: process.env.SOURCE_DATA_PATH,
+        USER_DATA_PATH: process.env.USER_DATA_PATH,
+        USER_ASSETS_PATH: process.env.USER_ASSETS_PATH,
         isProd: String(app.isPackaged),
         assetsPath: resolveWorkersAssets(),
       },
     } as any);
     let oldPort = 0;
+    w.on('online', () => console.log(`[worker:online][${this.spec.name}]`));
+    w.on('exit', (code) => console.log(`[worker:exit][${this.spec.name}] - code: ${code}`));
     w.on('message', (m: BootMsg) => {
       if (m?.t === 'ready') {
         this.port = m.port;
@@ -217,6 +228,9 @@ export class BaseHttpWorkerManager extends EventEmitter {
           m.stack ?? ''
         );
         this.emit('error', new Error(`[${this.spec.name}] ${m.error}`));
+      } else {
+        console.log(`[worker:msg][${this.spec.name}]`, m);
+        this.emit('event', {entryAbsPath, m});
       }
     });
 

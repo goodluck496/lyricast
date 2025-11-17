@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import 'reflect-metadata';
 import { parentPort } from 'node:worker_threads';
 import { NestFactory } from '@nestjs/core';
@@ -13,13 +15,23 @@ type Msg =
 
 const log = new Logger('SongsWorker');
 
+console.log('process.resourcesPath');
 async function bootstrap() {
+
+
+  fs.writeFileSync(
+    path.join(`C:\\work\\pet-projects\\lyricast\\dist`, 'worker-started.txt'),
+    JSON.stringify(process.env as any, null, 2)
+  );
   try {
     // Диагностика старта воркера
     // Важно: этот лог должен появиться сразу после сообщения [worker:running][songs]
     // Если его нет — проблема ещё до bootstrap (entry-файл, импорты и т.п.).
     // Внутри воркера assetsPath пробрасывается из main-процесса.
-    log.log('bootstrap start, assetsPath = ' + (process.env['assetsPath'] ?? 'undefined'));
+    log.log(
+      'bootstrap start, assetsPath = ' +
+        (process.env['assetsPath'] ?? 'undefined')
+    );
 
     const expressApp = express();
     const adapter = new ExpressAdapter(expressApp);

@@ -83,6 +83,7 @@ export async function migrateUserDataFromOldLocations() {
   try {
     await migrateOldUserAssetsToUserData();
     await migrateOldDatabasesToUserData();
+    console.log('[UserDataMigration] User data migration completed successfully');
   } catch (e) {
     // Лог ошибки оставляем на уровне вызова, чтобы не заваливать старт приложения.
     // Основной кейс — просто отсутствие старых директорий.

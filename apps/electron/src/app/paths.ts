@@ -32,7 +32,7 @@ export function getSourceDataPath(): string {
  */
 export function getUserDataRoot(): string {
   const base = app.getPath('userData');
-  return join(base, 'lyricast');
+  return join(base, app.getName());
 }
 
 /**

@@ -241,7 +241,7 @@ export default class App {
   private static async onReady() {
     // Configure all important paths and environment variables in one place
     configureAppPathsEnv();
-    console.log('process.env', process.env);
+    // console.log('process.env', process.env);
 
     // One-time migration from old resources-based locations to userData
     await migrateUserDataFromOldLocations();
@@ -318,9 +318,15 @@ export default class App {
     ]);
     registerSvcProtocol(App.workers);
 
-    // Даем воркерам больше времени на старт в проде (особенно songs-service)
-    await App.workers.waitAllReady(15000);
-    console.log('workers are ready!!!');
+    try {
+      await App.workers.waitAllReady(5000);
+      console.log('workers are ready!!!');
+    } catch (err: any) {
+      console.log('workers are not ready!!!', err);
+      App.workers.disposeAll();
+      App.application.quit();
+    }
+
 
     // This method will be called when Electron has finished
     // initialization and is ready to create browser windows.
@@ -331,10 +337,11 @@ export default class App {
     }
 
     // (опционально) лог/метрики
-    App.workers.on('worker:ready', (e) => console.log('[ready]', e));
-    App.workers.on('worker:reready', (e) => console.log('[reready]', e));
-    App.workers.on('worker:exit', (e) => console.warn('[exit]', e));
-    App.workers.on('worker:error', (e) => console.error('[error]', e));
+    App.workers.on('worker:ready', (e) => console.log('[worker-ready]', e));
+    App.workers.on('worker:reready', (e) => console.log('[worker-reready]', e));
+    App.workers.on('worker:exit', (e) => console.warn('[worker-exit]', e));
+    App.workers.on('worker:error', (e) => console.error('[worker-error]', e));
+    App.workers.on('worker:event', (e) => console.log('[worker-event]', e));
   }
 
   private static onActivate() {

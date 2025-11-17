@@ -1,6 +1,8 @@
 import { app, dialog, MessageBoxOptions, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import App from '../app';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export default class UpdateEvents {
   static retryTimer: NodeJS.Timeout | null = null;
@@ -39,7 +41,12 @@ export default class UpdateEvents {
   // check for updates - most be invoked after initAutoUpdateService() and only in production
   static checkForUpdates() {
     if (!App.isDevelopmentMode()) {
-      autoUpdater.checkForUpdates();
+      const updateFile = path.join(process.resourcesPath, 'app-update.yml');
+      if (fs.existsSync(updateFile)) {
+        autoUpdater.checkForUpdates();
+      } else {
+        console.log('[Updater] app-update.yml not found, skipping update check.');
+      }
     }
   }
 }

@@ -16,7 +16,6 @@ export const databaseProvider: Provider = {
 
     const { dbPath } = getDbPath({
       dbName,
-      copyFromSourceInProd: true,
     });
 
     const sqlite = new Database(dbPath);

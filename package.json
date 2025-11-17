@@ -1,5 +1,5 @@
 {
-  "name": "@lyri-cast/source",
+  "name": "lyricast",
   "version": "2.0.7",
   "main": "./dist/apps/electron/main.js",
   "description": "Casting bible, songs and other to projector",

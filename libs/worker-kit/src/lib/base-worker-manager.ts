@@ -210,6 +210,12 @@ export class BaseHttpWorkerManager extends EventEmitter {
           this.emit('ready', { name: this.spec.name, port: m.port });
         }
       } else if (m?.t === 'error') {
+        // Логируем ошибку воркера сразу, чтобы не терять её из-за таймаута waitReady
+        console.error(
+          `[worker:error][${this.spec.name}]`,
+          m.error,
+          m.stack ?? ''
+        );
         this.emit('error', new Error(`[${this.spec.name}] ${m.error}`));
       }
     });

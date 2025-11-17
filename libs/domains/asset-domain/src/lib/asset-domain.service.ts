@@ -20,20 +20,25 @@ export class AssetDomainService {
     @Inject(DB_PROVIDER_TOKEN)
     private db: BetterSQLite3Database<typeof schema>
   ) {
-    const isPackaged = process.env.IS_PACKAGED === 'true';
-    const userDataPath = process.env.USER_DATA_PATH!;
-    const sourceDataPath = process.env.SOURCE_DATA_PATH!;
-    const assetsDirName = 'user-assets';
+    // Все пользовательские ассеты живут в USER_ASSETS_PATH, который указывает
+    // на директорию внутри userData (см. configureAppPathsEnv в electron-приложении).
+    // SOURCE_DATA_PATH больше не используется для хранения живых файлов.
+    const assetsEnvPath =
+      process.env['USER_ASSETS_PATH'] || process.env['USER_DATA_PATH'];
 
-    if (isPackaged) {
-      this.assetsPath = path.join(userDataPath, assetsDirName);
-    } else {
-      this.assetsPath = path.resolve(sourceDataPath, 'data', assetsDirName);
+    if (!assetsEnvPath) {
+      throw new Error('USER_ASSETS_PATH/USER_DATA_PATH is not configured.');
     }
+
+    // Если USER_ASSETS_PATH не задан по какой-то причине, то используем
+    // корень USER_DATA_PATH и создаём в нём подпапку user-assets.
+    this.assetsPath = process.env['USER_ASSETS_PATH']
+      ? assetsEnvPath
+      : path.join(assetsEnvPath, 'user-assets');
   }
 
   async create(file: UploadedMulterFile): Promise<Asset> {
-    const hash = createHash('sha256').update(file.buffer).digest('hex');
+    const hash = createHash('sha256').update(file.buffer as any).digest('hex');
 
     const existingAsset = await this.findOne(hash);
     if (existingAsset) {
@@ -41,7 +46,7 @@ export class AssetDomainService {
     }
 
     const filePath = path.join(this.assetsPath, hash);
-    await fs.writeFile(filePath, file.buffer);
+    await fs.writeFile(filePath, file.buffer as any);
 
     const newAsset: NewAsset = {
       id: hash,

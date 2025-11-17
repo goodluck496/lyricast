@@ -23,6 +23,8 @@ import { registerSvcProtocol } from './api/svc.protocol';
 import { startFileServer } from './server';
 import * as http from 'http';
 import { runDatabaseMigrations } from './migrations';
+import { configureAppPathsEnv } from './paths';
+import { migrateUserDataFromOldLocations } from './user-data-migration';
 
 export const DEFAULT_WEB_PREF = {
   contextIsolation: true,
@@ -237,23 +239,12 @@ export default class App {
   }
 
   private static async onReady() {
-    // Pass necessary paths and flags to worker processes via environment variables
-    process.env.IS_PACKAGED = String(app.isPackaged);
-    // In packaged builds we want to use the bundled resources assets directory
-    // so that DB and assets resolve to '<resources>/assets/...'.
-    if (app.isPackaged) {
-      process.env.USER_DATA_PATH = join(process.resourcesPath, 'assets');
-    } else {
-      process.env.USER_DATA_PATH = app.getPath('userData');
-    }
+    // Configure all important paths and environment variables in one place
+    configureAppPathsEnv();
+    console.log('process.env', process.env);
 
-    // In development, we need the project root to find the 'data' folder.
-    // In production, we need the resources path.
-    if (app.isPackaged) {
-      process.env.SOURCE_DATA_PATH = process.resourcesPath;
-    } else {
-      process.env.SOURCE_DATA_PATH = process.cwd(); // Project root
-    }
+    // One-time migration from old resources-based locations to userData
+    await migrateUserDataFromOldLocations();
 
     await runDatabaseMigrations();
 
@@ -327,7 +318,8 @@ export default class App {
     ]);
     registerSvcProtocol(App.workers);
 
-    await App.workers.waitAllReady();
+    // Даем воркерам больше времени на старт в проде (особенно songs-service)
+    await App.workers.waitAllReady(15000);
     console.log('workers are ready!!!');
 
     // This method will be called when Electron has finished

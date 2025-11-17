@@ -23,14 +23,6 @@ export class SongsService {
 
   isReady = false;
 
-  constructor() {
-    this.assetsPath = path.resolve(
-      process.env?.['assetsPath'] ?? '',
-      'complete-jsons',
-      'songs'
-    );
-  }
-
   readBookNames(): ISongBookName[] {
     try {
       const files = fs.readdirSync(this.assetsPath);

@@ -23,38 +23,30 @@ export function getDbPath(options: DbPathOptions): DbPathResult {
     throw new Error('Database paths are not configured. Required environment variables are missing.');
   }
 
-  let dbPath: string;
+  // Единственная "живая" точка хранения БД — внутри USER_DATA_PATH/databases,
+  // как в dev, так и в prod. SOURCE_DATA_PATH используется только как источник шаблонной БД.
+  const dbPath = path.join(userDataPath, 'databases', dbName);
   let isNewDb = false;
 
-  if (isPackaged) {
-    // PRODUCTION LOGIC
-    const destinationDbPath = path.join(userDataPath, 'databases', dbName);
-
-    if (!fs.existsSync(destinationDbPath)) {
-      isNewDb = true;
-      const destinationDir = path.dirname(destinationDbPath);
-      if (!fs.existsSync(destinationDir)) {
-        fs.mkdirSync(destinationDir, { recursive: true });
-      }
-
-      if (copyFromSourceInProd) {
-        const sourceDbPathFull = path.join(sourceDataPath, 'assets', 'databases', dbName);
-
-        if (fs.existsSync(sourceDbPathFull)) {
-          // Avoid copying a file onto itself when source and destination are the same
-          if (path.resolve(sourceDbPathFull) !== path.resolve(destinationDbPath)) {
-            fs.copyFileSync(sourceDbPathFull, destinationDbPath);
-          }
-          isNewDb = false;
-        }
-      }
+  if (!fs.existsSync(dbPath)) {
+    isNewDb = true;
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
     }
-    dbPath = destinationDbPath;
-  } else {
-    // DEVELOPMENT LOGIC
-    dbPath = path.resolve(sourceDataPath, 'data', dbName);
-    if (!fs.existsSync(dbPath)) {
-      isNewDb = true;
+
+    // В prod-режиме при желании можно скопировать стартовую БД из ресурсов.
+    if (isPackaged && copyFromSourceInProd) {
+      const sourceDbPathFull = path.join(sourceDataPath, 'assets', 'databases', dbName);
+
+      if (fs.existsSync(sourceDbPathFull)) {
+        // Avoid copying a file onto itself when source and destination are the same
+        if (path.resolve(sourceDbPathFull) !== path.resolve(dbPath)) {
+          fs.copyFileSync(sourceDbPathFull, dbPath);
+        }
+        // В этом случае база не считается "новой" — она уже содержит данные из шаблона.
+        isNewDb = false;
+      }
     }
   }
 

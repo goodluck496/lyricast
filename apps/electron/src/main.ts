@@ -6,11 +6,8 @@ import App from './app/app';
 
 export default class Main {
   static initialize() {
-    // Set environment variables for database paths
+    // Set basic flag for packaged state; detailed paths are configured in App.onReady
     process.env.IS_PACKAGED = String(app.isPackaged);
-    process.env.SOURCE_DATA_PATH = app.isPackaged
-      ? process.resourcesPath
-      : process.cwd();
 
     if (SquirrelEvents.handleEvents()) {
       // squirrel event handled (except first run event) and app will exit in 1000ms, so don't do anything else

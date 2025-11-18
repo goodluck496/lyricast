@@ -19,6 +19,7 @@ import {
   Subscription,
 } from 'rxjs';
 import { WorkersRegistry } from '@lyri-cast/worker-kit';
+import { WORKER_SPECS } from './workers.config';
 import { registerSvcProtocol } from './api/svc.protocol';
 import { startFileServer } from './server';
 import * as http from 'http';
@@ -290,32 +291,12 @@ export default class App {
 
     const isDev = !app.isPackaged;
 
-    App.workers = new WorkersRegistry([
-      {
-        name: 'songs',
-        rootApiPath: 'songs',
-        distSubdir: 'songs-service',
+    App.workers = new WorkersRegistry(
+      WORKER_SPECS.map((spec) => ({
+        ...spec,
         devWatch: isDev,
-      },
-      {
-        name: 'bible',
-        rootApiPath: 'bible',
-        distSubdir: 'bible-service',
-        devWatch: isDev,
-      },
-      {
-        name: 'free-slide',
-        rootApiPath: 'free-slide',
-        distSubdir: 'free-slide-service',
-        devWatch: isDev,
-      },
-      {
-        name: 'assets',
-        rootApiPath: 'assets',
-        distSubdir: 'asset-service',
-        devWatch: isDev,
-      },
-    ]);
+      }))
+    );
     registerSvcProtocol(App.workers);
 
     try {

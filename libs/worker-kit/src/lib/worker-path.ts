@@ -38,8 +38,16 @@ export function resolveWorkerEntry(distSubdir: string, entry = 'main.js') {
 }
 
 export function resolveWorkersAssets() {
-  const isDev = !app.isPackaged;
+  // Основной источник правды о путях — SOURCE_DATA_PATH, который
+  // настраивается в apps/electron/src/app/paths.ts → configureAppPathsEnv.
+  const fromEnv = process.env.SOURCE_DATA_PATH;
 
+  if (fromEnv && fromEnv.length > 0) {
+    return path.join(fromEnv, 'assets');
+  }
+
+  // Fallback на случай, если configureAppPathsEnv не вызван (тесты/нестандартный запуск)
+  const isDev = !app.isPackaged;
   if (isDev) {
     return path.join(process.cwd(), 'assets');
   }

@@ -109,8 +109,8 @@ export class TextFitService {
             ? baseStyle.fill
             : this.utils.colorToNumber('#ffffee'),
         cssOverrides: [
-          'p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
-          'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+          '.pixi-html-text, .pixi-html-text * { margin: 0; white-space: normal !important; word-break: normal !important; overflow-wrap: break-word !important; }',
+          '.pixi-html-text ul, .pixi-html-text ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
         ],
       },
     });

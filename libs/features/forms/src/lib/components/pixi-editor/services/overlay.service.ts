@@ -125,14 +125,18 @@ export class OverlayService {
         if (commit && currentNode && comp) {
           const newHTML: string = comp.getHTML();
 
+          // Нормализуем HTML из редактора: убираем неразрывные пробелы,
+          // чтобы перенос происходил по словам, а не по буквам.
+          const normalizedHTML = newHTML.replace(/&nbsp;/g, ' ');
+
           // для fit и рендера текста оставляем .text (плэйн)
-          currentNode.textHtml = newHTML;
+          currentNode.textHtml = normalizedHTML;
 
           currentNode.requestFit();
 
           // История — на основе html (можно сделать ChangeContentCommand, если нужно)
           if (origHtml !== undefined && newHTML !== origHtml) {
-            const cmd = new ChangeTextCommand(currentNode, origHtml, newHTML);
+            const cmd = new ChangeTextCommand(currentNode, origHtml, normalizedHTML);
             this.history.execute(cmd);
           }
         }
@@ -186,11 +190,13 @@ export class OverlayService {
     if (node && comp) {
       const newHTML: string = comp.getHTML();
 
-      node.textHtml = newHTML;
+      const normalizedHTML = newHTML.replace(/&nbsp;/g, ' ');
+
+      node.textHtml = normalizedHTML;
       node.requestFit();
 
       if (originalHTML !== undefined && newHTML !== originalHTML) {
-        const cmd = new ChangeTextCommand(node, originalHTML, newHTML);
+        const cmd = new ChangeTextCommand(node, originalHTML, normalizedHTML);
         this.history.execute(cmd);
       }
     }

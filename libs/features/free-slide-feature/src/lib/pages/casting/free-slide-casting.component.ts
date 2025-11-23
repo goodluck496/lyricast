@@ -12,7 +12,7 @@ import {
   signal,
   ViewChild,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Store } from '@ngrx/store';
 import {
   selectFreeSlideCastingPaused,
@@ -50,7 +50,7 @@ import { SlideTransitionService } from '../../services/slide-transition.service'
 @Component({
   selector: 'lyri-free-slide-casting',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './free-slide-casting.component.html',
   styleUrls: ['./free-slide-casting.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

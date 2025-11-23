@@ -1,18 +1,35 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
+html.my-app-dark .overlay {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+html:not(.my-app-dark) .overlay {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+html.my-app-dark .dialog {
+  background: #1e1e2d;
+  color: #fff;
+}
+
+html.my-app-dark .dialog__header,
+html.my-app-dark .dialog__footer {
+  border-color: rgba(255,255,255,0.08);
+}
+
 .dialog {
   width: 800px;
   max-width: calc(100vw - 40px);
-  background: #1e1e2d;
-  color: #fff;
+  background: #ffffff;
+  color: #222222;
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   overflow: hidden;
@@ -20,7 +37,7 @@
 
 .dialog__header {
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
 }
 
 .dialog__body {
@@ -29,7 +46,7 @@
 
 .dialog__footer {
   padding: 12px 20px 18px;
-  border-top: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid rgba(0,0,0,0.08);
   display: flex;
   gap: 8px;
   justify-content: flex-end;

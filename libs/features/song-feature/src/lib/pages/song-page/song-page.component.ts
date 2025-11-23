@@ -35,7 +35,7 @@ import {
   LyricLine,
 } from '@lyri-cast/entities';
 import { filterEmpty, snapshot } from '@lyri-cast/common';
-import { DropdownModule } from 'primeng/dropdown';
+import { SelectModule } from 'primeng/select';
 import { ListboxModule } from 'primeng/listbox';
 import { CastingService } from '../../services/casting.service';
 import { InputTextModule } from 'primeng/inputtext';
@@ -79,7 +79,7 @@ export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
     PrimeTemplate,
     AsyncPipe,
     ReactiveFormsModule,
-    DropdownModule,
+    SelectModule,
     ListboxModule,
     ListBoxComponent,
     SongComponent,

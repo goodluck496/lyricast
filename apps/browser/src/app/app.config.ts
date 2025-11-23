@@ -12,7 +12,7 @@ import {
   withInterceptorsFromDi,
 } from '@angular/common/http';
 import { CustomReuseStrategy } from '../services/common/router-reuse.strategy';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideState, provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { provideEffects } from '@ngrx/effects';
@@ -32,6 +32,8 @@ import {
   MAT_DATE_FORMATS,
   MAT_DATE_LOCALE,
 } from '@angular/material/core';
+import { providePrimeNG } from 'primeng/config';
+import Aura from '@primeuix/themes/aura';
 
 export const RU_LUXON_DATE_FORMATS = {
   parse: {
@@ -65,13 +67,25 @@ export class CustomLuxonDateAdapter extends LuxonDateAdapter {
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    importProvidersFrom(BrowserAnimationsModule),
+    provideAnimationsAsync(),
     { provide: RouteReuseStrategy, useClass: CustomReuseStrategy },
     provideHttpClient(withInterceptorsFromDi()),
     { provide: BASE_API_TOKEN, useValue: 'http://localhost:3000/api' },
     //для оптимизации, чтобы вспылтие события не взызывало двойного обнаржуния изменений
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes),
+
+    /**
+     * PrimeNG v20 global configuration + always-on dark mode
+     */
+    providePrimeNG({
+      theme: {
+        preset: Aura,
+        options: {
+          darkModeSelector: '.my-app-dark',
+        },
+      },
+    }),
 
     /**
      * Material

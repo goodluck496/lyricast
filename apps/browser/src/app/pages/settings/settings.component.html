@@ -1,42 +1,118 @@
-<p-tabView>
-  <p-tabPanel header="Выбор экрана">
-    <h3>Выбор экрана для отображения презентаций</h3>
-    <div class="settings__displays">
-      @if (selectedDisplay$ | async; as selectedDisplay) {
-        @for (display of displays; track display.id) {
-          <p-card class="settings__display-item">
-            <ng-template pTemplate="title">{{ display.label || 'Display - ' + display.id }}</ng-template>
+<p-tabs [value]="0">
+  <p-tablist>
+    <p-tab [value]="0">Выбор экрана</p-tab>
+    <p-tab [value]="1">Обновления</p-tab>
+    <p-tab [value]="2">Файлы презентаций</p-tab>
+    <p-tab [value]="3">Оформление</p-tab>
+  </p-tablist>
+  <p-tabpanels>
+    <p-tabpanel [value]="0">
+      <h3>Выбор экрана для отображения презентаций</h3>
+      <div class="settings__displays">
+        @if (selectedDisplay$ | async; as selectedDisplay) { @for (display of
+        displays; track display.id) {
+        <p-card class="settings__display-item">
+          <ng-template pTemplate="title">{{
+            display.label || 'Display - ' + display.id
+          }}</ng-template>
 
-            <p>{{ display.bounds.width }}x{{ display.bounds.height }} \ {{ display.displayFrequency.toFixed(0) }} Гц</p>
+          <p>
+            {{ display.bounds.width }}x{{ display.bounds.height }} \
+            {{ display.displayFrequency.toFixed(0) }} Гц
+          </p>
 
-            <ng-template pTemplate="footer">
-              @if (selectedDisplay.id !== display.id) {
-                <button pButton severity="primary" (click)="onSelectDisplay(display)">Выбрать</button>
-              } @else {
-                <button pButton severity="secondary" [disabled]="true">Выбрано</button>
-              }
+          <ng-template pTemplate="footer">
+            @if (selectedDisplay.id !== display.id) {
+            <button
+              pButton
+              severity="primary"
+              (click)="onSelectDisplay(display)"
+            >
+              Выбрать
+            </button>
+            } @else {
+            <button pButton severity="secondary" [disabled]="true">
+              Выбрано
+            </button>
+            }
+          </ng-template>
+        </p-card>
+        } }
+      </div>
+    </p-tabpanel>
+    <p-tabpanel [value]="1">
+      <div class="settings__updates">
+        <p>Текущая версия: v{{ appVersion }}</p>
+        <button
+          pButton
+          (click)="onCheckUpdates()"
+          [disabled]="updateInProgress"
+          [label]="
+            updateInProgress
+              ? updateLabel || 'Загрузка: ' + updatePercent + '%'
+              : 'Проверить обновления'
+          "
+        ></button>
+      </div>
+    </p-tabpanel>
+    <p-tabpanel [value]="2">
+      <div class="settings__assets">
+        <lyri-asset-management></lyri-asset-management>
+      </div>
+    </p-tabpanel>
+    <p-tabpanel [value]="3">
+      <div class="settings__appearance">
+        <div class="settings__field">
+          <div class="settings__field-options">
+            <p-toggleButton
+              inputId="themeToggle"
+              [ngModel]="isDarkTheme"
+              (ngModelChange)="onThemeToggle($event)"
+              onLabel="Тёмная"
+              offLabel="Светлая"
+              onIcon="pi pi-moon"
+              offIcon="pi pi-sun"
+            ></p-toggleButton>
+          </div>
+        </div>
 
-            </ng-template>
-          </p-card>
-        }
-      }
-    </div>
-  </p-tabPanel>
-  <p-tabPanel header="Обновления">
-    <div class="settings__updates">
-      <p>Текущая версия: v{{ appVersion }}</p>
-      <button pButton
-              (click)="onCheckUpdates()"
-              [disabled]="updateInProgress"
-              [label]="updateInProgress ? (updateLabel || ('Загрузка: ' + updatePercent + '%')) : 'Проверить обновления'">
-      </button>
-    </div>
-  </p-tabPanel>
-  <p-tabPanel header="Файлы презентаций">
-
-    <div class="settings__assets">
-      <lyri-asset-management></lyri-asset-management>
-    </div>
-  </p-tabPanel>
-</p-tabView>
-
+        <div class="settings__field">
+          <p-floatlabel>
+            <p-select
+              inputId="fontSelect"
+              [options]="fontOptions"
+              [ngModel]="selectedFont"
+              (ngModelChange)="onFontChange($event)"
+            >
+              <ng-template pTemplate="selectedItem" let-value>
+                <span
+                  [ngStyle]="{
+                    'font-family':
+                      (value?.value || value) === 'sans-serif'
+                        ? 'sans-serif'
+                        : (value?.value || value) + ', sans-serif'
+                  }"
+                >
+                  {{ value?.label || value }}
+                </span>
+              </ng-template>
+              <ng-template pTemplate="item" let-option>
+                <span
+                  [ngStyle]="{
+                    'font-family':
+                      option.value === 'sans-serif'
+                        ? 'sans-serif'
+                        : option.value + ', sans-serif'
+                  }"
+                >
+                  {{ option.label }}
+                </span>
+              </ng-template>
+            </p-select>
+            <label for="fontSelect">Шрифт интерфейса</label>
+          </p-floatlabel>
+        </div>
+      </div>
+    </p-tabpanel>
+  </p-tabpanels>
+</p-tabs>

@@ -14,6 +14,43 @@
   &:focus {
     outline: none;
   }
+
+  // Theme-specific overrides for list-style items
+  html:not(.my-app-dark) lyri-list-box .list-box__item {
+    background-color: #ffffff;
+    color: #222222;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  html.my-app-dark lyri-list-box .list-box__item {
+    background-color: #191919;
+    color: #ffffff;
+    border-bottom: 1px solid #414141;
+  }
+
+  html:not(.my-app-dark) .lyric-item {
+    background: #ffffff;
+  }
+
+  html.my-app-dark .lyric-item {
+    background: #191919;
+  }
+
+  html:not(.my-app-dark) .lyric-item__line:not(:last-child) {
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  html.my-app-dark .lyric-item__line:not(:last-child) {
+    border-bottom: 1px solid #414141;
+  }
+
+  html:not(.my-app-dark) .lyric-item__header {
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  html.my-app-dark .lyric-item__header {
+    border-bottom: 1px solid #414141;
+  }
 }
 
 .song {
@@ -27,13 +64,11 @@
 .lyric-item {
   width: 100%;
   border-radius: 8px;
-  background: #191919;
 
   $self: &;
 
   &__header {
     font-weight: bold;
-    border-bottom: 1px solid #414141;
     padding: 10px 15px;
   }
 
@@ -68,7 +103,6 @@
     }
 
     &:not(:last-child) {
-      border-bottom: 1px solid #414141;
     }
   }
 

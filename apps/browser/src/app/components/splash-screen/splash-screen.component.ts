@@ -1,10 +1,10 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 @Component({
   selector: 'lyri-splash-screen',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './splash-screen.component.html',
   styleUrl: './splash-screen.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -7,7 +7,7 @@
          (keydown)="onKeydown($event)" (click)="onClickInput($event)" />
 </p-iconField>
 
-<p-overlayPanel #searchOverlay>
+<p-popover #searchOverlay>
 
   <div class="search__wrapper">
     <div class="search-feature-row">
@@ -21,7 +21,7 @@
       </div>
       <div class="search__additional-controls">
         @if (activeTab.value === SearchTypeTabs.BIBLE) {
-          <p-dropdown [options]="(bibleTranslates$ | async) || []"
+          <p-select [options]="(bibleTranslates$ | async) || []"
                       optionLabel="title"
                       placeholder="Выберите перевод"
                       [(ngModel)]="selectedTranslate"
@@ -30,11 +30,11 @@
             <ng-template pTemplate="selectedItem" let-data>
               {{data.title.toString().substring(0, 30)}}
             </ng-template>
-          </p-dropdown>
+          </p-select>
         }
 
         @if(activeTab.value === SearchTypeTabs.SONGS) {
-          <p-dropdown [options]="(songBooks$ | async) || []"
+          <p-select [options]="(songBooks$ | async) || []"
                       optionLabel="title"
                       placeholder="Выберите сборник"
                       [(ngModel)]="selectedSongBook"
@@ -43,7 +43,7 @@
             <ng-template pTemplate="selectedItem" let-data>
               {{data.title.toString().substring(0, 30)}}
             </ng-template>
-          </p-dropdown>
+          </p-select>
         }
       </div>
     </div>
@@ -62,4 +62,4 @@
 
   </div>
 
-</p-overlayPanel>
+</p-popover>

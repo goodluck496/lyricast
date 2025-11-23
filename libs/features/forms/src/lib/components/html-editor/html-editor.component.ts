@@ -28,7 +28,6 @@ import {
 } from '@angular/core/rxjs-interop';
 import Quill from 'quill';
 import QuillResizeImage from 'quill-resize-image';
-import { EditorSelectionChangeEvent } from 'primeng/editor/editor.interface';
 import { fromEvent } from 'rxjs';
 
 Quill.register('modules/resize', QuillResizeImage);
@@ -180,7 +179,7 @@ export class HtmlEditorComponent
     this.$htmlChange.emit(this.model);
   }
 
-  onSelectionChange(event: EditorSelectionChangeEvent) {
+  onSelectionChange(event: any) {
     if (event.range === null) {
       /**
        * когда null, то считается, что редактор потерял фокус и надо бы отправить blur событие

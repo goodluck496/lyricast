@@ -1,7 +1,7 @@
 // apps/electron/src/app/base-worker-manager.ts
 import { Worker } from 'node:worker_threads';
 import { EventEmitter } from 'node:events';
-import chokidar from 'chokidar';
+import type { FSWatcher } from 'chokidar';
 import { app } from 'electron';
 import { resolveWorkerEntry, resolveWorkersAssets } from './worker-path';
 import path from 'node:path';
@@ -45,7 +45,7 @@ export class BaseHttpWorkerManager extends EventEmitter {
 
   private readonly entryPath: string;
   private readonly readyTimeoutMs: number;
-  private watcher?: chokidar.FSWatcher | EventEmitter;
+  private watcher?: FSWatcher | EventEmitter;
   private reloading = false;
 
   // промис «готовности»

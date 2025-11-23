@@ -9,11 +9,13 @@ module.exports = {
   productName: 'LyriCast', // Человекочитаемое имя
   executableName: 'lyricast', // Имя бинарника без спецсимволов
   npmRebuild: true,
+  // npmRebuild: false,
   files: [
     'dist/apps/browser/**/*',
     'dist/apps/workers/**/*',
     'dist/apps/electron/**',
     'node_modules/**',
+    // { from: '.npm-node-modules/node_modules', to: 'node_modules' },
     'package.json',
   ],
   win: {
@@ -27,9 +29,10 @@ module.exports = {
     // packageName: 'lyricast',       // под виндой не собирается если раскомментировать.  имя DEB/RPM пакета (без @ и /)
     artifactName: 'lyricast_${version}_${arch}.${ext}', // куда писать файлы
   },
-  asar: true,
+  // asar: true,
+  asar: false,
   asarUnpack: [
-    'resources/backend/**',
+    // 'node_modules/call-bind-apply-helpers/**',
     '**/*.node',
     '**/better-sqlite3/**',
     '**/chokidar/**',
@@ -55,6 +58,18 @@ module.exports = {
     {
       from: 'drizzle',
       to: 'drizzle',
+    },
+    {
+      from: 'node_modules/call-bind-apply-helpers',
+      to: 'node_modules/call-bind-apply-helpers',
+    },
+    {
+      from: 'node_modules/function-bind',
+      to: 'node_modules/function-bind',
+    },
+    {
+      from: 'node_modules/es-errors',
+      to: 'node_modules/es-errors',
     },
 
     // todo самое плохое решение,  но рабочее,

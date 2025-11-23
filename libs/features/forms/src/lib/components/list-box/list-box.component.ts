@@ -144,7 +144,7 @@ export class ListBoxComponent<T>
     }
   }
 
-  public onItemClick(item: IUiLyriListItem<T>) {
+  public onItemClick(item: IUiLyriListItem<any>) {
     this.calcSelectedItem(item);
 
     this.control.setValue(item);

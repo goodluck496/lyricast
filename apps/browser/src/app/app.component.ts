@@ -1,4 +1,11 @@
-import { ChangeDetectorRef, Component, effect, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  effect,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import {
   ActivatedRoute,
   NavigationEnd,
@@ -6,8 +13,7 @@ import {
   RouterModule,
 } from '@angular/router';
 import { MenuItem } from 'primeng/api';
-import { TabMenuModule } from 'primeng/tabmenu';
-import { TabViewModule } from 'primeng/tabview';
+
 import { filter, map, take } from 'rxjs';
 import { Store } from '@ngrx/store';
 import {
@@ -19,21 +25,12 @@ import {
   selectAppInit,
   SettingsService,
 } from '@lyri-cast/common-browser';
-import { AsyncPipe } from '@angular/common';
-import { ButtonDirective } from 'primeng/button';
 import { SplashScreenComponent } from './components/splash-screen/splash-screen.component';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   standalone: true,
-  imports: [
-    RouterModule,
-    TabMenuModule,
-    TabViewModule,
-    AsyncPipe,
-    ButtonDirective,
-    SplashScreenComponent,
-  ],
+  imports: [RouterModule, SplashScreenComponent],
   selector: 'lyri-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
@@ -50,7 +47,6 @@ export class AppComponent implements OnInit {
   router = inject(Router);
 
   isLoading = signal(true);
-
 
   activePage?: MenuItem;
 
@@ -80,25 +76,33 @@ export class AppComponent implements OnInit {
   $isNotCastingPage = toSignal(this.isNotCastingPage$);
 
   constructor() {
-    effect(() => {
-      if (!this.loadingStatusService.isInitialLoading()) {
-        this.isLoading.set(false);
-      }
-    }, {allowSignalWrites: true});
+    effect(
+      () => {
+        if (!this.loadingStatusService.isInitialLoading()) {
+          this.isLoading.set(false);
+        }
+      },
+    );
   }
 
   ngOnInit() {
-    this.router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      take(1)
-    ).subscribe((event: NavigationEnd) => {
-      const isBibleFeature = event.urlAfterRedirects.includes(Pages.BIBLE_FEATURE);
-      const isCastingPage = event.urlAfterRedirects.includes(Pages.CASTING);
+    this.router.events
+      .pipe(
+        filter(
+          (event): event is NavigationEnd => event instanceof NavigationEnd
+        ),
+        take(1)
+      )
+      .subscribe((event: NavigationEnd) => {
+        const isBibleFeature = event.urlAfterRedirects.includes(
+          Pages.BIBLE_FEATURE
+        );
+        const isCastingPage = event.urlAfterRedirects.includes(Pages.CASTING);
 
-      if (isCastingPage || !isBibleFeature) {
-        this.isLoading.set(false);
-      }
-    });
+        if (isCastingPage || !isBibleFeature) {
+          this.isLoading.set(false);
+        }
+      });
 
     const isRoot = this.router.isActive('/', {
       paths: 'exact',

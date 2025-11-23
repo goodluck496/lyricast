@@ -1,5 +1,5 @@
 import { EditorSerializerService } from './services/editor-serializer.service';
-import { CommonModule } from '@angular/common';
+
 import {
   AfterViewInit,
   ChangeDetectorRef,
@@ -11,6 +11,7 @@ import {
   OnInit,
   ViewChild,
 } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   Application,
@@ -61,7 +62,7 @@ type WorldContainer = Container & { app: Application };
 @Component({
   selector: 'lyri-pixi-slide-editor-v2',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, AsyncPipe],
   templateUrl: 'pixi-editor.component.html',
   styleUrl: 'pixi-editor.component.scss',
   providers: [...PIXI_EDITOR_PROVIDERS()],
@@ -1009,7 +1010,7 @@ export class PixiSlideEditorV2Component
 @Component({
   selector: 'lyri-test-pixi-editor-v2',
   standalone: true,
-  imports: [CommonModule, PixiSlideEditorV2Component],
+  imports: [PixiSlideEditorV2Component],
   template: `<lyri-pixi-slide-editor-v2 />`,
 })
 export class TestPixiEditorV2Component {}

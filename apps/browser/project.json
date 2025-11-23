@@ -8,19 +8,14 @@
   "targets": {
     "build": {
       "executor": "@angular-devkit/build-angular:browser",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/apps/browser",
         "index": "apps/browser/src/index.html",
         "main": "apps/browser/src/main.ts",
-        "polyfills": [
-          "zone.js"
-        ],
+        "polyfills": ["zone.js"],
         "tsConfig": "apps/browser/tsconfig.app.json",
         "inlineStyleLanguage": "scss",
-
         "assets": [
           {
             "glob": "**/*",
@@ -32,19 +27,14 @@
             "input": "apps/browser/public"
           },
           {
-            "glob": "**/*.svg",
+            "glob": "**/*",
             "input": "libs/styles/assets",
             "output": "assets"
           }
         ],
-        "styles": [
-          "apps/browser/src/styles.scss"
-        ],
-        "scripts": [
-
-        ],
-        "allowedCommonJsDependencies": [
-        ]
+        "styles": ["apps/browser/src/styles.scss"],
+        "scripts": [],
+        "allowedCommonJsDependencies": []
       },
       "configurations": {
         "production": {
@@ -90,7 +80,8 @@
         "proxyConfig": "apps/browser/proxy.conf.json",
         "host": "0.0.0.0",
         "disableHostCheck": true
-      }
+      },
+      "continuous": true
     },
     "extract-i18n": {
       "executor": "@angular-devkit/build-angular:extract-i18n",
@@ -103,11 +94,10 @@
     },
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": [
-        "{workspaceRoot}/coverage/{projectRoot}"
-      ],
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "apps/browser/jest.config.ts"
+        "jestConfig": "apps/browser/jest.config.ts",
+        "tsConfig": "apps/browser/tsconfig.spec.json"
       }
     },
     "serve-static": {

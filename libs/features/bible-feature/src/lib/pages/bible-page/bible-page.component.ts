@@ -18,7 +18,7 @@ import {
   ReactiveFormsModule,
 } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
-import { DropdownModule } from 'primeng/dropdown';
+
 import {
   BibleBookShort,
   BibleBookTitle,
@@ -69,7 +69,6 @@ import {
   SidebarService,
 } from '@lyri-cast/common-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { Router } from '@angular/router';
 import { Actions, ofType } from '@ngrx/effects';
@@ -79,6 +78,8 @@ import { ToggleButtonModule } from 'primeng/togglebutton';
 import { SvgIconComponent } from '@lyri-cast/svg-icons';
 import { ButtonDirective } from 'primeng/button';
 import { LoadingStatusService } from '@lyri-cast/common-browser';
+import { SelectModule } from 'primeng/select';
+import { PopoverModule } from 'primeng/popover';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -88,12 +89,12 @@ import { LoadingStatusService } from '@lyri-cast/common-browser';
     PageContainerComponent,
     FormsModule,
     InputTextModule,
-    DropdownModule,
+    SelectModule,
     ReactiveFormsModule,
     ListBoxComponent,
     HighlighterPipe,
     BibleChapterComponent,
-    OverlayPanelModule,
+    PopoverModule,
     BibleSidebarComponent,
     DashBoxComponent,
     ToggleButtonModule,

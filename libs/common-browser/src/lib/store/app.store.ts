@@ -7,7 +7,6 @@ import {
   props,
 } from '@ngrx/store';
 import { Pages } from '../pages.types';
-import { ActionCreatorProps, Creator } from '@ngrx/store/src/models';
 import {
   APP_COMMON_ACTIONS,
   AppCommonActionKeys,
@@ -50,10 +49,7 @@ export const AppActions = createActionGroup({
     focusPage: emptyProps(),
     openedPage: props<ActionOpenPageProps>(),
     closeWindow: props<ActionCloseWindowProps>(),
-  } satisfies Record<
-    AppCommonActionKeys,
-    ActionCreatorProps<unknown> | Creator
-  >,
+  },
 });
 
 export const AppReducer = createReducer(

@@ -243,7 +243,7 @@ export class CalendarHeaderComponent<D extends DateTime> {
       --mat-form-field-container-vertical-padding: 9px;
       --mat-form-field-container-height: 40px;
 
-      --mdc-icon-button-state-layer-size: 20px;
+      --mat-icon-button-state-layer-size: 20px;
 
       --mat-datepicker-calendar-container-background-color: #272b2a;
       --mat-datepicker-calendar-container-text-color: #e0e3e2;
@@ -285,7 +285,7 @@ export class CalendarHeaderComponent<D extends DateTime> {
 
       --mat-form-field-container-height: 40px;
 
-      --mdc-icon-button-state-layer-size: 20px;
+      --mat-icon-button-state-layer-size: 20px;
 
       --mat-datepicker-calendar-container-background-color: #272b2a;
       --mat-datepicker-calendar-container-text-color: #e0e3e2;

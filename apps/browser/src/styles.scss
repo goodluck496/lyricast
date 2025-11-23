@@ -1,9 +1,7 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import "bootstrap/dist/css/bootstrap-grid.css";
-
-@import "primeng/resources/primeng.css";
-@import "primeng/resources/themes/arya-blue/theme.css";
+@import "primeicons/primeicons.css";
 @import '@angular/material/prebuilt-themes/cyan-orange.css';
 @import "material.rewrites";
 
@@ -21,19 +19,16 @@
 body {
   margin: 0;
 
-  //font-family: "Cruinn", sans-serif !important;
-  //font-family: "Entropia", sans-serif !important;
-  //font-family: "Share-Tech-CYR" !important;
-  //font-family: "sans-serif", sans-serif !important;
-
-  background-color: black !important;
+  font-family: sans-serif;
 }
 
-* {
-  //font-family: "Cruinn", sans-serif !important;
-  //font-family: "sans-serif", sans-serif !important;
+html.my-app-dark body {
+  background-color: #000;
 }
 
+html:not(.my-app-dark) body {
+  background-color: #fff;
+}
 
 .highlighted-text {
   background-color: yellow;

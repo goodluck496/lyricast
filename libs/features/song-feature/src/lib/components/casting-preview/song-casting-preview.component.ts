@@ -9,7 +9,7 @@ import {
   OnDestroy,
   signal,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 import Reveal from 'reveal.js';
 import { SongPageSelectService } from '../../pages/song-page/song-page-select.service';
@@ -21,7 +21,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 @Component({
   selector: 'lyri-song-casting-preview',
   standalone: true,
-  imports: [CommonModule, Ng2FittextModule],
+  imports: [Ng2FittextModule],
   templateUrl: './song-casting-preview.component.html',
   styleUrl: './song-casting-preview.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

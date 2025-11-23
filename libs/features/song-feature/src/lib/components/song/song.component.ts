@@ -9,7 +9,7 @@ import {
   signal,
   viewChildren,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ISong, LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { NgScrollbar } from 'ngx-scrollbar';
 import { SongPageSelectService } from '../../pages/song-page/song-page-select.service';
@@ -17,19 +17,17 @@ import { DblClickDirective } from '@lyri-cast/ui-lib';
 import { DomHandler } from 'primeng/dom';
 import { EditorModule } from 'primeng/editor';
 import { FormsModule } from '@angular/forms';
-import { EditorTextChangeEvent } from 'primeng/editor/editor.interface';
 import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
   selector: 'lyri-song',
   standalone: true,
   imports: [
-    CommonModule,
     NgScrollbar,
     DblClickDirective,
     EditorModule,
-    FormsModule,
-  ],
+    FormsModule
+],
   templateUrl: './song.component.html',
   styleUrl: './song.component.scss',
 })
@@ -65,7 +63,6 @@ export class SongComponent {
         this.scrollToSelected();
         this.elRef.nativeElement.focus();
       },
-      { allowSignalWrites: true }
     );
 
     effect(
@@ -75,7 +72,6 @@ export class SongComponent {
         // const lines = lyrics[0];
         // this.onLineClick(lines, lines.lines[0], false);
       },
-      { allowSignalWrites: true }
     );
   }
 
@@ -110,7 +106,7 @@ export class SongComponent {
     }, 1000);
   }
 
-  onTextChange(event: EditorTextChangeEvent) {
+  onTextChange(event: any) {
     console.log('event', event);
   }
 }

@@ -21,7 +21,6 @@ import {
   PAGE_CONTAINER_TEMPLATES,
   Pages,
 } from '@lyri-cast/common-browser';
-import { DropdownModule } from 'primeng/dropdown';
 import { FreeSlideService } from './free-slide.service';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
@@ -54,6 +53,8 @@ import { PrimeTemplate } from 'primeng/api';
 import { Ripple } from 'primeng/ripple';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { CtrlDragCopyDirective } from '../../directives/ctrl-drag-copy.directive';
+import { SelectModule } from 'primeng/select';
+import { PopoverModule } from 'primeng/popover';
 
 @Component({
   selector: 'lyri-free-slide',
@@ -64,7 +65,6 @@ import { CtrlDragCopyDirective } from '../../directives/ctrl-drag-copy.directive
     FormsModule,
     ReactiveFormsModule,
     PageContainerComponent,
-    DropdownModule,
     CardModule,
     InputTextModule,
     NgScrollbar,
@@ -75,6 +75,8 @@ import { CtrlDragCopyDirective } from '../../directives/ctrl-drag-copy.directive
     Ripple,
     DragDropModule,
     CtrlDragCopyDirective,
+    PopoverModule,
+    SelectModule
   ],
   templateUrl: './free-slide.component.html',
   styleUrl: './free-slide.component.scss',

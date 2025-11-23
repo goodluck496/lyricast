@@ -19,16 +19,16 @@
         "assets": [
           {
             "glob": "**/*",
-            "input": "assets",
-            "output": "assets"
-          },
-          {
-            "glob": "**/*",
             "input": "apps/browser/public"
           },
           {
             "glob": "**/*",
             "input": "libs/styles/assets",
+            "output": "assets"
+          },
+          {
+            "glob": "**/*",
+            "input": "assets/build",
             "output": "assets"
           }
         ],

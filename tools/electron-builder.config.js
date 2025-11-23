@@ -14,9 +14,15 @@ module.exports = {
     'dist/apps/browser/**/*',
     'dist/apps/workers/**/*',
     'dist/apps/electron/**',
-    'node_modules/**',
+    // 'node_modules/**',
     // { from: '.npm-node-modules/node_modules', to: 'node_modules' },
     'package.json',
+    "!**/*.md",
+    "!**/LICENSE",
+    "!**/CHANGELOG*",
+    "!**/test/**",
+    "!**/tests/**",
+    "!**/*.map"
   ],
   win: {
     target: [{ target: 'nsis', arch: ['ia32'] }],
@@ -30,7 +36,7 @@ module.exports = {
     artifactName: 'lyricast_${version}_${arch}.${ext}', // куда писать файлы
   },
   // asar: true,
-  asar: false,
+  asar: true,
   asarUnpack: [
     // 'node_modules/call-bind-apply-helpers/**',
     '**/*.node',
@@ -59,6 +65,9 @@ module.exports = {
       from: 'drizzle',
       to: 'drizzle',
     },
+    // todo в проекте используется pnpm для оптимизации работы с пакетами,
+    //  и с ним проект в собранном состоянии весит на 150Мб меньше,
+    //  но приходится извлекать зависимости таким способом, т.к. lectronwa
     {
       from: 'node_modules/call-bind-apply-helpers',
       to: 'node_modules/call-bind-apply-helpers',

@@ -2,6 +2,7 @@
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   DestroyRef,
   ElementRef,
@@ -11,7 +12,6 @@ import {
   OnDestroy,
   OnInit,
   output,
-  signal,
   viewChild,
 } from '@angular/core';
 import {
@@ -24,11 +24,10 @@ import { Editor, EditorModule } from 'primeng/editor';
 import {
   outputToObservable,
   takeUntilDestroyed,
-  toObservable,
 } from '@angular/core/rxjs-interop';
 import Quill from 'quill';
 import QuillResizeImage from 'quill-resize-image';
-import { fromEvent } from 'rxjs';
+import { BehaviorSubject, fromEvent } from 'rxjs';
 
 Quill.register('modules/resize', QuillResizeImage);
 
@@ -54,6 +53,7 @@ export type LyriHtmlEditorResult = {
 export class HtmlEditorComponent
   implements ControlValueAccessor, OnInit, OnDestroy, AfterViewInit
 {
+  cdr = inject(ChangeDetectorRef);
   destroyRef = inject(DestroyRef);
 
   html = input(''); // стартовый HTML
@@ -71,8 +71,7 @@ export class HtmlEditorComponent
 
   model = '';
 
-  isReady = signal(false);
-  isReady$ = toObservable(this.isReady);
+  isReady$ = new BehaviorSubject(false);
 
   quillFormats = [
     'header',
@@ -148,30 +147,27 @@ export class HtmlEditorComponent
 
   onReady() {
     // Фокус в поле сразу
-    // Quill доступен: this.editorCmp.getQuill()
-    queueMicrotask(() => {
-      this.editorComp().getQuill().focus();
-      this.isReady.set(true);
+    this.editorComp().getQuill().focus();
+    this.isReady$.next(true);
 
-      const quill: Quill = this.editorComp().getQuill();
-      fromEvent<KeyboardEvent>(quill.root, 'keydown')
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe((event) => {
-          if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-            event.stopPropagation();
-            event.preventDefault();
+    const quill: Quill = this.editorComp().getQuill();
+    fromEvent<KeyboardEvent>(quill.root, 'keydown')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.stopPropagation();
+          event.preventDefault();
 
-            this.$finish.emit({
-              type: 'submit',
-            });
-          }
-          if (event.key === 'Escape') {
-            event.stopPropagation();
-            event.preventDefault();
-            this.$finish.emit({ type: 'cancel' });
-          }
-        });
-    });
+          this.$finish.emit({
+            type: 'submit',
+          });
+        }
+        if (event.key === 'Escape') {
+          event.stopPropagation();
+          event.preventDefault();
+          this.$finish.emit({ type: 'cancel' });
+        }
+      });
   }
 
   emitChange() {
@@ -221,9 +217,9 @@ export class HtmlEditorComponent
      * для того чтобы в редактор можно было вставить какое-то значение
      */
     const quill: Quill = this.editorComp().getQuill();
-    const delta = quill.clipboard.convert({
-      html,
-    });
+    // Quill.clipboard.convert ожидает строку HTML, а не объект.
+    // Передаём строку напрямую, чтобы контент корректно появлялся в редакторе.
+    const delta = quill.clipboard.convert({ html: html ?? '' });
     quill.setContents(delta);
 
     this.emitChange();

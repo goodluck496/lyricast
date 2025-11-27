@@ -122,7 +122,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
         '.pixi-html-text, .pixi-html-text * { margin: 0; white-space: normal !important; word-break: normal !important; overflow-wrap: break-word !important; }',
-        '.pixi-html-text ul, .pixi-html-text ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+        ' ul, ol { margin: 0; padding-left: 0; list-style-position: inside; }',
       ],
     });
 
@@ -204,7 +204,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
         '.pixi-html-text, .pixi-html-text p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
-        '.pixi-html-text ul, .pixi-html-text ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+        '.pixi-html-text ul, .pixi-html-text ol { margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
       ],
     });
 
@@ -293,7 +293,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
         '.pixi-html-text, .pixi-html-text p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
-        '.pixi-html-text ul, .pixi-html-text ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+        '.pixi-html-text ul, .pixi-html-text ol { margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
       ],
     });
 

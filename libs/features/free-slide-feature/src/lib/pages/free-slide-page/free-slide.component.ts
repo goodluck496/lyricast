@@ -31,6 +31,7 @@ import {
   Subject,
   take,
   takeUntil,
+  merge,
 } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgScrollbar } from 'ngx-scrollbar';
@@ -194,10 +195,9 @@ export class FreeSlideComponent implements AfterViewInit {
           // Clear current nodes to avoid races when switching quickly
           this.pixiEditor.clearAllNodes();
           this.pixiEditor.serializer.deserializeState(slideData);
-          // Ensure text auto-fit after loading scene
-          await this.pixiEditor.fitAllTextNodes();
-          // Wait for text nodes to be properly sized before updating scene bounds
-          await new Promise(resolve => requestAnimationFrame(resolve));
+          // После десериализации используем сохранённые размеры/позиции нод,
+          // поэтому не вызываем глобальный fitAllTextNodes, который растягивает
+          // все текстовые блоки на всю сцену.
           this.pixiEditor.sceneViewport.updateSceneBounds();
           if (version !== this.loadVersion) return; // stale load, abort
         } catch (e) {
@@ -275,16 +275,17 @@ export class FreeSlideComponent implements AfterViewInit {
 
     // const { id } = RouteParamsReducerHelper.reduceSnapshot(this.route.snapshot);
 
-    this.slideService.updateSlide(
-      {
-        id: this.currentSlideId,
-        name: this.slideForm.getRawValue().name,
-        index: this.currentSlideIndex,
-        content: htmlString,
-        previewAssetId: assetId,
-      },
-      { suppressUiUpdate: !!options.isNavigatingAway }
-    );
+    const slidePayload = {
+      id: this.currentSlideId,
+      name: this.slideForm.getRawValue().name,
+      index: this.currentSlideIndex,
+      content: htmlString,
+      previewAssetId: assetId,
+    };
+
+    this.slideService.updateSlide(slidePayload, {
+      suppressUiUpdate: !!options.isNavigatingAway,
+    });
 
     this.slideForm.markAsPristine();
 
@@ -312,15 +313,12 @@ export class FreeSlideComponent implements AfterViewInit {
 
           // If the slide we just saved is the one on the casting screen, dispatch the update
           if (castedSlideId === this.currentSlideId) {
-            const updatedSlide = this.slideService.slidesMap.get(
-              this.currentSlideId
-            );
             const liveSyncEnabled = this.slideService.liveSyncEnabled$.value;
 
-            if (updatedSlide && liveSyncEnabled) {
+            if (liveSyncEnabled) {
               this.store.dispatch(
                 FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide]({
-                  slide: updatedSlide,
+                  slide: slidePayload as any,
                 })
               );
             }
@@ -480,8 +478,11 @@ export class FreeSlideComponent implements AfterViewInit {
 
     // При любом изменении в редакторе - запускаем триггер сохранения
     setTimeout(() => {
-      if (this.pixiEditor?.history) {
-        this.pixiEditor.history.commandExecuted$
+      if (this.pixiEditor) {
+        merge(
+          this.pixiEditor.history.commandExecuted$,
+          this.pixiEditor.change$
+        )
           .pipe(
             takeUntil(this.changePresentation$),
             takeUntilDestroyed(this.destroyRef)

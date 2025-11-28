@@ -116,6 +116,11 @@ export class PixiSlideEditorV2Component
   canRedo$ = this.history.canRedo$;
 
   private destroy$ = new Subject<void>();
+  /**
+   * Generic "content changed" stream for external consumers (e.g., free-slide preview/live-sync).
+   * Emits on commands that mutate visual slide content but may not go through HistoryService.
+   */
+  change$ = new Subject<void>();
   private ctxMenu?: ContextMenuService;
 
   ngOnInit() {
@@ -709,6 +714,31 @@ export class PixiSlideEditorV2Component
         takeUntil(this.destroy$)
       )
       .subscribe(() => reorder('backward'));
+
+    // Broadcast content-changing commands (for autosave/live-sync consumers)
+    this.bus.commands$
+      .pipe(
+        filter((command) =>
+          [
+            'ADD_TEXT',
+            'APPLY_STYLE',
+            'SET_TEXT_BACKGROUND',
+            'CLEAR_TEXT_BACKGROUND',
+            'SET_TEXT_BG_COLOR',
+            'ADD_SHAPE',
+            'SET_SHAPE_BACKGROUND',
+            'CLEAR_SHAPE_BACKGROUND',
+            'SET_SHAPE_FILL',
+            'ADD_BRUSH',
+            'SET_BRUSH_BACKGROUND',
+            'CLEAR_BRUSH_BACKGROUND',
+          ].includes(command.t)
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.change$.next();
+      });
 
     // Enable iframe/video interactive mode
     this.bus.commands$

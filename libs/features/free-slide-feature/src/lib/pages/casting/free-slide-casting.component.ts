@@ -82,7 +82,7 @@ export class FreeSlideCastingComponent
   private app!: Application;
   private scene!: Container;
   private previousScene: Container | null = null; // предыдущая сцена для переходов
-  private currentSlideId: string = ''; // ID текущего слайда
+  private currentSlideId = ''; // ID текущего слайда
   private isTransitioning = false; // флаг выполняющегося перехода
   private previousSlideAssetIds: Set<string> = new Set();
   private renderVersion = 0; // инкрементируем для каждого нового рендера, чтобы отменять предыдущие
@@ -126,18 +126,14 @@ export class FreeSlideCastingComponent
         let slideToRender: Slide | undefined;
 
         if (navigate?.slide && process) {
-          // If a navigation or live update has occurred, find the latest version of that slide
+          // If navigation has occurred, always prefer the slide from the casting process,
+          // which is updated by liveUpdateSlide reducer. Fallback to navigate.slide only
+          // if for some reason the slide is missing from the process.
           const foundSlide = process.slides.find(
             (s) => s.id === navigate.slide.id
           );
 
-          // The slide from the navigate state could be more up-to-date after a live update.
-          // If the content differs, prioritize the slide from the navigate state.
-          if (foundSlide && navigate.slide.content !== foundSlide.content) {
-            slideToRender = navigate.slide;
-          } else {
-            slideToRender = foundSlide;
-          }
+          slideToRender = foundSlide || navigate.slide;
         } else if (process) {
           // Otherwise, use the initial slide from the process
           slideToRender = process.slides[process.fromIndex];
@@ -247,35 +243,36 @@ export class FreeSlideCastingComponent
       transition: transition
     });
 
-    // Если уже выполняется переход, пропускаем
+    // Если уже выполняется переход, пропускаем новый запрос
     if (this.isTransitioning) {
       console.log('[Casting] Transition already in progress, skipping');
       return;
     }
 
-    // Если это тот же слайд, не делаем переход (но только если уже был рендер)
-    if (this.currentSlideId === slide.id && this.previousScene) {
-      console.log('[Casting] Same slide, skipping transition');
-      return;
-    }
+    const sameSlide = this.currentSlideId === slide.id && this.previousScene;
 
     this.isTransitioning = true;
 
     try {
       console.log('[Casting] Creating new scene for slide', slide.id);
-      // Создаем новую сцену для нового слайда
+      // Создаем новую сцену для слайда (как для нового контента, так и для live-update)
       const newScene = await this.createSlideScene(slide);
-      
+
       if (!newScene) {
         console.log('[Casting] Failed to create scene');
-        this.isTransitioning = false;
         return;
       }
 
       console.log('[Casting] Scene created, previousScene exists:', !!this.previousScene);
 
-      // Если есть предыдущая сцена, выполняем переход
-      if (this.previousScene && this.currentSlideId) {
+      if (sameSlide) {
+        // Live-update того же самого слайда: обновляем сцену без перехода
+        console.log('[Casting] Same slide, updating scene without transition');
+        this.app.stage.removeChildren();
+        this.app.stage.addChild(newScene);
+        this.previousScene?.destroy({ children: true });
+      } else if (this.previousScene && this.currentSlideId) {
+        // Если есть предыдущая сцена и это новый слайд — выполняем переход
         console.log('[Casting] Executing transition', transition.type);
         await this.transitionService.executeTransition({
           app: this.app,
@@ -283,9 +280,8 @@ export class FreeSlideCastingComponent
           newScene: newScene,
           transition: transition,
         });
-        
+
         console.log('[Casting] Transition completed, destroying old scene');
-        // Уничтожаем предыдущую сцену
         this.previousScene.destroy({ children: true });
       } else {
         // Первый слайд - просто показываем без перехода
@@ -299,11 +295,11 @@ export class FreeSlideCastingComponent
       this.currentSlideId = slide.id;
       this.scene = newScene;
 
-      console.log('[Casting] Slide transition completed successfully');
+      console.log('[Casting] Slide render completed successfully');
 
     } catch (error) {
-      console.error('[Casting] Error during slide transition:', error);
-      // В случае ошибки, просто показываем новый слайд
+      console.error('[Casting] Error during slide transition/render:', error);
+      // В случае ошибки, по возможности оставляем предыдущую сцену
       this.app.stage.removeChildren();
       if (this.previousScene) {
         this.app.stage.addChild(this.previousScene);
@@ -378,7 +374,7 @@ export class FreeSlideCastingComponent
           scaleFactor: scaleFactor,
         });
         if (isStale()) return null;
-        
+
         if (node) {
           node.x = nodeData.x * scaleFactor;
           node.y = nodeData.y * scaleFactor;
@@ -396,7 +392,7 @@ export class FreeSlideCastingComponent
       // Обрабатываем iframe элементы
       this.domOverlayRef.nativeElement.innerHTML = '';
       if (isStale()) return null;
-      
+
       for (const iframeData of iframeNodes) {
         const iframe = this.renderer.createElement('iframe');
         this.renderer.setAttribute(iframe, 'src', iframeData.url);

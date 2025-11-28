@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import 'reflect-metadata';
 import { parentPort } from 'node:worker_threads';
 import { NestFactory } from '@nestjs/core';
@@ -17,10 +19,13 @@ async function bootstrap() {
   try {
     const expressApp = express();
     const adapter = new ExpressAdapter(expressApp);
+    log.log('Creating Nest app for SongsDomainModule...');
     const app = await NestFactory.create(SongsDomainModule, adapter, {
       logger: ['error', 'warn', 'log'],
       cors: false, // ходим через main-прокси
     });
+
+    log.log('Nest app created, configuring pipes and shutdown hooks...');
 
     app.useGlobalPipes(
       new ValidationPipe({ transform: true, whitelist: true })
@@ -28,6 +33,7 @@ async function bootstrap() {
     app.enableShutdownHooks();
 
     // слушаем СЛУЧАЙНЫЙ порт только на loopback
+    log.log('Starting HTTP listener on random port...');
     await app.listen(0, '127.0.0.1');
 
     const addr = app.getHttpServer().address();
@@ -46,10 +52,16 @@ async function bootstrap() {
       }
     });
   } catch (e: any) {
+    // Максимально подробный лог ошибки старта воркера, чтобы main-процесс мог её увидеть
+    const errMsg = e?.message ?? String(e);
+    const errStack = e?.stack ?? '';
+    log.error(e);
+    log.error('bootstrap error: ' + errMsg, errStack);
+
     parentPort?.postMessage({
       t: 'error',
-      error: e?.message ?? String(e),
-      stack: e?.stack,
+      error: errMsg,
+      stack: errStack,
     } as Msg);
     process.exit(1);
   }

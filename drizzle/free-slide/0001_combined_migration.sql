@@ -14,3 +14,5 @@ CREATE TABLE `slides` (
 	`presentation_id` text NOT NULL,
 	FOREIGN KEY (`presentation_id`) REFERENCES `presentations`(`id`) ON UPDATE no action ON DELETE cascade
 );
+--> statement-breakpoint
+ALTER TABLE `presentations` ADD `transition_settings` text DEFAULT '';

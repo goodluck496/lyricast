@@ -14,21 +14,19 @@ import {
 @Injectable()
 export class SongsService {
   fileNameSuffix = '.songs.json';
-
-  assetsPath = path.resolve(__dirname, 'assets', 'complete-jsons');
-  // assetsPath = path.resolve(__dirname, 'assets', 'complete-jsons');
-
+  // assetsPath = path.resolve(__dirname, 'assets', 'complete-jsons', 'songs');
+  assetsPath: string;
   bookCache: Record<string, ISongBook> = {};
   songCache: Record<string, ISong> = {};
 
   isReady = false;
-
   constructor() {
     this.assetsPath = path.resolve(
       process.env?.['assetsPath'] ?? '',
       'complete-jsons',
       'songs'
     );
+
   }
 
   readBookNames(): ISongBookName[] {

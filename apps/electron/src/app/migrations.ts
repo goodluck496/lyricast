@@ -1,6 +1,6 @@
 import { getDbPath } from '@lyri-cast/common-workers';
 import Database from 'better-sqlite3';
-import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { BetterSQLite3Database, drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { join } from 'path';
 import * as process from 'node:process';
@@ -23,7 +23,6 @@ export async function runDatabaseMigrations() {
     try {
       const { dbPath } = getDbPath({
         dbName: config.dbName,
-        copyFromSourceInProd: true,
       });
 
       const migrationsPath = join(

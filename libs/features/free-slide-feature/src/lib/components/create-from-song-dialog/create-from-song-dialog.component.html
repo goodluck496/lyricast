@@ -13,22 +13,22 @@
     <div class="form-grid">
       <div class="form-grid__item">
         <label>Справочник</label>
-        <p-dropdown
+        <p-select
           [options]="songBooksDict"
           optionLabel="title"
           appendTo="body"
           (onChange)="onSelectBook($event.value)"
-        ></p-dropdown>
+        ></p-select>
       </div>
 
       <div class="form-grid__item">
         <label>Разделить блоки</label>
-        <p-dropdown
+        <p-select
           [options]="splitOptions"
           [ngModel]="splitCount()"
           appendTo="body"
           (onChange)="splitCount.set($event.value)"
-        ></p-dropdown>
+        ></p-select>
       </div>
 
     </div>

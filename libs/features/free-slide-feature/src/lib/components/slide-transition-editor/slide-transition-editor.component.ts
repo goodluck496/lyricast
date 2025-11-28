@@ -5,7 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   FormControl,
   FormGroup,
@@ -31,31 +31,28 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest, map, take } from 'rxjs';
 import { ButtonDirective } from 'primeng/button';
-import { DropdownModule } from 'primeng/dropdown';
+import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SliderModule } from 'primeng/slider';
 import { Ripple } from 'primeng/ripple';
 import { SvgIconComponent } from '@lyri-cast/svg-icons';
 import { ScrollPanelModule } from 'primeng/scrollpanel';
 import { CheckboxModule } from 'primeng/checkbox';
-import { NgScrollbar } from 'ngx-scrollbar';
 
 @Component({
   selector: 'lyri-slide-transition-editor',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     ReactiveFormsModule,
     ButtonDirective,
-    DropdownModule,
+    SelectModule,
     InputNumberModule,
     SliderModule,
     Ripple,
     SvgIconComponent,
     ScrollPanelModule,
     CheckboxModule,
-    NgScrollbar,
   ],
   templateUrl: './slide-transition-editor.component.html',
   styleUrls: ['./slide-transition-editor.component.scss'],

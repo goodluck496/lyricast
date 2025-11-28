@@ -22,7 +22,7 @@ import {
 import { CdkListbox, CdkOption } from '@angular/cdk/listbox';
 import { HighlighterPipe } from '@lyri-cast/ui-lib';
 import { filterEmpty } from '@lyri-cast/common';
-import { TabViewModule } from 'primeng/tabview';
+import { TabsModule } from 'primeng/tabs';
 import { Actions, ofType } from '@ngrx/effects';
 import { Router } from '@angular/router';
 import { Pages } from '@lyri-cast/common-browser';
@@ -41,7 +41,7 @@ import { Pages } from '@lyri-cast/common-browser';
     CdkListbox,
     CdkOption,
     HighlighterPipe,
-    TabViewModule,
+    TabsModule,
   ],
   templateUrl: './song-search-result.component.html',
   styleUrl: './song-search-result.component.scss',
@@ -99,8 +99,9 @@ export class SongSearchResultComponent {
     this.store.dispatch(SongActions.selectBook(value.bookName));
   }
 
-  onChangeTab(tabIndex: number) {
-    this.selectedTabIndex = tabIndex;
+  onChangeTab(tabValue: any) {
+    const idx = Number(tabValue ?? 0);
+    this.selectedTabIndex = Number.isNaN(idx) ? 0 : idx;
     this.cdr.detectChanges();
   }
 }

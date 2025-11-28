@@ -1,5 +1,4 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { ActionCreatorProps } from '@ngrx/store/src/models';
 import { ISong, ISongBookName, LyricForCasting } from '@lyri-cast/entities';
 import { Pages } from '@lyri-cast/common-browser';
 
@@ -74,6 +73,6 @@ export const SongActions = createActionGroup({
     stopCasting: emptyProps(),
     pauseCasting: emptyProps(),
     slideNavigate: props<SongPresentationNavigatePayload>(),
-    castingStarted: emptyProps()
-  } satisfies Record<SongActionKeys, ActionCreatorProps<unknown>>,
+    castingStarted: emptyProps(),
+  },
 });

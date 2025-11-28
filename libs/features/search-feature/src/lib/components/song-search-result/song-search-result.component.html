@@ -3,13 +3,22 @@
 @if (searchResult$ | async; as searchResultDto) {
   @if (searchResultDto.length) {
 
-    <p-tabView (onChange)="onChangeTab($event.index)">
-      @for (data of searchResultDto; track data.bookName.fileKey) {
+    <p-tabs [value]="selectedTabIndex" (valueChange)="onChangeTab($event)">
+      <p-tablist>
+      @for (data of searchResultDto; track data.bookName.fileKey; let idx = $index) {
         @if (data.songs.length) {
-          <p-tabPanel #tabPanel [header]="data.bookName.humanName">
+          <p-tab [value]="idx">{{ data.bookName.humanName }}</p-tab>
+        }
+
+      }
+      </p-tablist>
+      <p-tabpanels>
+      @for (data of searchResultDto; track data.bookName.fileKey; let idx = $index) {
+        @if (data.songs.length) {
+          <p-tabpanel [value]="idx">
             <!-- виртуальный скролл в табах работает только с таким фиксом
             https://stackoverflow.com/a/56474174/11542647 -->
-            @if(tabPanel.selected) {
+            @if(idx === selectedTabIndex) {
               <ng-scrollbar externalViewport cdkVirtualScrollViewport class="song-search-result__scroll-container">
                 <cdk-virtual-scroll-viewport [appendOnly]="false"
                                              orientation="vertical"
@@ -23,7 +32,7 @@
                          (click)="onSelectSearchElement(item)"
                     >
                       <div class="list-item__wrapper">
-                        <div class="list-item__number" [innerHTML]="item.number  | highliter: data.search"></div>
+                        <div class="list-item__number" [innerHTML]="item.number !== null && item.number !== undefined ? (item.number | number:'1.0-0') : ''"></div>
                         <div class="list-item__title" >
                           <span class="list-item__title-content" [innerHTML]="item.title | highliter: data.search"></span>
                         </div>
@@ -40,11 +49,12 @@
               </ng-scrollbar>
             }
 
-          </p-tabPanel>
+          </p-tabpanel>
         }
 
       }
-    </p-tabView>
+      </p-tabpanels>
+    </p-tabs>
 
 
   } @else {

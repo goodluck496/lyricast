@@ -11,11 +11,9 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { InputText, InputTextModule } from 'primeng/inputtext';
-import { OverlayPanel, OverlayPanelModule } from 'primeng/overlaypanel';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { SelectButtonChangeEvent } from 'primeng/selectbutton/selectbutton.interface';
-import { BibleSearchService } from '../bible-search.service';
 import { SongSearchService } from '../song-search.service';
+import { BibleSearchService } from '../bible-search.service';
 import { BibleSearchResultComponent } from '../components/bible-search-result/bible-search-result.component';
 import { SongSearchResultComponent } from '../components/song-search-result/song-search-result.component';
 import {
@@ -35,15 +33,16 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Actions, ofType } from '@ngrx/effects';
 import { BibleActions } from '@lyri-cast/bible-store';
-import { IconFieldModule } from 'primeng/iconfield';
+import { SelectModule } from 'primeng/select';
+import { Popover, PopoverModule } from 'primeng/popover';
 import { InputIconModule } from 'primeng/inputicon';
 import { BibleTranslateShort, ISongBookName } from '@lyri-cast/entities';
 import { IUiLyriItemInList, IUiLyriListItem } from '@lyri-cast/form';
 import { NavigationStart, Router } from '@angular/router';
-import { DropdownModule } from 'primeng/dropdown';
 import { Store } from '@ngrx/store';
 import { SongActions } from '@lyri-cast/song-store';
 import { Pages } from '@lyri-cast/common-browser';
+import { IconFieldModule } from 'primeng/iconfield';
 
 export enum SearchTypeTabs {
   BIBLE = 'bible',
@@ -58,14 +57,14 @@ export enum SearchTypeTabs {
     CommonModule,
     InputTextModule,
     ReactiveFormsModule,
-    OverlayPanelModule,
     SelectButtonModule,
     FormsModule,
     BibleSearchResultComponent,
     SongSearchResultComponent,
     IconFieldModule,
     InputIconModule,
-    DropdownModule,
+    SelectModule,
+    PopoverModule,
   ],
   templateUrl: './search-feature.component.html',
   styleUrl: './search-feature.component.scss',
@@ -85,7 +84,7 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
   defaultTab = input<SearchTypeTabs>(SearchTypeTabs.BIBLE);
 
   input = viewChild.required(InputText);
-  searchOverlay = viewChild.required('searchOverlay', { read: OverlayPanel });
+  searchOverlay = viewChild.required('searchOverlay', { read: Popover });
 
   searchControl = new FormControl<string>('');
 
@@ -269,7 +268,7 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
     this.searchOverlay().show(event);
   }
 
-  onSelectTab(tab: SelectButtonChangeEvent) {
+  onSelectTab(tab: any) {
     if (!tab.value) {
       this.activeTab.setValue(this.lastTab);
       return;

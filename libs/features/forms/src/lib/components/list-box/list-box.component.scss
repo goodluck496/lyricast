@@ -8,6 +8,7 @@
 
   --list-box-item-h: 42px;
 
+  // selection colors (shared for both themes)
   --list-box-item-selected-bg: #0D99FF;
   --list-box-item-hover-bg: #92cdff;
   --list-box-item-selected-text-color: white;
@@ -59,7 +60,6 @@
     min-height: var(--list-box-item-h);
     width: 100%;
     cursor: pointer;
-    border-bottom: 1px solid #414141;
     transition: .3s;
 
     &--selected {

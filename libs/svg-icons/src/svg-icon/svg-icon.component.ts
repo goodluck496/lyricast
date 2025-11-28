@@ -1,4 +1,4 @@
-import { DOCUMENT } from '@angular/common';
+
 import {
   ChangeDetectionStrategy,
   Component,
@@ -6,6 +6,7 @@ import {
   Inject,
   Input,
   Optional,
+  DOCUMENT
 } from '@angular/core';
 import { IconsService } from '../icons.service';
 import { LyriIconName } from '../lyri-icons/lyri-svg-icon.model';

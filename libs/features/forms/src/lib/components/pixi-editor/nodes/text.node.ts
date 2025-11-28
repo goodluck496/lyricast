@@ -121,8 +121,8 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       fontSize: size,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
-        'p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
-        'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+        '.pixi-html-text, .pixi-html-text * { margin: 0; white-space: normal !important; word-break: normal !important; overflow-wrap: break-word !important; }',
+        ' ul, ol { margin: 0; padding-left: 0; list-style-position: inside; }',
       ],
     });
 
@@ -203,8 +203,8 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       lineHeight: this.lastCalculatedFontSize * this.style.lineHeight,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
-        'p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
-        'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+        '.pixi-html-text, .pixi-html-text p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
+        '.pixi-html-text ul, .pixi-html-text ol { margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
       ],
     });
 
@@ -292,8 +292,8 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       fontSize: size,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
-        'p { margin: 0; white-space: normal; }',
-        'ul, ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+        '.pixi-html-text, .pixi-html-text p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
+        '.pixi-html-text ul, .pixi-html-text ol { margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
       ],
     });
 

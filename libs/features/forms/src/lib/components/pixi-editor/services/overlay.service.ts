@@ -7,7 +7,7 @@ import {
   inject,
   Injectable,
 } from '@angular/core';
-import { filter, Subject } from 'rxjs';
+import { debounceTime, filter, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { EditorStore } from './editor-store.service';
 import { HistoryService } from './history.service';
@@ -105,11 +105,16 @@ export class OverlayService {
     host.appendChild(ref.location.nativeElement as HTMLElement);
 
     // 3) заполняем начальными данными
-    const initialHtml = node.textHtml;
+    const initialHtml = node.textHtml ?? '';
     this.originalHTML = initialHtml;
 
+    // ВАЖНО: передаём initialHtml во входной input сразу после создания компонента,
+    // а не только внутри isReady$, чтобы не зависеть от тайминга события onInit.
     ref.setInput('html', initialHtml);
-    ref.instance.isReady$.pipe(filter(Boolean)).subscribe(() => {
+
+    // Когда редактор реально готов, даём фокус и при необходимости можем ещё раз
+    // установить HTML (но, как правило, достаточно эффекта в HtmlEditorComponent).
+    ref.instance.isReady$.pipe(debounceTime(0), filter(Boolean)).subscribe(() => {
       ref.instance.setHTML(initialHtml);
       ref.instance.focus();
     });
@@ -125,14 +130,22 @@ export class OverlayService {
         if (commit && currentNode && comp) {
           const newHTML: string = comp.getHTML();
 
+          // Нормализуем HTML из редактора: убираем неразрывные пробелы,
+          // чтобы перенос происходил по словам, а не по буквам.
+          const normalizedHTML = newHTML.replace(/&nbsp;/g, ' ');
+
           // для fit и рендера текста оставляем .text (плэйн)
-          currentNode.textHtml = newHTML;
+          currentNode.textHtml = normalizedHTML;
 
           currentNode.requestFit();
 
           // История — на основе html (можно сделать ChangeContentCommand, если нужно)
           if (origHtml !== undefined && newHTML !== origHtml) {
-            const cmd = new ChangeTextCommand(currentNode, origHtml, newHTML);
+            const cmd = new ChangeTextCommand(
+              currentNode,
+              origHtml,
+              normalizedHTML
+            );
             this.history.execute(cmd);
           }
         }
@@ -186,11 +199,13 @@ export class OverlayService {
     if (node && comp) {
       const newHTML: string = comp.getHTML();
 
-      node.textHtml = newHTML;
+      const normalizedHTML = newHTML.replace(/&nbsp;/g, ' ');
+
+      node.textHtml = normalizedHTML;
       node.requestFit();
 
       if (originalHTML !== undefined && newHTML !== originalHTML) {
-        const cmd = new ChangeTextCommand(node, originalHTML, newHTML);
+        const cmd = new ChangeTextCommand(node, originalHTML, normalizedHTML);
         this.history.execute(cmd);
       }
     }

@@ -13,6 +13,7 @@ const common = {
   target: 'node22', // Node версии твоего Electron
   bundle: true, // тянем код из libs/**
   sourcemap: isWatch,
+  minify: !isWatch,
   external: ['better-sqlite3', 'bindings'], // нативный модуль вне бандла
   tsconfig: 'tsconfig.esbuild.json', // см. пункт 3
 };

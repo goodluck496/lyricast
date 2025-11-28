@@ -9,16 +9,16 @@
 <!--      <p-checkbox id="chorusAfterCouplet" inputId="chorusAfterCouplet" [binary]="true"-->
 <!--                  [(ngModel)]="chorusAfterCouplet"></p-checkbox>-->
       <label for="lyric-count">Разделить <br>на блоки:</label>
-      <p-dropdown id="lyric-count" inputId="lyric-count" [(ngModel)]="splitCount"
+      <p-select id="lyric-count" inputId="lyric-count" [(ngModel)]="splitCount"
                   (onChange)="onSelectSplitValue($event.value)"
-                  [options]="SplitPartsCountOptions"></p-dropdown>
+                  [options]="SplitPartsCountOptions"></p-select>
     </div>
   </ng-template>
 
   <ng-container page-content>
     <div class="list-search-wrapper">
       <div class="list-search-block list-search-block--wide">
-        <p-dropdown
+        <p-select
           [formControl]="selectedBook"
           [options]="songBooksDict"
           appendTo="body"
@@ -26,7 +26,7 @@
           styleClass="list-search-dropdown"
         >
           <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
-        </p-dropdown>
+        </p-select>
 
         <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl" [tabIndex]="0"
                        [loading]="isLoading()">

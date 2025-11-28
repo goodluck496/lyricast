@@ -1,4 +1,8 @@
 <div class="casting-preview">
-  <img *ngIf="previewUrl$ | async as url" [src]="url" alt="preview" />
-  <div *ngIf="!(previewUrl$ | async)" class="placeholder">Нет превью</div>
+  @if (previewUrl$ | async; as url) {
+    <img [src]="url" alt="preview" />
+  }
+  @if (!(previewUrl$ | async)) {
+    <div class="placeholder">Нет превью</div>
+  }
 </div>

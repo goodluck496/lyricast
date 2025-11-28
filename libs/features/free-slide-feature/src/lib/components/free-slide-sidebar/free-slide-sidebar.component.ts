@@ -41,8 +41,7 @@ import { FreeSlideApiService } from '@lyri-cast/free-slide';
 
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { FormsModule } from '@angular/forms';
-import { ToggleButtonChangeEvent } from 'primeng/togglebutton/togglebutton.interface';
-import { TabViewModule } from 'primeng/tabview';
+import { TabsModule } from 'primeng/tabs';
 import { SlideTransitionEditorComponent } from '../slide-transition-editor/slide-transition-editor.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -57,7 +56,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     FreeSlideCastingPreviewComponent,
     ToggleButtonModule,
     FormsModule,
-    TabViewModule,
+    TabsModule,
     SlideTransitionEditorComponent,
   ],
   templateUrl: './free-slide-sidebar.component.html',
@@ -89,7 +88,7 @@ export class FreeSlideSidebarComponent {
   castingIsFrozen$ = this.store.select(selectFreeSlideCastingFrozen);
   liveSyncEnabled$ = this.slideService.liveSyncEnabled$.asObservable();
 
-  onLiveSyncToggle(event: ToggleButtonChangeEvent) {
+  onLiveSyncToggle(event: any) {
     const isEnabled = !!event.checked;
     this.slideService.toggleLiveSync(isEnabled);
 
@@ -147,7 +146,7 @@ export class FreeSlideSidebarComponent {
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.pauseCasting]());
   }
 
-  onFreezeToggle(event: ToggleButtonChangeEvent) {
+  onFreezeToggle(event: any) {
     const frozen = !!event.checked;
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.setFreezeCasting]({ frozen }));
   }

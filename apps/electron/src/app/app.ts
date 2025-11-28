@@ -19,10 +19,13 @@ import {
   Subscription,
 } from 'rxjs';
 import { WorkersRegistry } from '@lyri-cast/worker-kit';
+import { WORKER_SPECS } from './workers.config';
 import { registerSvcProtocol } from './api/svc.protocol';
 import { startFileServer } from './server';
 import * as http from 'http';
 import { runDatabaseMigrations } from './migrations';
+import { configureAppPathsEnv } from './paths';
+import { migrateUserDataFromOldLocations } from './user-data-migration';
 
 export const DEFAULT_WEB_PREF = {
   contextIsolation: true,
@@ -237,23 +240,12 @@ export default class App {
   }
 
   private static async onReady() {
-    // Pass necessary paths and flags to worker processes via environment variables
-    process.env.IS_PACKAGED = String(app.isPackaged);
-    // In packaged builds we want to use the bundled resources assets directory
-    // so that DB and assets resolve to '<resources>/assets/...'.
-    if (app.isPackaged) {
-      process.env.USER_DATA_PATH = join(process.resourcesPath, 'assets');
-    } else {
-      process.env.USER_DATA_PATH = app.getPath('userData');
-    }
+    // Configure all important paths and environment variables in one place
+    configureAppPathsEnv();
+    // console.log('process.env', process.env);
 
-    // In development, we need the project root to find the 'data' folder.
-    // In production, we need the resources path.
-    if (app.isPackaged) {
-      process.env.SOURCE_DATA_PATH = process.resourcesPath;
-    } else {
-      process.env.SOURCE_DATA_PATH = process.cwd(); // Project root
-    }
+    // One-time migration from old resources-based locations to userData
+    await migrateUserDataFromOldLocations();
 
     await runDatabaseMigrations();
 
@@ -299,36 +291,23 @@ export default class App {
 
     const isDev = !app.isPackaged;
 
-    App.workers = new WorkersRegistry([
-      {
-        name: 'songs',
-        rootApiPath: 'songs',
-        distSubdir: 'songs-service',
+    App.workers = new WorkersRegistry(
+      WORKER_SPECS.map((spec) => ({
+        ...spec,
         devWatch: isDev,
-      },
-      {
-        name: 'bible',
-        rootApiPath: 'bible',
-        distSubdir: 'bible-service',
-        devWatch: isDev,
-      },
-      {
-        name: 'free-slide',
-        rootApiPath: 'free-slide',
-        distSubdir: 'free-slide-service',
-        devWatch: isDev,
-      },
-      {
-        name: 'assets',
-        rootApiPath: 'assets',
-        distSubdir: 'asset-service',
-        devWatch: isDev,
-      },
-    ]);
+      }))
+    );
     registerSvcProtocol(App.workers);
 
-    await App.workers.waitAllReady();
-    console.log('workers are ready!!!');
+    try {
+      await App.workers.waitAllReady(5000);
+      console.log('workers are ready!!!');
+    } catch (err: any) {
+      console.log('workers are not ready!!!', err);
+      App.workers.disposeAll();
+      App.application.quit();
+    }
+
 
     // This method will be called when Electron has finished
     // initialization and is ready to create browser windows.
@@ -339,10 +318,11 @@ export default class App {
     }
 
     // (опционально) лог/метрики
-    App.workers.on('worker:ready', (e) => console.log('[ready]', e));
-    App.workers.on('worker:reready', (e) => console.log('[reready]', e));
-    App.workers.on('worker:exit', (e) => console.warn('[exit]', e));
-    App.workers.on('worker:error', (e) => console.error('[error]', e));
+    App.workers.on('worker:ready', (e) => console.log('[worker-ready]', e));
+    App.workers.on('worker:reready', (e) => console.log('[worker-reready]', e));
+    App.workers.on('worker:exit', (e) => console.warn('[worker-exit]', e));
+    App.workers.on('worker:error', (e) => console.error('[worker-error]', e));
+    App.workers.on('worker:event', (e) => console.log('[worker-event]', e));
   }
 
   private static onActivate() {

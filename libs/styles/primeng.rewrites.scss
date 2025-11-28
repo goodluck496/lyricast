@@ -1,13 +1,13 @@
 /**
-  tabs
+  tabs (PrimeNG 20 Tabs component)
  */
-.p-tabview {
-  .p-tabview-panels {
+.p-tabs {
+  .p-tabs-panels {
     //50px высота хедера в табах
     height: calc(100% - 50px);
     width: 100%;
 
-    .p-tabview-panel {
+    .p-tabs-panel {
       height: 100%;
     }
   }

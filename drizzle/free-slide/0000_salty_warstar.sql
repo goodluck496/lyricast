@@ -1,1 +1,0 @@
-ALTER TABLE `presentations` ADD `transition_settings` text DEFAULT '';

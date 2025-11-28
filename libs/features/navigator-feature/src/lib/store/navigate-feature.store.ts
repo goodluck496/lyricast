@@ -6,7 +6,6 @@ import {
   on,
   props,
 } from '@ngrx/store';
-import { ActionCreatorProps, Creator } from '@ngrx/store/src/models';
 
 export type NavigatorFeatureState = {
   history: HistoryItem[];
@@ -28,10 +27,7 @@ export const NavigatorActions = createActionGroup({
   events: {
     [NavigatorActionsTypes.push]: props<{ data: HistoryItem }>(),
     [NavigatorActionsTypes.clear]: emptyProps(),
-  } satisfies Record<
-    NavigatorActionKeys,
-    ActionCreatorProps<unknown> | Creator
-  >,
+  },
 });
 
 export const NavigatorReducer = createReducer(

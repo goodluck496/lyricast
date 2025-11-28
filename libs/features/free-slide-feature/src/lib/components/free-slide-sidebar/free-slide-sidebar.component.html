@@ -1,7 +1,11 @@
 <div class="control-sidebar__wrapper">
-  <p-tabView>
-    <!-- Вкладка Управление -->
-    <p-tabPanel header="Управление">
+  <p-tabs [value]="0">
+    <p-tablist>
+      <p-tab [value]="0">Управление</p-tab>
+      <p-tab [value]="1">Эффекты переходов</p-tab>
+    </p-tablist>
+    <p-tabpanels>
+    <p-tabpanel [value]="0">
       <lyri-free-slide-casting-preview></lyri-free-slide-casting-preview>
 
       <div class="control-sidebar__actions flex flex-column">
@@ -53,13 +57,14 @@
       <lyri-navigator-feature class="control-sidebar__navigator" />
 
       <div class="control-sidebar__divider"></div>
-    </p-tabPanel>
+    </p-tabpanel>
 
     <!-- Вкладка Эффекты переходов -->
-    <p-tabPanel header="Эффекты переходов">
+    <p-tabpanel [value]="1">
       <lyri-slide-transition-editor></lyri-slide-transition-editor>
-    </p-tabPanel>
-  </p-tabView>
+    </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
 </div>
 
 

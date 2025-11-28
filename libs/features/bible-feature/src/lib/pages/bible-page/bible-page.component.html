@@ -11,7 +11,7 @@
   <ng-container page-content [formGroup]="bibleFormGroup">
     <div class="list-search-wrapper list-search-wrapper__books">
       <div class="list-search-block ">
-        <p-dropdown
+        <p-select
           [formControl]="bibleFormGroup.controls.translate"
           [options]="bibleTranslates"
           appendTo="body"
@@ -19,7 +19,7 @@
           styleClass="list-search-dropdown"
         >
           <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
-        </p-dropdown>
+        </p-select>
 
 
 

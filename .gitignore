@@ -7,6 +7,7 @@ tmp
 
 # dependencies
 node_modules
+.npm-node-modules
 
 # IDEs and editors
 /.idea
@@ -53,3 +54,5 @@ temp-scripts/**/*
 data
 
 tools/publish-release.ps1
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md

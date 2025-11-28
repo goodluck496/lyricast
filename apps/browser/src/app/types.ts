@@ -1,6 +1,9 @@
-import { MenuItem as MenuItemPrime } from 'primeng/api/menuitem';
 import { LyriIconName } from '@lyri-cast/svg-icons';
 
-export type MenuItem = MenuItemPrime & {
-  icon: LyriIconName
+export type MenuItem = {
+  icon: LyriIconName;
+  routerLink: string[];
+  label: string;
+  visible: boolean;
+  disabled?: boolean;
 };

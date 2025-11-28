@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, EventEmitter, Output, inject, signal } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
-import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
@@ -11,6 +10,7 @@ import { IShortSong, ISong, ISongBookName, Lyric, LyricTypeEnum, PresentationDto
 import { ListBoxComponent, IUiLyriItemInList, IUiLyriListItem, AssetStorageService, ListBoxTemplates } from '@lyri-cast/form';
 import { SongsApiService } from '@lyri-cast/data-access-songs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { SelectModule } from 'primeng/select';
 
 @Component({
   selector: 'lyri-create-from-song-dialog',
@@ -20,7 +20,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     FormsModule,
     ReactiveFormsModule,
     ButtonModule,
-    DropdownModule,
+    SelectModule,
     InputTextModule,
     CheckboxModule,
     ListBoxComponent,

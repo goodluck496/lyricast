@@ -10,7 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 import Reveal from 'reveal.js';
 import { BibleVerse, BibleVerseForCasting } from '@lyri-cast/entities';
@@ -29,7 +29,7 @@ import { filterEmpty } from '@lyri-cast/common';
 @Component({
   selector: 'lyri-bible-casting-preview',
   standalone: true,
-  imports: [CommonModule, Ng2FittextModule],
+  imports: [Ng2FittextModule],
   templateUrl: './bible-casting-preview.component.html',
   styleUrl: './bible-casting-preview.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

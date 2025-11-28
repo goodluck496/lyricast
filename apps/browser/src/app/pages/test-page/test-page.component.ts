@@ -1,7 +1,7 @@
 import { Component, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { BridgeService } from '@lyri-cast/common-browser';
 import { DatepickerComponent } from './test-utils/datepicker.component';
-import { DropdownChangeEvent, DropdownModule } from 'primeng/dropdown';
+import { SelectModule } from 'primeng/select';
 import { DatepickerPrimengComponent } from './test-utils/datepicker-primeng.component';
 import { MatCalendar } from '@angular/material/datepicker';
 import { CdkConnectedOverlay, CdkOverlayOrigin } from '@angular/cdk/overlay';
@@ -11,7 +11,7 @@ import { CdkConnectedOverlay, CdkOverlayOrigin } from '@angular/cdk/overlay';
   standalone: true,
   imports: [
     DatepickerComponent,
-    DropdownModule,
+    SelectModule,
     DatepickerPrimengComponent,
     MatCalendar,
     CdkConnectedOverlay,
@@ -43,7 +43,7 @@ export class TestPageComponent implements OnInit {
 
   ngOnInit() {}
 
-  onChangeType(type: DropdownChangeEvent) {
+  onChangeType(type: any) {
     if (type.value === 'EQUAL') {
       this.selectType = 'single';
     }

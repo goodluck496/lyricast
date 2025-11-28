@@ -1,17 +1,24 @@
-<p-tabView [activeIndex]="1" styleClass="navigator-tabs" class="navigator-tabs">
-  <p-tabPanel header="Оформление" [disabled]="true">
+<p-tabs [value]="1" styleClass="navigator-tabs" class="navigator-tabs">
+  <p-tablist>
+    <p-tab [value]="0" [disabled]="true">Оформление</p-tab>
+    <p-tab [value]="1">История</p-tab>
+    <p-tab [value]="2" [disabled]="true">Очередь</p-tab>
+  </p-tablist>
+  <p-tabpanels>
+  <p-tabpanel [value]="0">
     <p>
       Lorem ipsum dolor sit amet...
     </p>
-  </p-tabPanel>
-  <p-tabPanel header="История" class="navigator-tab">
+  </p-tabpanel>
+  <p-tabpanel [value]="1" class="navigator-tab">
     <div class="navigator-tabs__content">
       <lyri-navigator-history></lyri-navigator-history>
     </div>
-  </p-tabPanel>
-  <p-tabPanel header="Очередь" [disabled]="true">
+  </p-tabpanel>
+  <p-tabpanel [value]="2">
     <p>
       At vero eos et accusamus et iusto odio dignissimos...
     </p>
-  </p-tabPanel>
-</p-tabView>
+  </p-tabpanel>
+  </p-tabpanels>
+</p-tabs>

@@ -23,6 +23,7 @@ export class WorkersRegistry extends EventEmitter {
       m.on('reready', (e) => this.emit('worker:reready', e));
       m.on('exit', (e) => this.emit('worker:exit', e));
       m.on('error', (e) => this.emit('worker:error', e));
+      m.on('event', (e) => this.emit('worker:event', e));
     });
   }
 

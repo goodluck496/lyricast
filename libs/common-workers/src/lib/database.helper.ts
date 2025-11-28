@@ -1,10 +1,8 @@
-
 import path from 'path';
 import fs from 'fs';
 
 export interface DbPathOptions {
   dbName: string;
-  copyFromSourceInProd?: boolean;
 }
 
 export interface DbPathResult {
@@ -13,49 +11,21 @@ export interface DbPathResult {
 }
 
 export function getDbPath(options: DbPathOptions): DbPathResult {
-  const { dbName, copyFromSourceInProd } = options;
+  const { dbName } = options;
 
-  const isPackaged = process.env.IS_PACKAGED === 'true';
   const userDataPath = process.env.USER_DATA_PATH;
-  const sourceDataPath = process.env.SOURCE_DATA_PATH;
 
-  if (!sourceDataPath || !userDataPath) {
+  if (!userDataPath) {
     throw new Error('Database paths are not configured. Required environment variables are missing.');
   }
 
-  let dbPath: string;
+  // Единственная "живая" точка хранения БД — внутри USER_DATA_PATH/databases,
+  // как в dev, так и в prod.
+  const dbPath = path.join(userDataPath, 'databases', dbName);
   let isNewDb = false;
 
-  if (isPackaged) {
-    // PRODUCTION LOGIC
-    const destinationDbPath = path.join(userDataPath, 'databases', dbName);
-
-    if (!fs.existsSync(destinationDbPath)) {
-      isNewDb = true;
-      const destinationDir = path.dirname(destinationDbPath);
-      if (!fs.existsSync(destinationDir)) {
-        fs.mkdirSync(destinationDir, { recursive: true });
-      }
-
-      if (copyFromSourceInProd) {
-        const sourceDbPathFull = path.join(sourceDataPath, 'assets', 'databases', dbName);
-
-        if (fs.existsSync(sourceDbPathFull)) {
-          // Avoid copying a file onto itself when source and destination are the same
-          if (path.resolve(sourceDbPathFull) !== path.resolve(destinationDbPath)) {
-            fs.copyFileSync(sourceDbPathFull, destinationDbPath);
-          }
-          isNewDb = false;
-        }
-      }
-    }
-    dbPath = destinationDbPath;
-  } else {
-    // DEVELOPMENT LOGIC
-    dbPath = path.resolve(sourceDataPath, 'data', dbName);
-    if (!fs.existsSync(dbPath)) {
-      isNewDb = true;
-    }
+  if (!fs.existsSync(dbPath)) {
+    isNewDb = true;
   }
 
   const dbDir = path.dirname(dbPath);

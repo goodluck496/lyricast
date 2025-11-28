@@ -48,7 +48,7 @@
 
         <div class="form-field">
           <label for="transition-type">Тип перехода</label>
-          <p-dropdown
+          <p-select
             id="transition-type"
             [options]="transitionTypes"
             formControlName="type"
@@ -79,7 +79,7 @@
 
           <div class="form-field">
             <label for="transition-easing">Функция сглаживания</label>
-            <p-dropdown
+            <p-select
               id="transition-easing"
               [options]="easingOptions"
               formControlName="easing"

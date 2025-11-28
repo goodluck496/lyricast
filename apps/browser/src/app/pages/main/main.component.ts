@@ -11,10 +11,10 @@ import {
   NavigationEnd,
   Router,
   RouterOutlet,
+  RouterLink,
+  RouterLinkActive,
 } from '@angular/router';
-import { TabViewModule } from 'primeng/tabview';
 
-import { TabMenuModule } from 'primeng/tabmenu';
 import {
   FreeSlidePages,
   MainComponentService,
@@ -54,8 +54,8 @@ import { lyriBulletList } from '@lyri-cast/svg-icons/lyri-icons/lyri-bullet-list
   standalone: true,
   imports: [
     RouterOutlet,
-    TabViewModule,
-    TabMenuModule,
+    RouterLink,
+    RouterLinkActive,
     ProgressSpinnerModule,
     SearchFeatureComponent,
     NgTemplateOutlet,

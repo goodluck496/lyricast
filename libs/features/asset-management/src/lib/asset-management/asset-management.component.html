@@ -31,7 +31,7 @@
     [scrollable]="true"
     scrollHeight="40vh"
     [loading]="loading()"
-  >
+    >
     <ng-template pTemplate="header">
       <tr>
         <th style="width: 3rem">
@@ -67,21 +67,23 @@
     </ng-template>
   </p-table>
 
-  <p-toolbar *ngIf="selectedAssets.length > 0" styleClass="context-toolbar">
-    <div class="p-toolbar-group-start">
-      <button
-        pButton
-        type="button"
-        [label]="'Delete (' + selectedAssets.length + ')'"
-        icon="pi pi-trash"
-        class="p-button-danger"
-        (click)="confirmDeleteSelected()"
-      ></button>
-    </div>
-    <div class="p-toolbar-group-end">
-      <span class="selected-count"
-        >{{ selectedAssets.length }} item(s) selected</span
-      >
-    </div>
-  </p-toolbar>
-</div>
+  @if (selectedAssets.length > 0) {
+    <p-toolbar class="context-toolbar">
+      <div class="p-toolbar-group-start">
+        <button
+          pButton
+          type="button"
+          [label]="'Delete (' + selectedAssets.length + ')'"
+          icon="pi pi-trash"
+          class="p-button-danger"
+          (click)="confirmDeleteSelected()"
+        ></button>
+      </div>
+      <div class="p-toolbar-group-end">
+        <span class="selected-count"
+          >{{ selectedAssets.length }} item(s) selected</span
+          >
+        </div>
+      </p-toolbar>
+    }
+  </div>

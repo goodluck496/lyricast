@@ -10,7 +10,7 @@ import {
   signal,
   viewChildren,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { NgScrollbar } from 'ngx-scrollbar';
 import { BibleChapterSection, BibleVerse } from '@lyri-cast/entities';
 import { Store } from '@ngrx/store';
@@ -29,7 +29,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 @Component({
   selector: 'lyri-bible-chapter',
   standalone: true,
-  imports: [CommonModule, NgScrollbar],
+  imports: [NgScrollbar],
   templateUrl: './bible-chapter.component.html',
   styleUrl: './bible-chapter.component.scss',
 })

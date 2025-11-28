@@ -4,17 +4,21 @@ const GITHUB_TOKEN = process.env.GH_TOKEN || '';
 const isPublishEnabled = CI && GITHUB_TOKEN;
 
 module.exports = {
-  // npmRebuild: false,
   appId: 'com.lyricast.app',
   productName: 'LyriCast', // Человекочитаемое имя
   executableName: 'lyricast', // Имя бинарника без спецсимволов
   npmRebuild: true,
   files: [
     'dist/apps/browser/**/*',
-    'dist/apps/backend/**/*',
+    'dist/apps/workers/**/*',
     'dist/apps/electron/**',
-    'node_modules/**',
     'package.json',
+    "!**/*.md",
+    "!**/LICENSE",
+    "!**/CHANGELOG*",
+    "!**/test/**",
+    "!**/tests/**",
+    "!**/*.map"
   ],
   win: {
     target: [{ target: 'nsis', arch: ['ia32'] }],
@@ -29,7 +33,6 @@ module.exports = {
   },
   asar: true,
   asarUnpack: [
-    'resources/backend/**',
     '**/*.node',
     '**/better-sqlite3/**',
     '**/chokidar/**',
@@ -39,11 +42,6 @@ module.exports = {
   },
   compression: 'maximum',
   extraResources: [
-    // todo  @deprecated
-    // { //было нужно для работы старых воркеров внутри electron проекта
-    //   from: 'dist/apps/electron/assets',
-    //   to: 'electron-assets',
-    // },
     {
       from: 'assets/complete-jsons',
       to: 'assets/complete-jsons',
@@ -53,20 +51,24 @@ module.exports = {
       to: 'assets/icons',
     },
     {
-      from: 'data',
-      to: 'assets/databases',
-    },
-    {
       from: 'drizzle',
       to: 'drizzle',
     },
-
-    // todo самое плохое решение,  но рабочее,
-    //  чтобы в вместо битого package.json в backend копировать сразу модули
-    // {
-    //   from: 'node_modules',
-    //   to: 'backend/node_modules',
-    // },
+    // todo в проекте используется pnpm для оптимизации работы с пакетами,
+    //  и с ним проект в собранном состоянии весит на 150Мб меньше,
+    //  но приходится извлекать зависимости таким способом, т.к. electron без них не запускает проект
+    {
+      from: 'node_modules/call-bind-apply-helpers',
+      to: 'node_modules/call-bind-apply-helpers',
+    },
+    {
+      from: 'node_modules/function-bind',
+      to: 'node_modules/function-bind',
+    },
+    {
+      from: 'node_modules/es-errors',
+      to: 'node_modules/es-errors',
+    },
   ],
   publish: isPublishEnabled
     ? [

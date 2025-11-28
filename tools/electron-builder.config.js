@@ -4,18 +4,14 @@ const GITHUB_TOKEN = process.env.GH_TOKEN || '';
 const isPublishEnabled = CI && GITHUB_TOKEN;
 
 module.exports = {
-  // npmRebuild: false,
   appId: 'com.lyricast.app',
   productName: 'LyriCast', // Человекочитаемое имя
   executableName: 'lyricast', // Имя бинарника без спецсимволов
   npmRebuild: true,
-  // npmRebuild: false,
   files: [
     'dist/apps/browser/**/*',
     'dist/apps/workers/**/*',
     'dist/apps/electron/**',
-    // 'node_modules/**',
-    // { from: '.npm-node-modules/node_modules', to: 'node_modules' },
     'package.json',
     "!**/*.md",
     "!**/LICENSE",
@@ -35,10 +31,8 @@ module.exports = {
     // packageName: 'lyricast',       // под виндой не собирается если раскомментировать.  имя DEB/RPM пакета (без @ и /)
     artifactName: 'lyricast_${version}_${arch}.${ext}', // куда писать файлы
   },
-  // asar: true,
   asar: true,
   asarUnpack: [
-    // 'node_modules/call-bind-apply-helpers/**',
     '**/*.node',
     '**/better-sqlite3/**',
     '**/chokidar/**',
@@ -48,11 +42,6 @@ module.exports = {
   },
   compression: 'maximum',
   extraResources: [
-    // todo  @deprecated
-    // { //было нужно для работы старых воркеров внутри electron проекта
-    //   from: 'dist/apps/electron/assets',
-    //   to: 'electron-assets',
-    // },
     {
       from: 'assets/complete-jsons',
       to: 'assets/complete-jsons',
@@ -67,7 +56,7 @@ module.exports = {
     },
     // todo в проекте используется pnpm для оптимизации работы с пакетами,
     //  и с ним проект в собранном состоянии весит на 150Мб меньше,
-    //  но приходится извлекать зависимости таким способом, т.к. lectronwa
+    //  но приходится извлекать зависимости таким способом, т.к. electron без них не запускает проект
     {
       from: 'node_modules/call-bind-apply-helpers',
       to: 'node_modules/call-bind-apply-helpers',
@@ -80,13 +69,6 @@ module.exports = {
       from: 'node_modules/es-errors',
       to: 'node_modules/es-errors',
     },
-
-    // todo самое плохое решение,  но рабочее,
-    //  чтобы в вместо битого package.json в backend копировать сразу модули
-    // {
-    //   from: 'node_modules',
-    //   to: 'backend/node_modules',
-    // },
   ],
   publish: isPublishEnabled
     ? [

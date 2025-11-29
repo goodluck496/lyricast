@@ -2,7 +2,7 @@
   <p-progressSpinner class="loader"></p-progressSpinner>
 } @else {
   <div class="dash-box__container">
-    <ng-scrollbar style="width: 100%">
+    <ng-scrollbar style="width: 100%; height: 100%">
       <div class="dash-box__wrapper">
         @for (item of showItems(); track item.searchKey; let index = $index) {
           <div

@@ -1,21 +1,48 @@
 
 :host {
   display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
 }
 
 .navigator-tab {
   width: 100%;
+  height: 100%;
+  display: flex;
 }
 
 .navigator-tabs {
   width: 100%;
   height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 
   ::ng-deep {
     .navigator-tabs {
       height: 100%;
+    }
+
+    // keep tab headers at natural size and prevent them from being squeezed
+    .p-tablist {
+      flex: 0 0 auto;
+    }
+
+    // make PrimeNG tabs layout use full height
+    .p-tabpanels {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .p-tabpanel {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
   }
 
@@ -25,6 +52,6 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
+    min-height: 0; // allow inner scrollbar to shrink and scroll
   }
 }
-

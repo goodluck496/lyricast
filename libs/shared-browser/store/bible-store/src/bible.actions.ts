@@ -16,6 +16,7 @@ export type BibleStartCastingPayload = {
   chapter: BibleChapterShort;
   content: BibleVerseForCasting[];
   fromIndex: number;
+  range?: { from: number; to: number };
 };
 
 export type BiblePresentationNavigatePayload = {
@@ -47,7 +48,7 @@ export const BibleActionsEnum = {
   stopCasting: 'stopCasting',
   pauseCasting: 'pauseCasting',
   castingProcessChange: 'castingProcessChange',
-
+  selectVersesRange: 'selectVersesRange',
 } as const;
 
 export type BibleActionsEnumKeys = keyof typeof BibleActionsEnum;
@@ -85,6 +86,7 @@ export const BibleActions = createActionGroup({
     [BibleActionsEnum.pauseCasting]: emptyProps(),
     [BibleActionsEnum.castingProcessChange]:
       props<BiblePresentationNavigatePayload>(),
-    [BibleActionsEnum.openedCastingPage]: emptyProps()
+    [BibleActionsEnum.openedCastingPage]: emptyProps(),
+    [BibleActionsEnum.selectVersesRange]: props<{ from: number; to: number }>(),
   },
 });

@@ -135,5 +135,11 @@ export const BibleReducers = createReducer<BibleState>(
       ...state,
       selectedPath: data.path,
     } satisfies BibleState;
+  }),
+  on(BibleActions.selectVersesRange, (state, { from, to }) => {
+    return {
+      ...state,
+      selectedVersesRange: { from, to },
+    } satisfies BibleState;
   })
 );

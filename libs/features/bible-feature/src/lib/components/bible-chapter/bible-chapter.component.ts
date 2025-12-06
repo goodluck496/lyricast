@@ -19,6 +19,7 @@ import {
   selectSelectedBibleVerse,
   selectSelectedPath,
   selectSelectedPrevOrNextVerse,
+  selectSelectedVersesRange,
 } from '@lyri-cast/bible-store';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime } from 'rxjs';
@@ -48,6 +49,9 @@ export class BibleChapterComponent implements OnInit {
   selectedVerse$ = this.store.select(selectSelectedBibleVerse);
   selectedPrevOrNextVerse$ = this.store.select(selectSelectedPrevOrNextVerse);
   selectedPath$ = this.store.select(selectSelectedPath);
+
+  selectedRange = signal<{ from: number; to: number } | null>(null);
+  selectedRange$ = this.store.select(selectSelectedVersesRange);
 
   isScrolled = false;
 
@@ -82,6 +86,12 @@ export class BibleChapterComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef), debounceTime(0))
       .subscribe((path) => {
         this.selectVerse(path);
+      });
+
+    this.selectedRange$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((range) => {
+        this.selectedRange.set(range);
       });
   }
 
@@ -134,7 +144,37 @@ export class BibleChapterComponent implements OnInit {
     }, 100);
   }
 
-  onSelectVerse(verse: BibleVerse, casting = false) {
+  isInRange(verseNumber: number): boolean {
+    const range = this.selectedRange();
+    if (!range) {
+      return false;
+    }
+
+    return verseNumber >= range.from && verseNumber <= range.to;
+  }
+
+  onSelectVerse(verse: BibleVerse, mouseEvent?: MouseEvent, casting = false) {
+    const shiftPressed = !!mouseEvent?.shiftKey;
+
+    if (shiftPressed) {
+      const current = this.selectedVerse();
+      const from = current
+        ? Math.min(current.number, verse.number)
+        : verse.number;
+      const to = current
+        ? Math.max(current.number, verse.number)
+        : verse.number;
+
+      this.store.dispatch(BibleActions.selectVersesRange({ from, to }));
+    } else {
+      this.store.dispatch(
+        BibleActions.selectVersesRange({
+          from: verse.number,
+          to: verse.number,
+        })
+      );
+    }
+
     this.store.dispatch(BibleActions.selectBibleVerse(verse));
 
     if (casting) {

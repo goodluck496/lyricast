@@ -53,6 +53,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
   selectedChapterId = signal<number | null>(null);
   selectedContents = signal<BibleVerseForCasting[]>([]);
   selectedVerseId = signal<number>(1);
+  selectedRange = signal<{ from: number; to: number } | null>(null);
 
   showingContent = signal(false);
   lines = signal<string[]>([]);
@@ -116,17 +117,53 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
     this.selectedBook.set(payload.book);
     this.selectedBookTitle.set(payload.book.title.full);
-    this.selectedContents.set(payload.content);
     this.selectedChapterId.set(payload.chapter.number);
+    const range = payload.range ?? null;
+    this.selectedRange.set(range);
+
+    if (range) {
+      const versesInRange = payload.content.filter(
+        (v) => v.number >= range.from && v.number <= range.to
+      );
+
+      if (versesInRange.length) {
+        const first = versesInRange[0];
+        const combinedHtml = versesInRange
+          .map((v) => (Array.isArray(v.text) ? v.text.join(' ') : (v as any).text))
+          .join('<br/>');
+
+        this.selectedContents.set([
+          {
+            ...first,
+            text: [combinedHtml],
+          },
+        ]);
+
+        this.selectedVerseId.set(range.from);
+      } else {
+        this.selectedContents.set(payload.content);
+        this.selectedVerseId.set(payload.fromIndex ?? 0);
+      }
+    } else {
+      this.selectedContents.set(payload.content);
+      this.selectedVerseId.set(payload.fromIndex ?? 0);
+    }
+
     this.showingContent.set(true);
-    this.selectedVerseId.set(payload.fromIndex ?? 0);
     this.cdr.detectChanges();
 
     await this.initReveal();
     this.deckRef?.layout();
     this.deckRef?.sync();
 
-    if (payload.fromIndex) {
+    // Для диапазона всегда показываем первый (и единственный) слайд,
+    // для одиночного стиха оставляем существующее поведение.
+    const hasRange = !!payload.range;
+    if (hasRange) {
+      // Первый дочерний section внутри stack пустой (placeholder),
+      // реальные слайды начинаются с индекса 1.
+      this.deckRef?.slide(undefined, 1);
+    } else if (payload.fromIndex) {
       this.deckRef?.slide(undefined, payload.fromIndex);
     } else {
       this.deckRef?.slide(0, 0);

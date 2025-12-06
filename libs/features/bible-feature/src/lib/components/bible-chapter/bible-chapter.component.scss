@@ -12,7 +12,6 @@
   flex-direction: column;
 
   &__header {
-
   }
 
   &__content {
@@ -28,6 +27,7 @@
     width: 100%;
     border-radius: 8px;
 
+    position: relative;
     transition: background-color .3s;
     cursor: pointer;
 
@@ -35,6 +35,11 @@
       background-color: #0D99FF;
       color: white;
       text-shadow: 1px 1px 10px black;
+    }
+
+    &--in-range:not(&--selected) {
+      background-color: #C5E6FF;
+      color: #003B73;
     }
 
     &:hover:not(.bible-chapter-section__verse--selected) {
@@ -58,6 +63,24 @@
     display: inline !important;
     margin-top: 1px;
     padding-right: 8px;
+  }
+
+  &__shift-badge {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+
+  &__verse:hover &__shift-badge {
+    opacity: 1;
   }
 
 }

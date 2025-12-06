@@ -18,6 +18,7 @@ export const {
   selectSelectedBibleVerse,
   selectSelectedPrevOrNextVerse,
   selectSelectedPath,
+  selectSelectedVersesRange,
   selectBooks,
   selectChaptersOfBook,
   selectChapterLoading,

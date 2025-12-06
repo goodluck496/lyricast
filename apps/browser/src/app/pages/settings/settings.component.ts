@@ -19,6 +19,8 @@ import { TabsModule } from 'primeng/tabs';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { SelectModule } from 'primeng/select';
 import { FloatLabelModule } from 'primeng/floatlabel';
+import { SnowfallManager } from '../../../services/common/snowfall.service';
+import { ToggleSwitch } from 'primeng/toggleswitch';
 
 @Component({
   selector: 'lyri-settings',
@@ -34,6 +36,7 @@ import { FloatLabelModule } from 'primeng/floatlabel';
     ToggleButtonModule,
     SelectModule,
     FloatLabelModule,
+    ToggleSwitch,
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
@@ -43,6 +46,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   cdr = inject(ChangeDetectorRef);
   settingsSrv = inject(SettingsService);
   windowSrv = inject(WindowService);
+  snowfall = inject(SnowfallManager);
 
   displays: AppDisplay[] = [];
 
@@ -72,6 +76,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }));
   selectedFont = 'sans-serif';
   isDarkTheme = true;
+  snowEnabled = false;
 
   async ngOnInit() {
     const srv = await this.settingsSrv.init();
@@ -158,6 +163,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.onThemeToggle(this.isDarkTheme);
     this.onFontChange(this.selectedFont);
 
+    // Snowfall settings
+    this.snowEnabled = this.snowfall.isEnabled();
+
+    this.cdr.detectChanges();
+  }
+
+  onSnowToggle(enabled: boolean) {
+    this.snowEnabled = enabled;
+    this.snowfall.setEnabled(enabled);
     this.cdr.detectChanges();
   }
 

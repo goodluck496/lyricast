@@ -12,7 +12,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
 import { Store } from '@ngrx/store';
-import { SlideDto } from '@lyri-cast/entities';
+import { SlideDto, SerializedState } from '@lyri-cast/entities';
 import { Actions } from '@ngrx/effects';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { PageContainerComponent } from '@lyri-cast/ui-lib';
@@ -183,7 +183,7 @@ export class FreeSlideComponent implements AfterViewInit {
       if (slide.content) {
         const version = ++this.loadVersion;
         try {
-          const slideData = JSON.parse(slide.content);
+          const slideData = JSON.parse(slide.content) as SerializedState;
 
           // Restore aspect ratio BEFORE deserializing nodes
           if (slideData.aspectRatio) {
@@ -195,10 +195,19 @@ export class FreeSlideComponent implements AfterViewInit {
           // Clear current nodes to avoid races when switching quickly
           this.pixiEditor.clearAllNodes();
           this.pixiEditor.serializer.deserializeState(slideData);
-          // После десериализации используем сохранённые размеры/позиции нод,
-          // поэтому не вызываем глобальный fitAllTextNodes, который растягивает
-          // все текстовые блоки на всю сцену.
           this.pixiEditor.sceneViewport.updateSceneBounds();
+
+          // После десериализации всегда прогоняем layout для всех текстовых нод,
+          // чтобы TextFitService пересчитал размер шрифта под текущие границы сцены.
+          await this.pixiEditor.fitAllTextNodes();
+
+          // Дополнительный отложенный прогон на следующий тик event-loop,
+          // чтобы учесть асинхронные обновления Pixi/DOM-метрик.
+          setTimeout(() => {
+            if (version !== this.loadVersion) return; // слайд уже сменился
+            void this.pixiEditor.fitAllTextNodes();
+          }, 0);
+
           if (version !== this.loadVersion) return; // stale load, abort
         } catch (e) {
           console.error('Error parsing slide data, clearing editor', e);

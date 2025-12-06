@@ -69,8 +69,14 @@ export class NodeFactoryService {
         textNode.textHtml = nodeData.textHtml;
         if (nodeData.style) {
           textNode.style = { ...nodeData.style };
-          textNode.style.actualFontSize =
-            (nodeData.actualFontSize || 32) * scaleFactor;
+          if (typeof nodeData.actualFontSize === 'number') {
+            textNode.style.actualFontSize =
+              nodeData.actualFontSize * scaleFactor;
+          } else {
+            // If no explicit actualFontSize is provided, let TextNode
+            // compute it via its own layout logic instead of forcing 32.
+            delete (textNode.style as any).actualFontSize;
+          }
         }
         if (typeof nodeData.bgFillColor === 'number') {
           textNode.setBackgroundFill(nodeData.bgFillColor);

@@ -16,7 +16,7 @@ import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import Reveal, { Api } from 'reveal.js';
 
 import { Store } from '@ngrx/store';
-import { BridgeService, Pages } from '@lyri-cast/common-browser';
+import { BridgeService, Pages, SnowfallManager } from '@lyri-cast/common-browser';
 import {
   selectCastingPaused,
   selectCastingProcess,
@@ -41,6 +41,7 @@ export class CastingComponent implements OnInit, AfterViewInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly elRef = inject(ElementRef<HTMLElement>);
   private readonly store = inject(Store);
+  private readonly snowfall = inject(SnowfallManager);
   sanitizer: DomSanitizer = inject(DomSanitizer);
 
   deckRef?: Reveal.Api;
@@ -71,6 +72,15 @@ export class CastingComponent implements OnInit, AfterViewInit {
   ngOnInit() {
     this.castingPaused$.subscribe((value) => {
       this.showingContent.set(!value);
+
+      if (value) {
+        // Кастинг на паузе или завершён — убираем снежинки
+        this.snowfall.stop();
+      } else {
+        // Кастинг активен — включаем снежинки (если пользователь их разрешил в настройках)
+        this.snowfall.ensureRunning();
+      }
+
       setTimeout(() => {
         this.hideContent = value;
         this.cdr.detectChanges();

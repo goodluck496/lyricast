@@ -26,10 +26,12 @@ export const SongFeatureRoutes: Routes = [
       import('./lib/pages/song-page/song-page.component').then(
         (p) => p.SongPageComponent
       ),
-    resolve: [() => {
-      const iconSrv = inject(IconsService);
-      return iconSrv.registerIcons([lyriPlay, lyriStop]);
-    }],
+    resolve: [
+      () => {
+        const iconSrv = inject(IconsService);
+        return iconSrv.registerIcons([lyriPlay, lyriStop]);
+      },
+    ],
     canDeactivate: [
       () => {
         const store = inject(Store);

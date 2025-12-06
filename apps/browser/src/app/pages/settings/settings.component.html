@@ -9,35 +9,38 @@
     <p-tabpanel [value]="0">
       <h3>Выбор экрана для отображения презентаций</h3>
       <div class="settings__displays">
-        @if (selectedDisplay$ | async; as selectedDisplay) { @for (display of
-        displays; track display.id) {
-        <p-card class="settings__display-item">
-          <ng-template pTemplate="title">{{
-            display.label || 'Display - ' + display.id
-          }}</ng-template>
+        @if (selectedDisplay$ | async; as selectedDisplay) {
+          @for (display of
+            displays; track display.id) {
+            <p-card class="settings__display-item">
+              <ng-template pTemplate="title">{{
+                  display.label || 'Display - ' + display.id
+                }}
+              </ng-template>
 
-          <p>
-            {{ display.bounds.width }}x{{ display.bounds.height }} \
-            {{ display.displayFrequency.toFixed(0) }} Гц
-          </p>
+              <p>
+                {{ display.bounds.width }}x{{ display.bounds.height }} \
+                {{ display.displayFrequency.toFixed(0) }} Гц
+              </p>
 
-          <ng-template pTemplate="footer">
-            @if (selectedDisplay.id !== display.id) {
-            <button
-              pButton
-              severity="primary"
-              (click)="onSelectDisplay(display)"
-            >
-              Выбрать
-            </button>
-            } @else {
-            <button pButton severity="secondary" [disabled]="true">
-              Выбрано
-            </button>
-            }
-          </ng-template>
-        </p-card>
-        } }
+              <ng-template pTemplate="footer">
+                @if (selectedDisplay.id !== display.id) {
+                  <button
+                    pButton
+                    severity="primary"
+                    (click)="onSelectDisplay(display)"
+                  >
+                    Выбрать
+                  </button>
+                } @else {
+                  <button pButton severity="secondary" [disabled]="true">
+                    Выбрано
+                  </button>
+                }
+              </ng-template>
+            </p-card>
+          }
+        }
       </div>
     </p-tabpanel>
     <p-tabpanel [value]="1">
@@ -61,23 +64,36 @@
       </div>
     </p-tabpanel>
     <p-tabpanel [value]="3">
-      <div class="settings__appearance">
-        <div class="settings__field">
-          <div class="settings__field-options">
-            <p-toggleButton
-              inputId="themeToggle"
-              [ngModel]="isDarkTheme"
-              (ngModelChange)="onThemeToggle($event)"
-              onLabel="Тёмная"
-              offLabel="Светлая"
-              onIcon="pi pi-moon"
-              offIcon="pi pi-sun"
-            ></p-toggleButton>
+      <div class="settings__appearance-wrapper">
+        <div class="settings__appearance">
+          <div class="settings__field">
+            <div class="settings__field-options">
+              <div class="settings__field-label">Тема</div>
+              <p-toggleButton
+                inputId="themeToggle"
+                [ngModel]="isDarkTheme"
+                (ngModelChange)="onThemeToggle($event)"
+                onLabel="Тёмная"
+                offLabel="Светлая"
+                onIcon="pi pi-moon"
+                offIcon="pi pi-sun"
+              ></p-toggleButton>
+            </div>
           </div>
-        </div>
+          <div class="settings__field">
+            <div class="settings__field-options">
+              <div class="settings__field-label">Снежинки</div>
+              <p-toggleswitch
+                inputId="snowToggle"
+                [ngModel]="snowEnabled"
+                (ngModelChange)="onSnowToggle($event)"
+              ></p-toggleswitch>
 
-        <div class="settings__field">
-          <p-floatlabel>
+            </div>
+          </div>
+          <div class="settings__field">
+            <div class="settings__field-label">Шрифт</div>
+
             <p-select
               inputId="fontSelect"
               [options]="fontOptions"
@@ -109,10 +125,11 @@
                 </span>
               </ng-template>
             </p-select>
-            <label for="fontSelect">Шрифт интерфейса</label>
-          </p-floatlabel>
+          </div>
         </div>
       </div>
+
+
     </p-tabpanel>
   </p-tabpanels>
 </p-tabs>

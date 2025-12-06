@@ -10,9 +10,9 @@ import {
   ActivatedRoute,
   NavigationEnd,
   Router,
-  RouterOutlet,
   RouterLink,
   RouterLinkActive,
+  RouterOutlet,
 } from '@angular/router';
 
 import {
@@ -130,7 +130,7 @@ export class MainComponent implements OnInit {
       lyriSongLyrics,
       lyriOpenedBook,
       lyriGrid,
-      lyriBulletList
+      lyriBulletList,
     ]);
   }
 

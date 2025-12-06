@@ -126,11 +126,14 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
         (v) => v.number >= range.from && v.number <= range.to
       );
 
-      if (versesInRange.length) {
+      if (versesInRange.length > 1) {
         const first = versesInRange[0];
         const combinedHtml = versesInRange
-          .map((v) => (Array.isArray(v.text) ? v.text.join(' ') : (v as any).text))
-          .join('<br/>');
+          .map((v) => {
+            const text = Array.isArray(v.text) ? v.text.join(' ') : (v as any).text;
+            return `<span class="bible-casting__verse-number">${v.number}</span> ${text}`;
+          })
+          .join(' ');
 
         this.selectedContents.set([
           {
@@ -141,8 +144,10 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
         this.selectedVerseId.set(range.from);
       } else {
+        // Диапазон фактически из одного стиха — ведём себя как для одиночного стиха.
         this.selectedContents.set(payload.content);
         this.selectedVerseId.set(payload.fromIndex ?? 0);
+        this.selectedRange.set(null);
       }
     } else {
       this.selectedContents.set(payload.content);
@@ -177,19 +182,57 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     if (!this.deckRef) {
       return;
     }
-    if (payload.direction) {
-      this.deckRef[payload.direction]();
-    } else if (payload.nextIndex !== undefined) {
-      this.deckRef.slide(undefined, payload.nextIndex);
+    // Если навигация пришла с диапазоном и набором стихов — обновляем один слайд
+    if (payload.range && payload.versesInRange && payload.versesInRange.length > 1) {
+      this.selectedRange.set(payload.range);
+
+      const combinedHtml = payload.versesInRange
+        .map((v) => {
+          const text = Array.isArray(v.text) ? v.text.join(' ') : (v as any).text;
+          return `<span class="bible-casting__verse-number">${v.number}</span> ${text}`;
+        })
+        .join(' ');
+
+      const first = payload.versesInRange[0];
+
+      this.selectedContents.set([
+        {
+          ...first,
+          text: [combinedHtml],
+        },
+      ]);
+
+      this.selectedVerseId.set(payload.range.from);
+
+      const bookName = first.bookTitle;
+      this.selectedBookTitle.set(bookName.full);
+      this.selectedChapterId.set(first.chapterId);
+
+      this.cdr.detectChanges();
+      this.deckRef.layout();
+      this.deckRef.sync();
+      this.updateTextSize();
+    } else {
+      // Для навигации без диапазона (или с диапазоном из одного стиха)
+      // всегда показываем один стих на одном слайде.
+      this.selectedRange.set(null);
+      this.selectedContents.set([
+        {
+          ...payload.currentContent,
+        },
+      ]);
+
+      const bookName = payload.currentContent.bookTitle;
+
+      this.selectedBookTitle.set(bookName.full);
+      this.selectedChapterId.set(payload.currentContent.chapterId);
+      this.selectedVerseId.set(payload.currentContent.number);
+
+      this.cdr.detectChanges();
+      this.deckRef.layout();
+      this.deckRef.sync();
+      this.updateTextSize();
     }
-
-    const bookName = payload.currentContent.bookTitle;
-
-    this.selectedBookTitle.set(bookName.full);
-    this.selectedChapterId.set(payload.currentContent.chapterId);
-    this.selectedVerseId.set(payload.currentContent.number);
-
-    this.cdr.detectChanges();
   }
 
   async initReveal(): Promise<Api> {

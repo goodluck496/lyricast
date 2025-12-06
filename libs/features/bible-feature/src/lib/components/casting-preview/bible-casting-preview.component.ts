@@ -90,9 +90,19 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
           (v) => v.number >= fromNumber && v.number <= toNumber
         );
 
-        this.slideText = versesInRange
-          .map((v) => v.text)
-          .join('<br/>');
+        if (versesInRange.length > 1) {
+          this.slideText = versesInRange
+            .map((v) => {
+              const text = v.text;
+              return `<span class="bible-casting__verse-number">${v.number}</span> ${text}`;
+            })
+            .join(' ');
+        } else if (versesInRange.length === 1) {
+          // Для одиночного стиха в "диапазоне" не показываем номер, как и при обычном кастинге
+          this.slideText = versesInRange[0].text;
+        } else {
+          this.slideText = verse.text;
+        }
 
         this.initReveal();
       });

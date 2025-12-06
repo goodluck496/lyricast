@@ -12,6 +12,8 @@ import {
   selectSelectedBook,
   selectSelectedPath,
   selectSelectedTranslate,
+  selectSelectedChapterSections,
+  selectSelectedVersesRange,
 } from './bible.selectors';
 import {
   AppActions,
@@ -182,11 +184,36 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
       ofType(BibleActions.selectBibleVerse),
       withLatestFrom(
         this.store.select(selectCastingPaused),
-        this.store.select(selectBooks)
+        this.store.select(selectBooks),
+        this.store.select(selectSelectedVersesRange),
+        this.store.select(selectSelectedChapterSections)
       ),
       filter(([verse, paused]) => !paused),
-      map(([verse, paused, books]) => {
+      map(([verse, paused, books, range, sections]) => {
         const book = books.find((book) => book.number === verse.bookId);
+
+        let versesInRange: any[] | undefined;
+        let effectiveRange: { from: number; to: number } | undefined;
+
+        if (range && sections && sections.length) {
+          const from = Math.min(range.from, range.to);
+          const to = Math.max(range.from, range.to);
+
+          const allVerses = sections.flatMap((sec) => sec.content);
+          const filtered = allVerses.filter(
+            (v) => v.number >= from && v.number <= to
+          );
+
+          if (filtered.length) {
+            versesInRange = filtered.map((v) => ({
+              ...v,
+              text: [v.text],
+              bookTitle: book!.title as BibleBookTitle,
+            }));
+            effectiveRange = { from, to };
+          }
+        }
+
         return BibleActions.castingProcessChange({
           currentContent: {
             ...verse,
@@ -194,6 +221,8 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
             text: [verse.text],
           },
           nextIndex: verse.number,
+          range: effectiveRange,
+          versesInRange,
         });
       })
     )

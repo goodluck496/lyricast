@@ -41,6 +41,7 @@ export const BibleReducers = createReducer<BibleState>(
       selectedChapter: null,
       selectedChapterSections: [],
       castingPaused: true,
+      selectedVersesRange: null,
     } satisfies BibleState;
   }),
   on(BibleActions.chapterLoading, (state) => {
@@ -65,6 +66,7 @@ export const BibleReducers = createReducer<BibleState>(
         data.chapter.number.toString(),
         '1',
       ],
+      selectedVersesRange: null,
     } satisfies BibleState;
   }),
   on(BibleActions.selectChapterSection, (state, data) => {

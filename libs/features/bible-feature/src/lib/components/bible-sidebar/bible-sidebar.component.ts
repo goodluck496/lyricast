@@ -80,6 +80,7 @@ export class BibleSidebarComponent {
         if (groupValue.book && groupValue.chapter && sections.length) {
           const fromNumber = range?.from ?? verse.number;
           const toNumber = range?.to ?? verse.number;
+
           this.store.dispatch(
             BibleActions.openCasting({
               book: groupValue.book.baseEntity,

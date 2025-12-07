@@ -144,14 +144,43 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
         this.selectedVerseId.set(range.from);
       } else {
-        // Диапазон фактически из одного стиха — ведём себя как для одиночного стиха.
-        this.selectedContents.set(payload.content);
-        this.selectedVerseId.set(payload.fromIndex ?? 0);
+        // Диапазон фактически из одного стиха — отображаем только этот стих без нумерации.
+        const single = versesInRange[0] ?? payload.content.find((v) => v.number === range.from);
+
+        if (single) {
+          this.selectedContents.set([
+            {
+              ...single,
+              text: Array.isArray(single.text) ? single.text : [single.text as any],
+            },
+          ]);
+          this.selectedVerseId.set(single.number);
+        } else {
+          // запасной вариант: берём весь контент и fromIndex
+          this.selectedContents.set(payload.content);
+          this.selectedVerseId.set(payload.fromIndex ?? 0);
+        }
+
         this.selectedRange.set(null);
       }
     } else {
-      this.selectedContents.set(payload.content);
-      this.selectedVerseId.set(payload.fromIndex ?? 0);
+      // Без диапазона отображаем только выбранный стих как один слайд.
+      const single =
+        payload.content.find((v) => v.number === payload.fromIndex) ??
+        payload.content[0];
+
+      if (single) {
+        this.selectedContents.set([
+          {
+            ...single,
+            text: Array.isArray(single.text) ? single.text : [single.text as any],
+          },
+        ]);
+        this.selectedVerseId.set(single.number);
+      } else {
+        this.selectedContents.set(payload.content);
+        this.selectedVerseId.set(payload.fromIndex ?? 0);
+      }
     }
 
     this.showingContent.set(true);
@@ -161,18 +190,11 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     this.deckRef?.layout();
     this.deckRef?.sync();
 
-    // Для диапазона всегда показываем первый (и единственный) слайд,
-    // для одиночного стиха оставляем существующее поведение.
-    const hasRange = !!payload.range;
-    if (hasRange) {
-      // Первый дочерний section внутри stack пустой (placeholder),
-      // реальные слайды начинаются с индекса 1.
-      this.deckRef?.slide(undefined, 1);
-    } else if (payload.fromIndex) {
-      this.deckRef?.slide(undefined, payload.fromIndex);
-    } else {
-      this.deckRef?.slide(0, 0);
-    }
+    // В новой модели у нас всегда один реальный слайд с текстом (после placeholder),
+    // поэтому при старте всегда переходим к нему.
+    // Первый дочерний section внутри stack пустой (placeholder),
+    // реальные слайды начинаются с индекса 1.
+    this.deckRef?.slide(undefined, 1);
     this.updateTextSize();
   }
 

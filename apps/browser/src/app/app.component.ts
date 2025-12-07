@@ -25,6 +25,7 @@ import {
   selectAppInit,
   SettingsService,
 } from '@lyri-cast/common-browser';
+import { SnowfallManager } from '../services/common/snowfall.service';
 import { SplashScreenComponent } from './components/splash-screen/splash-screen.component';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -41,6 +42,7 @@ export class AppComponent implements OnInit {
   store = inject(Store);
   settingsSrv = inject(SettingsService);
   loadingStatusService = inject(LoadingStatusService);
+  snowfall = inject(SnowfallManager);
 
   cdr = inject(ChangeDetectorRef);
   route = inject(ActivatedRoute);
@@ -117,6 +119,8 @@ export class AppComponent implements OnInit {
     }
 
     this.settingsSrv.init();
+
+    this.snowfall.ensureRunning();
 
     this.store
       .select(selectAppInit)

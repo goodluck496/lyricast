@@ -4,6 +4,8 @@ export const ElectronActionEvents = {
   OPEN_WINDOW: 'OPEN_WINDOW',
   CLOSE_WINDOW: 'CLOSE_WINDOW',
   PING: 'PING',
+  LOAD_SETTINGS: 'LOAD_SETTINGS',
+  SAVE_SETTINGS: 'SAVE_SETTINGS',
 } as const;
 
 export const ElectronCommonEvents = {

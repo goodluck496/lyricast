@@ -24,6 +24,7 @@ import {
   PageTitlesMap,
   selectAppInit,
   SettingsService,
+  UserSettingsService,
 } from '@lyri-cast/common-browser';
 import { SnowfallManager } from '../services/common/snowfall.service';
 import { SplashScreenComponent } from './components/splash-screen/splash-screen.component';
@@ -43,6 +44,7 @@ export class AppComponent implements OnInit {
   settingsSrv = inject(SettingsService);
   loadingStatusService = inject(LoadingStatusService);
   snowfall = inject(SnowfallManager);
+  userSettings = inject(UserSettingsService);
 
   cdr = inject(ChangeDetectorRef);
   route = inject(ActivatedRoute);
@@ -120,7 +122,18 @@ export class AppComponent implements OnInit {
 
     this.settingsSrv.init();
 
-    this.snowfall.ensureRunning();
+    this.userSettings
+      .loadAndApplyAppearance()
+      .then((settings) => {
+        if (settings && typeof settings.snowEnabled === 'boolean') {
+          this.snowfall.setEnabled(settings.snowEnabled);
+        }
+
+        this.snowfall.ensureRunning();
+      })
+      .catch(() => {
+        this.snowfall.ensureRunning();
+      });
 
     this.store
       .select(selectAppInit)

@@ -37,4 +37,7 @@ contextBridge.exposeInMainWorld('electron', {
   checkForAppUpdates: () => {
     ipcRenderer.send('APP_FORCE_CHECK_UPDATE');
   },
+  loadUserSettings: () => ipcRenderer.invoke(ElectronActionEvents.LOAD_SETTINGS),
+  saveUserSettings: (settings: unknown) =>
+    ipcRenderer.invoke(ElectronActionEvents.SAVE_SETTINGS, settings),
 } satisfies Context);

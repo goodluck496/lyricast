@@ -8,7 +8,11 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SettingsService, WindowService } from '@lyri-cast/common-browser';
+import {
+  SettingsService,
+  UserSettingsService,
+  WindowService,
+} from '@lyri-cast/common-browser';
 import { AppDisplay } from '@lyri-cast/common-electron';
 import { CardModule } from 'primeng/card';
 import { ButtonDirective } from 'primeng/button';
@@ -46,6 +50,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   cdr = inject(ChangeDetectorRef);
   settingsSrv = inject(SettingsService);
   windowSrv = inject(WindowService);
+  userSettings = inject(UserSettingsService);
   snowfall = inject(SnowfallManager);
 
   displays: AppDisplay[] = [];
@@ -125,6 +130,25 @@ export class SettingsComponent implements OnInit, OnDestroy {
     };
     this.windowSrv.electronContext.onAppUpdateStatus(this._updateHandler);
 
+    const loadedSettings = await this.userSettings.loadAndApplyAppearance();
+    if (loadedSettings) {
+      if (loadedSettings.theme === 'dark' || loadedSettings.theme === 'light') {
+        this.isDarkTheme = loadedSettings.theme === 'dark';
+      }
+
+      if (
+        loadedSettings.font &&
+        this.availableFonts.includes(loadedSettings.font)
+      ) {
+        this.selectedFont = loadedSettings.font;
+      }
+
+      if (typeof loadedSettings.snowEnabled === 'boolean') {
+        this.snowEnabled = loadedSettings.snowEnabled;
+        this.snowfall.setEnabled(this.snowEnabled);
+      }
+    }
+
     // Initialize appearance settings from localStorage or current DOM
     try {
       const storedTheme = localStorage.getItem('lyricast.theme');
@@ -172,6 +196,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
   onSnowToggle(enabled: boolean) {
     this.snowEnabled = enabled;
     this.snowfall.setEnabled(enabled);
+    this.userSettings.saveAppearanceSnapshot({
+      theme: this.isDarkTheme ? 'dark' : 'light',
+      font: this.selectedFont,
+      snowEnabled: this.snowEnabled,
+    });
     this.cdr.detectChanges();
   }
 
@@ -200,6 +229,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
     } catch {
       // ignore storage errors
     }
+    this.userSettings.saveAppearanceSnapshot({
+      theme: this.isDarkTheme ? 'dark' : 'light',
+      font: this.selectedFont,
+      snowEnabled: this.snowEnabled,
+    });
     this.cdr.detectChanges();
   }
 
@@ -216,6 +250,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
     } catch {
       // ignore storage errors
     }
+    this.userSettings.saveAppearanceSnapshot({
+      theme: this.isDarkTheme ? 'dark' : 'light',
+      font: this.selectedFont,
+      snowEnabled: this.snowEnabled,
+    });
     this.cdr.detectChanges();
   }
 

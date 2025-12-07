@@ -57,6 +57,15 @@ export class HistoryService {
         this.store.dispatch(
           BibleActions.changePath({ path: item.payload.path })
         );
+
+        if (item.payload.range) {
+          this.store.dispatch(
+            BibleActions.selectVersesRange({
+              from: item.payload.range.from,
+              to: item.payload.range.to,
+            })
+          );
+        }
         break;
     }
   }

@@ -111,42 +111,37 @@ export const loggableActions = defineLoggableActions([
   {
     action: BibleActions.startCasting,
     toHistory: (data, deps) => {
+      const fromNumber = data.range?.from ?? data.fromIndex;
+      const toNumber = data.range?.to ?? data.fromIndex;
+
+      const fromIndex = Math.max(0, fromNumber - 1);
+      const baseVerse = data.content[fromIndex];
+
+      const versesInRange = data.content.filter(
+        (v) => v.number >= fromNumber && v.number <= toNumber
+      );
+
+      const shortTextSource = versesInRange.length
+        ? versesInRange[0]
+        : baseVerse;
+      const shortText = Array.isArray(shortTextSource.text)
+        ? shortTextSource.text.join(' ')
+        : (shortTextSource as any).text;
+      const previewText =
+        shortText.length > 20 ? `${shortText.slice(0, 20)}...` : shortText;
+
+      const labelNumber =
+        data.range && fromNumber !== toNumber
+          ? `${fromNumber}-${toNumber}`
+          : `${baseVerse?.number}`;
+
       const bibleTitle = () => {
         return [
           '<div class="ellipsis" style="width: 100%; height: 100%; padding: 6px 0;">',
           `<span class="history__item-label">${data.book.title.short} ${
             data.chapter.number
-          }:${data.content[data.fromIndex - 1].number}</span>`,
-          data.content[data.fromIndex - 1].text.slice(0, 20),
-          '</div>',
-        ].join(' ');
-      };
-      const fromIndex =
-        data.fromIndex > 0 ? data.fromIndex - 1 : data.fromIndex;
-      return of({
-        type: HistoryType.BIBLE,
-        dateTime: Date.now(),
-        payload: {
-          entityId: data.content[fromIndex]?.path?.join('-'),
-          path: data.content[fromIndex]?.path,
-          key: `select-bible-verse-${data.content[fromIndex]?.number}`,
-          title: bibleTitle(),
-          icon: '',
-          url: ``,
-          children: [],
-          currentVerse: data.content[fromIndex],
-        },
-      });
-    },
-  },
-  {
-    action: BibleActions.castingProcessChange,
-    toHistory: (data, deps) => {
-      const bibleTitle = () => {
-        return [
-          '<div class="ellipsis" style="width: 100%; height: 100%; padding: 6px 0;">',
-          `<span class="history__item-label">${data.currentContent.bookTitle.short} ${data.currentContent.chapterId}:${data.currentContent.number}</span>`,
-          data.currentContent.text.slice(0, 20),
+          }:${labelNumber}</span>`,
+          previewText,
           '</div>',
         ].join(' ');
       };
@@ -155,14 +150,73 @@ export const loggableActions = defineLoggableActions([
         type: HistoryType.BIBLE,
         dateTime: Date.now(),
         payload: {
-          entityId: data.currentContent.path.join('-'),
-          path: data.currentContent.path,
-          key: `select-bible-verse-${data.currentContent.path}`,
+          entityId: baseVerse?.path?.join('-'),
+          path: baseVerse?.path,
+          key: `select-bible-verse-${labelNumber}`,
           title: bibleTitle(),
           icon: '',
           url: ``,
-          children: [],
+          children: versesInRange,
+          currentVerse: baseVerse,
+          range:
+            data.range && fromNumber !== toNumber
+              ? { from: fromNumber, to: toNumber }
+              : undefined,
+        },
+      });
+    },
+  },
+  {
+    action: BibleActions.castingProcessChange,
+    toHistory: (data, deps) => {
+      const hasRange = !!data.range && !!data.versesInRange?.length;
+
+      const fromNumber = hasRange ? data.range!.from : data.currentContent.number;
+      const toNumber = hasRange ? data.range!.to : data.currentContent.number;
+
+      const versesInRange = hasRange
+        ? data.versesInRange!
+        : [data.currentContent];
+
+      const shortTextSource = versesInRange[0];
+      const shortText = Array.isArray(shortTextSource.text)
+        ? shortTextSource.text.join(' ')
+        : (shortTextSource as any).text;
+      const previewText =
+        shortText.length > 20 ? `${shortText.slice(0, 20)}...` : shortText;
+
+      const labelNumber =
+        hasRange && fromNumber !== toNumber
+          ? `${fromNumber}-${toNumber}`
+          : `${data.currentContent.number}`;
+
+      const bibleTitle = () => {
+        return [
+          '<div class="ellipsis" style="width: 100%; height: 100%; padding: 6px 0;">',
+          `<span class="history__item-label">${data.currentContent.bookTitle.short} ${data.currentContent.chapterId}:${labelNumber}</span>`,
+          previewText,
+          '</div>',
+        ].join(' ');
+      };
+
+      const basePath = data.currentContent.path;
+
+      return of({
+        type: HistoryType.BIBLE,
+        dateTime: Date.now(),
+        payload: {
+          entityId: basePath.join('-'),
+          path: basePath,
+          key: `select-bible-verse-${labelNumber}`,
+          title: bibleTitle(),
+          icon: '',
+          url: ``,
+          children: versesInRange,
           currentVerse: data.currentContent,
+          range:
+            hasRange && fromNumber !== toNumber
+              ? { from: fromNumber, to: toNumber }
+              : undefined,
         },
       });
     },

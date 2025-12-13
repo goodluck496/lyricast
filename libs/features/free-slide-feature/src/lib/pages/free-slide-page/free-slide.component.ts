@@ -12,7 +12,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
 import { Store } from '@ngrx/store';
-import { SlideDto, SerializedState } from '@lyri-cast/entities';
+import { Slide, SlideDto, SerializedState } from '@lyri-cast/entities';
 import { Actions } from '@ngrx/effects';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { PageContainerComponent } from '@lyri-cast/ui-lib';
@@ -28,10 +28,13 @@ import {
   combineLatest,
   debounceTime,
   first,
+  fromEvent,
   Subject,
   take,
   takeUntil,
   merge,
+  withLatestFrom,
+  filter,
 } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgScrollbar } from 'ngx-scrollbar';
@@ -43,6 +46,7 @@ import {
   selectFreeSlideCastingProcess,
   selectFreeSlideCastingStarted,
   selectFreeSlideNavigateState,
+  selectFreeSlideSelected,
 } from '@lyri-cast/free-slide-store';
 import {
   AssetStorageService,
@@ -56,6 +60,7 @@ import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { CtrlDragCopyDirective } from '../../directives/ctrl-drag-copy.directive';
 import { SelectModule } from 'primeng/select';
 import { PopoverModule } from 'primeng/popover';
+import { filterEmpty } from '@lyri-cast/common';
 
 @Component({
   selector: 'lyri-free-slide',
@@ -97,6 +102,113 @@ export class FreeSlideComponent implements AfterViewInit {
   containerPagePath: (string | Pages)[] = [];
 
   changePresentation$ = new Subject<void>();
+
+  private initKeyboardControl() {
+    fromEvent<KeyboardEvent>(window, 'keydown')
+      .pipe(
+        debounceTime(100),
+        takeUntil(this.changePresentation$),
+        takeUntilDestroyed(this.destroyRef),
+        filter((event) => {
+          const el = event.target as HTMLElement | null;
+          const tag = (el?.tagName || '').toLowerCase();
+          const isEditable =
+            tag === 'input' ||
+            tag === 'textarea' ||
+            tag === 'select' ||
+            el?.isContentEditable;
+          return !isEditable;
+        }),
+        withLatestFrom(
+          this.store.select(selectFreeSlideCastingStarted),
+          this.store.select(selectFreeSlideCastingProcess),
+          this.store.select(selectFreeSlideNavigateState)
+        )
+      )
+      .subscribe(([event, castingStarted, process, navigate]) => {
+        if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
+          event.preventDefault();
+          const dir = event.key === 'ArrowDown' ? 'next' : 'prev';
+          this.onNavigateByKeyboard(dir, {
+            castingStarted,
+            process,
+            navigate,
+          });
+        }
+
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          this.onStartCastingByKeyboard();
+        }
+
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.pauseCasting]());
+        }
+      });
+  }
+
+  private onStartCastingByKeyboard() {
+    this.slideService.saveCompleted$.pipe(take(1)).subscribe(() => {
+      this.store
+        .select(selectFreeSlideSelected)
+        .pipe(filterEmpty(), take(1))
+        .subscribe((slide) => {
+          const currentSlides = this.slideService.slides$.value;
+          this.store.dispatch(
+            FreeSlideActions[FreeSlideActionsEnum.openCasting]({
+              slideId: slide.id,
+              slides: currentSlides,
+              fromIndex: slide.index,
+            })
+          );
+        });
+    });
+
+    this.slideService.requestSaveCurrentSlide$.next();
+  }
+
+  private onNavigateByKeyboard(
+    dir: 'prev' | 'next',
+    ctx: {
+      castingStarted: boolean;
+      process: { slides: Slide[]; fromIndex: number } | null;
+      navigate: { index?: number } | null;
+    }
+  ) {
+    if (ctx.castingStarted && ctx.process?.slides?.length) {
+      const currentIndex =
+        typeof ctx.navigate?.index === 'number'
+          ? ctx.navigate.index
+          : ctx.process.fromIndex;
+
+      const nextIndex = dir === 'next' ? currentIndex + 1 : currentIndex - 1;
+      const boundedIndex = Math.max(
+        0,
+        Math.min(nextIndex, ctx.process.slides.length - 1)
+      );
+      const nextSlide = ctx.process.slides[boundedIndex];
+      if (!nextSlide) {
+        return;
+      }
+
+      this.store.dispatch(
+        FreeSlideActions[FreeSlideActionsEnum.slideNavigate]({
+          slide: nextSlide,
+          direction: dir,
+          index: boundedIndex,
+        })
+      );
+
+      return;
+    }
+
+    const nextIndex = dir === 'next' ? this.currentSlideIndex + 1 : this.currentSlideIndex - 1;
+    const slide = this.slideService.getSlideByIndex(nextIndex);
+    if (slide) {
+      void this.onSelectSlide(slide);
+    }
+  }
 
   @ViewChild(PixiSlideEditorV2Component)
   pixiEditor!: PixiSlideEditorV2Component;
@@ -149,7 +261,9 @@ export class FreeSlideComponent implements AfterViewInit {
         const url = URL.createObjectURL(blob);
         this.slideService.setLivePreviewObjectUrl(url);
       }
-    } catch {}
+    } catch {
+      return;
+    }
   }
 
   async onAddNewSlide() {
@@ -157,7 +271,7 @@ export class FreeSlideComponent implements AfterViewInit {
     await this.onSelectSlide(newSlide);
   }
 
-  async onSelectSlide(slide: SlideDto) {
+  async onSelectSlide(slide: SlideDto | Slide) {
     // Автосохранение текущего слайда перед переключением
     if (
       this.currentSlideId &&
@@ -327,7 +441,7 @@ export class FreeSlideComponent implements AfterViewInit {
             if (liveSyncEnabled) {
               this.store.dispatch(
                 FreeSlideActions[FreeSlideActionsEnum.liveUpdateSlide]({
-                  slide: slidePayload as any,
+                  slide: slidePayload as Slide,
                 })
               );
             }
@@ -515,6 +629,8 @@ export class FreeSlideComponent implements AfterViewInit {
           }, 150);
         }
       });
+
+    this.initKeyboardControl();
   }
 
   ngAfterViewInit() {

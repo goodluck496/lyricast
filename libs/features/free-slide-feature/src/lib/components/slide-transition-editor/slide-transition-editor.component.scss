@@ -87,16 +87,17 @@
   justify-content: center;
   gap: 0.35rem;
   padding: 0.75rem 0.5rem;
-  border: 2px solid var(--surface-border);
+  // Базовые стили, не зависящие от CSS-переменных темы
+  border: 2px solid rgba(0, 0, 0, 0.2);
   border-radius: 8px;
-  background: var(--surface-card);
+  background: #ffffff;
+  color: #111111;
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: 90px;
   position: relative;
 
   &:hover {
-    background: var(--surface-hover);
     border-color: var(--primary-color);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -124,14 +125,60 @@
     text-align: center;
     line-height: 1.2;
     font-weight: 500;
-    color: var(--text-color);
+    color: inherit;
     word-break: break-word;
   }
 
   .preset-duration {
     font-size: 0.7rem;
-    color: var(--text-color-secondary);
+    color: rgba(0, 0, 0, 0.6);
     font-weight: 400;
+  }
+}
+
+// Базовая видимость карточек эффектов в светлой теме
+html:not(.my-app-dark) {
+  .transition-preset {
+    border-color: rgba(0, 0, 0, 0.20);
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+
+    .preset-name {
+      color: #111111;
+    }
+
+    .preset-duration {
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    &:hover {
+      background: #f5f5f5;
+      border-color: var(--primary-color);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+  }
+}
+
+// Базовая видимость карточек эффектов в тёмной теме
+html.my-app-dark {
+  .transition-preset {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: #1e1e1e;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+
+    .preset-name {
+      color: #f5f5f5;
+    }
+
+    .preset-duration {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    &:hover {
+      background: #282828;
+      border-color: var(--primary-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+    }
   }
 }
 

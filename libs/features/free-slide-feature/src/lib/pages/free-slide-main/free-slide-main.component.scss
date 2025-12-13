@@ -36,8 +36,8 @@
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   background-size: cover;
   background-position: center;
-  // default colors, overridden by theme-specific rules below
-  color: #222;
+  // базовый цвет текста наследуется от темы страницы (светлая/тёмная)
+  color: inherit;
 
   .card-overlay {
     height: 100%;
@@ -46,6 +46,13 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+  }
+
+  // Заголовок и подпись на превью: всегда белые с тёмной тенью
+  .card-overlay h4,
+  .card-overlay p {
+    color: #ffffff;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.7);
   }
 
   &__edit-btn, &__success-btn, &__delete-btn {
@@ -87,6 +94,55 @@
 
     #{$self}__edit-btn, #{$self}__success-btn, #{$self}__delete-btn {
       opacity: 1;
+    }
+  }
+}
+
+// Тёмная тема: html получает класс my-app-dark в настройках
+html.my-app-dark {
+  .presentation-card {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.7);
+
+    .card-overlay {
+      // лёгкий затемняющий слой, чтобы текст был читаем поверх превью
+      background: radial-gradient(circle at top, rgba(0, 0, 0, 0.0) 0, rgba(0, 0, 0, 0.55) 55%, rgba(0, 0, 0, 0.8) 100%);
+    }
+
+    input[type='text'] {
+      background-color: rgba(0, 0, 0, 0.7);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.5);
+      text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+    }
+
+    &__edit-btn,
+    &__success-btn,
+    &__delete-btn {
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+
+      i {
+        color: #000000;
+      }
+    }
+  }
+}
+
+// Светлая тема: если у html НЕТ класса my-app-dark, делаем текст карточек светлым,
+// чтобы он не сливался с тёмными/чёрными превью.
+html:not(.my-app-dark) {
+  .presentation-card {
+    color: #f5f5f5;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.7);
+
+    .card-overlay {
+      background: radial-gradient(circle at top, rgba(0, 0, 0, 0.0) 0, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0.7) 100%);
+    }
+
+    h4,
+    p {
+      color: #f5f5f5;
     }
   }
 }

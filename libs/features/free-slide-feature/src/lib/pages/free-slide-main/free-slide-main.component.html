@@ -28,16 +28,16 @@
 
                 @if (!presentation.inEdit) {
                   <div class="presentation-card__edit-btn" (click)="onEdit($event, presentation)">
-                    <i class="pi pi-pencil" style="color: black"></i>
+                    <i class="pi pi-pencil"></i>
                   </div>
                 } @else {
                   <div class="presentation-card__success-btn" (click)="onEditComplete($event, presentation)">
-                    <i class="pi pi-check" style="color: black"></i>
+                    <i class="pi pi-check"></i>
                   </div>
                 }
 
                 <div class="presentation-card__delete-btn" (click)="onDelete($event, presentation)">
-                  <i class="pi pi-trash" style="color: white"></i>
+                  <i class="pi pi-trash"></i>
                 </div>
 
                 <div class="card-overlay flex flex-column">

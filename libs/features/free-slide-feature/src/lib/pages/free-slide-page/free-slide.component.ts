@@ -192,14 +192,9 @@ export class FreeSlideComponent implements AfterViewInit {
         return;
       }
 
-      this.store.dispatch(
-        FreeSlideActions[FreeSlideActionsEnum.slideNavigate]({
-          slide: nextSlide,
-          direction: dir,
-          index: boundedIndex,
-        })
-      );
-
+      // While casting, keyboard navigation should also update the editor and preview.
+      // onSelectSlide() already keeps store selection and casting navigation in sync.
+      void this.onSelectSlide(nextSlide);
       return;
     }
 

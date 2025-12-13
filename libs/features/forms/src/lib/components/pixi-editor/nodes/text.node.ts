@@ -20,7 +20,6 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
     max: DEFAULT_CONFIG.defaults.textMax,
     color: 0xffffff,
     colorHex: '#ffffff',
-    actualFontSize: 32,
   };
 
   private lastCalculatedFontSize = 32;
@@ -79,8 +78,8 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
     this.drawHandles();
 
     // Check if this is a restoration call by looking for a special property.
-    const restoredFontSize = this.style.actualFontSize;
-    if (restoredFontSize) {
+    const restoredFontSize = (this.style as any).actualFontSize;
+    if (typeof restoredFontSize === 'number' && Number.isFinite(restoredFontSize)) {
       this.applyFixedSize(restoredFontSize);
       delete this.style.actualFontSize; // Consume the property to avoid re-triggering
       return;

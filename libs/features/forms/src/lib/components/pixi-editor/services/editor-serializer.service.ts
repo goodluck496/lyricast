@@ -201,17 +201,23 @@ export class EditorSerializerService {
     // this.clearAllNodes(); // This should be handled by the component
     if (!data || !data.nodes) return;
 
+    const savedW = data.sceneBounds?.width ?? this.sceneViewport.baseSceneWidth;
+    const savedH = data.sceneBounds?.height ?? this.sceneViewport.baseSceneHeight;
+    const scaleX = savedW > 0 ? this.sceneViewport.baseSceneWidth / savedW : 1;
+    const scaleY = savedH > 0 ? this.sceneViewport.baseSceneHeight / savedH : 1;
+    const scaleFont = Math.min(scaleX, scaleY);
+
     data.nodes.forEach((nodeData) => {
       const options = {
-        width: nodeData.width,
-        height: nodeData.height,
+        width: nodeData.width * scaleX,
+        height: nodeData.height * scaleY,
         rotation: nodeData.rotation,
         alpha: nodeData.alpha,
       };
 
       // Координаты теперь абсолютны относительно world, который уже сдвинут
-      const absoluteX = nodeData.x;
-      const absoluteY = nodeData.y;
+      const absoluteX = nodeData.x * scaleX;
+      const absoluteY = nodeData.y * scaleY;
 
       switch (nodeData.type) {
         case 'text':
@@ -224,7 +230,10 @@ export class EditorSerializerService {
               ...options,
               style: {
                 ...nodeData.style,
-                actualFontSize: nodeData.actualFontSize,
+                actualFontSize:
+                  typeof nodeData.actualFontSize === 'number'
+                    ? nodeData.actualFontSize * scaleFont
+                    : undefined,
               },
               bgFillColor: nodeData.bgFillColor,
               bgAssetId: nodeData.bgAssetId, // Pass asset ID

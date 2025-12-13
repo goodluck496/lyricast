@@ -41,8 +41,11 @@ export class TextPlugin implements EditorPlugin {
       // Применяем стили и текст ДО вызова applyBoxSize и layout
       if (addText.options?.style) {
         textNode.style = { ...addText.options.style };
-        // Передаем actualFontSize для восстановления
-        textNode.style.actualFontSize = addText.options.style.actualFontSize;
+        // Передаем actualFontSize для восстановления (только если он явно задан)
+        const restored = (addText.options.style as any).actualFontSize;
+        if (typeof restored === 'number' && Number.isFinite(restored)) {
+          (textNode.style as any).actualFontSize = restored;
+        }
       }
       textNode.textHtml = addText.text ?? 'New text';
 
@@ -57,8 +60,18 @@ export class TextPlugin implements EditorPlugin {
       textNode.applyBoxSize(addText.options?.width ?? 600, addText.options?.height ?? 240);
 
       // layout() вызываем только если узел создается с нуля, а не восстанавливается
-      if (!addText.options?.style?.actualFontSize) {
-        void textNode.layout();
+      if (!(addText.options?.style as any)?.actualFontSize) {
+        // Pixi text metrics/fonts can settle over a couple frames; delay initial fit.
+        void (async () => {
+          const waitForFrames = async (count: number) => {
+            for (let i = 0; i < count; i++) {
+              // eslint-disable-next-line no-await-in-loop
+              await new Promise<void>((r) => requestAnimationFrame(() => r()));
+            }
+          };
+          await waitForFrames(2);
+          await textNode.layout();
+        })();
       }
 
       const destroy$ = new Subject<void>();

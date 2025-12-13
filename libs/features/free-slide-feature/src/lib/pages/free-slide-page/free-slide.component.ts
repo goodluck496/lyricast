@@ -192,14 +192,9 @@ export class FreeSlideComponent implements AfterViewInit {
         return;
       }
 
-      this.store.dispatch(
-        FreeSlideActions[FreeSlideActionsEnum.slideNavigate]({
-          slide: nextSlide,
-          direction: dir,
-          index: boundedIndex,
-        })
-      );
-
+      // While casting, keyboard navigation should also update the editor and preview.
+      // onSelectSlide() already keeps store selection and casting navigation in sync.
+      void this.onSelectSlide(nextSlide);
       return;
     }
 
@@ -220,6 +215,7 @@ export class FreeSlideComponent implements AfterViewInit {
   });
 
   currentSlideId = '';
+  loadedSlideId = '';
   currentSlideIndex = 1;
 
   slides$ = this.slideService.slides$.asObservable();
@@ -274,11 +270,11 @@ export class FreeSlideComponent implements AfterViewInit {
   async onSelectSlide(slide: SlideDto | Slide) {
     // Автосохранение текущего слайда перед переключением
     if (
-      this.currentSlideId &&
+      this.loadedSlideId &&
       this.pixiEditor &&
-      this.currentSlideId !== slide.id
+      this.loadedSlideId !== slide.id
     ) {
-      await this.onSaveSlide({ isNavigatingAway: true });
+      await this.onSaveSlide({ isNavigatingAway: true, slideId: this.loadedSlideId });
     } else if (this.currentSlideId === slide.id) {
       return;
     }
@@ -290,12 +286,23 @@ export class FreeSlideComponent implements AfterViewInit {
     this.currentSlideId = slide.id;
     this.currentSlideIndex = slide.index;
 
+    // Обновляем UI/стор сразу, чтобы клик по слайду ощущался мгновенно
+    this.store.dispatch(
+      FreeSlideActions[FreeSlideActionsEnum.selectSlide](slide)
+    );
+    this.slideService.notifyUiUpdate();
+    this.cdr.markForCheck();
+
+    // Новая версия загрузки — всё, что было запущено до этого, считается устаревшим
+    const version = ++this.loadVersion;
+
     // Дожидаемся инициализации PixiJS перед очисткой/десериализацией
     const ready = await this.waitForEditorReady();
+    if (version !== this.loadVersion) return; // stale click/load
+
     if (this.pixiEditor && ready && this.pixiEditor.app) {
       this.pixiEditor.clearAllNodes();
       if (slide.content) {
-        const version = ++this.loadVersion;
         try {
           const slideData = JSON.parse(slide.content) as SerializedState;
 
@@ -306,35 +313,32 @@ export class FreeSlideComponent implements AfterViewInit {
 
           // Preload assets so text/metrics are ready before layout
           await this.pixiEditor.serializer.preloadAssets(slideData);
+          if (version !== this.loadVersion) return; // stale load, abort
+
           // Clear current nodes to avoid races when switching quickly
           this.pixiEditor.clearAllNodes();
           this.pixiEditor.serializer.deserializeState(slideData);
           this.pixiEditor.sceneViewport.updateSceneBounds();
 
-          // После десериализации всегда прогоняем layout для всех текстовых нод,
-          // чтобы TextFitService пересчитал размер шрифта под текущие границы сцены.
-          await this.pixiEditor.fitAllTextNodes();
+          if (version !== this.loadVersion) return;
+          this.loadedSlideId = slide.id;
 
-          // Дополнительный отложенный прогон на следующий тик event-loop,
-          // чтобы учесть асинхронные обновления Pixi/DOM-метрик.
-          setTimeout(() => {
-            if (version !== this.loadVersion) return; // слайд уже сменился
-            void this.pixiEditor.fitAllTextNodes();
-          }, 0);
-
-          if (version !== this.loadVersion) return; // stale load, abort
+          // После десериализации прогоняем layout для всех текстовых нод,
+          // но делаем это асинхронно и с защитой от гонок.
+          void (async () => {
+            if (version !== this.loadVersion) return;
+            await this.pixiEditor.fitAllTextNodes();
+          })();
         } catch (e) {
           console.error('Error parsing slide data, clearing editor', e);
           this.pixiEditor.clearAllNodes();
         }
       } else {
         this.pixiEditor.clearAllNodes();
+        if (version !== this.loadVersion) return;
+        this.loadedSlideId = slide.id;
       }
     }
-
-    this.store.dispatch(
-      FreeSlideActions[FreeSlideActionsEnum.selectSlide](slide)
-    );
 
     this.store
       .select(selectFreeSlideCastingStarted)
@@ -350,17 +354,25 @@ export class FreeSlideComponent implements AfterViewInit {
           })
         );
       });
-
-    // Manually trigger UI update for the slide list after navigation is complete
-    this.slideService.notifyUiUpdate();
-    this.cdr.markForCheck();
   }
 
-  async onSaveSlide(options: { isNavigatingAway?: boolean } = {}) {
+  async onSaveSlide(
+    options: { isNavigatingAway?: boolean; slideId?: string } = {}
+  ) {
     if (!this.pixiEditor) {
       console.warn('[FreeSlide] Cannot save: pixiEditor is not ready');
       return;
     }
+
+    const targetSlideId = options.slideId || this.loadedSlideId || this.currentSlideId;
+    if (!targetSlideId) return;
+
+    // Никогда не сохраняем состояние редактора в слайд, который не загружен в Pixi.
+    // Иначе при быстром переключении можно перезаписать контент другого слайда.
+    if (this.loadedSlideId && targetSlideId !== this.loadedSlideId) {
+      return;
+    }
+
     const editorState = this.pixiEditor.serializer.serializeState();
     const htmlString = JSON.stringify(editorState);
     // Compute a simple content hash based on serialized editor state
@@ -368,20 +380,24 @@ export class FreeSlideComponent implements AfterViewInit {
 
     // Reuse existing preview asset if content hasn't changed
     let assetId: string | undefined;
-    const currentSlide = this.slideService.slidesMap.get(this.currentSlideId);
+    const currentSlide = this.slideService.slidesMap.get(targetSlideId);
 
-    const lastHash = this.lastContentHashBySlideId.get(this.currentSlideId);
+    const lastHash = this.lastContentHashBySlideId.get(targetSlideId);
     if (lastHash !== contentHash) {
+      // Если за время генерации превью пользователь переключился на другой слайд — отменяем.
+      if (this.loadedSlideId && this.loadedSlideId !== targetSlideId) return;
       const blob = await this.pixiEditor.generateSnapshot();
+      if (this.loadedSlideId && this.loadedSlideId !== targetSlideId) return;
       if (blob) {
         // Upload new preview first; backend deduplicates by content hash
         const newAssetId = await this.assetStorage.saveAsset(blob, 'image/jpeg');
+        if (this.loadedSlideId && this.loadedSlideId !== targetSlideId) return;
         const oldAssetId = currentSlide?.previewAssetId;
 
         // If old asset exists and differs from new one, delete it only if not reused elsewhere
         if (oldAssetId && oldAssetId !== newAssetId) {
           const isReused = Array.from(this.slideService.slidesMap.values()).some(
-            (s) => s.id !== this.currentSlideId && s.previewAssetId === oldAssetId
+            (s) => s.id !== targetSlideId && s.previewAssetId === oldAssetId
           );
           if (!isReused) {
             await this.assetStorage.deleteAsset(oldAssetId);
@@ -399,9 +415,15 @@ export class FreeSlideComponent implements AfterViewInit {
     // const { id } = RouteParamsReducerHelper.reduceSnapshot(this.route.snapshot);
 
     const slidePayload = {
-      id: this.currentSlideId,
-      name: this.slideForm.getRawValue().name,
-      index: this.currentSlideIndex,
+      id: targetSlideId,
+      name:
+        targetSlideId === this.currentSlideId
+          ? this.slideForm.getRawValue().name
+          : (currentSlide?.name ?? this.slideForm.getRawValue().name),
+      index:
+        targetSlideId === this.currentSlideId
+          ? this.currentSlideIndex
+          : (currentSlide?.index ?? this.currentSlideIndex),
       content: htmlString,
       previewAssetId: assetId,
     };
@@ -413,7 +435,7 @@ export class FreeSlideComponent implements AfterViewInit {
     this.slideForm.markAsPristine();
 
     // Update content hash after successful update attempt
-    this.lastContentHashBySlideId.set(this.currentSlideId, contentHash);
+    this.lastContentHashBySlideId.set(targetSlideId, contentHash);
 
     // Live-sync logic: if casting is active for this slide, dispatch an update.
     if (!options.isNavigatingAway) {
@@ -435,7 +457,7 @@ export class FreeSlideComponent implements AfterViewInit {
           }
 
           // If the slide we just saved is the one on the casting screen, dispatch the update
-          if (castedSlideId === this.currentSlideId) {
+          if (castedSlideId === targetSlideId) {
             const liveSyncEnabled = this.slideService.liveSyncEnabled$.value;
 
             if (liveSyncEnabled) {
@@ -455,7 +477,7 @@ export class FreeSlideComponent implements AfterViewInit {
 
   async onDuplicateSlide() {
     // 1. Ensure the current state is saved so we copy the latest version.
-    await this.onSaveSlide();
+    await this.onSaveSlide({ slideId: this.loadedSlideId || this.currentSlideId });
 
     const originalSlide = this.slideService.slidesMap.get(this.currentSlideId);
     if (!originalSlide) return;
@@ -527,6 +549,7 @@ export class FreeSlideComponent implements AfterViewInit {
       } else {
         // Handle case where no slides are left
         this.currentSlideId = '';
+        this.loadedSlideId = '';
         this.currentSlideIndex = -1;
         // this.currentSlideName = '';
         this.pixiEditor.clearAllNodes();
@@ -547,8 +570,8 @@ export class FreeSlideComponent implements AfterViewInit {
    * Этот метод вызывается из сайдбара перед началом кастинга.
    */
   saveCurrentSlide() {
-    if (this.pixiEditor && this.currentSlideId) {
-      this.onSaveSlide();
+    if (this.pixiEditor && (this.loadedSlideId || this.currentSlideId)) {
+      this.onSaveSlide({ slideId: this.loadedSlideId || this.currentSlideId });
     }
   }
 
@@ -647,8 +670,11 @@ export class FreeSlideComponent implements AfterViewInit {
 
   async updateSlideInService(presentationId: string) {
     // Save current slide immediately to avoid losing debounced changes (e.g., title)
-    if (this.currentSlideId && this.pixiEditor) {
-      await this.onSaveSlide({ isNavigatingAway: true });
+    if ((this.loadedSlideId || this.currentSlideId) && this.pixiEditor) {
+      await this.onSaveSlide({
+        isNavigatingAway: true,
+        slideId: this.loadedSlideId || this.currentSlideId,
+      });
     }
     this.changePresentation$.next();
     this.slideService.clear(); // Synchronously clear the state before async operations

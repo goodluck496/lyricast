@@ -794,18 +794,12 @@ export class PixiSlideEditorV2Component
    */
   public async fitAllTextNodes(): Promise<void> {
     const nodes = this.store.snapshot((s) => s.nodes);
-    const bounds = this.sceneViewport.getSceneBounds();
     const tasks: Promise<void>[] = [];
 
     for (const id of Object.keys(nodes)) {
       const ref = nodes[id]?.ref as NodeBase | undefined;
       if (ref instanceof TextNode) {
-        // Resize text node to exactly match scene bounds, then relayout
         try {
-          ref.x = 0;
-          ref.y = 0;
-          ref.applyBoxSize(bounds.width, bounds.height);
-
           // Wait for multiple frames to ensure proper text measurement
           const waitForFrames = async (count: number) => {
             for (let i = 0; i < count; i++) {

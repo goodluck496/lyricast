@@ -4,10 +4,10 @@
   }
 
   <input pInputText placeholder="Поиск" class="search__input" [formControl]="searchControl"
-         (keydown)="onKeydown($event)" (click)="onClickInput($event)" />
+         (keydown)="onKeydown($event)" (mousedown)="$event.stopPropagation()" (click)="onClickInput($event)" />
 </p-iconField>
 
-<p-popover #searchOverlay>
+<p-popover #searchOverlay (onShow)="onOverlayShow()">
 
   <div class="search__wrapper">
     <div class="search-feature-row">
@@ -26,6 +26,7 @@
                       placeholder="Выберите перевод"
                       [(ngModel)]="selectedTranslate"
                       (ngModelChange)="onTranslateSelect($event)"
+                      
           >
             <ng-template pTemplate="selectedItem" let-data>
               {{data.title.toString().substring(0, 30)}}
@@ -39,6 +40,7 @@
                       placeholder="Выберите сборник"
                       [(ngModel)]="selectedSongBook"
                       (ngModelChange)="onSongBookSelect($event)"
+                      
           >
             <ng-template pTemplate="selectedItem" let-data>
               {{data.title.toString().substring(0, 30)}}

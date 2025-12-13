@@ -219,9 +219,22 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
     fromEvent<KeyboardEvent>(window, 'keydown')
       .pipe(filter((event) => event.ctrlKey && event.code === 'KeyF'))
       .subscribe((event) => {
-        this.input().el.nativeElement.focus();
+        this.focusSearchInput();
         this.searchOverlay().show(event, this.input().el.nativeElement);
       });
+  }
+
+  private focusSearchInput(): void {
+    const inputEl = this.input().el.nativeElement;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        inputEl.focus();
+      });
+    });
+
+    setTimeout(() => inputEl.focus(), 0);
+    setTimeout(() => inputEl.focus(), 50);
   }
 
   onKeydown(event: KeyboardEvent): void {
@@ -234,6 +247,8 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
   }
 
   onClickInput(event: MouseEvent): void {
+    event.stopPropagation();
+
     if (this.searchOverlay().overlayVisible) {
       return;
     }
@@ -265,7 +280,12 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    this.searchOverlay().show(event);
+    this.searchOverlay().show(event, this.input().el.nativeElement);
+    this.focusSearchInput();
+  }
+
+  onOverlayShow(): void {
+    this.focusSearchInput();
   }
 
   onSelectTab(tab: any) {

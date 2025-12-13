@@ -4,6 +4,8 @@
  */
 
 import { app, ipcMain, screen } from 'electron';
+import * as fs from 'fs';
+import * as path from 'path';
 import { environment } from '../../environments/environment';
 import {
   ElectronActionEvents,
@@ -127,6 +129,22 @@ ipcMain.handle(ElectronAppEvents.GET_DISPLAYS, () => {
       primary: el.id === primaryId,
     };
   });
+});
+
+ipcMain.handle(ElectronActionEvents.LOAD_SETTINGS, async () => {
+  const file = path.join(app.getPath('userData'), 'settings.json');
+  try {
+    const raw = await fs.promises.readFile(file, 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+});
+
+ipcMain.handle(ElectronActionEvents.SAVE_SETTINGS, async (_event, settings) => {
+  const file = path.join(app.getPath('userData'), 'settings.json');
+  await fs.promises.mkdir(path.dirname(file), { recursive: true });
+  await fs.promises.writeFile(file, JSON.stringify(settings, null, 2), 'utf-8');
 });
 
 // todo УДАЛИТЬ т.к. неудобно использовать "голые" воркеры оч сложно подключать к ним какие-то фреймворки

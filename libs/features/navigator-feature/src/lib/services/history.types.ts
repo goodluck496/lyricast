@@ -26,7 +26,10 @@ export type BaseHistoryItemPayload = {
 export type BibleHistoryPayload = BaseHistoryItemPayload & {
   path: string[];
   children: BibleVerseForCasting[];
-  currentVerse: BibleVerseForCasting
+  currentVerse: BibleVerseForCasting;
+
+  // Опциональный диапазон стихов для истории (например, 3-5)
+  range?: { from: number; to: number };
 };
 
 export type SongHistoryPayload = BaseHistoryItemPayload & {

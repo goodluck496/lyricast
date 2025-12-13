@@ -16,6 +16,7 @@ import {
   selectCastingPaused,
   selectSelectedBibleVerse,
   selectSelectedChapterSections,
+  selectSelectedVersesRange,
 } from '@lyri-cast/bible-store';
 import { Router } from '@angular/router';
 import { BibleApiService } from '@lyri-cast/data-access-bible';
@@ -60,6 +61,7 @@ export class BibleSidebarComponent {
   sectionList$: Observable<BibleChapterSection[]> = this.store.select(
     selectSelectedChapterSections
   );
+  selectedRange$ = this.store.select(selectSelectedVersesRange);
 
   onStartCasting() {
     this.store
@@ -67,20 +69,24 @@ export class BibleSidebarComponent {
       .pipe(
         take(1),
         filterEmpty(),
-        withLatestFrom(this.sectionList$, this.sidebarService.data$)
+        withLatestFrom(this.sectionList$, this.sidebarService.data$, this.selectedRange$)
       )
-      .subscribe(([verse, sections, sidebarData]) => {
+      .subscribe(([verse, sections, sidebarData, range]) => {
         if (!sidebarData || !sidebarData.bibleForm) {
           return;
         }
         const groupValue = sidebarData.bibleForm;
 
         if (groupValue.book && groupValue.chapter && sections.length) {
+          const fromNumber = range?.from ?? verse.number;
+          const toNumber = range?.to ?? verse.number;
+
           this.store.dispatch(
             BibleActions.openCasting({
               book: groupValue.book.baseEntity,
               chapter: groupValue.chapter.baseEntity,
-              fromIndex: verse.number,
+              fromIndex: fromNumber,
+              range: range ? { from: fromNumber, to: toNumber } : undefined,
               content: sections[0].content.map((el) => {
                 return {
                   ...el,

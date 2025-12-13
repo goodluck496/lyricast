@@ -1,6 +1,15 @@
 <div class="info-block" [class.hide]="!showingContent()">
-  <div class="info-block__type" [class.hide]="!selectedBookTitle()">{{ selectedBookTitle() }}
-    - {{ selectedChapterId() }}:{{ selectedVerseId() }}
+  <div class="info-block__type" [class.hide]="!selectedBookTitle()">
+    {{ selectedBookTitle() }} - {{ selectedChapterId() }}:
+    @if (selectedRange(); as range) {
+      @if (range.from === range.to) {
+        {{ range.from }}
+      } @else {
+        {{ range.from }}-{{ range.to }}
+      }
+    } @else {
+      {{ selectedVerseId() }}
+    }
   </div>
 </div>
 

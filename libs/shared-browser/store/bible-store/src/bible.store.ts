@@ -33,6 +33,9 @@ export type BibleState = {
    */
   selectedPath: string[];
 
+  /** Диапазон выделенных стихов (по номерам внутри главы) */
+  selectedVersesRange: { from: number; to: number } | null;
+
   castingProcess: BibleStartCastingPayload | null;
   castingProcessNavigate: BiblePresentationNavigatePayload | null;
 
@@ -54,6 +57,8 @@ export const bibleInitialState: BibleState = {
   selectedBibleVerse: null,
   selectedPrevOrNextVerse: null,
   selectedPath: ['1', '1', '1'],
+
+  selectedVersesRange: null,
 
   castingProcessNavigate: null,
 

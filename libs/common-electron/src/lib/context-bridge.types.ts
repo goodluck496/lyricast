@@ -50,5 +50,8 @@ export type Context = {
   onAppUpdateStatus: (cb: (status: any) => void) => void;
   checkForAppUpdates: () => void;
 
+  loadUserSettings: () => Promise<unknown | null>;
+  saveUserSettings: (settings: unknown) => Promise<void>;
+
   platform: string;
 };

@@ -53,6 +53,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
   selectedChapterId = signal<number | null>(null);
   selectedContents = signal<BibleVerseForCasting[]>([]);
   selectedVerseId = signal<number>(1);
+  selectedRange = signal<{ from: number; to: number } | null>(null);
 
   showingContent = signal(false);
   lines = signal<string[]>([]);
@@ -116,21 +117,84 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
     this.selectedBook.set(payload.book);
     this.selectedBookTitle.set(payload.book.title.full);
-    this.selectedContents.set(payload.content);
     this.selectedChapterId.set(payload.chapter.number);
+    const range = payload.range ?? null;
+    this.selectedRange.set(range);
+
+    if (range) {
+      const versesInRange = payload.content.filter(
+        (v) => v.number >= range.from && v.number <= range.to
+      );
+
+      if (versesInRange.length > 1) {
+        const first = versesInRange[0];
+        const combinedHtml = versesInRange
+          .map((v) => {
+            const text = Array.isArray(v.text) ? v.text.join(' ') : (v as any).text;
+            return `<span class="bible-casting__verse-number">${v.number}</span> ${text}`;
+          })
+          .join(' ');
+
+        this.selectedContents.set([
+          {
+            ...first,
+            text: [combinedHtml],
+          },
+        ]);
+
+        this.selectedVerseId.set(range.from);
+      } else {
+        // Диапазон фактически из одного стиха — отображаем только этот стих без нумерации.
+        const single = versesInRange[0] ?? payload.content.find((v) => v.number === range.from);
+
+        if (single) {
+          this.selectedContents.set([
+            {
+              ...single,
+              text: Array.isArray(single.text) ? single.text : [single.text as any],
+            },
+          ]);
+          this.selectedVerseId.set(single.number);
+        } else {
+          // запасной вариант: берём весь контент и fromIndex
+          this.selectedContents.set(payload.content);
+          this.selectedVerseId.set(payload.fromIndex ?? 0);
+        }
+
+        this.selectedRange.set(null);
+      }
+    } else {
+      // Без диапазона отображаем только выбранный стих как один слайд.
+      const single =
+        payload.content.find((v) => v.number === payload.fromIndex) ??
+        payload.content[0];
+
+      if (single) {
+        this.selectedContents.set([
+          {
+            ...single,
+            text: Array.isArray(single.text) ? single.text : [single.text as any],
+          },
+        ]);
+        this.selectedVerseId.set(single.number);
+      } else {
+        this.selectedContents.set(payload.content);
+        this.selectedVerseId.set(payload.fromIndex ?? 0);
+      }
+    }
+
     this.showingContent.set(true);
-    this.selectedVerseId.set(payload.fromIndex ?? 0);
     this.cdr.detectChanges();
 
     await this.initReveal();
     this.deckRef?.layout();
     this.deckRef?.sync();
 
-    if (payload.fromIndex) {
-      this.deckRef?.slide(undefined, payload.fromIndex);
-    } else {
-      this.deckRef?.slide(0, 0);
-    }
+    // В новой модели у нас всегда один реальный слайд с текстом (после placeholder),
+    // поэтому при старте всегда переходим к нему.
+    // Первый дочерний section внутри stack пустой (placeholder),
+    // реальные слайды начинаются с индекса 1.
+    this.deckRef?.slide(undefined, 1);
     this.updateTextSize();
   }
 
@@ -140,19 +204,57 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     if (!this.deckRef) {
       return;
     }
-    if (payload.direction) {
-      this.deckRef[payload.direction]();
-    } else if (payload.nextIndex !== undefined) {
-      this.deckRef.slide(undefined, payload.nextIndex);
+    // Если навигация пришла с диапазоном и набором стихов — обновляем один слайд
+    if (payload.range && payload.versesInRange && payload.versesInRange.length > 1) {
+      this.selectedRange.set(payload.range);
+
+      const combinedHtml = payload.versesInRange
+        .map((v) => {
+          const text = Array.isArray(v.text) ? v.text.join(' ') : (v as any).text;
+          return `<span class="bible-casting__verse-number">${v.number}</span> ${text}`;
+        })
+        .join(' ');
+
+      const first = payload.versesInRange[0];
+
+      this.selectedContents.set([
+        {
+          ...first,
+          text: [combinedHtml],
+        },
+      ]);
+
+      this.selectedVerseId.set(payload.range.from);
+
+      const bookName = first.bookTitle;
+      this.selectedBookTitle.set(bookName.full);
+      this.selectedChapterId.set(first.chapterId);
+
+      this.cdr.detectChanges();
+      this.deckRef.layout();
+      this.deckRef.sync();
+      this.updateTextSize();
+    } else {
+      // Для навигации без диапазона (или с диапазоном из одного стиха)
+      // всегда показываем один стих на одном слайде.
+      this.selectedRange.set(null);
+      this.selectedContents.set([
+        {
+          ...payload.currentContent,
+        },
+      ]);
+
+      const bookName = payload.currentContent.bookTitle;
+
+      this.selectedBookTitle.set(bookName.full);
+      this.selectedChapterId.set(payload.currentContent.chapterId);
+      this.selectedVerseId.set(payload.currentContent.number);
+
+      this.cdr.detectChanges();
+      this.deckRef.layout();
+      this.deckRef.sync();
+      this.updateTextSize();
     }
-
-    const bookName = payload.currentContent.bookTitle;
-
-    this.selectedBookTitle.set(bookName.full);
-    this.selectedChapterId.set(payload.currentContent.chapterId);
-    this.selectedVerseId.set(payload.currentContent.number);
-
-    this.cdr.detectChanges();
   }
 
   async initReveal(): Promise<Api> {

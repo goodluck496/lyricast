@@ -219,6 +219,10 @@ export class BibleForCastingEffects implements BaseEffectsWithBridgeInterface {
           })
         );
 
+        // При навигации стрелками сбрасываем выбранный диапазон,
+        // чтобы вернуться к одиночным стихам
+        this.store.dispatch(BibleActions.resetVersesRange());
+
         return { type: BibleActionsEnum.selectPrevOrNextVerse };
       })
     )

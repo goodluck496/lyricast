@@ -30,7 +30,7 @@ export async function startFileServer(): Promise<{ port: number; server: http.Se
       reject(err);
     });
 
-    // Start listening on a dynamic port (port 0)
+    // Start listening on a dynamic port (0) so the OS chooses a free port
     server.listen(0, () => {
       const address = server.address();
       if (typeof address === 'string' || address === null) {

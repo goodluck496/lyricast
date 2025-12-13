@@ -13,15 +13,17 @@ import {
 
 
 import Reveal from 'reveal.js';
-import { BibleVerse, BibleVerseForCasting } from '@lyri-cast/entities';
+import { BibleChapterSection, BibleVerse, BibleVerseForCasting } from '@lyri-cast/entities';
 import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { Actions, ofType } from '@ngrx/effects';
 import {
   BibleActions,
+  selectSelectedVersesRange,
   selectSelectedBibleVerse,
   selectSelectedBook,
+  selectSelectedChapterSections,
 } from '@lyri-cast/bible-store';
 import { combineLatest } from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
@@ -52,9 +54,12 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
 
   public selectedBibleVerse = signal<BibleVerse | null>(null);
   public selectedBibleVerseForCast = signal<BibleVerseForCasting | null>(null);
+  public selectedRange = signal<{ from: number; to: number } | null>(null);
 
   selectedVerse$ = this.store.select(selectSelectedBibleVerse);
   selectedBook$ = this.store.select(selectSelectedBook);
+  selectedRange$ = this.store.select(selectSelectedVersesRange);
+  sections$ = this.store.select(selectSelectedChapterSections);
 
   stopCasting$ = this.actions.pipe(ofType(BibleActions.stopCasting));
   startCasting$ = this.actions.pipe(ofType(BibleActions.startCasting));
@@ -63,15 +68,41 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
     combineLatest([
       this.selectedBook$.pipe(filterEmpty()),
       this.selectedVerse$.pipe(filterEmpty()),
+      this.selectedRange$,
+      this.sections$,
     ])
       .pipe(takeUntilDestroyed())
-      .subscribe(([book, verse]) => {
+      .subscribe(([book, verse, range, sections]) => {
         this.selectedBibleVerse.set(verse);
         this.selectedBibleVerseForCast.set({
           ...verse,
           text: [verse.text],
           bookTitle: book.title,
         });
+        this.selectedRange.set(range);
+
+        const allVerses = (sections as BibleChapterSection[]).flatMap(
+          (sec) => sec.content
+        );
+        const fromNumber = range?.from ?? verse.number;
+        const toNumber = range?.to ?? verse.number;
+        const versesInRange = allVerses.filter(
+          (v) => v.number >= fromNumber && v.number <= toNumber
+        );
+
+        if (versesInRange.length > 1) {
+          this.slideText = versesInRange
+            .map((v) => {
+              const text = v.text;
+              return `<span class="bible-casting__verse-number">${v.number}</span> ${text}`;
+            })
+            .join(' ');
+        } else if (versesInRange.length === 1) {
+          // Для одиночного стиха в "диапазоне" не показываем номер, как и при обычном кастинге
+          this.slideText = versesInRange[0].text;
+        } else {
+          this.slideText = verse.text;
+        }
 
         this.initReveal();
       });
@@ -87,8 +118,6 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
   }
 
   async initReveal(): Promise<void> {
-    this.slideText = this.selectedBibleVerse()?.text || '';
-
     // this.cdr.detectChanges();
     this.deckRef?.layout();
     this.deckRef?.sync();

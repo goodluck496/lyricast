@@ -29,7 +29,9 @@ import Quill from 'quill';
 import QuillResizeImage from 'quill-resize-image';
 import { BehaviorSubject, fromEvent } from 'rxjs';
 
-Quill.register('modules/resize', QuillResizeImage);
+try {
+  Quill.register('modules/resize', QuillResizeImage as any);
+} catch {}
 
 export type LyriHtmlEditorResult = {
   type: 'cancel' | 'submit';
@@ -180,19 +182,16 @@ export class HtmlEditorComponent
       /**
        * когда null, то считается, что редактор потерял фокус и надо бы отправить blur событие
        */
-      const container = this.root().nativeElement.querySelector(
-        '.p-editor-container'
-      ) as HTMLElement | null;
-      const toolbar = container?.querySelector(
-        '.p-editor-toolbar'
-      ) as HTMLElement | null;
-      const ae = document.activeElement as HTMLElement | null;
-      const stillInside =
-        !!ae && (container?.contains(ae) || toolbar?.contains(ae));
-      if (!stillInside) {
-        console.log('blur', this.model);
-        this.$blur.emit();
-      }
+      // Важно: при клике по тулбару Quill может на мгновение отдавать range=null.
+      // Проверяем ФАКТИЧЕСКИЙ активный элемент после того как браузер обновит focus.
+      queueMicrotask(() => {
+        const rootEl = this.root().nativeElement;
+        const ae = document.activeElement as HTMLElement | null;
+        const stillInside = !!ae && rootEl.contains(ae);
+        if (!stillInside) {
+          this.$blur.emit();
+        }
+      });
     }
   }
 
@@ -216,10 +215,12 @@ export class HtmlEditorComponent
      * ngModel для quill не работает ... приходится изголяться вот так,
      * для того чтобы в редактор можно было вставить какое-то значение
      */
-    const quill: Quill = this.editorComp().getQuill();
-    // Quill.clipboard.convert ожидает строку HTML, а не объект.
-    // Передаём строку напрямую, чтобы контент корректно появлялся в редакторе.
-    const delta = quill.clipboard.convert({ html: html ?? '' });
+    const quill: Quill | undefined = this.editorComp()?.getQuill();
+    if (!quill) {
+      return;
+    }
+
+    const delta = (quill.clipboard as any).convert({ html: html ?? '' });
     quill.setContents(delta);
 
     this.emitChange();

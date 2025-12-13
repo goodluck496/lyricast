@@ -7,7 +7,12 @@
       <p-tablist>
       @for (data of searchResultDto; track data.bookName.fileKey; let idx = $index) {
         @if (data.songs.length) {
-          <p-tab [value]="idx">{{ data.bookName.humanName }}</p-tab>
+          <p-tab [value]="idx">
+            <span class="song-search-result__tab-title">
+              <span class="song-search-result__tab-book">{{ data.bookName.humanName }}</span>
+              <span class="song-search-result__tab-badge">{{ data.songs.length }}</span>
+            </span>
+          </p-tab>
         }
 
       }
@@ -32,7 +37,7 @@
                          (click)="onSelectSearchElement(item)"
                     >
                       <div class="list-item__wrapper">
-                        <div class="list-item__number" [innerHTML]="item.number !== null && item.number !== undefined ? (item.number | number:'1.0-0') : ''"></div>
+                        <div class="list-item__number" [innerHTML]="item.number !== null && item.number !== undefined ? (item.number) : ''"></div>
                         <div class="list-item__title" >
                           <span class="list-item__title-content" [innerHTML]="item.title | highliter: data.search"></span>
                         </div>

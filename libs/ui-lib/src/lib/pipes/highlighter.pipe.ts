@@ -19,6 +19,54 @@ import { Pipe, PipeTransform } from '@angular/core';
 export class HighlighterPipe implements PipeTransform {
   htmlClass = 'highlighted-text';
 
+  private escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private wrapWithUnicodeWordBoundaries(pattern: string): string {
+    // JS \b doesn't work well with Cyrillic. Use Unicode property escapes.
+    // Treat letters/numbers/underscore as "word" characters.
+    const wordChar = '[\\p{L}\\p{N}_]';
+    return `(?<!${wordChar})${pattern}(?!${wordChar})`;
+  }
+
+  private buildRegex(searchTerm: string, type: 'full' | string = ''): RegExp | null {
+    const normalized = (searchTerm ?? '').trim();
+    if (!normalized) return null;
+
+    // If the user entered a phrase, we try to highlight it as a phrase first.
+    // If the phrase doesn't exist in the text, we can fallback to highlighting individual terms.
+    const terms = normalized.split(/\s+/g).filter(Boolean);
+
+    if (type === 'full') {
+      const escaped = this.escapeRegExp(normalized);
+      return new RegExp(this.wrapWithUnicodeWordBoundaries(`(${escaped})`), 'igu');
+    }
+
+    if (terms.length > 1) {
+      const escapedTerms = terms.map((t) => this.escapeRegExp(t));
+      // allow whitespace and punctuation between terms (backend search normalizes punctuation)
+      const phrase = escapedTerms.join('(?:[\\s\\p{P}\\p{S}]+)');
+      return new RegExp(phrase, 'igu');
+    }
+
+    return new RegExp(
+      this.wrapWithUnicodeWordBoundaries(this.escapeRegExp(normalized)),
+      'igu'
+    );
+  }
+
+  private buildTermsFallbackRegex(searchTerm: string): RegExp | null {
+    const normalized = (searchTerm ?? '').trim();
+    if (!normalized) return null;
+
+    const terms = normalized.split(/\s+/g).filter(Boolean);
+    if (terms.length <= 1) return null;
+
+    const escaped = terms.map((t) => this.escapeRegExp(t)).join('|');
+    return new RegExp(this.wrapWithUnicodeWordBoundaries(`(?:${escaped})`), 'igu');
+  }
+
   public transform2(
     value: string,
     searchTerm: string,
@@ -111,10 +159,10 @@ export class HighlighterPipe implements PipeTransform {
       return value;
     }
 
-    const regex =
-      type === 'full'
-        ? new RegExp(`\\b(${searchTerm}\\b)`, 'igm')
-        : new RegExp(searchTerm, 'igm');
+    const regex = this.buildRegex(searchTerm, type);
+    if (!regex) {
+      return value;
+    }
 
     // Создаем временный элемент для парсинга HTML
     const tempElement = document.createElement('div');
@@ -123,7 +171,15 @@ export class HighlighterPipe implements PipeTransform {
     // Удаляем все HTML-теги, чтобы работать только с текстом
     const plainText = tempElement.textContent || tempElement.innerText || '';
 
-    const match = plainText.match(regex);
+    let match = plainText.match(regex);
+    let activeRegex = regex;
+    if (!match) {
+      const fallbackRegex = this.buildTermsFallbackRegex(searchTerm);
+      if (fallbackRegex) {
+        match = plainText.match(fallbackRegex);
+        activeRegex = fallbackRegex;
+      }
+    }
     if (!match) {
       return value; // Если нет совпадений, возвращаем оригинальный HTML
     }
@@ -159,7 +215,10 @@ export class HighlighterPipe implements PipeTransform {
     let truncatedHtml = tempContainer.innerHTML;
 
     // Выделяем искомый текст, сохраняя разметку
-    truncatedHtml = truncatedHtml.replace(regex, `<span class="${this.htmlClass}">$&</span>`);
+    truncatedHtml = truncatedHtml.replace(
+      activeRegex,
+      `<span class="${this.htmlClass}">$&</span>`
+    );
 
     // Добавляем многоточия, если текст был урезан
     if (sliceStart > 0) {

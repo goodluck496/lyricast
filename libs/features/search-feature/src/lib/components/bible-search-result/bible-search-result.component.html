@@ -1,39 +1,58 @@
 <!--@if (!$isLoading())-->
 
-@if (searchResult$ | async; as searchResultDto) {
-  @if (searchResultDto.sections.length) {
-
-    <ng-scrollbar externalViewport cdkVirtualScrollViewport class="bible-search-result__scroll-container">
-      <cdk-virtual-scroll-viewport [appendOnly]="false"
-                                   orientation="vertical"
-                                   [itemSize]="64"
-
-                                   class="bible-search-result__viewport">
-                      <span cdkListbox>
-                        <div *cdkVirtualFor="let item of searchResultDto.sections; let index; templateCacheSize: 5"
-                             [cdkOption]="item"
-                             class="bible-search-result__item"
-                             (dblclick)="onSelectSearchElement(item)"
-                        >
-                          <!-- TODO заменить на компоненты ссылки-->
-                          <div class="bible-search-result__link" (click)="onSelectSearchElement(item)">
-                            {{ item.bookShortName }}
-                            {{ item.chapterId }}:{{ item.content.number }}
-                          </div>
-                          <div class="bible-search-result__item-text"
-                               [innerHTML]="item.content.text | highliter: searchResultDto.search || ''"></div>
-                        </div>
-
-                      </span>
-      </cdk-virtual-scroll-viewport>
-
-    </ng-scrollbar>
-
+@if (groupedResult$ | async; as searchResultDto) {
+  @if (searchResultDto.groups.length) {
+    <p-tabs [value]="selectedTabIndex" (valueChange)="onChangeTab($event)">
+      <p-tablist>
+        @for (group of searchResultDto.groups; track group.bookId; let idx = $index) {
+          <p-tab [value]="idx">
+            <span class="bible-search-result__tab-title">
+              <span class="bible-search-result__tab-book">{{ group.bookShortName }}</span>
+              <span class="bible-search-result__tab-badge">{{ group.matchCount }}</span>
+            </span>
+          </p-tab>
+        }
+      </p-tablist>
+      <p-tabpanels>
+        @for (group of searchResultDto.groups; track group.bookId; let idx = $index) {
+          <p-tabpanel [value]="idx">
+            <!-- виртуальный скролл в табах работает только с таким фиксом
+            https://stackoverflow.com/a/56474174/11542647 -->
+            @if (idx === selectedTabIndex) {
+              <ng-scrollbar externalViewport cdkVirtualScrollViewport class="bible-search-result__scroll-container">
+                <cdk-virtual-scroll-viewport
+                  [appendOnly]="false"
+                  orientation="vertical"
+                  [itemSize]="64"
+                  class="bible-search-result__viewport"
+                >
+                  <span cdkListbox>
+                    <div
+                      *cdkVirtualFor="let item of group.sections; let index; templateCacheSize: 5"
+                      [cdkOption]="item"
+                      class="bible-search-result__item"
+                      (dblclick)="onSelectSearchElement(item)"
+                    >
+                      <div class="bible-search-result__link" (click)="onSelectSearchElement(item)">
+                        {{ item.bookShortName }}
+                        {{ item.chapterId }}:{{ item.content.number }}
+                      </div>
+                      <div
+                        class="bible-search-result__item-text"
+                        [innerHTML]="item.content.text | highliter: searchResultDto.search || ''"
+                      ></div>
+                    </div>
+                  </span>
+                </cdk-virtual-scroll-viewport>
+              </ng-scrollbar>
+            }
+          </p-tabpanel>
+        }
+      </p-tabpanels>
+    </p-tabs>
   } @else {
     Ничего не нет
   }
-
-
 }
 @if (isLoading()) {
   <p-progressBar mode="indeterminate" [style]="{ height: '6px' }" />

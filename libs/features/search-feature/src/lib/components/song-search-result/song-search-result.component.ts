@@ -10,7 +10,7 @@ import { Store } from '@ngrx/store';
 import { map, Observable, take, tap } from 'rxjs';
 import { ISongForSearch, SongsSearchDto } from '@lyri-cast/entities';
 import { SongSearchService } from '../../song-search.service';
-import { SongActions } from '@lyri-cast/song-store';
+import { SongActions, SongActionsEnum } from '@lyri-cast/song-store';
 
 import { NgScrollbarExt } from 'ngx-scrollbar';
 import { NgScrollbarCdkVirtualScroll } from 'ngx-scrollbar/cdk';
@@ -88,15 +88,15 @@ export class SongSearchResultComponent {
       await this.router.navigate(songPagePath);
     }
     this.actions$
-      .pipe(ofType(SongActions.selectBook), take(1))
+      .pipe(ofType(SongActions[SongActionsEnum.selectBook]), take(1))
       .subscribe((payload) => {
         this.store.dispatch(
-          SongActions.selectSongByNumber({ data: { number: value.number } })
+          SongActions[SongActionsEnum.selectSongByNumber]({ data: { number: value.number } })
         );
         this.onSelectSong.emit(value);
       });
 
-    this.store.dispatch(SongActions.selectBook(value.bookName));
+    this.store.dispatch(SongActions[SongActionsEnum.selectBook](value.bookName));
   }
 
   onChangeTab(tabValue: any) {

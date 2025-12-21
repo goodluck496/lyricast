@@ -11,8 +11,11 @@ import {
   BaseEffectsWithBridgeInterface,
   BridgeProcessForEffectsDecorator,
   BridgeService,
+  AppActions,
 } from '@lyri-cast/common-browser';
 import { EventData } from '@lyri-cast/common-electron';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { map } from 'rxjs';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   [BibleActionsEnum.startCasting]: (eventData) =>
@@ -30,4 +33,13 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
 export class BibleCastingPageEffects implements BaseEffectsWithBridgeInterface {
   store = inject<Store<BibleState>>(Store);
   bridge = inject(BridgeService);
+
+  private readonly actions$ = inject(Actions);
+
+  stopCasting$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(BibleActions.stopCasting),
+      map(() => ({ type: '[BibleCastingPageEffects] stopCasting received' }))
+    )
+  );
 }

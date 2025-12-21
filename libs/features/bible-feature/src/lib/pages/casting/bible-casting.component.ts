@@ -17,6 +17,7 @@ import Reveal, { Api } from 'reveal.js';
 
 import { Store } from '@ngrx/store';
 import { BridgeService, Pages } from '@lyri-cast/common-browser';
+import { APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
 import {
   BiblePresentationNavigatePayload,
   BibleStartCastingPayload,
@@ -72,6 +73,28 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     this.updateTextSize();
   }
 
+  @HostListener('window:keydown', ['$event'])
+  keydownHandler(event: KeyboardEvent) {
+    if (!this.deckRef) {
+      return;
+    }
+
+    if (!this.showingContent()) {
+      return;
+    }
+
+    if (['ArrowRight', 'ArrowDown'].includes(event.key)) {
+      event.preventDefault();
+      this.deckRef.next();
+      return;
+    }
+
+    if (['ArrowLeft', 'ArrowUp'].includes(event.key)) {
+      event.preventDefault();
+      this.deckRef.prev();
+    }
+  }
+
   constructor(private sanitizer: DomSanitizer) {}
 
   // Функция для санитизации HTML
@@ -107,7 +130,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
       return;
     }
     this.bridge.windowSrv.electronContext.send({
-      event: 'OPENED_PAGE', //SONG_ACTIONS.openedPage,
+      event: APP_COMMON_ACTIONS.openedPage,
       payload: { state: 'after-view-init', page: Pages.CASTING },
     });
   }

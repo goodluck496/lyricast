@@ -118,6 +118,8 @@ export const BibleReducers = createReducer<BibleState>(
     return {
       ...state,
       castingPaused: true,
+      castingProcess: null,
+      castingProcessNavigate: null,
     } satisfies BibleState;
   }),
   on(BibleActions.pauseCasting, (state) => {

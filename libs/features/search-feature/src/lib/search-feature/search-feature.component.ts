@@ -40,7 +40,7 @@ import { BibleTranslateShort, ISongBookName } from '@lyri-cast/entities';
 import { IUiLyriItemInList, IUiLyriListItem } from '@lyri-cast/form';
 import { NavigationStart, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { SongActions } from '@lyri-cast/song-store';
+import { SongActions, SongActionsEnum } from '@lyri-cast/song-store';
 import { Pages } from '@lyri-cast/common-browser';
 import { IconFieldModule } from 'primeng/iconfield';
 import { BibleQuickReferenceComponent } from '../components/bible-quick-reference/bible-quick-reference.component';
@@ -371,7 +371,7 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
     this.songSearchSrv.isSelectBookForSearch = true;
 
     this.store.dispatch(
-      SongActions.selectBook({
+      SongActions[SongActionsEnum.selectBook]({
         fileKey: book.searchKey,
         humanName: book.title,
       })

@@ -3,6 +3,7 @@ import { AppWindowTypes } from '@lyri-cast/common-electron';
 import { AppActions } from '@lyri-cast/common-browser';
 import {
   SongActions,
+  SongActionsEnum,
   SongPageState,
   SongPresentationNavigatePayload,
   SongStartCastingPayload,
@@ -20,11 +21,11 @@ export class CastingService {
   castingPaused$ = this.store.select(selectCastingPaused);
 
   openCastingPageHandler(data: SongStartCastingPayload): void {
-    this.store.dispatch(SongActions.openCasting(data));
+    this.store.dispatch(SongActions[SongActionsEnum.openCasting](data));
   }
 
   pauseCasting() {
-    this.store.dispatch(SongActions.pauseCasting());
+    this.store.dispatch(SongActions[SongActionsEnum.pauseCasting]());
   }
 
   closeCasting() {
@@ -41,7 +42,7 @@ export class CastingService {
     currentLyric,
   }: SongPresentationNavigatePayload): void {
     this.store.dispatch(
-      SongActions.slideNavigate({
+      SongActions[SongActionsEnum.slideNavigate]({
         direction:
           (direction && (direction === 'prev' ? 'prev' : 'next')) || undefined,
         index,

@@ -3,7 +3,8 @@ import { Pages, SidebarService } from '@lyri-cast/common-browser';
 import { provideState, Store } from '@ngrx/store';
 import {
   SongActions,
-  SongCastingEffects,
+  SongActionsEnum,
+  SongForCastingEffects,
   SongFeatureName,
   SongPageReducers,
   SongsPageEffects,
@@ -36,8 +37,10 @@ export const SongFeatureRoutes: Routes = [
       () => {
         const store = inject(Store);
 
-        store.dispatch(SongActions.pauseCasting());
-        store.dispatch(SongActions.stopCasting());
+        store.dispatch(SongActions[SongActionsEnum.pauseCasting]());
+        store.dispatch(SongActions[SongActionsEnum.stopCasting]());
+
+        return true;
       },
     ],
     providers: [
@@ -53,7 +56,7 @@ export const SongFeatureRoutes: Routes = [
       ),
     providers: [
       provideState(SongFeatureName, SongPageReducers),
-      provideEffects(SongCastingEffects),
+      provideEffects(SongForCastingEffects),
     ],
   },
 ];

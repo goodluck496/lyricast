@@ -36,7 +36,9 @@ export const bibleFeatureRoutes: Route[] = [
       () => {
         const store = inject(Store);
 
-        store.dispatch(BibleActions.pauseCasting());
+        store.dispatch(BibleActions.stopCasting());
+
+        return true;
       },
     ],
     providers: [

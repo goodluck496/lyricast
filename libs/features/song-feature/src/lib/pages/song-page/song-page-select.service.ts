@@ -112,6 +112,8 @@ export class SongPageSelectService {
 
   public selectSong(song: ISong | null) {
     this.selectedSong.set(song);
+    this.selectedLyricLine.set(null);
+    this.selectedLyric.set(null);
   }
 
   private decideParts(lyric: Lyric, globalParts: SplitPartsCount, arrLen: number): number {

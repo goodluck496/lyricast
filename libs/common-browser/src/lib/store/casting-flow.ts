@@ -30,7 +30,7 @@ export interface CastingFlowOptions<State> {
   /**
    * Событие готовности окна кастинга
    */
-  castingStartedAction: ActionCreator;
+  castingStartedAction?: ActionCreator;
   /**
    * Остановка кастинга (пока скрытие содержимого, может сделать это опционально)
    */
@@ -44,7 +44,7 @@ export interface CastingFlowOptions<State> {
    */
   slideNavigateAction: ActionCreator;
 
-  liveUpdateSlideAction: ActionCreator;
+  liveUpdateSlideAction?: ActionCreator;
 
   // Дополнительные действия (опционально) для централизованного проброса через Bridge
   setGlobalTransitionAction?: ActionCreator;
@@ -246,23 +246,35 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
   });
 
-  const stopCasting$ = createBridgeEffect({
-    actions$,
-    action: stopCastingAction,
-    bridge,
-    label: 'stopCasting',
-    bridgeEventNameExtractorCb: extractEventName,
-    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
-  });
+  const stopCasting$ = createEffect(() =>
+    actions$.pipe(
+      ofType(stopCastingAction),
+      withLatestFrom(
+        selectCastingFrozen
+          ? store
+              .select(selectCastingFrozen as any)
+              .pipe(startWith(false), map((v: any) => !!v))
+          : of(false)
+      ),
+      filter(([, frozen]) => !frozen),
+      tap(([data]) => {
+        const eventName = extractEventName(stopCastingAction.type);
+        bridge.send(eventName, data as any);
+      }),
+      map(() => ({ type: '[CastingFlow] stopCasting sent' }))
+    )
+  );
 
-  const castingStarted$ = createBridgeEffect({
-    actions$,
-    action: castingStartedAction,
-    bridge,
-    label: 'castingStarted',
-    bridgeEventNameExtractorCb: extractEventName,
-    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
-  });
+  const castingStarted$ = castingStartedAction
+    ? createBridgeEffect({
+        actions$,
+        action: castingStartedAction,
+        bridge,
+        label: 'castingStarted',
+        bridgeEventNameExtractorCb: extractEventName,
+        blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
+      })
+    : (undefined as unknown as ReturnType<typeof createEffect>);
 
   const slideNavigate$ = createBridgeEffect({
     actions$,
@@ -273,14 +285,16 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
   });
 
-  const liveUpdateSlide$ = createBridgeEffect({
-    actions$,
-    action: liveUpdateSlideAction,
-    bridge,
-    label: 'liveUpdateSlide',
-    bridgeEventNameExtractorCb: extractEventName,
-    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
-  });
+  const liveUpdateSlide$ = liveUpdateSlideAction
+    ? createBridgeEffect({
+        actions$,
+        action: liveUpdateSlideAction,
+        bridge,
+        label: 'liveUpdateSlide',
+        bridgeEventNameExtractorCb: extractEventName,
+        blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
+      })
+    : (undefined as unknown as ReturnType<typeof createEffect>);
 
   const castingReady$ = options.bridge.queueEvents.pipe(
     filter((event) => !!event && event.event === 'castingStarted'),
@@ -330,9 +344,9 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     startCastingTrigger$,
     pauseCasting$,
     stopCasting$,
-    castingStarted$,
+    ...(castingStartedAction ? { castingStarted$ } : {}),
     slideNavigate$,
-    liveUpdateSlide$,
+    ...(liveUpdateSlideAction ? { liveUpdateSlide$ } : {}),
     // опциональные эффекты возвращаем, если были заданы
     ...(setGlobalTransitionAction ? { setGlobalTransition$ } : {}),
     ...(setSlideTransitionAction ? { setSlideTransition$ } : {}),

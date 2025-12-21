@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Action, Store } from '@ngrx/store';
 import { FreeSlideState } from './free-slide.reducers';
 import {
+  AppActions,
   BaseEffectsWithBridgeInterface,
   BridgeProcessForEffectsDecorator,
   BridgeService,
@@ -11,7 +12,7 @@ import {
   SettingsService,
   WindowService,
 } from '@lyri-cast/common-browser';
-import { Actions } from '@ngrx/effects';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
 import {
   FreeSlideActions,
   FreeSlideActionsEnum,
@@ -19,6 +20,8 @@ import {
 } from './free-slide.actions';
 import { EventData } from '@lyri-cast/common-electron';
 import { selectFreeSlideCastingProcess, selectFreeSlideCastingFrozen, selectGlobalTransition, selectSlideTransitions } from './free-slide.selectors';
+import { AppWindowTypes } from '@lyri-cast/common-electron';
+import { filter, map } from 'rxjs';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
   [FreeSlideActionsEnum.startCasting]: (eventData: EventData) =>
@@ -85,4 +88,16 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
   setGlobalTransition$ = this.base.setGlobalTransition$;
   setSlideTransition$ = this.base.setSlideTransition$;
   updateTransitionSettings$ = this.base.updateTransitionSettings$;
+
+  closeCastingWindow$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AppActions.closeWindow, AppActions.clearWindowId),
+      filter((a) =>
+        a.type === AppActions.closeWindow.type
+          ? a.windowType === AppWindowTypes.CASTING
+          : true
+      ),
+      map(() => FreeSlideActions[FreeSlideActionsEnum.stopCasting]())
+    )
+  );
 }

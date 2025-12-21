@@ -63,9 +63,8 @@ export const AppReducer = createReducer(
     return {
       ...state,
       openedWindow: {
-        ...state.openedWindow,
         procId: data.procId,
-        type: data.pageType
+        type: data.pageType,
       },
     } satisfies AppState
   }),

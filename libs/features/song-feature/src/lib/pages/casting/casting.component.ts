@@ -21,10 +21,10 @@ import {
   selectCastingPaused,
   selectCastingProcess,
   selectNavigateState,
-  SONG_ACTIONS,
-  SongPayloadsMap,
+  SongPresentationNavigatePayload,
   SongStartCastingPayload,
 } from '@lyri-cast/song-store';
+import { APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
 import { sanitize } from 'quill/formats/link';
 import { DomSanitizer } from '@angular/platform-browser';
 
@@ -105,7 +105,7 @@ export class CastingComponent implements OnInit, AfterViewInit {
     await this.initReveal();
 
     this.bridge.windowSrv.electronContext.send({
-      event: SONG_ACTIONS.openedPage,
+      event: APP_COMMON_ACTIONS.openedPage,
       payload: { state: 'after-view-init', page: Pages.CASTING },
     });
   }
@@ -143,7 +143,7 @@ export class CastingComponent implements OnInit, AfterViewInit {
     }, 500);
   }
 
-  navigateCastingHandler(payload: SongPayloadsMap['SLIDE_NAVIGATE']) {
+  navigateCastingHandler(payload: SongPresentationNavigatePayload) {
     if (!this.deckRef) {
       return;
     }

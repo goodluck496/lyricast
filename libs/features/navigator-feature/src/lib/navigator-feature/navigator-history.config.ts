@@ -4,6 +4,7 @@ import {
   selectCastingPaused,
   selectCastingProcess,
   SongActions,
+  SongActionsEnum,
 } from '@lyri-cast/song-store';
 import { BibleActions } from '@lyri-cast/bible-store';
 import { filter, map, Observable, of } from 'rxjs';
@@ -35,7 +36,7 @@ function defineLoggableActions<
 
 export const loggableActions = defineLoggableActions([
   {
-    action: SongActions.startCasting,
+    action: SongActions[SongActionsEnum.startCasting],
     toHistory: (data, [store]) => {
       return store.select(selectCastingProcess).pipe(
         map(() => {
@@ -61,12 +62,14 @@ export const loggableActions = defineLoggableActions([
     },
   },
   {
-    action: SongActions.slideNavigate,
+    action: SongActions[SongActionsEnum.slideNavigate],
     toHistory: (data, [store]) => {
       const title = () => {
         const index = data.index ?? 0;
         const rawText =
-          data.currentLyric.lines.find((el) => el.globalSongIndex === index)
+          data.currentLyric.lines.find(
+            (el: { globalSongIndex: number }) => el.globalSongIndex === index
+          )
             ?.text || '';
         const text = sliceTextAtBreak(rawText);
         const splitCount = data.currentLyric.lines.length;

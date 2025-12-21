@@ -2,42 +2,21 @@ import { createActionGroup, emptyProps, props } from '@ngrx/store';
 import { ISong, ISongBookName, LyricForCasting } from '@lyri-cast/entities';
 import { Pages } from '@lyri-cast/common-browser';
 
-export const SONG_ACTIONS = {
-  /**
-   * Открытие страницы в открытом окне кастинга, после срабатывания "OPEN_CASTING"
-   */
-  openPage: 'OPEN_PAGE',
-  /**
-   * Вызывается после успешного открытия страницы в окне кастинга
-   * приходит через bridge сервис из окна кастинга
-   */
-  openedPage: 'OPENED_PAGE',
+export const SongActionsEnum = {
+  openPage: '[SONG]openPage',
+  openCasting: '[SONG]openCasting',
+  startCasting: '[SONG]startCasting',
+  castingStarted: '[SONG]castingStarted',
+  stopCasting: '[SONG]stopCasting',
+  pauseCasting: '[SONG]pauseCasting',
+  slideNavigate: '[SONG]slideNavigate',
 
-  selectBook: 'SELECT_BOOK',
-  selectSong: 'SELECT_SONG',
-  selectSongByNumber: 'SELECT_SONG_BY_NUMBER',
-
-  /**
-   * отвечает за первичное открытие окна кастинга
-   */
-  openCasting: 'OPEN_CASTING',
-  /**
-   * запускает кастинг с первого слайда (или с того которы выбран)
-   * когда "OPEN_CASTING" уже был вызван
-   */
-  startCasting: 'START_CASTING',
-  /**
-   * Вызывается после успешного начала кастинга
-   * приходит через bridge сервис из окна кастинга
-   */
-  castingStarted: 'CASTING_STARTED',
-
-  stopCasting: 'STOP_CASTING',
-  pauseCasting: 'PAUSE_CASTING',
-  slideNavigate: 'SLIDE_NAVIGATE',
+  selectBook: '[SONG]selectBook',
+  selectSong: '[SONG]selectSong',
+  selectSongByNumber: '[SONG]selectSongByNumber',
 } as const;
 
-export type SongActionKeys = keyof typeof SONG_ACTIONS;
+export type SongActionsEnumKeys = keyof typeof SongActionsEnum;
 
 export type SongStartCastingPayload = {
   song: ISong;
@@ -60,19 +39,21 @@ export type SongPresentationNavigatePayload = {
   fromService?: boolean;
 };
 
+export const SongActionSource = 'SONG_ACTIONS';
+
 export const SongActions = createActionGroup({
-  source: 'SONG_ACTIONS',
+  source: SongActionSource,
   events: {
-    openPage: props<{ path: Pages[] }>(),
-    openedPage: props<{ name: Pages }>(),
-    selectBook: props<ISongBookName>(),
-    selectSong: props<{bookName: ISongBookName, song: ISong}>(),
-    selectSongByNumber: props<{ data: { number: number } }>(),
-    openCasting: props<SongStartCastingPayload>(),
-    startCasting: props<SongStartCastingPayload>(),
-    stopCasting: emptyProps(),
-    pauseCasting: emptyProps(),
-    slideNavigate: props<SongPresentationNavigatePayload>(),
-    castingStarted: emptyProps(),
+    [SongActionsEnum.openPage]: props<{ path: Pages[] }>(),
+    [SongActionsEnum.openCasting]: props<SongStartCastingPayload>(),
+    [SongActionsEnum.startCasting]: props<SongStartCastingPayload>(),
+    [SongActionsEnum.castingStarted]: emptyProps(),
+    [SongActionsEnum.stopCasting]: emptyProps(),
+    [SongActionsEnum.pauseCasting]: emptyProps(),
+    [SongActionsEnum.slideNavigate]: props<SongPresentationNavigatePayload>(),
+
+    [SongActionsEnum.selectBook]: props<ISongBookName>(),
+    [SongActionsEnum.selectSong]: props<{ bookName: ISongBookName; song: ISong }>(),
+    [SongActionsEnum.selectSongByNumber]: props<{ data: { number: number } }>(),
   },
 });

@@ -4,12 +4,20 @@
   }
 
   <input pInputText placeholder="Поиск" class="search__input" [formControl]="searchControl"
-         (keydown)="onKeydown($event)" (mousedown)="$event.stopPropagation()" (click)="onClickInput($event)" />
+         (keydown)="onKeydown($event)" (focus)="onFocusInput()" (mousedown)="$event.stopPropagation()" (click)="onClickInput($event)" />
 </p-iconField>
 
 <p-popover #searchOverlay (onShow)="onOverlayShow()">
 
   <div class="search__wrapper">
+    <lyri-bible-quick-reference
+      [active]="activeTab.value === SearchTypeTabs.BIBLE && searchOverlay.overlayVisible"
+      [query]="searchControl.value || ''"
+      [books]="(books$ | async) || []"
+      [translate]="(selectedTranslate$ | async) || null"
+      (navigate)="onQuickNavigate($event)"
+    />
+
     <div class="search-feature-row">
       <div class="search__tabs">
         <p-selectButton

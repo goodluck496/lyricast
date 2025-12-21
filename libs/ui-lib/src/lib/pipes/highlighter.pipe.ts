@@ -50,10 +50,19 @@ export class HighlighterPipe implements PipeTransform {
       return new RegExp(phrase, 'igu');
     }
 
-    return new RegExp(
-      this.wrapWithUnicodeWordBoundaries(this.escapeRegExp(normalized)),
-      'igu'
-    );
+    return new RegExp(this.escapeRegExp(normalized), 'igu');
+  }
+
+  private buildPhraseLocateRegex(searchTerm: string): RegExp | null {
+    const normalized = (searchTerm ?? '').trim();
+    if (!normalized) return null;
+
+    const terms = normalized.split(/\s+/g).filter(Boolean);
+    if (terms.length <= 1) return null;
+
+    const escapedTerms = terms.map((t) => this.escapeRegExp(t));
+    const phrase = escapedTerms.join('(?:[\\s\\p{P}\\p{S}]+)');
+    return new RegExp(phrase, 'igu');
   }
 
   private buildTermsFallbackRegex(searchTerm: string): RegExp | null {
@@ -64,89 +73,7 @@ export class HighlighterPipe implements PipeTransform {
     if (terms.length <= 1) return null;
 
     const escaped = terms.map((t) => this.escapeRegExp(t)).join('|');
-    return new RegExp(this.wrapWithUnicodeWordBoundaries(`(?:${escaped})`), 'igu');
-  }
-
-  public transform2(
-    value: string,
-    searchTerm: string,
-    maxStringLength: number,
-    type: 'full' | string = ''
-  ): string {
-    if (!searchTerm) {
-      return value;
-    }
-
-    let result = value
-    if(value.length >= maxStringLength) {
-
-    }
-
-    result =
-      type === 'full'
-        ? value.replace(
-            new RegExp(`\\b(${searchTerm}\\b)`, 'igm'),
-            `<span class="${this.htmlClass}">$1</span>`
-          )
-        : value.replace(
-            new RegExp(searchTerm, 'igm'),
-            `<span class="${this.htmlClass}">$&</span>`
-          );
-
-    return result;
-  }
-
-
-  public transform3(
-    value: string,
-    searchTerm: string,
-    maxStringLength = 150,
-    type: 'full' | string = ''
-  ): string {
-    if (!searchTerm || !value) {
-      return value;
-    }
-
-    const regex =
-      type === 'full'
-        ? new RegExp(`\\b(${searchTerm}\\b)`, 'igm')
-        : new RegExp(searchTerm, 'igm');
-
-    const match = value.match(regex);
-    if (!match) {
-      return value;
-    }
-
-    let startIndex = value.indexOf(match[0]);
-    let endIndex = startIndex + match[0].length;
-
-    // Определяем границы обрезки
-    let sliceStart = Math.max(0, startIndex - Math.floor((maxStringLength - match[0].length) / 2));
-    let sliceEnd = Math.min(value.length, sliceStart + maxStringLength);
-
-    // Гарантируем, что искомая фраза влезет в границы
-    if (startIndex < sliceStart) {
-      sliceStart = Math.max(0, startIndex);
-      sliceEnd = Math.min(value.length, sliceStart + maxStringLength);
-    }
-
-    if (endIndex > sliceEnd) {
-      sliceEnd = Math.min(value.length, endIndex);
-      sliceStart = Math.max(0, sliceEnd - maxStringLength);
-    }
-
-    const truncatedValue = value.slice(sliceStart, sliceEnd);
-    let highlighted = truncatedValue.replace(regex, `<span class="${this.htmlClass}">$&</span>`);
-
-    // Добавляем многоточия, если текст был обрезан
-    if (sliceStart > 0) {
-      highlighted = `...${highlighted}`;
-    }
-    if (sliceEnd < value.length) {
-      highlighted = `${highlighted}...`;
-    }
-
-    return highlighted;
+    return new RegExp(`(?:${escaped})`, 'igu');
   }
 
   public transform(
@@ -158,6 +85,9 @@ export class HighlighterPipe implements PipeTransform {
     if (!searchTerm || !value) {
       return value;
     }
+
+    const normalizedSearch = (searchTerm ?? '').trim();
+    const terms = normalizedSearch.split(/\s+/g).filter(Boolean);
 
     const regex = this.buildRegex(searchTerm, type);
     if (!regex) {
@@ -171,13 +101,25 @@ export class HighlighterPipe implements PipeTransform {
     // Удаляем все HTML-теги, чтобы работать только с текстом
     const plainText = tempElement.textContent || tempElement.innerText || '';
 
-    let match = plainText.match(regex);
-    let activeRegex = regex;
+
+    // 1) Для фразы: пытаемся найти фразу (для выбора сниппета),
+    // 2) Если фразу не нашли — ищем по словам,
+    // 3) Подсветку делаем словами (так читабельнее), если это фраза.
+
+    const phraseLocateRegex = type !== 'full' ? this.buildPhraseLocateRegex(searchTerm) : null;
+    const termsHighlightRegex =
+      type !== 'full' && terms.length > 1 ? this.buildTermsFallbackRegex(searchTerm) : null;
+
+    let match = plainText.match(phraseLocateRegex ?? regex);
+    let locateRegex = phraseLocateRegex ?? regex;
+    let highlightRegex: RegExp = termsHighlightRegex ?? locateRegex;
+
     if (!match) {
       const fallbackRegex = this.buildTermsFallbackRegex(searchTerm);
       if (fallbackRegex) {
         match = plainText.match(fallbackRegex);
-        activeRegex = fallbackRegex;
+        locateRegex = fallbackRegex;
+        highlightRegex = fallbackRegex;
       }
     }
     if (!match) {
@@ -216,7 +158,7 @@ export class HighlighterPipe implements PipeTransform {
 
     // Выделяем искомый текст, сохраняя разметку
     truncatedHtml = truncatedHtml.replace(
-      activeRegex,
+      highlightRegex,
       `<span class="${this.htmlClass}">$&</span>`
     );
 

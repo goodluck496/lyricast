@@ -1,0 +1,19 @@
+@if (suggestions.length) {
+  <p-listbox
+    class="search__quick-refs"
+    [options]="suggestions"
+    optionLabel="label"
+    [ngModel]="selected"
+    (ngModelChange)="onSelectionChange($event)"
+    (onChange)="onChoose($event.value)"
+  >
+    <ng-template pTemplate="item" let-item>
+      <div class="search__quick-ref-row">
+        <div class="search__quick-ref-label">{{ item.label }}</div>
+        @if (item.meta) {
+          <div class="search__quick-ref-meta">{{ item.meta }}</div>
+        }
+      </div>
+    </ng-template>
+  </p-listbox>
+}

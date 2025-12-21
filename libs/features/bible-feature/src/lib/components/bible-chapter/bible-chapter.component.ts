@@ -55,6 +55,10 @@ export class BibleChapterComponent implements OnInit {
 
   isScrolled = false;
 
+  private scrollRetryTimer: any = null;
+  private scrollRetryCount = 0;
+  private readonly scrollRetryMax = 10;
+
   // Функция для санитизации HTML
   sanitizeHtml(rawHtml: string): SafeHtml {
     return this.sanitizer.bypassSecurityTrustHtml(rawHtml);
@@ -65,6 +69,7 @@ export class BibleChapterComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => {
         this.selectedVerse.set(value);
+        this.scrollRetryCount = 0;
         this.scrollToSelected();
       });
     this.selectedPrevOrNextVerse$
@@ -76,6 +81,8 @@ export class BibleChapterComponent implements OnInit {
           );
           if (foundVerse) {
             this.selectedVerse.set(foundVerse);
+
+            this.scrollRetryCount = 0;
 
             this.scrollToSelected();
           }
@@ -122,26 +129,43 @@ export class BibleChapterComponent implements OnInit {
     }
     this.isScrolled = true;
 
-    setTimeout(() => {
-      this.listItems().forEach((item) => {
+    const tryScroll = () => {
+      let found = false;
+
+      for (const item of this.listItems()) {
         if (
           DomHandler.hasClass(
             item.nativeElement,
             'bible-chapter-section__verse--selected'
           )
         ) {
-          /**
-           * работает хуже чем нативный scrollIntoView
-           */
-          // this.scrollBar().scrollToElement(item);
+          found = true;
           item.nativeElement.scrollIntoView({
             block: 'center',
             behavior: 'smooth',
           });
-          this.isScrolled = false;
+          break;
         }
+      }
+
+      // Всегда сбрасываем флаг, иначе он может "залипнуть" если элемент еще не отрендерился.
+      this.isScrolled = false;
+
+      if (!found && this.scrollRetryCount < this.scrollRetryMax) {
+        this.scrollRetryCount += 1;
+        this.scrollRetryTimer = setTimeout(() => {
+          // если за это время выбранный стих сменился — новые подписки сбросят счетчик
+          this.scrollToSelected();
+        }, 50);
+      }
+    };
+
+    // Ждем рендер и применение класса selected
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        tryScroll();
       });
-    }, 100);
+    });
   }
 
   isInRange(verseNumber: number): boolean {

@@ -32,7 +32,7 @@ import {
 } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Actions, ofType } from '@ngrx/effects';
-import { BibleActions } from '@lyri-cast/bible-store';
+import { BibleActions, selectBooks, selectSelectedTranslate } from '@lyri-cast/bible-store';
 import { SelectModule } from 'primeng/select';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { InputIconModule } from 'primeng/inputicon';
@@ -43,6 +43,7 @@ import { Store } from '@ngrx/store';
 import { SongActions } from '@lyri-cast/song-store';
 import { Pages } from '@lyri-cast/common-browser';
 import { IconFieldModule } from 'primeng/iconfield';
+import { BibleQuickReferenceComponent } from '../components/bible-quick-reference/bible-quick-reference.component';
 
 export enum SearchTypeTabs {
   BIBLE = 'bible',
@@ -61,6 +62,7 @@ export enum SearchTypeTabs {
     FormsModule,
     BibleSearchResultComponent,
     SongSearchResultComponent,
+    BibleQuickReferenceComponent,
     IconFieldModule,
     InputIconModule,
     SelectModule,
@@ -86,7 +88,12 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
   input = viewChild.required(InputText);
   searchOverlay = viewChild.required('searchOverlay', { read: Popover });
 
+  bibleQuickRef = viewChild(BibleQuickReferenceComponent);
+
   searchControl = new FormControl<string>('');
+
+  books$ = this.store.select(selectBooks);
+  selectedTranslate$ = this.store.select(selectSelectedTranslate);
 
   tabOptions = [
     { label: 'Библия', value: SearchTypeTabs.BIBLE },
@@ -134,8 +141,28 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
           this.selectedSongBook = all;
           this.songSearchSrv.isLoading.set(false);
         }
-      })
+      }),
+      map((data) => data.sort((a, b) => a.title.localeCompare(b.title)))
     );
+
+  async onQuickNavigate(path: string[]): Promise<void> {
+    await this.goToBiblePath(path);
+    this.searchOverlay().hide();
+  }
+
+  private async goToBiblePath(path: string[]): Promise<void> {
+    const pagePath = [Pages.MAIN, Pages.BIBLE_FEATURE, Pages.BIBLE];
+    const isBiblePage = this.router.isActive(pagePath.join('/'), {
+      paths: 'exact',
+      queryParams: 'exact',
+      fragment: 'ignored',
+      matrixParams: 'ignored',
+    });
+    if (!isBiblePage) {
+      await this.router.navigate(pagePath);
+    }
+    this.store.dispatch(BibleActions.changePath({ path }));
+  }
 
   readonly SearchTypeTabs = SearchTypeTabs;
 
@@ -237,8 +264,32 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
     setTimeout(() => inputEl.focus(), 50);
   }
 
+  onFocusInput(): void {
+    const inputEl = this.input().el.nativeElement as HTMLInputElement;
+    const valueLength = (inputEl.value ?? '').length;
+    if (!valueLength) return;
+
+    // Даем браузеру завершить обработку focus, потом выделяем весь текст.
+    // Навигация стрелками влево/вправо после этого работает штатно.
+    setTimeout(() => {
+      if (document.activeElement !== inputEl) return;
+      try {
+        inputEl.setSelectionRange(0, valueLength);
+      } catch {
+        // ignore
+      }
+    }, 0);
+  }
+
   onKeydown(event: KeyboardEvent): void {
     event.stopPropagation();
+
+    if (this.activeTab.value === SearchTypeTabs.BIBLE) {
+      const handled = this.bibleQuickRef()?.handleKeydown(event);
+      if (handled) {
+        return;
+      }
+    }
 
     if (event.key === 'Escape') {
       this.searchOverlay().hide();

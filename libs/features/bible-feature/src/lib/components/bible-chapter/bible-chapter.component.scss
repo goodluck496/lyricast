@@ -40,7 +40,7 @@
     &--selected {
       background-color: #0D99FF;
       color: white;
-      text-shadow: 1px 1px 10px black;
+      text-shadow: 1px 1px 4px black;
     }
 
     &--in-range:not(&--selected) {
@@ -51,7 +51,7 @@
     &:hover:not(.bible-chapter-section__verse--selected) {
       background-color: #92cdff;
       color: white;
-      text-shadow: 1px 1px 10px black;
+      text-shadow: 1px 1px 4px black;
     }
 
   }

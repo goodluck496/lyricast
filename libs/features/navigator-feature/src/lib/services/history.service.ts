@@ -37,6 +37,8 @@ export class HistoryService {
   }
 
   async selectHistoryItem(item: HistoryItem): Promise<void> {
+    this.store.dispatch(NavigatorActions.select({ key: item.payload.key }));
+
     switch (item.type) {
       case HistoryType.SELECT_LYRIC:
         await this.handleSelectLyric(item);

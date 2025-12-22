@@ -260,15 +260,6 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         this.splitCount.set(splitCount);
         this.songPageSelectSrv.setSplitCountValue(splitCount);
 
-        const selectedLyricLine = this.songPageSelectSrv.selectedLyricLine();
-        if (!selectedLyricLine) {
-          const lyricsForCasting = this.songPageSelectSrv.selectedLyricsForCasting();
-          const firstLyric = lyricsForCasting[0];
-          const firstLine = firstLyric?.lines?.[0];
-          if (firstLyric && firstLine) {
-            this.songPageSelectSrv.showPreview(true, firstLyric, firstLine);
-          }
-        }
         this.selectedSong$.next(newSong);
 
         if (this.selectedBook.value) {
@@ -318,15 +309,21 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         if (!data.fromService) {
           return;
         }
-        const line = data.currentLyric.lines.find(
-          (el) => el.globalSongIndex === (data?.index ?? 0)
+
+        const index = data.index ?? 0;
+        const lyrics = this.songPageSelectSrv.selectedLyricsForCasting();
+        const allLines = lyrics.map((el) => el.lines).flat();
+
+        const line = allLines.find((el) => el.globalSongIndex === index);
+        const lyric = lyrics.find((el) =>
+          el.lines.some((el1) => el1.globalSongIndex === index)
         );
 
-        console.log('from hist', line, data);
-        if (!line) {
+        if (!lyric || !line) {
           return;
         }
-        this.onSelectLyricLine([data.currentLyric, line, false]);
+
+        this.onSelectLyricLine([lyric, line, false]);
       });
   }
 

@@ -49,7 +49,7 @@ type TranslateMetaInfo = {
 
 @Injectable()
 export class BibleXmlParserService {
-  assetsPath = path.resolve(__dirname, 'assets', 'bibles', 'xml-versions');
+  assetsPath = path.resolve(process.env['assetsPath'] ?? '', 'raw', 'bibles', 'xml-versions');//path.resolve(__dirname, 'assets', 'bibles', 'xml-versions');
   assetsJsonsPath = path.resolve(
     __dirname,
     'assets',
@@ -197,6 +197,7 @@ export class BibleXmlParserService {
 
   async convertToJson() {
     try {
+      console.log('--------, this.assetsPath', this.assetsPath);
       const langVersions = fs.readdirSync(this.assetsPath);
       const translate: BibleTranslate = {
         title: '',
@@ -350,14 +351,18 @@ export class BibleXmlParserService {
   reorderBibleBooksByNumber = (books: BibleBook[]): BibleBook[] => {
     // Классический порядок книг Нового Завета
     const newTestamentOrder = [
-      ...Array.from({ length: 5 }, (_, i) => i + 40), // Евангелия и Деяния (от 40 до 44)
+      40,
+      41,
+      42,
+      43, // 4 Евангелия: Матфея, Марка, Луки, Иоанна
+      44, // Деяния апостолов
       59,
       60,
       61,
       62,
       63,
       64,
-      65, // Послания других апостолов (Иакова - Иуды)
+      65, // Соборные послания: Иакова, 1–2 Петра, 1–3 Иоанна, Иуды
       45,
       46,
       47,
@@ -371,7 +376,7 @@ export class BibleXmlParserService {
       55,
       56,
       57,
-      58, // Послания Павла
+      58, // Послания Павла: Рим – Евреям
       66, // Откровение
     ];
 

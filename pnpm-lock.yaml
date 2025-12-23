@@ -68,7 +68,7 @@ importers:
         version: 10.4.20(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.4.20)
       '@nestjs/typeorm':
         specifier: ^10.0.2
-        version: 10.0.2(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.4.20)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.27(babel-plugin-macros@3.1.0)(better-sqlite3@12.4.6)(reflect-metadata@0.1.14)(ts-node@10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@18.16.9)(typescript@5.9.3)))
+        version: 10.0.2(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.4.20)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.27(babel-plugin-macros@3.1.0)(better-sqlite3@12.4.6)(reflect-metadata@0.1.14)(sql.js@1.13.0)(ts-node@10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@18.16.9)(typescript@5.9.3)))
       '@ngrx/component-store':
         specifier: 20.0.0
         version: 20.0.0(@angular/core@20.3.13(@angular/compiler@20.3.13)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2)
@@ -90,9 +90,15 @@ importers:
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
+      '@types/sql.js':
+        specifier: ^1.4.9
+        version: 1.4.9
       '@types/uuid':
         specifier: ^11.0.0
         version: 11.0.0
+      adm-zip:
+        specifier: ^0.5.10
+        version: 0.5.16
       angular-imask:
         specifier: ^7.6.1
         version: 7.6.1
@@ -119,7 +125,7 @@ importers:
         version: 0.14.2
       drizzle-orm:
         specifier: ^0.44.7
-        version: 0.44.7(@libsql/client@0.15.15)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.4.6)
+        version: 0.44.7(@libsql/client@0.15.15)(@types/better-sqlite3@7.6.13)(@types/sql.js@1.4.9)(better-sqlite3@12.4.6)(sql.js@1.13.0)
       electron-log:
         specifier: ^5.3.0
         version: 5.4.3
@@ -171,6 +177,9 @@ importers:
       rxjs:
         specifier: ~7.8.1
         version: 7.8.2
+      sql.js:
+        specifier: ^1.13.0
+        version: 1.13.0
       svg-to-ts:
         specifier: ^12.0.0
         version: 12.0.0
@@ -179,7 +188,7 @@ importers:
         version: 2.8.1
       typeorm:
         specifier: ^0.3.20
-        version: 0.3.27(babel-plugin-macros@3.1.0)(better-sqlite3@12.4.6)(reflect-metadata@0.1.14)(ts-node@10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@18.16.9)(typescript@5.9.3))
+        version: 0.3.27(babel-plugin-macros@3.1.0)(better-sqlite3@12.4.6)(reflect-metadata@0.1.14)(sql.js@1.13.0)(ts-node@10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@18.16.9)(typescript@5.9.3))
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -304,6 +313,9 @@ importers:
       '@types/reveal.js':
         specifier: ^5.0.4
         version: 5.2.1
+      '@types/xml2js':
+        specifier: ^0.4.14
+        version: 0.4.14
       '@typescript-eslint/utils':
         specifier: ^8.33.1
         version: 8.47.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
@@ -4076,6 +4088,9 @@ packages:
   '@types/earcut@3.0.0':
     resolution: {integrity: sha512-k/9fOUGO39yd2sCjrbAJvGDEQvRwRnQIZlBz43roGwUZo5SHAmyVvSFyaVVZkicRVCaDXPKlbxrUcBuJoSWunQ==}
 
+  '@types/emscripten@1.41.5':
+    resolution: {integrity: sha512-cMQm7pxu6BxtHyqJ7mQZ2kXWV5SLmugybFdHCBbJ5eHzOo6VhBckEgAT3//rP5FwPHNPeEiq4SmQ5ucBwsOo4Q==}
+
   '@types/eslint-scope@3.7.7':
     resolution: {integrity: sha512-MzMFlSLBqNF2gcHWO0G1vP/YQyfvrxZ0bF+u7mzUdZ1/xK4A4sru+nraZz5i3iEIk1l1uyicaDVTB4QbbEkAYg==}
 
@@ -4205,6 +4220,9 @@ packages:
   '@types/sockjs@0.3.36':
     resolution: {integrity: sha512-MK9V6NzAS1+Ud7JV9lJLFqW85VbC9dq3LmwZCuBe4wBDgKC0Kj/jd8Xl+nSviU+Qc3+m7umHHyHg//2KSa0a0Q==}
 
+  '@types/sql.js@1.4.9':
+    resolution: {integrity: sha512-ep8b36RKHlgWPqjNG9ToUrPiwkhwh0AEzy883mO5Xnd+cL6VBH1EvSjBAAuxLUFF2Vn/moE3Me6v9E1Lo+48GQ==}
+
   '@types/stack-utils@2.0.3':
     resolution: {integrity: sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==}
 
@@ -4226,6 +4244,9 @@ packages:
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+
+  '@types/xml2js@0.4.14':
+    resolution: {integrity: sha512-4YnrRemBShWRO2QjvUin8ESA41rH+9nQGLUGZV/1IDhi3SL9OhdpNC/MrulTWuptXKwhx/aDxE7toV0f/ypIXQ==}
 
   '@types/yargs-parser@21.0.3':
     resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
@@ -10248,6 +10269,9 @@ packages:
     resolution: {integrity: sha512-ed7OK4e9ywpE7pgRMkMQmZDPKSVdm0oX5IEtZiKnFucSF0zu6c80GZBe38UqHuVhTWJ9xsKgSMjCG2bml86KvA==}
     engines: {node: '>=14'}
 
+  sql.js@1.13.0:
+    resolution: {integrity: sha512-RJbVP1HRDlUUXahJ7VMTcu9Rm1Nzw+EBpoPr94vnbD4LwR715F3CcxE2G2k45PewcaZ57pjetYa+LoSJLAASgA==}
+
   ssri@12.0.0:
     resolution: {integrity: sha512-S7iGNosepx9RadX82oimUkvr0Ct7IjJbEbs4mJcTxst8um95J3sDYU1RBEOvdu6oL1Wek2ODI5i4MAw+dZ6cAQ==}
     engines: {node: ^18.17.0 || >=20.5.0}
@@ -15342,13 +15366,13 @@ snapshots:
     optionalDependencies:
       '@nestjs/platform-express': 10.4.20(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.4.20)
 
-  '@nestjs/typeorm@10.0.2(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.4.20)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.27(babel-plugin-macros@3.1.0)(better-sqlite3@12.4.6)(reflect-metadata@0.1.14)(ts-node@10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@18.16.9)(typescript@5.9.3)))':
+  '@nestjs/typeorm@10.0.2(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.4.20)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.27(babel-plugin-macros@3.1.0)(better-sqlite3@12.4.6)(reflect-metadata@0.1.14)(sql.js@1.13.0)(ts-node@10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@18.16.9)(typescript@5.9.3)))':
     dependencies:
       '@nestjs/common': 10.4.20(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.1.14)(rxjs@7.8.2)
       '@nestjs/core': 10.4.20(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/platform-express@10.4.20)(encoding@0.1.13)(reflect-metadata@0.1.14)(rxjs@7.8.2)
       reflect-metadata: 0.1.14
       rxjs: 7.8.2
-      typeorm: 0.3.27(babel-plugin-macros@3.1.0)(better-sqlite3@12.4.6)(reflect-metadata@0.1.14)(ts-node@10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@18.16.9)(typescript@5.9.3))
+      typeorm: 0.3.27(babel-plugin-macros@3.1.0)(better-sqlite3@12.4.6)(reflect-metadata@0.1.14)(sql.js@1.13.0)(ts-node@10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@18.16.9)(typescript@5.9.3))
       uuid: 9.0.1
 
   '@ngrx/component-store@20.0.0(@angular/core@20.3.13(@angular/compiler@20.3.13)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2)':
@@ -15412,7 +15436,7 @@ snapshots:
 
   '@npmcli/fs@4.0.0':
     dependencies:
-      semver: 7.7.2
+      semver: 7.7.3
 
   '@npmcli/git@6.0.3':
     dependencies:
@@ -16579,6 +16603,8 @@ snapshots:
 
   '@types/earcut@3.0.0': {}
 
+  '@types/emscripten@1.41.5': {}
+
   '@types/eslint-scope@3.7.7':
     dependencies:
       '@types/eslint': 9.6.1
@@ -16741,6 +16767,11 @@ snapshots:
     dependencies:
       '@types/node': 18.16.9
 
+  '@types/sql.js@1.4.9':
+    dependencies:
+      '@types/emscripten': 1.41.5
+      '@types/node': 18.16.9
+
   '@types/stack-utils@2.0.3': {}
 
   '@types/tough-cookie@4.0.5': {}
@@ -16757,6 +16788,10 @@ snapshots:
   '@types/wrap-ansi@3.0.0': {}
 
   '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 18.16.9
+
+  '@types/xml2js@0.4.14':
     dependencies:
       '@types/node': 18.16.9
 
@@ -18819,11 +18854,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.44.7(@libsql/client@0.15.15)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.4.6):
+  drizzle-orm@0.44.7(@libsql/client@0.15.15)(@types/better-sqlite3@7.6.13)(@types/sql.js@1.4.9)(better-sqlite3@12.4.6)(sql.js@1.13.0):
     optionalDependencies:
       '@libsql/client': 0.15.15
       '@types/better-sqlite3': 7.6.13
+      '@types/sql.js': 1.4.9
       better-sqlite3: 12.4.6
+      sql.js: 1.13.0
 
   dunder-proto@1.0.1:
     dependencies:
@@ -22157,7 +22194,7 @@ snapshots:
       make-fetch-happen: 14.0.3
       nopt: 8.1.0
       proc-log: 5.0.0
-      semver: 7.7.2
+      semver: 7.7.3
       tar: 7.5.2
       tinyglobby: 0.2.15
       which: 5.0.0
@@ -22220,7 +22257,7 @@ snapshots:
 
   npm-install-checks@7.1.2:
     dependencies:
-      semver: 7.7.2
+      semver: 7.7.3
 
   npm-normalize-package-bin@4.0.0: {}
 
@@ -23984,6 +24021,8 @@ snapshots:
 
   sql-highlight@6.1.0: {}
 
+  sql.js@1.13.0: {}
+
   ssri@12.0.0:
     dependencies:
       minipass: 7.1.2
@@ -24566,7 +24605,7 @@ snapshots:
 
   typedarray@0.0.6: {}
 
-  typeorm@0.3.27(babel-plugin-macros@3.1.0)(better-sqlite3@12.4.6)(reflect-metadata@0.1.14)(ts-node@10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@18.16.9)(typescript@5.9.3)):
+  typeorm@0.3.27(babel-plugin-macros@3.1.0)(better-sqlite3@12.4.6)(reflect-metadata@0.1.14)(sql.js@1.13.0)(ts-node@10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@18.16.9)(typescript@5.9.3)):
     dependencies:
       '@sqltools/formatter': 1.2.5
       ansis: 3.17.0
@@ -24585,6 +24624,7 @@ snapshots:
       yargs: 17.7.2
     optionalDependencies:
       better-sqlite3: 12.4.6
+      sql.js: 1.13.0
       ts-node: 10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@18.16.9)(typescript@5.9.3)
     transitivePeerDependencies:
       - babel-plugin-macros

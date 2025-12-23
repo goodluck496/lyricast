@@ -20,6 +20,7 @@ export class BibleDomainModule {
     private bibleXmlParserService: BibleXmlParserService,
     private readonly bibleService: BibleByFilesService
   ) /*@InjectRepository(BibleTranslateEntity)
+  //
     private readonly bibleTranslateRepo: Repository<BibleTranslateEntity>*/ {
     if (false /*!environment.production*/) {
       this.init();

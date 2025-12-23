@@ -56,7 +56,7 @@ export const freeSlideFeatureRoutes: Route[] = [
 
         mainCmpService.$disableSidebar.set(false);
 
-        store.dispatch(FreeSlideActions[FreeSlideActionsEnum.pauseCasting]());
+        store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
         return true;
       },
     ],

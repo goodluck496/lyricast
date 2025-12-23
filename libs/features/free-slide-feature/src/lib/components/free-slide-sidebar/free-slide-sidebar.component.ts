@@ -1,25 +1,28 @@
 import {
   ChangeDetectionStrategy,
-  ChangeDetectorRef,
   Component,
   DestroyRef,
-  ElementRef,
   inject,
   viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
 import { NavigatorFeatureComponent } from '@lyri-cast/navigator-feature';
-import { BibleState } from '@lyri-cast/bible-store';
-import { Router } from '@angular/router';
-import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { Store } from '@ngrx/store';
 import { Actions, ofType } from '@ngrx/effects';
-import { map, take, debounceTime, combineLatest, first, BehaviorSubject, withLatestFrom, filter, finalize, catchError, of } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  filter,
+  first,
+  map,
+  of,
+  take,
+  withLatestFrom,
+} from 'rxjs';
 import {
   AppActions,
   selectOpenedWindow,
-  SidebarService,
 } from '@lyri-cast/common-browser';
 import { AppWindowTypes } from '@lyri-cast/common-electron';
 
@@ -28,8 +31,8 @@ import { FreeSlideCastingPreviewComponent } from '../casting-preview/free-slide-
 import {
   FreeSlideActions,
   FreeSlideActionsEnum,
+  FreeSlideState,
   selectFreeSlideCastingPaused,
-  selectFreeSlideCastingStarted,
   selectFreeSlideSelected,
   selectGlobalTransition,
   selectSlideTransitions,
@@ -64,17 +67,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FreeSlideSidebarComponent {
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly router = inject(Router);
-  private readonly elRef = inject(ElementRef);
-  private readonly apiSrv = inject(BibleApiService);
-  private readonly freeSlideApi = inject(FreeSlideApiService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly store = inject<Store<BibleState>>(Store<BibleState>);
+  private readonly freeSlideApi = inject(FreeSlideApiService);
+  private readonly store = inject<Store<FreeSlideState>>(Store<FreeSlideState>);
   private readonly actions$ = inject(Actions);
-  private readonly sidebarService = inject<SidebarService<any>>(SidebarService);
   private readonly slideService = inject(FreeSlideService);
-  private readonly transitionsLoaded$ = new BehaviorSubject<boolean>(false);
   private applyingLoadedSettings = false;
 
   slideTransitionEditor = viewChild(SlideTransitionEditorComponent);
@@ -134,7 +131,9 @@ export class FreeSlideSidebarComponent {
 
   onStopCasting() {
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
-    // Закрываем окно кастинга
+  }
+
+  onCloseCasting() {
     this.store.dispatch(
       AppActions.closeWindow({
         windowType: AppWindowTypes.CASTING,
@@ -162,13 +161,11 @@ export class FreeSlideSidebarComponent {
         .getTransitionSettings(p.id)
         .pipe(
           first(),
-          catchError(() => of({})),
-          finalize(() => this.transitionsLoaded$.next(true))
+          catchError(() => of({}))
         )
         .subscribe((settings: any) => {
           // Применяем настройки из БД и игнорируем автосохранение на это время
           this.applyingLoadedSettings = true;
-          this.transitionsLoaded$.next(true);
           const gt = settings?.globalTransition;
           if (gt) {
             this.store.dispatch(

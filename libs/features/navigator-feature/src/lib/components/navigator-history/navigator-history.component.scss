@@ -59,13 +59,23 @@
 
     &:hover {
       background-color: #92cdff;
-      color: black;
+      color: white;
+      border-radius: 8px;
+      text-shadow: 1px 1px 4px black;
+    }
+
+    &.history__item--selected {
+      background-color: #0d99ff;
+      color: #fff;
+      border-radius: 8px;
+      text-shadow: 1px 1px 4px black;
     }
 
     &-wrapper {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      gap: 4px;
     }
   }
 }

@@ -1,9 +1,6 @@
 import {
   ChangeDetectionStrategy,
-  ChangeDetectorRef,
   Component,
-  DestroyRef,
-  ElementRef,
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -18,16 +15,14 @@ import {
   selectSelectedChapterSections,
   selectSelectedVersesRange,
 } from '@lyri-cast/bible-store';
-import { Router } from '@angular/router';
-import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { Store } from '@ngrx/store';
-import { Actions } from '@ngrx/effects';
 import { map, Observable, take, withLatestFrom } from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
 import { BibleBookTitle, BibleChapterSection } from '@lyri-cast/entities';
-import { selectOpenedWindow, SidebarService } from '@lyri-cast/common-browser';
+import { AppActions, selectOpenedWindow, SidebarService } from '@lyri-cast/common-browser';
 import { BibleSidebarData } from '../../types';
 import { SvgIconComponent } from '@lyri-cast/svg-icons';
+import { AppWindowTypes } from '@lyri-cast/common-electron';
 
 @Component({
   selector: 'lyri-bible-sidebar',
@@ -44,19 +39,11 @@ import { SvgIconComponent } from '@lyri-cast/svg-icons';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BibleSidebarComponent {
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly router = inject(Router);
-  private readonly elRef = inject(ElementRef);
-  private readonly apiSrv = inject(BibleApiService);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly store = inject<Store<BibleState>>(Store<BibleState>);
-  private readonly actions$ = inject(Actions);
   private readonly sidebarService =
     inject<SidebarService<BibleSidebarData>>(SidebarService);
 
-  windowHasClose$ = this.store
-    .select(selectOpenedWindow)
-    .pipe(map((data) => !data));
+  openedCastingWindow$ = this.store.select(selectOpenedWindow).pipe(map((e) => !!e));
   castingIsPaused$ = this.store.select(selectCastingPaused);
   sectionList$: Observable<BibleChapterSection[]> = this.store.select(
     selectSelectedChapterSections
@@ -107,5 +94,13 @@ export class BibleSidebarComponent {
 
   onPauseCasting() {
     this.store.dispatch(BibleActions.pauseCasting());
+  }
+
+  onCloseCasting() {
+    this.store.dispatch(
+      AppActions.closeWindow({
+        windowType: AppWindowTypes.CASTING,
+      })
+    );
   }
 }

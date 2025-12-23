@@ -88,7 +88,7 @@ export function groupHistoryItems(items: HistoryItem[]): GroupedHistoryItem[] {
 
   // Шаг 4: Финальная сортировка результата
   return result
-    .filter((el) => el?.children?.length)
+    .filter((el) => el.type === HistoryType.SELECT_SONG || el?.children?.length)
     .sort((a, b) => b.dateTime - a.dateTime);
 }
 

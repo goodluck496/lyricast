@@ -7,7 +7,8 @@ export const NavigatorFeatureName = 'NavigatorFeatureName' as const ;
 export const selectNavigatorFeature = createFeature({name: NavigatorFeatureName, reducer: NavigatorReducer })
 
 export const {
-  selectHistory
+  selectHistory,
+  selectSelectedHistoryKey,
 } = selectNavigatorFeature;
 
 export const selectHistoryByType = (type: HistoryItem['type']) =>

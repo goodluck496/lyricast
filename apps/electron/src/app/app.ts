@@ -25,6 +25,7 @@ import { startFileServer } from './server';
 import * as http from 'http';
 import { runDatabaseMigrations } from './migrations';
 import { configureAppPathsEnv } from './paths';
+import { ensureBiblesUnpacked } from './bibles-assets';
 import { migrateUserDataFromOldLocations } from './user-data-migration';
 
 export const DEFAULT_WEB_PREF = {
@@ -243,6 +244,9 @@ export default class App {
     // Configure all important paths and environment variables in one place
     configureAppPathsEnv();
     // console.log('process.env', process.env);
+
+    // Гарантируем наличие распакованных переводов Библии в user-assets
+    await ensureBiblesUnpacked();
 
     // One-time migration from old resources-based locations to userData
     await migrateUserDataFromOldLocations();

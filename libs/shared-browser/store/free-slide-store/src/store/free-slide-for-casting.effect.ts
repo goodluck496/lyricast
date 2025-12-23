@@ -11,7 +11,7 @@ import {
 } from '@lyri-cast/common-browser';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { FreeSlideActions, FreeSlideActionsEnum } from './free-slide.actions';
-import { AppWindowTypes, EventData } from '@lyri-cast/common-electron';
+import { EventData } from '@lyri-cast/common-electron';
 import { map } from 'rxjs';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
@@ -79,11 +79,7 @@ export class FreeSlideForCastingEffects
   stopCasting$ = createEffect(() =>
     this.actions$.pipe(
       ofType(FreeSlideActions[FreeSlideActionsEnum.stopCasting]),
-      map(() => {
-        return AppActions.closeWindow({
-          windowType: AppWindowTypes.CASTING,
-        });
-      })
+      map(() => ({ type: '[FreeSlideForCastingEffects] stopCasting received' }))
     )
   );
 }

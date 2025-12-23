@@ -96,3 +96,5 @@ export const BibleActions = createActionGroup({
     [BibleActionsEnum.resetVersesRange]: emptyProps(),
   },
 });
+
+export const BibleActionSource = 'BIBLE_ACTIONS';

@@ -9,7 +9,7 @@ import {
   BibleSearchDto,
   BibleTranslateShort,
 } from '@lyri-cast/entities';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { BridgeService } from '@lyri-cast/common-browser';
 
 @Injectable({ providedIn: 'root' })
@@ -39,7 +39,7 @@ export class BibleApiService {
       {
         params: searchParams,
       }
-    );
+    ).pipe(tap(d => console.log(d)));
   }
 
   getBooks(

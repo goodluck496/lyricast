@@ -11,7 +11,7 @@ import {
 import { BibleActions } from '@lyri-cast/bible-store';
 import { Router } from '@angular/router';
 import { Pages } from '@lyri-cast/common-browser';
-import { SongActions } from '@lyri-cast/song-store';
+import { SongActions, SongActionsEnum } from '@lyri-cast/song-store';
 import { Actions, ofType } from '@ngrx/effects';
 
 @Injectable({ providedIn: 'root' })
@@ -37,6 +37,8 @@ export class HistoryService {
   }
 
   async selectHistoryItem(item: HistoryItem): Promise<void> {
+    this.store.dispatch(NavigatorActions.select({ key: item.payload.key }));
+
     switch (item.type) {
       case HistoryType.SELECT_LYRIC:
         await this.handleSelectLyric(item);
@@ -88,29 +90,29 @@ export class HistoryService {
 
         setTimeout(() =>
           this.store.dispatch(
-            SongActions.selectBook(foundSong.payload.bookName)
+            SongActions[SongActionsEnum.selectBook](foundSong.payload.bookName)
           )
         );
 
         this.actions$
           .pipe(
-            ofType(SongActions.selectBook),
+            ofType(SongActions[SongActionsEnum.selectBook]),
             take(1),
             concatMap(() => {
               this.store.dispatch(
-                SongActions.selectSongByNumber({
+                SongActions[SongActionsEnum.selectSongByNumber]({
                   data: { number: foundSong.payload.entity.number },
                 })
               );
               return this.actions$.pipe(
-                ofType(SongActions.selectSong),
+                ofType(SongActions[SongActionsEnum.selectSong]),
                 take(1)
               );
             })
           )
           .subscribe(() => {
             this.store.dispatch(
-              SongActions.slideNavigate({
+              SongActions[SongActionsEnum.slideNavigate]({
                 ...item.payload.actionData,
                 fromService: true,
               })

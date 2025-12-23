@@ -15,7 +15,9 @@ import fs from 'fs';
 
 @Injectable()
 export class BibleByFilesService {
+  // Встроенные ассеты в пакете приложения
   assetsPath = path.resolve(process.cwd(), 'assets', 'complete-jsons', 'bibles');
+  // Внешние ассеты (user-assets / assetsPath), инициализируются в конструкторе
   assetsPathNew = '';
 
   biblesCache: Record<string, BibleTranslate> = {};
@@ -24,13 +26,22 @@ export class BibleByFilesService {
 
   readedTranslates = false;
   constructor() {
-    this.assetsPathNew = path.resolve(
-      process.env?.['assetsPath'] ?? '',
-      'complete-jsons',
-      'bibles'
-    );
-    console.log('assetsPathNew', this.assetsPathNew);
-  } // private readonly bibleTranslateRepo: Repository<BibleTranslateEntity> // @InjectRepository(BibleTranslateEntity)
+    const externalRoot = process.env?.['assetsPath'];
+
+    if (externalRoot) {
+      // Внешний путь, который прокидывается воркерам (user-assets или аналогичная директория)
+      this.assetsPathNew = path.resolve(
+        externalRoot,
+        'complete-jsons',
+        'bibles'
+      );
+    } else {
+      // Если assetsPath не задан, используем встроенные ассеты как основной путь
+      this.assetsPathNew = this.assetsPath;
+    }
+
+    // private readonly bibleTranslateRepo: Repository<BibleTranslateEntity> // @InjectRepository(BibleTranslateEntity)
+  }
 
   getAllBibles(): BibleTranslate[] {
     const allBibles = this.getAllShortBibles();
@@ -42,32 +53,48 @@ export class BibleByFilesService {
     if (this.readedTranslates) {
       return Object.keys(this.biblesCache).map((key) => this.biblesCache[key]);
     }
-    const translatesFiles = fs.readdirSync(this.assetsPathNew);
     const translates: BibleTranslateShort[] = [];
+    const seenKeys = new Set<string>();
 
     try {
-      for (const translateFile of translatesFiles) {
-        if (this.biblesCache[translateFile]) {
-          translates.push(this.biblesCache[translateFile]);
-          console.log('in cache');
-          continue;
+      // Читаем переводы из двух мест: встроенные ассеты и внешние (user-assets), если есть
+      const dirs = [this.assetsPath, this.assetsPathNew]
+        .filter(Boolean)
+        .filter((dir, idx, arr) => arr.indexOf(dir) === idx) // убираем дубликаты путей
+        .filter((dir) => fs.existsSync(dir));
+
+      for (const dir of dirs) {
+        const translatesFiles = fs
+          .readdirSync(dir)
+          .filter((file) => file.toLowerCase().endsWith('.bible.json'));
+
+        for (const translateFile of translatesFiles) {
+          const translateStr = fs.readFileSync(path.resolve(dir, translateFile));
+          const translate: BibleTranslate = JSON.parse(translateStr.toString());
+
+          const key = translate.keyForSearch;
+          if (!key) {
+            continue;
+          }
+
+          // Если такой перевод уже загружен (даже из другого файла) — не дублируем
+          if (seenKeys.has(key)) {
+            continue;
+          }
+          seenKeys.add(key);
+
+          this.biblesCache[key] = translate;
+
+          translates.push({
+            title: translate.title,
+            sourceTitle: translate.sourceTitle,
+            keyForSearch: key,
+            lang: translate.lang,
+            version: translate.version,
+            isDefault: false,
+            isClassicBookOrder: translate.isClassicBookOrder,
+          });
         }
-
-        const translateStr = fs.readFileSync(
-          path.resolve(this.assetsPathNew, translateFile)
-        );
-        const translate: BibleTranslate = JSON.parse(translateStr.toString());
-
-        translates.push({
-          title: translate.title,
-          sourceTitle: translate.sourceTitle,
-          keyForSearch: translate.keyForSearch,
-          lang: translate.lang,
-          version: translate.version,
-          isDefault: false,
-          isClassicBookOrder: translate.isClassicBookOrder,
-        });
-        this.biblesCache[translate.keyForSearch] = translate;
       }
 
       this.readedTranslates = true;

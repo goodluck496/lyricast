@@ -47,8 +47,8 @@ import {
 import { Store } from '@ngrx/store';
 import {
   selectSelectedBook,
-  SONG_ACTIONS,
   SongActions,
+  SongActionsEnum,
 } from '@lyri-cast/song-store';
 import { SongComponent } from '../../components';
 import {
@@ -191,11 +191,15 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
   // changeChorusAfterCouplet$ = toObservable(this.chorusAfterCouplet);
 
-  selectBookInStore$ = this.actions$.pipe(ofType(SongActions.selectBook));
-  slideNavigateInStore$ = this.actions$.pipe(ofType(SongActions.slideNavigate));
+  selectBookInStore$ = this.actions$.pipe(
+    ofType(SongActions[SongActionsEnum.selectBook])
+  );
+  slideNavigateInStore$ = this.actions$.pipe(
+    ofType(SongActions[SongActionsEnum.slideNavigate])
+  );
 
   selectSongByNumber$ = this.actions$.pipe(
-    ofType(SongActions.selectSongByNumber),
+    ofType(SongActions[SongActionsEnum.selectSongByNumber]),
     switchMap((payload) => {
       return combineLatest([
         of(payload.data.number),
@@ -205,18 +209,18 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     map(([number, songs]) => {
       const song = songs.find((el) => el.baseEntity.number === number);
       if (!song) {
-        return { type: SONG_ACTIONS.selectSong };
+        return { type: SongActionsEnum.selectSong };
       }
 
       if (
         song.baseEntity.bookName.fileKey !== this.selectedBook.value?.searchKey
       ) {
-        return { type: SONG_ACTIONS.selectSong };
+        return { type: SongActionsEnum.selectSong };
       }
 
       this.songControl.setValue(song);
 
-      return { type: SONG_ACTIONS.selectSong };
+      return { type: SongActionsEnum.selectSong };
     })
   );
 
@@ -249,17 +253,18 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         ///////// todo сделать отдельной функцией
         this.songPageSelectSrv.selectSong(newSong);
 
-        this.store.dispatch(SongActions.pauseCasting());
+        this.store.dispatch(SongActions[SongActionsEnum.pauseCasting]());
 
         const splitCount =
           newSong.lyrics[0]?.splitLinesCount || SPLIT_PARTS_COUNT.NONE;
         this.splitCount.set(splitCount);
         this.songPageSelectSrv.setSplitCountValue(splitCount);
+
         this.selectedSong$.next(newSong);
 
         if (this.selectedBook.value) {
           this.store.dispatch(
-            SongActions.selectSong({
+            SongActions[SongActionsEnum.selectSong]({
               song: newSong,
               bookName: this.selectedBook.value.baseEntity,
             })
@@ -304,15 +309,21 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         if (!data.fromService) {
           return;
         }
-        const line = data.currentLyric.lines.find(
-          (el) => el.globalSongIndex === (data?.index ?? 0)
+
+        const index = data.index ?? 0;
+        const lyrics = this.songPageSelectSrv.selectedLyricsForCasting();
+        const allLines = lyrics.map((el) => el.lines).flat();
+
+        const line = allLines.find((el) => el.globalSongIndex === index);
+        const lyric = lyrics.find((el) =>
+          el.lines.some((el1) => el1.globalSongIndex === index)
         );
 
-        console.log('from hist', line, data);
-        if (!line) {
+        if (!lyric || !line) {
           return;
         }
-        this.onSelectLyricLine([data.currentLyric, line, false]);
+
+        this.onSelectLyricLine([lyric, line, false]);
       });
   }
 

@@ -143,6 +143,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
       ),
       tap(() => {
         this.isLoading.set(false);
+        this.loadingStatusService.finishInitialLoading();
       })
     );
   bibleTranslates: IUiLyriListItem<BibleTranslateShort>[] = [];

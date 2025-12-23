@@ -2,6 +2,7 @@ import { createReducer, on } from '@ngrx/store';
 import { ISong, ISongBookName } from '@lyri-cast/entities';
 import {
   SongActions,
+  SongActionsEnum,
   SongPresentationNavigatePayload,
   SongStartCastingPayload,
 } from './song.actions';
@@ -25,10 +26,10 @@ export const initState: SongPageState = {
 
 export const SongPageReducers = createReducer<SongPageState>(
   initState,
-  on(SongActions.selectBook, (state, payload) => {
+  on(SongActions[SongActionsEnum.selectBook], (state, payload) => {
     return { ...state, selectedBook: payload } satisfies SongPageState;
   }),
-  on(SongActions.selectSong, (state, payload) => {
+  on(SongActions[SongActionsEnum.selectSong], (state, payload) => {
     return {
       ...state,
       selectedSong: payload.song,
@@ -36,23 +37,28 @@ export const SongPageReducers = createReducer<SongPageState>(
       castingProcess: null,
     } satisfies SongPageState;
   }),
-  on(SongActions.startCasting, (state, payload) => {
+  on(SongActions[SongActionsEnum.startCasting], (state, payload) => {
     return {
       ...state,
       castingProcess: payload,
       castingPaused: false,
     } satisfies SongPageState;
   }),
-  on(SongActions.openCasting, (state, payload) => {
+  on(SongActions[SongActionsEnum.openCasting], (state, payload) => {
     return { ...state, castingProcess: payload } satisfies SongPageState;
   }),
-  on(SongActions.pauseCasting, (state) => {
+  on(SongActions[SongActionsEnum.pauseCasting], (state) => {
     return { ...state, castingPaused: true } satisfies SongPageState;
   }),
-  on(SongActions.stopCasting, (state) => {
-    return { ...state, castingProcess: null } satisfies SongPageState;
+  on(SongActions[SongActionsEnum.stopCasting], (state) => {
+    return {
+      ...state,
+      castingProcess: null,
+      castingPaused: true,
+      navigateState: null,
+    } satisfies SongPageState;
   }),
-  on(SongActions.slideNavigate, (state, payload) => {
+  on(SongActions[SongActionsEnum.slideNavigate], (state, payload) => {
     return { ...state, navigateState: payload } satisfies SongPageState;
   })
 );

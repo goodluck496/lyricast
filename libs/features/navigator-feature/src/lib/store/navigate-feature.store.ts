@@ -9,15 +9,18 @@ import {
 
 export type NavigatorFeatureState = {
   history: HistoryItem[];
+  selectedHistoryKey: string | null;
 };
 
 export const navigateFeatureState: NavigatorFeatureState = {
   history: [],
+  selectedHistoryKey: null,
 };
 
 export const NavigatorActionsTypes = {
   push: 'push',
   clear: 'clear',
+  select: 'select',
 } as const;
 
 export type NavigatorActionKeys = keyof typeof NavigatorActionsTypes;
@@ -27,6 +30,7 @@ export const NavigatorActions = createActionGroup({
   events: {
     [NavigatorActionsTypes.push]: props<{ data: HistoryItem }>(),
     [NavigatorActionsTypes.clear]: emptyProps(),
+    [NavigatorActionsTypes.select]: props<{ key: string }>(),
   },
 });
 
@@ -47,5 +51,14 @@ export const NavigatorReducer = createReducer(
       ...state,
       history: [...state.history, data],
     };
-  })
+  }),
+  on(NavigatorActions.clear, (state) => ({
+    ...state,
+    history: [],
+    selectedHistoryKey: null,
+  })),
+  on(NavigatorActions.select, (state, { key }) => ({
+    ...state,
+    selectedHistoryKey: key,
+  }))
 );

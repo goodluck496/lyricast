@@ -4,6 +4,7 @@ export enum Pages {
   SONGS_FEATURE = 'songs-feature',
   BIBLE_FEATURE = 'bible-feature',
   FREE_SLIDE_FEATURE = 'free-slider-feature',
+  QUIZ_FEATURE = 'quiz-feature',
   FREE_SLIDE = 'free-slider',
   BIBLE = 'bible',
   PROGRAMS = 'programs',

@@ -60,6 +60,7 @@
         "libs/features/search-feature/src/index.ts"
       ],
       "@lyri-cast/song-feature": ["libs/features/song-feature/src/index.ts"],
+      "@lyri-cast/quiz-feature": ["libs/features/quiz/src/index.ts"],
       "@lyri-cast/song-store": [
         "libs/shared-browser/store/song-store/src/index.ts"
       ],
@@ -68,8 +69,7 @@
       "@lyri-cast/svg-icons": ["libs/svg-icons/src/index.ts"],
       "@lyri-cast/svg-icons/*": ["libs/svg-icons/src/*"],
       "@lyri-cast/ui-lib": ["libs/ui-lib/src/index.ts"],
-      "@lyri-cast/worker-kit": ["libs/worker-kit/src/index.ts"],
-      "quiz": ["libs/features/quiz/src/index.ts"]
+      "@lyri-cast/worker-kit": ["libs/worker-kit/src/index.ts"]
     }
   },
   "references": [

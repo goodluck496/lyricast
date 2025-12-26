@@ -49,11 +49,9 @@ export const appRoutes: Route[] = [
           ),
       },
       {
-        path: Pages.QUIZ,
-        loadComponent: () =>
-          import('./pages/quiz/quiz.component').then(
-            (c) => c.QuizComponent
-          ),
+        path: Pages.QUIZ_FEATURE,
+        loadChildren: () =>
+          import('@lyri-cast/quiz-feature').then((c) => c.quizFeatureRoutes),
       },
       {
         path: Pages.SETTINGS,
@@ -104,10 +102,10 @@ export const appRoutes: Route[] = [
   },
 
   {
-    path: 'quiz-casting',
-    loadComponent: () =>
-      import('./pages/quiz-casting/quiz-casting.component').then(
-        (c) => c.QuizCastingComponent,
+    path: Pages.QUIZ_FEATURE,
+    loadChildren: () =>
+      import('@lyri-cast/quiz-feature').then(
+        (c) => c.quizFeatureRoutes,
       ),
   },
 

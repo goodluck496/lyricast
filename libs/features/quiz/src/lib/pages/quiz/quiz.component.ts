@@ -19,15 +19,18 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Toast, ToastModule } from 'primeng/toast';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { CardModule } from 'primeng/card';
-import { QuizState, QuizStateService, QuizSummary } from '@lyri-cast/common-browser';
+import { QuizState, QuizStateService, QuizSummary } from '@lyri-cast/quiz-feature';
 import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { filter, skip } from 'rxjs/operators';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
-import { QuizQuestionEditorComponent } from './quiz-question-editor.component';
-import { QuizStatsTableComponent } from '../quiz-stats-table.component';
+import { QuizQuestionEditorComponent } from '../../components/quiz-question-editor/quiz-question-editor.component';
+import { QuizStatsTableComponent } from '../../components/quiz-stats-table/quiz-stats-table.component';
 import { AutoCompleteCompleteEvent, AutoCompleteModule } from 'primeng/autocomplete';
+import { QuizSidebarComponent } from '../../components/quiz-sidebar/quiz-sidebar.component';
+import { QuizSidebarService } from '../../services/quiz-sidebar.service';
+import { QuizGameService } from '../../services/quiz-game.service';
 
 @Component({
   selector: 'lyri-quiz-page',
@@ -55,24 +58,17 @@ import { AutoCompleteCompleteEvent, AutoCompleteModule } from 'primeng/autocompl
     ProgressSpinnerModule,
     Toast,
     ConfirmPopup,
+    QuizSidebarComponent,
   ],
   templateUrl: './quiz.component.html',
   styleUrl: './quiz.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [MessageService, ConfirmationService],
+  providers: [MessageService, ConfirmationService, QuizSidebarService],
 })
 export class QuizComponent implements OnInit {
   // левая часть: команды и участники
-  teams: {
-    id: string;
-    name: string;
-    score: number;
-    members: { id: string; name: string }[];
-  }[] = [];
-
   newTeamName = '';
   newMemberNameByTeamId = new Map<string, string>();
-  selectedTeamId: string | null = null;
   // ручная корректировка очков по командам (бонус/штраф)
   manualDeltaByTeamId = new Map<string, number | null>();
 
@@ -84,32 +80,8 @@ export class QuizComponent implements OnInit {
   newQuizTitle = '';
   filteredQuizzes: QuizSummary[] = [];
 
-  // Текущий показываемый на экране вопрос
-  // Делается публичным, чтобы использовать в шаблоне нижней таблицы
-  activeTopicId: string | null = null;
-  activeQuestionId: string | null = null;
-
   // Открытые панели аккордеона с темами (для программного разворота при скролле к вопросу)
   openedTopicIds: string[] = [];
-
-  isCastingActive = false;
-
-  // правая часть: тематики и вопросы
-  topics: {
-    id: string;
-    title: string;
-    questions: {
-      id: string;
-      text: string;
-      answer: string;
-      points: number;
-      seconds: number;
-      solved?: boolean;
-      burned?: boolean;
-      type?: 'normal' | 'penalty' | 'bonus';
-      penaltyMode?: 'subtract' | 'skip';
-    }[];
-  }[] = [];
 
   newTopicTitle = '';
   newQuestionDraftByTopicId = new Map<
@@ -125,16 +97,20 @@ export class QuizComponent implements OnInit {
   private newQuestionFormOpenByTopicId = new Map<string, boolean>();
 
   // варианты типов вопросов и режимов штрафа
-  readonly questionTypeOptions: { label: string; value: 'normal' | 'penalty' | 'bonus' }[] = [
+  readonly questionTypeOptions: {
+    label: string;
+    value: 'normal' | 'penalty' | 'bonus';
+  }[] = [
     { label: 'Обычный', value: 'normal' },
     { label: 'Штраф', value: 'penalty' },
     { label: 'Бонус', value: 'bonus' },
   ];
 
-  readonly penaltyModeOptions: { label: string; value: 'subtract' | 'skip' }[] = [
-    { label: 'Вычитать баллы', value: 'subtract' },
-    { label: 'Пропускать ход', value: 'skip' },
-  ];
+  readonly penaltyModeOptions: { label: string; value: 'subtract' | 'skip' }[] =
+    [
+      { label: 'Вычитать баллы', value: 'subtract' },
+      { label: 'Пропускать ход', value: 'skip' },
+    ];
 
   private withContextQuestion(
     handler: (topicId: string, questionId: string) => void
@@ -176,16 +152,14 @@ export class QuizComponent implements OnInit {
 
   private triggerMarkCorrectFromContext(): void {
     this.withContextQuestion((topicId, questionId) => {
-      this.activeTopicId = topicId;
-      this.activeQuestionId = questionId;
+      this.game.setActiveQuestion(topicId, questionId);
       this.answerCorrect();
     });
   }
 
   private triggerMarkWrongFromContext(): void {
     this.withContextQuestion((topicId, questionId) => {
-      this.activeTopicId = topicId;
-      this.activeQuestionId = questionId;
+      this.game.setActiveQuestion(topicId, questionId);
       this.answerWrong();
     });
   }
@@ -193,8 +167,7 @@ export class QuizComponent implements OnInit {
   private triggerScrollToQuestionFromContext(): void {
     this.withContextQuestion((topicId, questionId) => {
       // при переходе к вопросу с нижней таблицы также подсвечиваем его как активный
-      this.activeTopicId = topicId;
-      this.activeQuestionId = questionId;
+      this.game.setActiveQuestion(topicId, questionId);
       this.scrollToQuestion(topicId, questionId);
     });
   }
@@ -249,6 +222,7 @@ export class QuizComponent implements OnInit {
   private readonly bridge = inject(BridgeService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly game = inject(QuizGameService);
 
   // Контекстное меню для нижней таблицы вопросов
   quizTableMenuItems: MenuItem[] = [];
@@ -257,24 +231,49 @@ export class QuizComponent implements OnInit {
   @ViewChild('quizTableCm') private quizTableCm?: ContextMenu;
 
   get canAnswer(): boolean {
-    if (!this.selectedTeamId || !this.activeTopicId || !this.activeQuestionId) {
-      return false;
-    }
-
-    const topic = this.topics.find((t) => t.id === this.activeTopicId);
-    const question = topic?.questions.find(
-      (q) => q.id === this.activeQuestionId
-    );
-
-    return !!question && !question.solved;
+    return this.game.canAnswer();
   }
 
   get maxTeamScore(): number {
-    return this.teams.reduce((max, t) => Math.max(max, t.score), 0);
+    return this.game.maxTeamScore();
   }
 
-  get teamsSortedByScore(): { id: string; name: string; score: number; members: { id: string; name: string }[] }[] {
-    return [...this.teams].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  get teamsSortedByScore(): {
+    id: string;
+    name: string;
+    score: number;
+    members: { id: string; name: string }[];
+  }[] {
+    return this.game.teamsSortedByScore();
+  }
+
+  // Обёртки над состоянием игры, чтобы шаблон продолжал использовать старые имена
+  get teams() {
+    return this.game.teams();
+  }
+
+  get topics() {
+    return this.game.topics();
+  }
+
+  get selectedTeamId(): string | null {
+    return this.game.selectedTeamId();
+  }
+
+  set selectedTeamId(value: string | null) {
+    this.game.setSelectedTeamId(value);
+  }
+
+  get activeTopicId(): string | null {
+    return this.game.activeTopicId();
+  }
+
+  get activeQuestionId(): string | null {
+    return this.game.activeQuestionId();
+  }
+
+  get isCastingActive(): boolean {
+    return this.game.isCastingActive();
   }
 
   async ngOnInit(): Promise<void> {
@@ -359,7 +358,7 @@ export class QuizComponent implements OnInit {
         title,
         date: new Date().toISOString().slice(0, 10),
       },
-      emptyState,
+      emptyState
     );
 
     if (!id) {
@@ -444,8 +443,7 @@ export class QuizComponent implements OnInit {
     }
 
     // Запоминаем текущий вопрос как активный для дальнейшей обработки (верно/неверно)
-    this.activeTopicId = topicId;
-    this.activeQuestionId = questionId;
+    this.game.setActiveQuestion(topicId, questionId);
 
     const team = this.teams.find((t) => t.id === this.selectedTeamId) ?? null;
 
@@ -496,15 +494,17 @@ export class QuizComponent implements OnInit {
   }
 
   answerCorrect(): void {
-    if (!this.selectedTeamId || !this.activeTopicId || !this.activeQuestionId) {
+    const selectedTeamId = this.selectedTeamId;
+    const activeTopicId = this.activeTopicId;
+    const activeQuestionId = this.activeQuestionId;
+
+    if (!selectedTeamId || !activeTopicId || !activeQuestionId) {
       return;
     }
 
-    const topic = this.topics.find((t) => t.id === this.activeTopicId);
-    const question = topic?.questions.find(
-      (q) => q.id === this.activeQuestionId
-    );
-    const team = this.teams.find((t) => t.id === this.selectedTeamId);
+    const topic = this.topics.find((t) => t.id === activeTopicId);
+    const question = topic?.questions.find((q) => q.id === activeQuestionId);
+    const team = this.teams.find((t) => t.id === selectedTeamId);
 
     if (!topic || !question || !team || question.solved) {
       return;
@@ -541,9 +541,7 @@ export class QuizComponent implements OnInit {
     }
 
     if (delta !== 0) {
-      this.teams = this.teams.map((t) =>
-        t.id === team.id ? { ...t, score: t.score + delta } : t
-      );
+      this.game.updateTeamScore(team.id, delta);
     }
 
     // История: фиксируем верный ответ (в том числе бонусный/штрафной)
@@ -555,16 +553,7 @@ export class QuizComponent implements OnInit {
     });
 
     // Помечаем вопрос как решённый в локальном состоянии викторины
-    this.topics = this.topics.map((t) =>
-      t.id === topic.id
-        ? {
-            ...t,
-            questions: t.questions.map((q) =>
-              q.id === question.id ? { ...q, solved: true } : q
-            ),
-          }
-        : t
-    );
+    this.game.updateQuestion(topic.id, question.id, { solved: true });
     this.cdr.markForCheck();
 
     // Сообщаем кастинг-окну о верном ответе
@@ -582,14 +571,16 @@ export class QuizComponent implements OnInit {
 
   answerWrong(): void {
     // Пока без изменения счёта, только заглушка под будущую логику передачи очков
-    if (!this.selectedTeamId || !this.activeTopicId || !this.activeQuestionId) {
+    const selectedTeamId = this.selectedTeamId;
+    const activeTopicId = this.activeTopicId;
+    const activeQuestionId = this.activeQuestionId;
+
+    if (!selectedTeamId || !activeTopicId || !activeQuestionId) {
       return;
     }
 
-    const topic = this.topics.find((t) => t.id === this.activeTopicId);
-    const question = topic?.questions.find(
-      (q) => q.id === this.activeQuestionId
-    );
+    const topic = this.topics.find((t) => t.id === activeTopicId);
+    const question = topic?.questions.find((q) => q.id === activeQuestionId);
     if (!topic || !question || question.solved || question.burned) {
       return;
     }
@@ -604,18 +595,7 @@ export class QuizComponent implements OnInit {
     }
 
     // помечаем вопрос как "сгоревший" (заблокированным)
-    const targetTopicId = topic.id;
-
-    this.topics = this.topics.map((t) =>
-      t.id === targetTopicId
-        ? {
-            ...t,
-            questions: t.questions.map((q) =>
-              q.id === question.id ? { ...q, burned: true } : q
-            ),
-          }
-        : t
-    );
+    this.game.updateQuestion(topic.id, question.id, { burned: true });
 
     // для штрафных вопросов при неверном ответе применяем ту же механику, что и при верном
     let delta = 0;
@@ -632,15 +612,13 @@ export class QuizComponent implements OnInit {
       }
     }
 
-    if (delta !== 0 && this.selectedTeamId) {
-      this.teams = this.teams.map((t) =>
-        t.id === this.selectedTeamId ? { ...t, score: t.score + delta } : t
-      );
+    if (delta !== 0 && selectedTeamId) {
+      this.game.updateTeamScore(selectedTeamId, delta);
     }
 
     // История: фиксируем неверный ответ / сгорание вопроса
-    if (this.selectedTeamId) {
-      this.appendTeamHistoryEntry(this.selectedTeamId, {
+    if (selectedTeamId) {
+      this.appendTeamHistoryEntry(selectedTeamId, {
         kind: 'wrong',
         topicTitle: topic.title,
         questionText: question.text,
@@ -651,9 +629,9 @@ export class QuizComponent implements OnInit {
     this.bridge.send(
       'QUIZ_ANSWER_WRONG' as any,
       {
-        teamId: this.selectedTeamId,
-        topicId: this.activeTopicId,
-        questionId: this.activeQuestionId,
+        teamId: selectedTeamId,
+        topicId: activeTopicId,
+        questionId: activeQuestionId,
         delta,
         type,
       } as any
@@ -663,31 +641,38 @@ export class QuizComponent implements OnInit {
 
   private appendTeamHistoryEntry(
     teamId: string,
-    entry: { kind: 'correct' | 'wrong' | 'manual_bonus' | 'manual_penalty'; topicTitle: string; questionText: string; points: number }
+    entry: {
+      kind: 'correct' | 'wrong' | 'manual_bonus' | 'manual_penalty';
+      topicTitle: string;
+      questionText: string;
+      points: number;
+    }
   ): void {
-    this.teams = this.teams.map((t) => {
-      if (t.id !== teamId) {
-        return t;
-      }
+    this.game.teams.update((teams) =>
+      teams.map((t) => {
+        if (t.id !== teamId) {
+          return t;
+        }
 
-      const history = Array.isArray((t as any).history)
-        ? ([...(t as any).history] as any[])
-        : [];
+        const history = Array.isArray((t as any).history)
+          ? ([...(t as any).history] as any[])
+          : [];
 
-      const fullEntry = {
-        id: this.generateId('history'),
-        timestamp: Date.now(),
-        topicTitle: entry.topicTitle,
-        questionText: entry.questionText,
-        points: entry.points,
-        kind: entry.kind,
-      } as any;
+        const fullEntry = {
+          id: this.generateId('history'),
+          timestamp: Date.now(),
+          topicTitle: entry.topicTitle,
+          questionText: entry.questionText,
+          points: entry.points,
+          kind: entry.kind,
+        } as any;
 
-      return {
-        ...t,
-        history: [...history, fullEntry],
-      } as any;
-    });
+        return {
+          ...t,
+          history: [...history, fullEntry],
+        } as any;
+      })
+    );
   }
 
   toggleQuestionLock(topicId: string, questionId: string): void {
@@ -699,18 +684,7 @@ export class QuizComponent implements OnInit {
 
     const newBurned = !question.burned;
 
-    const targetTopicId = topic.id;
-
-    this.topics = this.topics.map((t) =>
-      t.id === targetTopicId
-        ? {
-            ...t,
-            questions: t.questions.map((q) =>
-              q.id === question.id ? { ...q, burned: newBurned } : q
-            ),
-          }
-        : t
-    );
+    this.game.updateQuestion(topic.id, question.id, { burned: newBurned });
 
     if (newBurned) {
       // при ручной блокировке шлём такое же событие, как при неверном ответе
@@ -739,20 +713,12 @@ export class QuizComponent implements OnInit {
   // ==== Teams ====
   addTeam() {
     const name = this.newTeamName?.trim() || `Команда ${this.teams.length + 1}`;
-    this.teams = [
-      ...this.teams,
-      {
-        id: this.generateId('team'),
-        name,
-        score: 0,
-        members: [],
-      },
-    ];
+    this.game.addTeam(name);
     this.newTeamName = '';
   }
 
   removeTeam(teamId: string) {
-    this.teams = this.teams.filter((t) => t.id !== teamId);
+    this.game.removeTeam(teamId);
     this.newMemberNameByTeamId.delete(teamId);
   }
 
@@ -768,9 +734,7 @@ export class QuizComponent implements OnInit {
   }
 
   updateTeamName(teamId: string, name: string) {
-    this.teams = this.teams.map((t) =>
-      t.id === teamId ? { ...t, name: name.trim() || t.name } : t
-    );
+    this.game.updateTeamName(teamId, name.trim() || name);
   }
 
   addMember(teamId: string) {
@@ -778,48 +742,24 @@ export class QuizComponent implements OnInit {
     if (!draft) {
       return;
     }
-    this.teams = this.teams.map((t) =>
-      t.id === teamId
-        ? {
-            ...t,
-            members: [
-              ...t.members,
-              { id: this.generateId('member'), name: draft },
-            ],
-          }
-        : t
-    );
+    this.game.addMember(teamId, draft);
     this.newMemberNameByTeamId.set(teamId, '');
   }
 
   removeMember(teamId: string, memberId: string) {
-    this.teams = this.teams.map((t) =>
-      t.id === teamId
-        ? {
-            ...t,
-            members: t.members.filter((m) => m.id !== memberId),
-          }
-        : t
-    );
+    this.game.removeMember(teamId, memberId);
   }
 
   // ==== Topics ====
   addTopic() {
     const title =
       this.newTopicTitle?.trim() || `Тема ${this.topics.length + 1}`;
-    this.topics = [
-      ...this.topics,
-      {
-        id: this.generateId('topic'),
-        title,
-        questions: [],
-      },
-    ];
+    this.game.addTopic(title);
     this.newTopicTitle = '';
   }
 
   removeTopic(topicId: string) {
-    this.topics = this.topics.filter((t) => t.id !== topicId);
+    this.game.removeTopic(topicId);
     this.newQuestionDraftByTopicId.delete(topicId);
   }
 
@@ -835,9 +775,7 @@ export class QuizComponent implements OnInit {
   }
 
   updateTopicTitle(topicId: string, title: string) {
-    this.topics = this.topics.map((t) =>
-      t.id === topicId ? { ...t, title: title.trim() || t.title } : t
-    );
+    this.game.updateTopicTitle(topicId, title.trim() || title);
   }
 
   addQuestion(topicId: string) {
@@ -853,34 +791,18 @@ export class QuizComponent implements OnInit {
     const points = draft.points ?? 0;
     const seconds = draft.seconds ?? 30;
 
-    const beforeCount = this.topics.find((t) => t.id === topicId)?.questions.length ?? 0;
+    const beforeCount =
+      this.topics.find((t) => t.id === topicId)?.questions.length ?? 0;
 
-    this.topics = this.topics.map((topic) => {
-      if (topic.id !== topicId) {
-        return topic;
-      }
-
-      if (topic.questions.length >= 5) {
-        return topic;
-      }
-
-      return {
-        ...topic,
-        questions: [
-          ...topic.questions,
-          {
-            id: this.generateId('question'),
-            text,
-            answer: draft.answer.trim(),
-            points,
-            seconds,
-            solved: false,
-          },
-        ],
-      };
+    this.game.addQuestion(topicId, {
+      text,
+      answer: draft.answer.trim(),
+      points,
+      seconds,
     });
 
-    const afterCount = this.topics.find((t) => t.id === topicId)?.questions.length ?? 0;
+    const afterCount =
+      this.topics.find((t) => t.id === topicId)?.questions.length ?? 0;
 
     this.newQuestionDraftByTopicId.set(topicId, {
       text: '',
@@ -895,17 +817,14 @@ export class QuizComponent implements OnInit {
   }
 
   removeQuestion(topicId: string, questionId: string) {
-    this.topics = this.topics.map((topic) =>
-      topic.id === topicId
-        ? {
-            ...topic,
-            questions: topic.questions.filter((q) => q.id !== questionId),
-          }
-        : topic
-    );
+    this.game.removeQuestion(topicId, questionId);
   }
 
-  confirmRemoveQuestion(event: Event, topicId: string, questionId: string): void {
+  confirmRemoveQuestion(
+    event: Event,
+    topicId: string,
+    questionId: string
+  ): void {
     this.confirmationService.confirm({
       target: event.currentTarget as HTMLElement,
       message: 'Удалить вопрос? Это действие нельзя отменить.',
@@ -919,60 +838,59 @@ export class QuizComponent implements OnInit {
   updateQuestionField(
     topicId: string,
     questionId: string,
-    field: 'text' | 'answer' | 'points' | 'seconds' | 'type' | 'penaltyMode' | 'solved',
+    field:
+      | 'text'
+      | 'answer'
+      | 'points'
+      | 'seconds'
+      | 'type'
+      | 'penaltyMode'
+      | 'solved',
     value: string | number | boolean | null
   ) {
-    this.topics = this.topics.map((topic) => {
-      if (topic.id !== topicId) {
-        return topic;
-      }
+    const topics = this.topics;
+    const topic = topics.find((t) => t.id === topicId);
+    const question = topic?.questions.find((q) => q.id === questionId);
+    if (!topic || !question) {
+      return;
+    }
 
-      return {
-        ...topic,
-        questions: topic.questions.map((q) => {
-          if (q.id !== questionId) {
-            return q;
-          }
-          if (field === 'points' || field === 'seconds') {
-            const num = typeof value === 'number' ? value : Number(value ?? 0);
-            return { ...q, [field]: num } as typeof q;
-          }
+    const changes: any = {};
 
-          if (field === 'type') {
-            const allowed: Array<'normal' | 'penalty' | 'bonus'> = [
-              'normal',
-              'penalty',
-              'bonus',
-            ];
-            const v = String(value ?? 'normal') as any;
-            const nextType: 'normal' | 'penalty' | 'bonus' = allowed.includes(v)
-              ? v
-              : 'normal';
+    if (field === 'points' || field === 'seconds') {
+      changes[field] =
+        typeof value === 'number' ? value : Number(value ?? 0);
+    } else if (field === 'type') {
+      const allowed: Array<'normal' | 'penalty' | 'bonus'> = [
+        'normal',
+        'penalty',
+        'bonus',
+      ];
+      const v = String(value ?? 'normal') as any;
+      const nextType: 'normal' | 'penalty' | 'bonus' = allowed.includes(v)
+        ? v
+        : 'normal';
 
-            // при смене типа сбрасываем режим штрафа к значению по умолчанию
-            return {
-              ...q,
-              type: nextType,
-              penaltyMode: nextType === 'penalty' ? (q.penaltyMode ?? 'subtract') : undefined,
-            } as typeof q;
-          }
+      changes.type = nextType;
+      changes.penaltyMode =
+        nextType === 'penalty'
+          ? question.penaltyMode ?? 'subtract'
+          : undefined;
+    } else if (field === 'penaltyMode') {
+      const allowed: Array<'subtract' | 'skip'> = ['subtract', 'skip'];
+      const v = String(value ?? 'subtract') as any;
+      const nextMode: 'subtract' | 'skip' = allowed.includes(v)
+        ? v
+        : 'subtract';
+      changes.penaltyMode = nextMode;
+    } else if (field === 'solved') {
+      const bool = value === true || value === 'true';
+      changes.solved = bool;
+    } else {
+      changes[field] = String(value ?? '');
+    }
 
-          if (field === 'penaltyMode') {
-            const allowed: Array<'subtract' | 'skip'> = ['subtract', 'skip'];
-            const v = String(value ?? 'subtract') as any;
-            const nextMode: 'subtract' | 'skip' = allowed.includes(v)
-              ? v
-              : 'subtract';
-            return { ...q, penaltyMode: nextMode } as typeof q;
-          }
-          if (field === 'solved') {
-            const bool = value === true || value === 'true';
-            return { ...q, solved: bool } as typeof q;
-          }
-          return { ...q, [field]: String(value ?? '') } as typeof q;
-        }),
-      };
-    });
+    this.game.updateQuestion(topicId, questionId, changes);
   }
 
   getQuestionDraft(topicId: string) {
@@ -1009,15 +927,11 @@ export class QuizComponent implements OnInit {
   }
 
   getState(): QuizState {
-    return {
-      teams: this.teams,
-      topics: this.topics,
-    } satisfies QuizState;
+    return this.game.getState();
   }
 
   applyState(state: QuizState) {
-    this.teams = Array.isArray(state.teams) ? state.teams : [];
-    this.topics = Array.isArray(state.topics) ? state.topics : [];
+    this.game.setState(state);
     this.cdr.markForCheck();
   }
 
@@ -1031,7 +945,7 @@ export class QuizComponent implements OnInit {
 
       const savedId = await this.quizStateService.saveAsNew(
         { id, title, date },
-        state,
+        state
       );
 
       if (!savedId) {
@@ -1063,29 +977,8 @@ export class QuizComponent implements OnInit {
   }
 
   resetStatistics(): void {
-    // Обнуляем счёт и историю команд, но сохраняем сами команды и вопросы
-    this.teams = this.teams.map((t) => ({
-      ...t,
-      score: 0,
-      history: [],
-    } as any));
-
-    // Сбрасываем флаги solved/burned у всех вопросов
-    this.topics = this.topics.map((topic) => ({
-      ...topic,
-      questions: topic.questions.map((q) => ({
-        ...q,
-        solved: false,
-        burned: false,
-      })),
-    }));
-
-    // Сбрасываем выбор и временные значения
-    this.selectedTeamId = null;
-    this.activeTopicId = null;
-    this.activeQuestionId = null;
+    this.game.resetStatistics();
     this.manualDeltaByTeamId.clear();
-
     this.cdr.markForCheck();
   }
 
@@ -1112,11 +1005,10 @@ export class QuizComponent implements OnInit {
       return;
     }
 
-    const signedDelta = kind === 'manual_bonus' ? Math.abs(delta) : -Math.abs(delta);
+    const signedDelta =
+      kind === 'manual_bonus' ? Math.abs(delta) : -Math.abs(delta);
 
-    this.teams = this.teams.map((t) =>
-      t.id === teamId ? { ...t, score: t.score + signedDelta } : t
-    );
+    this.game.updateTeamScore(teamId, signedDelta);
 
     // История: фиксируем ручную корректировку счёта
     this.appendTeamHistoryEntry(teamId, {
@@ -1139,11 +1031,11 @@ export class QuizComponent implements OnInit {
     // чтобы кастинговое окно загрузило свежие команды, темы и баллы
     await this.saveState();
 
-    this.isCastingActive = true;
+    this.game.setCastingActive(true);
     this.cdr.markForCheck();
     // Если нет Electron-контекста (браузерный режим) — просто навигируемся внутри текущего окна
     if (!this.windowSrv.hasElectron) {
-      this.router.navigate(['/quiz-casting']);
+      this.router.navigate([Pages.CASTING]);
       return;
     }
 
@@ -1155,7 +1047,7 @@ export class QuizComponent implements OnInit {
       );
 
       if (!display) {
-        this.router.navigate(['/quiz-casting']);
+        this.router.navigate([Pages.CASTING]);
         return;
       }
 
@@ -1188,12 +1080,12 @@ export class QuizComponent implements OnInit {
 
       await this.windowSrv.electronContext.send({
         event: APP_COMMON_ACTIONS.openPage,
-        payload: { path: ['quiz-casting'] } as any,
+        payload: { path: [Pages.QUIZ_FEATURE, Pages.CASTING] } as any,
       });
     } catch {
       // в случае ошибки откатываемся к переходу в этом же окне
-      this.router.navigate(['/quiz-casting']);
-      this.isCastingActive = false;
+      this.router.navigate([Pages.QUIZ_FEATURE, Pages.CASTING]);
+      this.game.setCastingActive(false);
       this.cdr.markForCheck();
     }
   }
@@ -1204,9 +1096,8 @@ export class QuizComponent implements OnInit {
     this.bridge.send('QUIZ_CLEAR_QUESTION' as any, {} as any);
 
     // Сбрасываем выбранную команду и активный вопрос
-    this.selectedTeamId = null;
-    this.activeTopicId = null;
-    this.activeQuestionId = null;
+    this.game.setSelectedTeamId(null);
+    this.game.setActiveQuestion(null, null);
     this.cdr.markForCheck();
   }
 
@@ -1218,7 +1109,7 @@ export class QuizComponent implements OnInit {
     await this.windowSrv.electronContext.closeWindow({
       type: AppWindowTypes.CASTING,
     });
-    this.isCastingActive = false;
+    this.game.setCastingActive(false);
     this.cdr.markForCheck();
   }
 }

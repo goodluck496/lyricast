@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Ng2FittextModule } from 'ng2-fittext';
-import { BridgeService, QuizState, QuizStateService } from '@lyri-cast/common-browser';
+import { BridgeService } from '@lyri-cast/common-browser';
+import { QuizState, QuizStateService } from '@lyri-cast/quiz-feature';
 import { filter } from 'rxjs/operators';
-import { QuizStatsTableComponent } from '../quiz-stats-table.component';
+import { QuizStatsTableComponent } from '../../components/quiz-stats-table/quiz-stats-table.component';
 
 @Component({
   selector: 'lyri-quiz-casting',

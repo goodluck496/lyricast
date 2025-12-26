@@ -24,6 +24,11 @@
   font-size: 0.75rem;
 }
 
+.quiz-question-editor__badge--burned {
+  background-color: #b91c1c22;
+  color: #b91c1c;
+}
+
 .quiz-question-editor__row {
   display: flex;
   gap: 0.75rem;
@@ -42,6 +47,12 @@
 .quiz-question-editor__row--types {
   flex-wrap: wrap;
   align-items: center;
+}
+
+.quiz-question-editor__type-hint {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #b91c1c; /* красный, но не кричащий */
 }
 
 .quiz-question-editor__row--meta {

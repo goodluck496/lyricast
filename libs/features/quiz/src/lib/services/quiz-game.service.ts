@@ -1,5 +1,6 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { QuizState } from '@lyri-cast/quiz-feature';
+import { BridgeService } from '@lyri-cast/common-browser';
 
 export interface QuizTeam {
   id: string;
@@ -29,6 +30,8 @@ export interface QuizTopic {
 
 @Injectable({ providedIn: 'root' })
 export class QuizGameService {
+  private readonly bridge = inject(BridgeService);
+
   // === State Signals ===
   readonly teams = signal<QuizTeam[]>([]);
   readonly topics = signal<QuizTopic[]>([]);
@@ -57,8 +60,14 @@ export class QuizGameService {
 
     const topic = this.topics().find((t) => t.id === topId);
     const question = topic?.questions.find((q) => q.id === qId);
+    if (!question) {
+      return false;
+    }
 
-    return !!question && !question.solved; // Можно добавить проверку на burned, если нужно
+    const type = question.type ?? 'normal';
+
+    // Отвечать можно только на обычные вопросы, которые ещё не решены и не сгорели
+    return !question.solved && !question.burned && type === 'normal';
   });
 
   // === Actions ===
@@ -251,6 +260,189 @@ export class QuizGameService {
           burned: false,
         })),
       }))
+    );
+  }
+
+  answerCorrect(): void {
+    const selectedTeamId = this.selectedTeamId();
+    const activeTopicId = this.activeTopicId();
+    const activeQuestionId = this.activeQuestionId();
+
+    if (!selectedTeamId || !activeTopicId || !activeQuestionId) {
+      return;
+    }
+
+    const topics = this.topics();
+    const teams = this.teams();
+
+    const topic = topics.find((t) => t.id === activeTopicId);
+    const question = topic?.questions.find((q) => q.id === activeQuestionId);
+    const team = teams.find((t) => t.id === selectedTeamId);
+
+    if (!topic || !question || !team || question.solved) {
+      return;
+    }
+
+    const basePoints = question.points ?? 0;
+    if (basePoints === 0) {
+      return;
+    }
+
+    const type = question.type ?? 'normal';
+    const penaltyMode = question.penaltyMode ?? 'subtract';
+
+    let delta = 0;
+
+    if (type === 'normal') {
+      delta = basePoints;
+    } else if (type === 'penalty') {
+      if (penaltyMode === 'subtract') {
+        delta = -basePoints;
+      } else {
+        delta = 0;
+      }
+    } else if (type === 'bonus') {
+      delta = basePoints;
+    }
+
+    if (delta === 0 && type !== 'penalty') {
+      return;
+    }
+
+    if (delta !== 0) {
+      this.updateTeamScore(team.id, delta);
+    }
+
+    this.appendTeamHistoryEntry(team.id, {
+      kind: 'correct',
+      topicTitle: topic.title,
+      questionText: question.text,
+      points: delta,
+    });
+
+    this.updateQuestion(topic.id, question.id, { solved: true });
+
+    this.bridge.send(
+      'QUIZ_ANSWER_CORRECT' as any,
+      {
+        teamId: team.id,
+        topicId: topic.id,
+        questionId: question.id,
+        delta,
+        type,
+      } as any
+    );
+  }
+
+  answerWrong(): void {
+    const selectedTeamId = this.selectedTeamId();
+    const activeTopicId = this.activeTopicId();
+    const activeQuestionId = this.activeQuestionId();
+
+    if (!selectedTeamId || !activeTopicId || !activeQuestionId) {
+      return;
+    }
+
+    const topics = this.topics();
+
+    const topic = topics.find((t) => t.id === activeTopicId);
+    const question = topic?.questions.find((q) => q.id === activeQuestionId);
+    if (!topic || !question || question.solved || question.burned) {
+      return;
+    }
+
+    const type = question.type ?? 'normal';
+    const penaltyMode = question.penaltyMode ?? 'subtract';
+
+    if (type === 'bonus') {
+      return;
+    }
+
+    this.updateQuestion(topic.id, question.id, { burned: true });
+
+    let delta = 0;
+    const basePoints = question.points ?? 0;
+
+    if (type === 'normal') {
+      delta = 0;
+    } else if (type === 'penalty') {
+      if (penaltyMode === 'subtract') {
+        delta = -basePoints;
+      } else {
+        delta = 0;
+      }
+    }
+
+    if (delta !== 0 && selectedTeamId) {
+      this.updateTeamScore(selectedTeamId, delta);
+    }
+
+    if (selectedTeamId) {
+      this.appendTeamHistoryEntry(selectedTeamId, {
+        kind: 'wrong',
+        topicTitle: topic.title,
+        questionText: question.text,
+        points: delta,
+      });
+    }
+
+    this.bridge.send(
+      'QUIZ_ANSWER_WRONG' as any,
+      {
+        teamId: selectedTeamId,
+        topicId: activeTopicId,
+        questionId: activeQuestionId,
+        delta,
+        type,
+      } as any
+    );
+  }
+
+   addManualHistoryEntry(
+    teamId: string,
+    entry: {
+      kind: 'manual_bonus' | 'manual_penalty';
+      topicTitle: string;
+      questionText: string;
+      points: number;
+    }
+  ): void {
+    this.appendTeamHistoryEntry(teamId, entry);
+  }
+
+  private appendTeamHistoryEntry(
+    teamId: string,
+    entry: {
+      kind: 'correct' | 'wrong' | 'manual_bonus' | 'manual_penalty';
+      topicTitle: string;
+      questionText: string;
+      points: number;
+    }
+  ): void {
+    this.teams.update((teams) =>
+      teams.map((t) => {
+        if (t.id !== teamId) {
+          return t;
+        }
+
+        const history = Array.isArray((t as any).history)
+          ? ([...(t as any).history] as any[])
+          : [];
+
+        const fullEntry = {
+          id: this.generateId('history'),
+          timestamp: Date.now(),
+          topicTitle: entry.topicTitle,
+          questionText: entry.questionText,
+          points: entry.points,
+          kind: entry.kind,
+        } as any;
+
+        return {
+          ...t,
+          history: [...history, fullEntry],
+        } as any;
+      })
     );
   }
 

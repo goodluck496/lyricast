@@ -189,12 +189,11 @@ export class QuizSidebarComponent implements OnInit {
   }
 
   answerCorrect(): void {
-    // делегируем в основной компонент/логику игры при необходимости
-    // пока оставляем как заглушку: сайдбар не знает о деталях начисления очков
+    this.game.answerCorrect();
   }
 
   answerWrong(): void {
-    // аналогично answerCorrect
+    this.game.answerWrong();
   }
 
   showStatsOnCasting(): void {

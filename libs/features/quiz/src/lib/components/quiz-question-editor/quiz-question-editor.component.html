@@ -3,6 +3,12 @@
     <div class="quiz-question-editor__badge" *ngIf="question.solved">
       Отвечен
     </div>
+    <div
+      class="quiz-question-editor__badge quiz-question-editor__badge--burned"
+      *ngIf="!question.solved && question.burned"
+    >
+      Сгорел
+    </div>
   </div>
 
   <div class="quiz-question-editor__row">
@@ -45,7 +51,7 @@
         optionLabel="label"
         optionValue="value"
         [ngModel]="question.type || 'normal'"
-        (ngModelChange)="onUpdateField('type', $event)"
+        (ngModelChange)="onTypeChange($event)"
       ></p-selectButton>
       <ng-container *ngIf="(question.type || 'normal') === 'penalty'">
         <p-selectButton
@@ -55,6 +61,9 @@
           [ngModel]="question.penaltyMode || 'subtract'"
           (ngModelChange)="onUpdateField('penaltyMode', $event)"
         ></p-selectButton>
+        <div class="quiz-question-editor__type-hint">
+          Этот вопрос штрафной: на экране он сразу будет как при истечении времени.
+        </div>
       </ng-container>
 
   </div>

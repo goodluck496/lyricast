@@ -447,6 +447,8 @@ export class QuizComponent implements OnInit {
 
     const team = this.teams.find((t) => t.id === this.selectedTeamId) ?? null;
 
+    const type = question.type ?? 'normal';
+
     // Пока без ngrx: напрямую шлём данные текущего вопроса в кастинг-окно
     this.bridge.send(
       'QUIZ_SHOW_QUESTION' as any,
@@ -459,10 +461,19 @@ export class QuizComponent implements OnInit {
           points: question.points,
           seconds: question.seconds,
         },
-        type: question.type ?? 'normal',
+        type,
         team: team ? { id: team.id, name: team.name, score: team.score } : null,
       } as any
     );
+
+    // Для штрафных и бонусных вопросов логика ответа срабатывает сразу при показе
+    if (type === 'penalty') {
+      this.game.answerWrong();
+      this.cdr.markForCheck();
+    } else if (type === 'bonus') {
+      this.game.answerCorrect();
+      this.cdr.markForCheck();
+    }
   }
 
   showAnswerOnCasting(topicId: string, questionId: string): void {
@@ -494,185 +505,13 @@ export class QuizComponent implements OnInit {
   }
 
   answerCorrect(): void {
-    const selectedTeamId = this.selectedTeamId;
-    const activeTopicId = this.activeTopicId;
-    const activeQuestionId = this.activeQuestionId;
-
-    if (!selectedTeamId || !activeTopicId || !activeQuestionId) {
-      return;
-    }
-
-    const topic = this.topics.find((t) => t.id === activeTopicId);
-    const question = topic?.questions.find((q) => q.id === activeQuestionId);
-    const team = this.teams.find((t) => t.id === selectedTeamId);
-
-    if (!topic || !question || !team || question.solved) {
-      return;
-    }
-
-    const basePoints = question.points ?? 0;
-    if (basePoints === 0) {
-      return;
-    }
-
-    const type = question.type ?? 'normal';
-    const penaltyMode = question.penaltyMode ?? 'subtract';
-
-    let delta = 0;
-
-    if (type === 'normal') {
-      delta = basePoints;
-    } else if (type === 'penalty') {
-      // для штрафного вопроса при "Верно" применяем ту же механику, что и для "Неверно":
-      // либо вычитаем баллы, либо просто фиксируем пропуск хода без изменения счёта
-      if (penaltyMode === 'subtract') {
-        delta = -basePoints;
-      } else {
-        delta = 0;
-      }
-    } else if (type === 'bonus') {
-      // бонусный вопрос всегда добавляет очки
-      delta = basePoints;
-    }
-
-    if (delta === 0 && type !== 'penalty') {
-      // для обычных и бонусных вопросов нулевой delta не имеет смысла
-      return;
-    }
-
-    if (delta !== 0) {
-      this.game.updateTeamScore(team.id, delta);
-    }
-
-    // История: фиксируем верный ответ (в том числе бонусный/штрафной)
-    this.appendTeamHistoryEntry(team.id, {
-      kind: 'correct',
-      topicTitle: topic.title,
-      questionText: question.text,
-      points: delta,
-    });
-
-    // Помечаем вопрос как решённый в локальном состоянии викторины
-    this.game.updateQuestion(topic.id, question.id, { solved: true });
+    this.game.answerCorrect();
     this.cdr.markForCheck();
-
-    // Сообщаем кастинг-окну о верном ответе
-    this.bridge.send(
-      'QUIZ_ANSWER_CORRECT' as any,
-      {
-        teamId: team.id,
-        topicId: topic.id,
-        questionId: question.id,
-        delta,
-        type,
-      } as any
-    );
   }
 
   answerWrong(): void {
-    // Пока без изменения счёта, только заглушка под будущую логику передачи очков
-    const selectedTeamId = this.selectedTeamId;
-    const activeTopicId = this.activeTopicId;
-    const activeQuestionId = this.activeQuestionId;
-
-    if (!selectedTeamId || !activeTopicId || !activeQuestionId) {
-      return;
-    }
-
-    const topic = this.topics.find((t) => t.id === activeTopicId);
-    const question = topic?.questions.find((q) => q.id === activeQuestionId);
-    if (!topic || !question || question.solved || question.burned) {
-      return;
-    }
-
-    const type = question.type ?? 'normal';
-    const penaltyMode = question.penaltyMode ?? 'subtract';
-
-    // для бонусного вопроса кнопка "Неверно" должна быть заблокирована в UI,
-    // но на всякий случай здесь тоже ничего не делаем
-    if (type === 'bonus') {
-      return;
-    }
-
-    // помечаем вопрос как "сгоревший" (заблокированным)
-    this.game.updateQuestion(topic.id, question.id, { burned: true });
-
-    // для штрафных вопросов при неверном ответе применяем ту же механику, что и при верном
-    let delta = 0;
-    const basePoints = question.points ?? 0;
-
-    if (type === 'normal') {
-      // пока без изменения счёта
-      delta = 0;
-    } else if (type === 'penalty') {
-      if (penaltyMode === 'subtract') {
-        delta = -basePoints;
-      } else {
-        delta = 0;
-      }
-    }
-
-    if (delta !== 0 && selectedTeamId) {
-      this.game.updateTeamScore(selectedTeamId, delta);
-    }
-
-    // История: фиксируем неверный ответ / сгорание вопроса
-    if (selectedTeamId) {
-      this.appendTeamHistoryEntry(selectedTeamId, {
-        kind: 'wrong',
-        topicTitle: topic.title,
-        questionText: question.text,
-        points: delta,
-      });
-    }
-
-    this.bridge.send(
-      'QUIZ_ANSWER_WRONG' as any,
-      {
-        teamId: selectedTeamId,
-        topicId: activeTopicId,
-        questionId: activeQuestionId,
-        delta,
-        type,
-      } as any
-    );
+    this.game.answerWrong();
     this.cdr.markForCheck();
-  }
-
-  private appendTeamHistoryEntry(
-    teamId: string,
-    entry: {
-      kind: 'correct' | 'wrong' | 'manual_bonus' | 'manual_penalty';
-      topicTitle: string;
-      questionText: string;
-      points: number;
-    }
-  ): void {
-    this.game.teams.update((teams) =>
-      teams.map((t) => {
-        if (t.id !== teamId) {
-          return t;
-        }
-
-        const history = Array.isArray((t as any).history)
-          ? ([...(t as any).history] as any[])
-          : [];
-
-        const fullEntry = {
-          id: this.generateId('history'),
-          timestamp: Date.now(),
-          topicTitle: entry.topicTitle,
-          questionText: entry.questionText,
-          points: entry.points,
-          kind: entry.kind,
-        } as any;
-
-        return {
-          ...t,
-          history: [...history, fullEntry],
-        } as any;
-      })
-    );
   }
 
   toggleQuestionLock(topicId: string, questionId: string): void {
@@ -1011,7 +850,7 @@ export class QuizComponent implements OnInit {
     this.game.updateTeamScore(teamId, signedDelta);
 
     // История: фиксируем ручную корректировку счёта
-    this.appendTeamHistoryEntry(teamId, {
+    this.game.addManualHistoryEntry(teamId, {
       kind,
       topicTitle: 'Ручная корректировка',
       questionText: '',

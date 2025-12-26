@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FloatLabelModule } from 'primeng/floatlabel';
@@ -8,6 +8,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { ButtonDirective } from 'primeng/button';
 import { Textarea } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
+import { MessageService } from 'primeng/api';
 
 export type QuizQuestionType = 'normal' | 'penalty' | 'bonus';
 export type QuizPenaltyMode = 'subtract' | 'skip';
@@ -55,7 +56,21 @@ export class QuizQuestionEditorComponent {
   @Output() toggleSolved = new EventEmitter<void>();
   @Output() remove = new EventEmitter<void>();
 
+  private readonly messageService = inject(MessageService);
+
   onUpdateField(field: 'text' | 'answer' | 'points' | 'seconds' | 'type' | 'penaltyMode' | 'solved', value: string | number | boolean | null): void {
     this.updateField.emit({ field, value });
+  }
+
+  onTypeChange(value: QuizQuestionType | null): void {
+    this.onUpdateField('type', value ?? 'normal');
+
+    if (value === 'penalty') {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Штрафной вопрос',
+        detail: 'На экране он сразу будет как при истечении времени.',
+      });
+    }
   }
 }

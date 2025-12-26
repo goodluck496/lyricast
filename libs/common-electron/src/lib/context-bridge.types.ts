@@ -53,5 +53,8 @@ export type Context = {
   loadUserSettings: () => Promise<unknown | null>;
   saveUserSettings: (settings: unknown) => Promise<void>;
 
+  loadQuizState: () => Promise<unknown | null>;
+  saveQuizState: (state: unknown) => Promise<void>;
+
   platform: string;
 };

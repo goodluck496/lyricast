@@ -1,0 +1,102 @@
+.quiz-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.quiz-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quiz-loading-spinner {
+  width: 4rem;
+  height: 4rem;
+}
+
+.quiz-panel {
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.quiz-panel--teams {
+  border-right: 1px solid transparent;
+}
+
+.quiz-panel--topics {
+  border-left: 1px solid transparent;
+}
+
+.quiz-sidebar {
+  padding: 8px;
+}
+
+/* Нижняя таблица вопросов */
+.quiz-bottom-table {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+.quiz-bottom-table__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1.25rem;
+}
+
+.quiz-bottom-table__th,
+.quiz-bottom-table__topic-cell,
+.quiz-bottom-table__points-cell {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  padding: 0.25rem 0.5rem;
+  text-align: center;
+}
+
+.quiz-bottom-table__th--topic,
+.quiz-bottom-table__topic-cell {
+  text-align: left;
+}
+
+.quiz-bottom-table__subheader th {
+  font-weight: normal;
+  font-size: 1.1rem;
+}
+
+.quiz-bottom-table__points-cell--solved {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.quiz-bottom-table__points-cell--wrong {
+  background: #b71c1c;
+  color: #fff;
+}
+
+/* выбранная ячейка всегда жёлтая, даже если вопрос уже решён/сгорел */
+.quiz-bottom-table__points-cell--active {
+  background: #ffd54f;
+  color: #000;
+  font-weight: 700;
+}
+
+/* Подсветка блока вопроса при скролле */
+.quiz-question--highlight {
+  animation: quiz-question-highlight 1.2s ease-out;
+}
+
+@keyframes quiz-question-highlight {
+  0% {
+    background-color: #fff59d;
+  }
+  100% {
+    background-color: transparent;
+  }
+}

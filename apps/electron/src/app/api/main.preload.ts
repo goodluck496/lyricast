@@ -40,4 +40,7 @@ contextBridge.exposeInMainWorld('electron', {
   loadUserSettings: () => ipcRenderer.invoke(ElectronActionEvents.LOAD_SETTINGS),
   saveUserSettings: (settings: unknown) =>
     ipcRenderer.invoke(ElectronActionEvents.SAVE_SETTINGS, settings),
+  loadQuizState: () => ipcRenderer.invoke(ElectronActionEvents.LOAD_QUIZ_STATE),
+  saveQuizState: (state: unknown) =>
+    ipcRenderer.invoke(ElectronActionEvents.SAVE_QUIZ_STATE, state),
 } satisfies Context);

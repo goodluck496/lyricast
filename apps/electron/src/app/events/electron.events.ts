@@ -147,6 +147,29 @@ ipcMain.handle(ElectronActionEvents.SAVE_SETTINGS, async (_event, settings) => {
   await fs.promises.writeFile(file, JSON.stringify(settings, null, 2), 'utf-8');
 });
 
+ipcMain.handle(ElectronActionEvents.LOAD_QUIZ_STATE, async () => {
+  const file = path.join(app.getPath('userData'), 'quiz.json');
+  try {
+    const raw = await fs.promises.readFile(file, 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+});
+
+ipcMain.handle(
+  ElectronActionEvents.SAVE_QUIZ_STATE,
+  async (_event, quizState) => {
+    const file = path.join(app.getPath('userData'), 'quiz.json');
+    await fs.promises.mkdir(path.dirname(file), { recursive: true });
+    await fs.promises.writeFile(
+      file,
+      JSON.stringify(quizState, null, 2),
+      'utf-8',
+    );
+  },
+);
+//
 // todo УДАЛИТЬ т.к. неудобно использовать "голые" воркеры оч сложно подключать к ним какие-то фреймворки
 //
 // const pool = new FileWorkerPool({ threads: 2 });

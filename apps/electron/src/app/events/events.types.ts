@@ -6,6 +6,8 @@ export const ElectronActionEvents = {
   PING: 'PING',
   LOAD_SETTINGS: 'LOAD_SETTINGS',
   SAVE_SETTINGS: 'SAVE_SETTINGS',
+  LOAD_QUIZ_STATE: 'LOAD_QUIZ_STATE',
+  SAVE_QUIZ_STATE: 'SAVE_QUIZ_STATE',
 } as const;
 
 export const ElectronCommonEvents = {

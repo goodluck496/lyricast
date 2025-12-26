@@ -1,0 +1,133 @@
+<div class="quiz-casting" [class.quiz-casting--expired]="timeExpired">
+  <div
+    class="quiz-casting__table-wrapper"
+    *ngIf="state as s; else noData"
+    [hidden]="!!currentQuestion || showStats"
+  >
+    <table class="quiz-casting__table">
+      <thead>
+        <tr>
+          <th class="quiz-casting__th quiz-casting__th--topic">Тема вопросов</th>
+          <th class="quiz-casting__th" colspan="5">Баллы</th>
+        </tr>
+        <tr class="quiz-casting__subheader">
+          <th></th>
+          <th *ngFor="let col of [1,2,3,4,5]">{{ col }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let topic of s.topics">
+          <td class="quiz-casting__topic-cell">{{ topic.title }}</td>
+          <td
+            class="quiz-casting__points-cell"
+            *ngFor="let i of [0,1,2,3,4]"
+            [ngClass]="{
+              'quiz-casting__points-cell--active':
+                currentQuestion && topic.questions[i] && topic.questions[i].id === currentQuestion.id,
+              'quiz-casting__points-cell--solved':
+                topic.questions[i] && solvedQuestionIds.has(topic.questions[i].id),
+              'quiz-casting__points-cell--wrong':
+                topic.questions[i] && burnedQuestionIds.has(topic.questions[i].id)
+            }"
+          >
+            <ng-container *ngIf="topic.questions[i] as q; else emptyCell">
+              {{ q.points }}
+            </ng-container>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #noData>
+    <div class="quiz-casting__empty">Нет данных викторины. Сначала настройте и сохраните её.</div>
+  </ng-template>
+
+  <ng-template #emptyCell>
+    <span class="quiz-casting__points-cell--empty"></span>
+  </ng-template>
+
+  <div
+    class="quiz-casting__stats"
+    *ngIf="showStats && statsTeams.length > 0"
+  >
+    <table class="quiz-casting__stats-table">
+      <thead>
+        <tr>
+          <th>Команда</th>
+          <th>Баллы</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          *ngFor="let team of statsTeams; index as i"
+          [class.quiz-casting__stats-row--winner]="statsHasWinner && i === 0"
+        >
+          <td>{{ team.name }}</td>
+          <td>{{ team.score }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div
+    class="quiz-casting__current"
+    [class.quiz-casting__current--visible]="!!currentQuestion && !showStats"
+  >
+    <div class="quiz-casting__current-header">
+      <div class="quiz-casting__current-topic">Текущий вопрос</div>
+      <div class="quiz-casting__current-points">
+        Баллы: {{ currentQuestion?.points ?? 0 }}
+      </div>
+    </div>
+    <div class="quiz-casting__current-question">
+      <div class="current-question__topic">
+        Тема:
+        {{ currentTopicTitle || '—' }}
+      </div>
+      <div class="current-question__team">
+        Команда:
+        {{ currentTeamName || '—' }}
+      </div>
+      <div
+        class="current-question__fit-wrapper"
+        [fittext]="true"
+        [maxFontSize]="60"
+        [activateOnResize]="true"
+      >
+        <h2 class="current-question__text">
+          {{
+            answerStatus === 'correct'
+              ? (
+                  lastCorrectType === 'bonus'
+                    ? ('Поздравляем с бонусом в ' + (lastCorrectDelta ?? currentQuestion?.points ?? 0) + ' баллов')
+                    : 'И это правильный ответ!'
+                )
+              : showAnswer
+                ? ('Ответ: ' + (currentQuestion?.answer || ''))
+                : (currentQuestion?.text || 'Здесь будет отображаться текущий вопрос викторины')
+          }}
+        </h2>
+      </div>
+    </div>
+    <div class="quiz-casting__timer">
+      Время: {{ remainingSeconds ?? 0 }} сек
+    </div>
+  </div>
+
+  <!-- Оверлей с полупрозрачными "кубиками" поверх всего содержимого -->
+  <div class="quiz-casting__overlay">
+    <div
+      class="quiz-casting__overlay-cell"
+      *ngFor="let cell of gridCells; index as i"
+      [class.quiz-casting__overlay-cell--active]="activeCellFlags[i]"
+    ></div>
+  </div>
+
+  <!-- Оверлей результата ответа (зелёный/красный флеш поверх всего) -->
+  <div
+    class="quiz-casting__answer-overlay"
+    [class.quiz-casting__answer-overlay--correct]="answerStatus === 'correct'"
+    [class.quiz-casting__answer-overlay--wrong]="answerStatus === 'wrong'"
+  ></div>
+</div>

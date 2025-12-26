@@ -39,6 +39,12 @@ export interface QuizState {
   topics: QuizTopicState[];
 }
 
+export interface QuizSummary {
+  id: string;
+  title: string;
+  date?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class QuizStateService {
   private windowSrv = inject(WindowService);
@@ -67,6 +73,93 @@ export class QuizStateService {
       await this.windowSrv.electronContext.saveQuizState(state);
     } catch {
       // ignore persistence errors
+    }
+  }
+
+  // === Multi-quiz helpers ===
+
+  async listQuizzes(): Promise<QuizSummary[]> {
+    const ctx: any = this.windowSrv.electronContext as any;
+    if (!ctx.listQuizzes) {
+      return [];
+    }
+    try {
+      const items = await ctx.listQuizzes();
+      if (!Array.isArray(items)) {
+        return [];
+      }
+      return items as QuizSummary[];
+    } catch {
+      return [];
+    }
+  }
+
+  async loadById(id: string): Promise<QuizState | null> {
+    if (!id) {
+      return null;
+    }
+    const ctx: any = this.windowSrv.electronContext as any;
+    if (!ctx.loadQuizById) {
+      return null;
+    }
+    try {
+      const raw = await ctx.loadQuizById(id);
+      if (!raw || typeof raw !== 'object') {
+        return null;
+      }
+      const data = raw as any;
+      if (!Array.isArray(data.teams) || !Array.isArray(data.topics)) {
+        return null;
+      }
+      return {
+        teams: data.teams,
+        topics: data.topics,
+      } as QuizState;
+    } catch {
+      return null;
+    }
+  }
+
+  async saveAsNew(
+    meta: { id?: string; title?: string; date?: string },
+    state: QuizState,
+  ): Promise<string | null> {
+    const ctx: any = this.windowSrv.electronContext as any;
+    if (!ctx.saveQuizAsNew) {
+      return null;
+    }
+    try {
+      const result = await ctx.saveQuizAsNew({
+        id: meta.id,
+        title: meta.title,
+        date: meta.date,
+        state,
+      });
+
+      // Обновляем "текущую" викторину для обратной совместимости
+      if (ctx.saveQuizState) {
+        await ctx.saveQuizState(state);
+      }
+
+      const id = (result && result.id) as string | undefined;
+      return id || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async deleteById(id: string): Promise<void> {
+    if (!id) {
+      return;
+    }
+    const ctx: any = this.windowSrv.electronContext as any;
+    if (!ctx.deleteQuiz) {
+      return;
+    }
+    try {
+      await ctx.deleteQuiz(id);
+    } catch {
+      // ignore
     }
   }
 }

@@ -61,19 +61,6 @@
   justify-content: center;
 }
 
-.quiz-casting__stats-table {
-  border-collapse: collapse;
-  width: 80%;
-  font-size: 3.4rem;
-}
-
-.quiz-casting__stats-table th,
-.quiz-casting__stats-table td {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 16px 24px;
-  text-align: left;
-}
-
 .quiz-casting__stats-row--winner {
   background: #2e7d32;
   color: #fff;

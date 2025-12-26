@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { Ng2FittextModule } from 'ng2-fittext';
 import { BridgeService, QuizState, QuizStateService } from '@lyri-cast/common-browser';
 import { filter } from 'rxjs/operators';
+import { QuizStatsTableComponent } from '../quiz-stats-table.component';
 
 @Component({
   selector: 'lyri-quiz-casting',
   standalone: true,
-  imports: [CommonModule, Ng2FittextModule],
+  imports: [CommonModule, Ng2FittextModule, QuizStatsTableComponent],
   templateUrl: './quiz-casting.component.html',
   styleUrl: './quiz-casting.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -31,12 +31,8 @@
       ],
       "@lyri-cast/common": ["libs/common/src/index.ts"],
       "@lyri-cast/common-browser": ["libs/common-browser/src/index.ts"],
-            "@lyri-cast/common-electron": [
-              "libs/common-electron/src/index.ts"
-            ],
-            "@lyri-cast/common-workers": [
-              "libs/common-workers/src/index.ts"
-            ],
+      "@lyri-cast/common-electron": ["libs/common-electron/src/index.ts"],
+      "@lyri-cast/common-workers": ["libs/common-workers/src/index.ts"],
       "@lyri-cast/data-access-bible": [
         "libs/shared-browser/data-access/bible/src/index.ts"
       ],
@@ -72,7 +68,8 @@
       "@lyri-cast/svg-icons": ["libs/svg-icons/src/index.ts"],
       "@lyri-cast/svg-icons/*": ["libs/svg-icons/src/*"],
       "@lyri-cast/ui-lib": ["libs/ui-lib/src/index.ts"],
-      "@lyri-cast/worker-kit": ["libs/worker-kit/src/index.ts"]
+      "@lyri-cast/worker-kit": ["libs/worker-kit/src/index.ts"],
+      "quiz": ["libs/features/quiz/src/index.ts"]
     }
   },
   "references": [

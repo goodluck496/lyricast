@@ -56,5 +56,11 @@ export type Context = {
   loadQuizState: () => Promise<unknown | null>;
   saveQuizState: (state: unknown) => Promise<void>;
 
+  // Multi-quiz management (optional, feature-detected on consumer side)
+  listQuizzes?: () => Promise<unknown[]>;
+  loadQuizById?: (id: string) => Promise<unknown | null>;
+  saveQuizAsNew?: (payload: { id?: string; title?: string; date?: string; state: unknown }) => Promise<{ id: string }>;
+  deleteQuiz?: (id: string) => Promise<void>;
+
   platform: string;
 };

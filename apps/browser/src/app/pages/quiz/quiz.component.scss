@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
 }
 
 .quiz-loading-overlay {
@@ -60,6 +61,31 @@
   text-align: center;
 }
 
+.quiz-bottom-table__points-cell {
+  white-space: nowrap;
+  position: relative;
+}
+
+.quiz-bottom-table__points-value {
+  display: inline-block;
+  min-width: 2.5rem;
+}
+
+.quiz-bottom-table__icon {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 0.9rem;
+}
+
+.quiz-bottom-table__icon--bonus {
+  color: #fbbf24; /* жёлтая звезда */
+}
+
+.quiz-bottom-table__icon--penalty {
+  color: #b91c1c; /* красный минус */
+}
+
 .quiz-bottom-table__th--topic,
 .quiz-bottom-table__topic-cell {
   text-align: left;
@@ -84,6 +110,13 @@
 .quiz-bottom-table__points-cell--active {
   background: #ffd54f;
   color: #000;
+  font-weight: 700;
+}
+
+/* Строка-победитель в таблице статистики команд (аналогично кастингу) */
+.quiz-bottom-stats__row--leader {
+  background: #2e7d32;
+  color: #fff;
   font-weight: 700;
 }
 

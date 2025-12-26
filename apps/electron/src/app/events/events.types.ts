@@ -8,6 +8,10 @@ export const ElectronActionEvents = {
   SAVE_SETTINGS: 'SAVE_SETTINGS',
   LOAD_QUIZ_STATE: 'LOAD_QUIZ_STATE',
   SAVE_QUIZ_STATE: 'SAVE_QUIZ_STATE',
+  LIST_QUIZZES: 'LIST_QUIZZES',
+  LOAD_QUIZ_BY_ID: 'LOAD_QUIZ_BY_ID',
+  SAVE_QUIZ_AS_NEW: 'SAVE_QUIZ_AS_NEW',
+  DELETE_QUIZ: 'DELETE_QUIZ',
 } as const;
 
 export const ElectronCommonEvents = {

@@ -51,23 +51,12 @@
     class="quiz-casting__stats"
     *ngIf="showStats && statsTeams.length > 0"
   >
-    <table class="quiz-casting__stats-table">
-      <thead>
-        <tr>
-          <th>Команда</th>
-          <th>Баллы</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          *ngFor="let team of statsTeams; index as i"
-          [class.quiz-casting__stats-row--winner]="statsHasWinner && i === 0"
-        >
-          <td>{{ team.name }}</td>
-          <td>{{ team.score }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <lyri-quiz-stats-table
+      [teams]="statsTeams"
+      tableClass="quiz-casting__stats-table"
+      winnerRowClass="quiz-casting__stats-row--winner"
+      [highlightFirstPositive]="true"
+    ></lyri-quiz-stats-table>
   </div>
 
   <div

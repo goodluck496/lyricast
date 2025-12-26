@@ -317,7 +317,7 @@ importers:
         specifier: ^0.4.14
         version: 0.4.14
       '@typescript-eslint/utils':
-        specifier: ^8.33.1
+        specifier: ^8.40.0
         version: 8.47.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
       angular-eslint:
         specifier: 20.3.0
@@ -355,6 +355,9 @@ importers:
       jest-preset-angular:
         specifier: 14.6.2
         version: 14.6.2(a0bda243ab41f03c349d8ff20f271d05)
+      jest-util:
+        specifier: ^29.7.0
+        version: 29.7.0
       npm-run-all:
         specifier: ^4.1.5
         version: 4.1.5

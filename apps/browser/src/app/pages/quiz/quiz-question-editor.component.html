@@ -1,0 +1,132 @@
+<div class="quiz-question-editor" [attr.data-question-id]="question.id">
+  <div class="quiz-question-editor__badge-row">
+    <div class="quiz-question-editor__badge" *ngIf="question.solved">
+      Отвечен
+    </div>
+  </div>
+
+  <div class="quiz-question-editor__row">
+    <p-floatlabel>
+      <textarea
+        pTextarea
+        rows="3"
+        [ngModel]="question.text"
+        (ngModelChange)="onUpdateField('text', $event)"
+        id="question-text-{{ question.id }}"
+      ></textarea>
+      <label for="question-text-{{ question.id }}">Текст вопроса</label>
+    </p-floatlabel>
+  </div>
+
+  <div
+    class="quiz-question-editor__row"
+    *ngIf="(question.type || 'normal') !== 'bonus'"
+  >
+    <p-floatlabel>
+      <textarea
+        pTextarea
+        rows="2"
+        [ngModel]="question.answer"
+        (ngModelChange)="onUpdateField('answer', $event)"
+        [disabled]="(question.type || 'normal') === 'penalty'"
+        id="question-answer-{{ question.id }}"
+      ></textarea>
+      <label for="question-answer-{{ question.id }}">Ответ</label>
+    </p-floatlabel>
+  </div>
+
+  <div class="quiz-question-editor__row quiz-question-editor__row--types">
+    <p-floatlabel>
+      <label for="question-points-{{ question.id }}">Тип вопроса</label>
+
+    </p-floatlabel>
+      <p-selectButton
+        [options]="questionTypeOptions"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="question.type || 'normal'"
+        (ngModelChange)="onUpdateField('type', $event)"
+      ></p-selectButton>
+      <ng-container *ngIf="(question.type || 'normal') === 'penalty'">
+        <p-selectButton
+          [options]="penaltyModeOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="question.penaltyMode || 'subtract'"
+          (ngModelChange)="onUpdateField('penaltyMode', $event)"
+        ></p-selectButton>
+      </ng-container>
+
+  </div>
+
+  <div class="quiz-question-editor__row quiz-question-editor__row--meta">
+    <div class="quiz-question-editor__meta-field">
+      <p-floatlabel>
+        <p-inputNumber
+          [ngModel]="question.points"
+          (ngModelChange)="onUpdateField('points', $event)"
+          inputId="question-points-{{ question.id }}"
+          [min]="0"
+        ></p-inputNumber>
+        <label for="question-points-{{ question.id }}">Очки</label>
+      </p-floatlabel>
+    </div>
+    <div class="quiz-question-editor__meta-field">
+      <p-floatlabel>
+        <p-inputNumber
+          [ngModel]="question.seconds"
+          (ngModelChange)="onUpdateField('seconds', $event)"
+          inputId="question-seconds-{{ question.id }}"
+          [min]="5"
+        ></p-inputNumber>
+        <label for="question-seconds-{{ question.id }}">Секунды</label>
+      </p-floatlabel>
+    </div>
+  </div>
+
+  <div class="quiz-question-editor__row quiz-question-editor__row--buttons">
+    <button
+      pButton
+      type="button"
+      class="quiz-question__lock"
+      [icon]="question.burned ? 'pi pi-lock' : 'pi pi-lock-open'"
+      pTooltip="Вопрос сгорел, больше нельзя на него отвечать"
+      (click)="toggleLock.emit()"
+    ></button>
+    <button
+      pButton
+      type="button"
+      class="quiz-question__solved"
+      [icon]="question.solved ? 'pi pi-check-circle' : 'pi pi-circle'"
+      [severity]="question.solved ? 'success' : undefined"
+      pTooltip="На вопрос уже отвечали"
+      (click)="toggleSolved.emit()"
+    ></button>
+    <button
+      pButton
+      type="button"
+      class="quiz-question__cast"
+      [disabled]="question.solved || question.burned"
+      (click)="showQuestion.emit()"
+    >
+      Показать на экране
+    </button>
+    <button
+      pButton
+      type="button"
+      class="quiz-question__cast"
+      [disabled]="(question.type || 'normal') === 'bonus' || (question.type || 'normal') === 'penalty'"
+      (click)="showAnswer.emit()"
+    >
+      Ответ
+    </button>
+    <button
+      pButton
+      type="button"
+      class="quiz-question__remove"
+      (click)="remove.emit()"
+    >
+      Удалить
+    </button>
+  </div>
+</div>

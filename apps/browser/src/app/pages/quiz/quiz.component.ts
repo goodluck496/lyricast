@@ -13,16 +13,21 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TooltipModule } from 'primeng/tooltip';
+import { DividerModule } from 'primeng/divider';
 import { ContextMenuModule, ContextMenu } from 'primeng/contextmenu';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Toast, ToastModule } from 'primeng/toast';
-import { QuizState, QuizStateService } from '@lyri-cast/common-browser';
+import { ConfirmPopup } from 'primeng/confirmpopup';
+import { CardModule } from 'primeng/card';
+import { QuizState, QuizStateService, QuizSummary } from '@lyri-cast/common-browser';
 import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { filter, skip } from 'rxjs/operators';
-import { Textarea } from 'primeng/textarea';
-import { MenuItem, MessageService } from 'primeng/api';
+import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
+import { QuizQuestionEditorComponent } from './quiz-question-editor.component';
+import { QuizStatsTableComponent } from '../quiz-stats-table.component';
+import { AutoCompleteCompleteEvent, AutoCompleteModule } from 'primeng/autocomplete';
 
 @Component({
   selector: 'lyri-quiz-page',
@@ -41,15 +46,20 @@ import { MenuItem, MessageService } from 'primeng/api';
     FloatLabelModule,
     CheckboxModule,
     TooltipModule,
-    Textarea,
+    DividerModule,
+    CardModule,
+    QuizQuestionEditorComponent,
+    QuizStatsTableComponent,
+    AutoCompleteModule,
     ContextMenuModule,
     ProgressSpinnerModule,
     Toast,
+    ConfirmPopup,
   ],
   templateUrl: './quiz.component.html',
   styleUrl: './quiz.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
 })
 export class QuizComponent implements OnInit {
   // левая часть: команды и участники
@@ -67,6 +77,12 @@ export class QuizComponent implements OnInit {
   manualDeltaByTeamId = new Map<string, number | null>();
 
   isLoading = true;
+
+  // === Multi-quiz management ===
+  quizzes: QuizSummary[] = [];
+  selectedQuiz: QuizSummary | null = null;
+  newQuizTitle = '';
+  filteredQuizzes: QuizSummary[] = [];
 
   // Текущий показываемый на экране вопрос
   // Делается публичным, чтобы использовать в шаблоне нижней таблицы
@@ -105,6 +121,8 @@ export class QuizComponent implements OnInit {
       seconds: number | null;
     }
   >();
+  // управление показом формы нового вопроса по теме
+  private newQuestionFormOpenByTopicId = new Map<string, boolean>();
 
   // варианты типов вопросов и режимов штрафа
   readonly questionTypeOptions: { label: string; value: 'normal' | 'penalty' | 'bonus' }[] = [
@@ -230,6 +248,7 @@ export class QuizComponent implements OnInit {
   private readonly settingsSrv = inject(SettingsService);
   private readonly bridge = inject(BridgeService);
   private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmationService);
 
   // Контекстное меню для нижней таблицы вопросов
   quizTableMenuItems: MenuItem[] = [];
@@ -251,17 +270,18 @@ export class QuizComponent implements OnInit {
   }
 
   get maxTeamScore(): number {
-    if (!this.teams || this.teams.length === 0) {
-      return 0;
-    }
-    return Math.max(...this.teams.map((t) => t.score ?? 0));
+    return this.teams.reduce((max, t) => Math.max(max, t.score), 0);
+  }
+
+  get teamsSortedByScore(): { id: string; name: string; score: number; members: { id: string; name: string }[] }[] {
+    return [...this.teams].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   }
 
   async ngOnInit(): Promise<void> {
-    const state = await this.quizStateService.load();
-    if (state) {
-      this.applyState(state);
-    }
+    // Не загружаем quiz.json автоматически, только список доступных викторин
+    this.quizzes = await this.quizStateService.listQuizzes();
+    this.filteredQuizzes = [...this.quizzes];
+
     this.isLoading = false;
     this.cdr.markForCheck();
 
@@ -292,6 +312,98 @@ export class QuizComponent implements OnInit {
         command: () => this.triggerScrollToQuestionFromContext(),
       },
     ];
+  }
+
+  // === Multi-quiz management helpers ===
+
+  filterQuizzes(event: AutoCompleteCompleteEvent): void {
+    const query = (event.query || '').toLowerCase();
+    if (!query) {
+      this.filteredQuizzes = [...this.quizzes];
+      return;
+    }
+    this.filteredQuizzes = this.quizzes.filter((q) =>
+      q.title.toLowerCase().includes(query)
+    );
+  }
+
+  async onQuizSelected(quiz: QuizSummary | null): Promise<void> {
+    if (!quiz) {
+      return;
+    }
+    const state = await this.quizStateService.loadById(quiz.id);
+    if (state) {
+      this.applyState(state);
+      this.selectedQuiz = quiz;
+    }
+  }
+
+  async createQuiz(): Promise<void> {
+    const title = this.newQuizTitle.trim();
+    if (!title) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Название не задано',
+        detail: 'Введите название новой викторины.',
+      });
+      return;
+    }
+
+    // Новая викторина должна начинаться с пустого состояния (без команд и вопросов)
+    const emptyState: QuizState = {
+      teams: [],
+      topics: [],
+    };
+    const id = await this.quizStateService.saveAsNew(
+      {
+        title,
+        date: new Date().toISOString().slice(0, 10),
+      },
+      emptyState,
+    );
+
+    if (!id) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Ошибка сохранения',
+        detail: 'Не удалось сохранить викторину.',
+      });
+      return;
+    }
+
+    this.newQuizTitle = '';
+    this.quizzes = await this.quizStateService.listQuizzes();
+    this.filteredQuizzes = [...this.quizzes];
+    const justCreated = this.quizzes.find((q) => q.id === id) ?? null;
+    this.selectedQuiz = justCreated;
+
+    // Применяем пустое состояние к UI, чтобы очистить команды и вопросы
+    this.applyState(emptyState);
+  }
+
+  confirmDeleteQuiz(event: Event): void {
+    if (!this.selectedQuiz) {
+      return;
+    }
+    this.confirmationService.confirm({
+      target: event.currentTarget as HTMLElement,
+      message: `Удалить викторину "${this.selectedQuiz.title}"? Это действие нельзя отменить.`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-text p-button-sm',
+      accept: () => this.deleteSelectedQuiz(),
+    });
+  }
+
+  private async deleteSelectedQuiz(): Promise<void> {
+    if (!this.selectedQuiz) {
+      return;
+    }
+    const id = this.selectedQuiz.id;
+    await this.quizStateService.deleteById(id);
+    this.quizzes = await this.quizStateService.listQuizzes();
+    this.filteredQuizzes = [...this.quizzes];
+    this.selectedQuiz = null;
   }
 
   showStatsOnCasting(): void {
@@ -644,6 +756,17 @@ export class QuizComponent implements OnInit {
     this.newMemberNameByTeamId.delete(teamId);
   }
 
+  confirmRemoveTeam(event: Event, teamId: string): void {
+    this.confirmationService.confirm({
+      target: event.currentTarget as HTMLElement,
+      message: 'Удалить команду? Это действие нельзя отменить.',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-text p-button-sm',
+      accept: () => this.removeTeam(teamId),
+    });
+  }
+
   updateTeamName(teamId: string, name: string) {
     this.teams = this.teams.map((t) =>
       t.id === teamId ? { ...t, name: name.trim() || t.name } : t
@@ -700,6 +823,17 @@ export class QuizComponent implements OnInit {
     this.newQuestionDraftByTopicId.delete(topicId);
   }
 
+  confirmRemoveTopic(event: Event, topicId: string): void {
+    this.confirmationService.confirm({
+      target: event.currentTarget as HTMLElement,
+      message: 'Удалить тему и все её вопросы? Это действие нельзя отменить.',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-text p-button-sm',
+      accept: () => this.removeTopic(topicId),
+    });
+  }
+
   updateTopicTitle(topicId: string, title: string) {
     this.topics = this.topics.map((t) =>
       t.id === topicId ? { ...t, title: title.trim() || t.title } : t
@@ -718,6 +852,8 @@ export class QuizComponent implements OnInit {
 
     const points = draft.points ?? 0;
     const seconds = draft.seconds ?? 30;
+
+    const beforeCount = this.topics.find((t) => t.id === topicId)?.questions.length ?? 0;
 
     this.topics = this.topics.map((topic) => {
       if (topic.id !== topicId) {
@@ -744,12 +880,18 @@ export class QuizComponent implements OnInit {
       };
     });
 
+    const afterCount = this.topics.find((t) => t.id === topicId)?.questions.length ?? 0;
+
     this.newQuestionDraftByTopicId.set(topicId, {
       text: '',
       answer: '',
       points: null,
       seconds: null,
     });
+
+    if (afterCount > beforeCount) {
+      this.newQuestionFormOpenByTopicId.set(topicId, false);
+    }
   }
 
   removeQuestion(topicId: string, questionId: string) {
@@ -761,6 +903,17 @@ export class QuizComponent implements OnInit {
           }
         : topic
     );
+  }
+
+  confirmRemoveQuestion(event: Event, topicId: string, questionId: string): void {
+    this.confirmationService.confirm({
+      target: event.currentTarget as HTMLElement,
+      message: 'Удалить вопрос? Это действие нельзя отменить.',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-text p-button-sm',
+      accept: () => this.removeQuestion(topicId, questionId),
+    });
   }
 
   updateQuestionField(
@@ -834,6 +987,23 @@ export class QuizComponent implements OnInit {
     return this.newQuestionDraftByTopicId.get(topicId)!;
   }
 
+  isNewQuestionFormOpen(topicId: string): boolean {
+    return this.newQuestionFormOpenByTopicId.get(topicId) === true;
+  }
+
+  onNewQuestionButtonClick(topicId: string): void {
+    const isOpen = this.isNewQuestionFormOpen(topicId);
+    if (!isOpen) {
+      // Открываем форму и инициализируем черновик
+      this.getQuestionDraft(topicId);
+      this.newQuestionFormOpenByTopicId.set(topicId, true);
+      return;
+    }
+
+    // Пытаемся сохранить вопрос
+    this.addQuestion(topicId);
+  }
+
   private generateId(prefix: string): string {
     return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
   }
@@ -852,7 +1022,37 @@ export class QuizComponent implements OnInit {
   }
 
   async saveState(): Promise<void> {
-    await this.quizStateService.save(this.getState());
+    const state = this.getState();
+
+    if (this.selectedQuiz) {
+      const id = this.selectedQuiz.id;
+      const title = this.selectedQuiz.title;
+      const date = this.selectedQuiz.date;
+
+      const savedId = await this.quizStateService.saveAsNew(
+        { id, title, date },
+        state,
+      );
+
+      if (!savedId) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Ошибка сохранения',
+          detail: 'Не удалось сохранить викторину.',
+        });
+        return;
+      }
+
+      // Обновляем список викторин и выбранную
+      this.quizzes = await this.quizStateService.listQuizzes();
+      this.filteredQuizzes = [...this.quizzes];
+      this.selectedQuiz =
+        this.quizzes.find((q) => q.id === savedId) ?? this.selectedQuiz;
+      return;
+    }
+
+    // Обратная совместимость: если викторина не выбрана, сохраняем в quiz.json
+    await this.quizStateService.save(state);
   }
 
   async reloadState(): Promise<void> {

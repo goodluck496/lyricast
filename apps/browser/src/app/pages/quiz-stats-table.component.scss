@@ -1,0 +1,56 @@
+/* Общие стили для таблицы статистики, применяются внутри компонента */
+:host {
+  display: block;
+  width: 100%;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+
+/* Вариант для окна кастинга */
+.quiz-casting__stats-table {
+  width: 80%;
+  font-size: 3.4375rem; // ~55px
+}
+
+.quiz-casting__stats-table th,
+.quiz-casting__stats-table td {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 16px 24px;
+}
+
+.quiz-casting__stats-row--winner {
+  background: #2e7d32;
+  color: #fff;
+  font-weight: 800;
+}
+
+/* Вариант для панели управления (та же "мелкая" сетка, что и таблица вопросов) */
+.quiz-bottom-stats__table {
+  font-size: 1.25rem;
+}
+
+.quiz-bottom-stats__table th,
+.quiz-bottom-stats__table td {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.quiz-bottom-stats__row--leader {
+  background: #2e7d32;
+  color: #fff;
+  font-weight: 700;
+}
+
+.quiz-stats-table__empty {
+  padding: 0.5rem 0;
+  color: #555;
+  font-size: 0.9rem;
+}

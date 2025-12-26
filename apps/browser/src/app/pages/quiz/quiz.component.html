@@ -44,7 +44,7 @@
                             pButton
                             type="button"
                             class="quiz-team__remove"
-                            (click)="removeTeam(team.id)"
+                            (click)="confirmRemoveTeam($event, team.id)"
                           >
                             Удалить
                           </button>
@@ -157,7 +157,7 @@
                             pButton
                             type="button"
                             class="quiz-topic__remove"
-                            (click)="removeTopic(topic.id)"
+                            (click)="confirmRemoveTopic($event, topic.id)"
                           >
                             Удалить
                           </button>
@@ -169,118 +169,20 @@
                           <div class="quiz-topic__questions-list">
                             @if (topic.questions; as questions) {
                               @for (q of questions; track q.id) {
-                                <div class="quiz-question" [attr.data-question-id]="q.id">
-                                  <div class="quiz-question__row">
-                                    <div class="quiz-question__main">
-                                      @if (q.solved) {
-                                        <div class="quiz-question__badge">
-                                          Отвечен
-                                        </div>
-                                      }
-                                    </div>
-                                    <p-floatLabel>
-                                      <textarea
-                                        pTextarea
-                                        rows="3"
-                                        [ngModel]="q.text"
-                                        (ngModelChange)="updateQuestionField(topic.id, q.id, 'text', $event)"
-                                        id="question-text-{{ q.id }}"
-                                      ></textarea>
-                                      <label for="question-text-{{ q.id }}">Текст вопроса</label>
-                                    </p-floatLabel>
-                                  </div>
-                                  <div class="quiz-question__row">
-                                    <p-floatLabel>
-                                      <input
-                                        pInputText
-                                        type="text"
-                                        [ngModel]="q.answer"
-                                        (ngModelChange)="updateQuestionField(topic.id, q.id, 'answer', $event)"
-                                        id="question-answer-{{ q.id }}"
-                                      />
-                                      <label for="question-answer-{{ q.id }}">Ответ</label>
-                                    </p-floatLabel>
-                                  </div>
-                                  <div class="quiz-question__row quiz-question__row--meta">
-                                    <p-selectButton
-                                      [options]="questionTypeOptions"
-                                      optionLabel="label"
-                                      optionValue="value"
-                                      [ngModel]="q.type || 'normal'"
-                                      (ngModelChange)="updateQuestionField(topic.id, q.id, 'type', $event)"
-                                    ></p-selectButton>
-                                    <ng-container *ngIf="(q.type || 'normal') === 'penalty'">
-                                      <p-selectButton
-                                        [options]="penaltyModeOptions"
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        [ngModel]="q.penaltyMode || 'subtract'"
-                                        (ngModelChange)="updateQuestionField(topic.id, q.id, 'penaltyMode', $event)"
-                                      ></p-selectButton>
-                                    </ng-container>
-                                    <p-floatLabel>
-                                      <p-inputNumber
-                                        [ngModel]="q.points"
-                                        (ngModelChange)="updateQuestionField(topic.id, q.id, 'points', $event)"
-                                        inputId="question-points-{{ q.id }}"
-                                        [min]="0"
-                                      ></p-inputNumber>
-                                      <label for="question-points-{{ q.id }}">Очки</label>
-                                    </p-floatLabel>
-                                    <p-floatLabel>
-                                      <p-inputNumber
-                                        [ngModel]="q.seconds"
-                                        (ngModelChange)="updateQuestionField(topic.id, q.id, 'seconds', $event)"
-                                        inputId="question-seconds-{{ q.id }}"
-                                        [min]="5"
-                                      ></p-inputNumber>
-                                      <label for="question-seconds-{{ q.id }}">Секунды</label>
-                                    </p-floatLabel>
-                                    <button
-                                      pButton
-                                      type="button"
-                                      class="quiz-question__lock"
-                                      [icon]="q.burned ? 'pi pi-lock' : 'pi pi-lock-open'"
-                                      pTooltip="Вопрос сгорел, больше нельзя на него отвечать"
-                                      (click)="toggleQuestionLock(topic.id, q.id)"
-                                    ></button>
-                                    <button
-                                      pButton
-                                      type="button"
-                                      class="quiz-question__solved"
-                                      [icon]="q.solved ? 'pi pi-check-circle' : 'pi pi-circle'"
-                                      [severity]="q.solved ? 'success' : undefined"
-                                      pTooltip="На вопрос уже отвечали"
-                                      (click)="updateQuestionField(topic.id, q.id, 'solved', !q.solved)"
-                                    ></button>
-                                    <button
-                                      pButton
-                                      type="button"
-                                      class="quiz-question__cast"
-                                      [disabled]="q.solved || q.burned"
-                                      (click)="showQuestionOnCasting(topic.id, q.id)"
-                                    >
-                                      Показать на экране
-                                    </button>
-                                    <button
-                                      pButton
-                                      type="button"
-                                      class="quiz-question__cast"
-                                      [disabled]="(q.type || 'normal') === 'bonus'"
-                                      (click)="showAnswerOnCasting(topic.id, q.id)"
-                                    >
-                                      Ответ
-                                    </button>
-                                    <button
-                                      pButton
-                                      type="button"
-                                      class="quiz-question__remove"
-                                      (click)="removeQuestion(topic.id, q.id)"
-                                    >
-                                      Удалить
-                                    </button>
-                                  </div>
-                                </div>
+                                <lyri-quiz-question-editor
+                                  [topicId]="topic.id"
+                                  [question]="q"
+                                  [questionTypeOptions]="questionTypeOptions"
+                                  [penaltyModeOptions]="penaltyModeOptions"
+                                  (updateField)="updateQuestionField(topic.id, q.id, $event.field, $event.value)"
+                                  (showQuestion)="showQuestionOnCasting(topic.id, q.id)"
+                                  (showAnswer)="showAnswerOnCasting(topic.id, q.id)"
+                                  (toggleLock)="toggleQuestionLock(topic.id, q.id)"
+                                  (toggleSolved)="updateQuestionField(topic.id, q.id, 'solved', !q.solved)"
+                                  (remove)="removeQuestion(topic.id, q.id)"
+                                ></lyri-quiz-question-editor>
+
+                                <p-divider *ngIf="q !== questions[questions.length - 1]"></p-divider>
                               }
                             } @else {
                               <div class="quiz-empty">Нет вопросов</div>
@@ -288,36 +190,44 @@
                           </div>
 
                           <div class="quiz-topic__questions-new">
-                            @if (getQuestionDraft(topic.id); as draft) {
-                              <input
-                                pInputText
-                                type="text"
-                                [(ngModel)]="draft.text"
-                                placeholder="Новый вопрос"
-                              />
-                              <input
-                                pInputText
-                                type="text"
-                                [(ngModel)]="draft.answer"
-                                placeholder="Ответ"
-                              />
-                              <p-inputNumber
-                                [(ngModel)]="draft.points"
-                                placeholder="Очки"
-                                [min]="0"
-                              ></p-inputNumber>
-                              <p-inputNumber
-                                [(ngModel)]="draft.seconds"
-                                placeholder="Секунды"
-                                [min]="5"
-                              ></p-inputNumber>
-                              <button
-                                pButton
-                                type="button"
-                                (click)="addQuestion(topic.id)"
-                              >
-                                Добавить вопрос (макс. 5)
-                              </button>
+                            <button
+                              pButton
+                              type="button"
+                              (click)="onNewQuestionButtonClick(topic.id)"
+                              [disabled]="topic.questions.length >= 5 && !isNewQuestionFormOpen(topic.id)"
+                            >
+                              {{
+                                isNewQuestionFormOpen(topic.id)
+                                  ? 'Сохранить вопрос'
+                                  : 'Добавить вопрос (макс. 5)'
+                              }}
+                            </button>
+
+                            @if (isNewQuestionFormOpen(topic.id) && getQuestionDraft(topic.id); as draft) {
+                              <div class="quiz-topic__questions-new-form">
+                                <input
+                                  pInputText
+                                  type="text"
+                                  [(ngModel)]="draft.text"
+                                  placeholder="Новый вопрос"
+                                />
+                                <input
+                                  pInputText
+                                  type="text"
+                                  [(ngModel)]="draft.answer"
+                                  placeholder="Ответ"
+                                />
+                                <p-inputNumber
+                                  [(ngModel)]="draft.points"
+                                  placeholder="Очки"
+                                  [min]="0"
+                                ></p-inputNumber>
+                                <p-inputNumber
+                                  [(ngModel)]="draft.seconds"
+                                  placeholder="Секунды"
+                                  [min]="5"
+                                ></p-inputNumber>
+                              </div>
                             }
                           </div>
                         </div>
@@ -336,23 +246,13 @@
             <ng-template pTemplate="panel">
               <div class="quiz-bottom-stats">
                 <h4>Статистика команд</h4>
-                <table class="quiz-bottom-stats__table" *ngIf="teams.length > 0; else noTeams">
-                  <thead>
-                    <tr>
-                      <th>Команда</th>
-                      <th>Баллы</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      *ngFor="let team of teams; index as i"
-                      [class.quiz-bottom-stats__row--leader]="maxTeamScore > 0 && team.score === maxTeamScore"
-                    >
-                      <td>{{ team.name }}</td>
-                      <td>{{ team.score }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <lyri-quiz-stats-table
+                  *ngIf="teams.length > 0; else noTeams"
+                  [teams]="teamsSortedByScore"
+                  tableClass="quiz-bottom-stats__table"
+                  winnerRowClass="quiz-bottom-stats__row--leader"
+                  [highlightFirstPositive]="true"
+                ></lyri-quiz-stats-table>
                 <ng-template #noTeams>
                   <div class="quiz-empty">Нет команд</div>
                 </ng-template>
@@ -397,7 +297,19 @@
                         "
                       >
                         <ng-container *ngIf="topic.questions[i] as q">
-                          {{ q.points }}
+                          <span class="quiz-bottom-table__points-value">
+                            {{ q.points }}
+                          </span>
+                          <i
+                            *ngIf="(q.type || 'normal') === 'bonus'"
+                            class="pi pi-star quiz-bottom-table__icon quiz-bottom-table__icon--bonus"
+                            pTooltip="Бонусный вопрос"
+                          ></i>
+                          <i
+                            *ngIf="(q.type || 'normal') === 'penalty'"
+                            class="pi pi-minus-circle quiz-bottom-table__icon quiz-bottom-table__icon--penalty"
+                            pTooltip="Штрафной вопрос"
+                          ></i>
                         </ng-container>
                       </td>
                     </tr>
@@ -414,6 +326,45 @@
   <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR">
     <div class="quiz-sidebar" *ngIf="!isLoading">
       <h4>Управление викториной</h4>
+      <div class="quiz-sidebar__quiz-select">
+        <label>Викторина</label>
+        <p-autoComplete
+          [suggestions]="filteredQuizzes"
+          optionLabel="title"
+          (completeMethod)="filterQuizzes($event)"
+          [dropdown]="true"
+          [forceSelection]="false"
+          [(ngModel)]="selectedQuiz"
+          (onSelect)="onQuizSelected($event.value)"
+          placeholder="Выберите викторину"
+        ></p-autoComplete>
+      </div>
+      <div class="quiz-sidebar__quiz-actions">
+        <input
+          pInputText
+          type="text"
+          [(ngModel)]="newQuizTitle"
+          placeholder="Название новой викторины"
+        />
+        <button
+          pButton
+          type="button"
+          class="quiz-sidebar__button"
+          (click)="createQuiz()"
+        >
+          Создать викторину
+        </button>
+        <button
+          pButton
+          type="button"
+          class="quiz-sidebar__button"
+          severity="danger"
+          [disabled]="!selectedQuiz"
+          (click)="confirmDeleteQuiz($event)"
+        >
+          Удалить викторину
+        </button>
+      </div>
       <div class="quiz-sidebar__team-select">
         <label>Команда для текущего вопроса</label>
         <p-select
@@ -486,4 +437,5 @@
       </button>
     </div>
   </ng-template>
+  <p-confirmpopup></p-confirmpopup>
 </lyri-page-container>

@@ -169,6 +169,106 @@ ipcMain.handle(
     );
   },
 );
+
+// === Multi-quiz management: separate quiz-*.json files with metadata ===
+
+const getQuizzesDir = () => path.join(app.getPath('userData'), 'quizzes');
+
+ipcMain.handle(ElectronActionEvents.LIST_QUIZZES, async () => {
+  const dir = getQuizzesDir();
+  try {
+    await fs.promises.mkdir(dir, { recursive: true });
+    const files = await fs.promises.readdir(dir);
+    const items = await Promise.all(
+      files
+        .filter((f) => f.toLowerCase().endsWith('.json'))
+        .map(async (file) => {
+          const full = path.join(dir, file);
+          try {
+            const raw = await fs.promises.readFile(full, 'utf-8');
+            const data = JSON.parse(raw) as any;
+            const id = (data && data.id) || path.basename(file, '.json');
+            const title = (data && data.title) || id;
+            const date = (data && data.date) || '';
+            return { id, title, date };
+          } catch {
+            const id = path.basename(file, '.json');
+            return { id, title: id, date: '' };
+          }
+        })
+    );
+    return items;
+  } catch {
+    return [];
+  }
+});
+
+ipcMain.handle(
+  ElectronActionEvents.LOAD_QUIZ_BY_ID,
+  async (_event, id: string) => {
+    if (!id) {
+      return null;
+    }
+    const dir = getQuizzesDir();
+    const file = path.join(dir, `${id}.json`);
+    try {
+      const raw = await fs.promises.readFile(file, 'utf-8');
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  },
+);
+
+ipcMain.handle(
+  ElectronActionEvents.SAVE_QUIZ_AS_NEW,
+  async (
+    _event,
+    payload: { id?: string; title?: string; date?: string; state: any },
+  ) => {
+    const dir = getQuizzesDir();
+    await fs.promises.mkdir(dir, { recursive: true });
+
+    const now = new Date();
+    const isoSafe = now.toISOString().replace(/[:.]/g, '-');
+    const id = (payload.id && String(payload.id)) || `quiz-${isoSafe}`;
+    const file = path.join(dir, `${id}.json`);
+
+    const title = payload.title?.trim() || id;
+    const date = payload.date || now.toISOString().slice(0, 10);
+
+    const body = {
+      id,
+      title,
+      date,
+      ...(payload.state || {}),
+    };
+
+    await fs.promises.writeFile(
+      file,
+      JSON.stringify(body, null, 2),
+      'utf-8',
+    );
+
+    return { id };
+  },
+);
+
+ipcMain.handle(
+  ElectronActionEvents.DELETE_QUIZ,
+  async (_event, id: string) => {
+    if (!id) {
+      return;
+    }
+    const dir = getQuizzesDir();
+    const file = path.join(dir, `${id}.json`);
+    try {
+      await fs.promises.unlink(file);
+    } catch {
+      // ignore
+    }
+  },
+);
 //
 // todo УДАЛИТЬ т.к. неудобно использовать "голые" воркеры оч сложно подключать к ним какие-то фреймворки
 //

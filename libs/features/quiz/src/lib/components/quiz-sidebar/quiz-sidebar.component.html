@@ -7,7 +7,7 @@
   } @else {
     <!-- Блок: выбор и управление викториной -->
     <section class="quiz-sidebar__section">
-      <div class="quiz-sidebar__field">
+      <div class="quiz-sidebar__field quiz-sidebar__field--inline">
         <!-- <label>Викторина</label> -->
         <p-autoComplete
           [suggestions]="filteredQuizzes"
@@ -19,24 +19,19 @@
           (onSelect)="onQuizSelected($event.value)"
           placeholder="Выберите викторину"
         ></p-autoComplete>
+        <button
+          pButton
+          type="button"
+          class="quiz-sidebar__icon-button"
+          pTooltip="Создать новую викторину"
+          tooltipPosition="top"
+          [disabled]="!!selectedQuizObj"
+          (click)="createQuiz()"
+        >
+          <span pButtonIcon class="pi pi-plus"></span>
+        </button>
       </div>
       @if (!selectOnly) {
-        <div class="quiz-sidebar__field quiz-sidebar__field--inline">
-          <input
-            pInputText
-            type="text"
-            [(ngModel)]="newQuizTitle"
-            placeholder="Название новой викторины"
-          />
-          <button
-            pButton
-            type="button"
-            class="quiz-sidebar__button"
-            (click)="createQuiz()"
-          >
-            Создать
-          </button>
-        </div>
         <div class="quiz-sidebar__buttons-row">
           <!-- Порядок: начать, сбросить экран, закрыть окно, сохранить, удалить -->
           <button

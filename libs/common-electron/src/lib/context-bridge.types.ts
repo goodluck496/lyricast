@@ -53,8 +53,10 @@ export type Context = {
   loadUserSettings: () => Promise<unknown | null>;
   saveUserSettings: (settings: unknown) => Promise<void>;
 
-  loadQuizState: () => Promise<unknown | null>;
-  saveQuizState: (state: unknown) => Promise<void>;
+  // Legacy quiz entrypoints (Electron IPC).
+  // После миграции квизов на HTTP API через svc://quiz эти методы могут отсутствовать.
+  loadQuizState?: () => Promise<unknown | null>;
+  saveQuizState?: (state: unknown) => Promise<void>;
 
   // Multi-quiz management (optional, feature-detected on consumer side)
   listQuizzes?: () => Promise<unknown[]>;

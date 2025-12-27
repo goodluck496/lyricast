@@ -59,8 +59,8 @@ export class QuizSidebarComponent implements OnInit {
 
   quizzes: QuizSummary[] = [];
   filteredQuizzes: QuizSummary[] = [];
-  selectedQuiz: QuizSummary | null = null;
-  newQuizTitle = '';
+  // Может быть как выбранным объектом викторины, так и введённой строкой (для создания новой).
+  selectedQuiz: QuizSummary | string | null = null;
 
   ngOnInit(): void {
     this.loadQuizzes();
@@ -72,6 +72,14 @@ export class QuizSidebarComponent implements OnInit {
 
   get teamsSortedByScore() {
     return this.game.teamsSortedByScore();
+  }
+
+  // Удобный геттер: выбранная викторина как объект (если действительно выбрана из списка),
+  // иначе null, даже если в selectedQuiz лежит введённая строка.
+  get selectedQuizObj(): QuizSummary | null {
+    return this.selectedQuiz && typeof this.selectedQuiz !== 'string'
+      ? (this.selectedQuiz as QuizSummary)
+      : null;
   }
 
   get selectedTeamId(): string | null {
@@ -135,7 +143,9 @@ export class QuizSidebarComponent implements OnInit {
   }
 
   async createQuiz(): Promise<void> {
-    const title = this.newQuizTitle.trim();
+    const value = this.selectedQuiz;
+    const title = typeof value === 'string' ? value.trim() : '';
+
     if (!title) {
       this.messageService.add({
         severity: 'warn',
@@ -151,19 +161,21 @@ export class QuizSidebarComponent implements OnInit {
       return;
     }
 
-    this.newQuizTitle = '';
     await this.loadQuizzes();
-    this.selectedQuiz = this.quizzes.find((q) => q.id === id) ?? null;
+    const created = this.quizzes.find((q) => q.id === id) ?? null;
+    this.selectedQuiz = created;
+    this.sidebarSrv.setSelectedQuiz(created);
     this.game.setState(emptyState);
   }
 
   confirmDeleteQuiz(event: Event): void {
-    if (!this.selectedQuiz) {
+    const quiz = this.selectedQuizObj;
+    if (!quiz) {
       return;
     }
     this.confirmationService.confirm({
       target: event.currentTarget as HTMLElement,
-      message: `Удалить викторину "${this.selectedQuiz.title}"? Это действие нельзя отменить.`,
+      message: `Удалить викторину "${quiz.title}"? Это действие нельзя отменить.`,
       icon: 'pi pi-exclamation-triangle',
       acceptButtonStyleClass: 'p-button-danger p-button-sm',
       rejectButtonStyleClass: 'p-button-text p-button-sm',
@@ -172,14 +184,33 @@ export class QuizSidebarComponent implements OnInit {
   }
 
   private async deleteSelectedQuiz(): Promise<void> {
-    if (!this.selectedQuiz) {
+    const quiz = this.selectedQuizObj;
+    if (!quiz) {
       return;
     }
-    const id = this.selectedQuiz.id;
+    const id = quiz.id;
     await this.sidebarSrv.deleteQuizById(id);
     await this.loadQuizzes();
-    this.selectedQuiz = null;
-    this.game.clearState();
+
+    // Если после удаления в списке ещё остались викторины — автоматически
+    // выбираем первую и подгружаем её состояние, чтобы интерфейс не
+    // "схлопывался" до стартового экрана.
+    if (this.quizzes.length > 0) {
+      const next = this.quizzes[0];
+      const state = await this.sidebarSrv.loadQuizById(next.id);
+      if (state) {
+        this.game.setState(state);
+      } else {
+        this.game.clearState();
+      }
+      this.selectedQuiz = next;
+      this.sidebarSrv.setSelectedQuiz(next);
+    } else {
+      // Если это была последняя викторина — очищаем выбранную и состояние.
+      this.selectedQuiz = null;
+      this.sidebarSrv.setSelectedQuiz(null);
+      this.game.clearState();
+    }
   }
 
   async startQuizCasting(): Promise<void> {
@@ -190,12 +221,12 @@ export class QuizSidebarComponent implements OnInit {
     const state = this.game.getState();
     await this.sidebarSrv.saveStateForQuiz(
       state,
-      this.selectedQuiz
+      this.selectedQuizObj
         ? {
-            id: this.selectedQuiz.id,
-            title: this.selectedQuiz.title,
+            id: this.selectedQuizObj.id,
+            title: this.selectedQuizObj.title,
             date:
-              this.selectedQuiz.date ?? new Date().toISOString().slice(0, 10),
+              this.selectedQuizObj.date ?? new Date().toISOString().slice(0, 10),
           }
         : null
     );

@@ -1,49 +1,30 @@
 import { inject, Injectable } from '@angular/core';
-import { WindowService } from '@lyri-cast/common-browser';
+import { firstValueFrom } from 'rxjs';
+import { QuizApiService } from '@lyri-cast/shared-browser/data-access/quiz';
 import { QuizState, QuizSummary } from '../quiz.types';
-
-
 
 @Injectable({ providedIn: 'root' })
 export class QuizStateService {
-  private windowSrv = inject(WindowService);
+  private readonly api = inject(QuizApiService);
 
   async load(): Promise<QuizState | null> {
-    try {
-      const raw = await this.windowSrv.electronContext.loadQuizState();
-      if (!raw || typeof raw !== 'object') {
-        return null;
-      }
-      const data = raw as any;
-      if (!Array.isArray(data.teams) || !Array.isArray(data.topics)) {
-        return null;
-      }
-      return {
-        teams: data.teams,
-        topics: data.topics,
-      } as QuizState;
-    } catch {
-      return null;
-    }
+    // В новой архитектуре "текущая" викторина определяется на клиенте.
+    // Этот метод можно использовать как обёртку над загрузкой выбранного quizId,
+    // но пока оставляем заглушкой, чтобы не ломать существующие вызовы.
+    return null;
   }
 
-  async save(state: QuizState): Promise<void> {
-    try {
-      await this.windowSrv.electronContext.saveQuizState(state);
-    } catch {
-      // ignore persistence errors
-    }
+  async save(_state: QuizState): Promise<void> {
+    // Сохранение конкретного квиза теперь делается через saveAsNew с явным meta.id
+    // Этот метод оставлен для совместимости и сейчас ничего не делает.
+    return;
   }
 
   // === Multi-quiz helpers ===
 
   async listQuizzes(): Promise<QuizSummary[]> {
-    const ctx: any = this.windowSrv.electronContext as any;
-    if (!ctx.listQuizzes) {
-      return [];
-    }
     try {
-      const items = await ctx.listQuizzes();
+      const items = await firstValueFrom(this.api.getQuizList());
       if (!Array.isArray(items)) {
         return [];
       }
@@ -57,22 +38,21 @@ export class QuizStateService {
     if (!id) {
       return null;
     }
-    const ctx: any = this.windowSrv.electronContext as any;
-    if (!ctx.loadQuizById) {
-      return null;
-    }
+
     try {
-      const raw = await ctx.loadQuizById(id);
-      if (!raw || typeof raw !== 'object') {
+      const dto = await firstValueFrom(this.api.getQuiz(id));
+      if (!dto || typeof dto !== 'object' || !dto.state) {
         return null;
       }
-      const data = raw as any;
-      if (!Array.isArray(data.teams) || !Array.isArray(data.topics)) {
+
+      const state = dto.state as any;
+      if (!Array.isArray(state.teams) || !Array.isArray(state.topics)) {
         return null;
       }
+
       return {
-        teams: data.teams,
-        topics: data.topics,
+        teams: state.teams,
+        topics: state.topics,
       } as QuizState;
     } catch {
       return null;
@@ -83,22 +63,15 @@ export class QuizStateService {
     meta: { id?: string; title?: string; date?: string },
     state: QuizState,
   ): Promise<string | null> {
-    const ctx: any = this.windowSrv.electronContext as any;
-    if (!ctx.saveQuizAsNew) {
-      return null;
-    }
     try {
-      const result = await ctx.saveQuizAsNew({
-        id: meta.id,
-        title: meta.title,
-        date: meta.date,
-        state,
-      });
-
-      // Обновляем "текущую" викторину для обратной совместимости
-      if (ctx.saveQuizState) {
-        await ctx.saveQuizState(state);
-      }
+      const result = await firstValueFrom(
+        this.api.saveQuiz({
+          id: meta.id,
+          title: meta.title,
+          date: meta.date,
+          state: state as any,
+        }),
+      );
 
       const id = (result && result.id) as string | undefined;
       return id || null;
@@ -111,12 +84,9 @@ export class QuizStateService {
     if (!id) {
       return;
     }
-    const ctx: any = this.windowSrv.electronContext as any;
-    if (!ctx.deleteQuiz) {
-      return;
-    }
+
     try {
-      await ctx.deleteQuiz(id);
+      await firstValueFrom(this.api.deleteQuiz(id));
     } catch {
       // ignore
     }

@@ -12,3 +12,5 @@ export * from './lib/pixi-serialization.types'
 
 export * from './lib/asset/asset.types'
 export * from './lib/asset/asset-dto'
+
+export * from './lib/quiz/quiz.dto'

@@ -157,7 +157,13 @@ export class QuizSidebarService {
 
       await this.windowSrv.electronContext.send({
         event: APP_COMMON_ACTIONS.openPage,
-        payload: { path: [Pages.QUIZ_FEATURE, Pages.CASTING] } as any,
+        payload: {
+          path: [Pages.QUIZ_FEATURE, Pages.CASTING],
+          // Прокидываем выбранный квиз в окно кастинга через query-параметр
+          queryParams: this._selectedQuiz?.id
+            ? { quizId: this._selectedQuiz.id }
+            : undefined,
+        } as any,
       });
     } catch {
       await this.router.navigate([Pages.QUIZ_FEATURE, Pages.CASTING]);

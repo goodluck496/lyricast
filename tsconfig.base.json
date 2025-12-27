@@ -69,7 +69,9 @@
       "@lyri-cast/svg-icons": ["libs/svg-icons/src/index.ts"],
       "@lyri-cast/svg-icons/*": ["libs/svg-icons/src/*"],
       "@lyri-cast/ui-lib": ["libs/ui-lib/src/index.ts"],
-      "@lyri-cast/worker-kit": ["libs/worker-kit/src/index.ts"]
+      "@lyri-cast/worker-kit": ["libs/worker-kit/src/index.ts"],
+      "@lyri-cast/quiz-domain": ["libs/domains/quiz-domain/src/index.ts"],
+      "quiz-data-access": ["libs/shared-browser/data-access/quiz/src/index.ts"]
     }
   },
   "references": [

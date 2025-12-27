@@ -7,6 +7,7 @@ import {
   OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { Ng2FittextModule } from 'ng2-fittext';
 import { BridgeService } from '@lyri-cast/common-browser';
 import { QuizStatsTableComponent } from '../../components/quiz-stats-table/quiz-stats-table.component';
@@ -25,6 +26,7 @@ export class QuizCastingComponent implements OnInit, OnDestroy {
   private readonly quizStateService = inject(QuizStateService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly bridge = inject(BridgeService);
+  private readonly route = inject(ActivatedRoute);
 
   state: QuizState | null = null;
 
@@ -72,7 +74,17 @@ export class QuizCastingComponent implements OnInit, OnDestroy {
 
   // Пока без реального таймера/выбора вопроса – просто плоское отображение данных
   async ngOnInit(): Promise<void> {
-    const loaded = await this.quizStateService.load();
+    // Если в маршрут передан quizId (через openPage payload) — грузим именно этот квиз.
+    const quizId = this.route.snapshot.queryParamMap.get('quizId');
+    let loaded: QuizState | null = null;
+
+    if (quizId) {
+      loaded = await this.quizStateService.loadById(quizId);
+    } else {
+      // Fallback для legacy-режима: используем старый механизм загрузки
+      loaded = await this.quizStateService.load();
+    }
+
     this.state = loaded;
 
     // Восстанавливаем подсветку решённых/"сгоревших" вопросов из сохранённого состояния

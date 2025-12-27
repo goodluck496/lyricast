@@ -40,15 +40,4 @@ contextBridge.exposeInMainWorld('electron', {
   loadUserSettings: () => ipcRenderer.invoke(ElectronActionEvents.LOAD_SETTINGS),
   saveUserSettings: (settings: unknown) =>
     ipcRenderer.invoke(ElectronActionEvents.SAVE_SETTINGS, settings),
-  loadQuizState: () => ipcRenderer.invoke(ElectronActionEvents.LOAD_QUIZ_STATE),
-  saveQuizState: (state: unknown) =>
-    ipcRenderer.invoke(ElectronActionEvents.SAVE_QUIZ_STATE, state),
-  // Multi-quiz management
-  listQuizzes: () => ipcRenderer.invoke(ElectronActionEvents.LIST_QUIZZES),
-  loadQuizById: (id: string) =>
-    ipcRenderer.invoke(ElectronActionEvents.LOAD_QUIZ_BY_ID, id),
-  saveQuizAsNew: (payload: { id?: string; title?: string; date?: string; state: unknown }) =>
-    ipcRenderer.invoke(ElectronActionEvents.SAVE_QUIZ_AS_NEW, payload),
-  deleteQuiz: (id: string) =>
-    ipcRenderer.invoke(ElectronActionEvents.DELETE_QUIZ, id),
 } satisfies Context);

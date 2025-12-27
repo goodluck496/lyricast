@@ -1,0 +1,124 @@
+<div class="quiz-panel quiz-panel--topics">
+  <h3>Темы и вопросы</h3>
+
+  <div class="quiz-topics__new">
+    <input
+      pInputText
+      type="text"
+      [(ngModel)]="newTopicTitle"
+      placeholder="Название новой темы"
+    />
+    <button pButton type="button" (click)="addTopic()">
+      Добавить тему
+    </button>
+  </div>
+
+  <p-accordion [multiple]="true" [(value)]="openedTopicIds">
+    @for (topic of topics; track topic.id) {
+      <p-accordion-panel [value]="topic.id">
+        <p-accordion-header>
+          <div class="quiz-topic__header">
+            <input
+              pInputText
+              type="text"
+              [ngModel]="topic.title"
+              (click)="$event.stopPropagation()"
+              (input)="$event.stopPropagation()"
+              (ngModelChange)="updateTopicTitle(topic.id, $event)"
+            />
+            <button
+              pButton
+              type="button"
+              class="quiz-topic__remove"
+              severity="danger"
+              pTooltip="Удалить тему"
+              (click)="confirmRemoveTopic($event, topic.id)"
+            >
+              <span pButtonIcon class="pi pi-trash"></span>
+            </button>
+          </div>
+        </p-accordion-header>
+
+        <p-accordion-content>
+          <div class="quiz-topic__questions">
+            <div class="quiz-topic__questions-list">
+              @if (topic.questions; as questions) {
+                @for (q of questions; track q.id) {
+                  <lyri-quiz-question-editor
+                    [topicId]="topic.id"
+                    [question]="q"
+                    [questionTypeOptions]="questionTypeOptions"
+                    [penaltyModeOptions]="penaltyModeOptions"
+                    (updateField)="
+                      updateQuestionField(
+                        topic.id,
+                        q.id,
+                        $event.field,
+                        $event.value
+                      )
+                    "
+                    (showQuestion)="onShowQuestion(topic.id, q.id)"
+                    (showAnswer)="onShowAnswer(topic.id, q.id)"
+                    (toggleLock)="onToggleLock(topic.id, q.id)"
+                    (toggleSolved)="onToggleSolved(topic.id, q.id)"
+                    (remove)="confirmRemoveQuestion($event, topic.id, q.id)"
+                  ></lyri-quiz-question-editor>
+
+                  <p-divider *ngIf="q !== questions[questions.length - 1]"></p-divider>
+                }
+              } @else {
+                <div class="quiz-empty">Нет вопросов</div>
+              }
+            </div>
+
+            <div class="quiz-topic__questions-new">
+              <button
+                pButton
+                type="button"
+                (click)="onNewQuestionButtonClick(topic.id)"
+                [disabled]="
+                  topic.questions.length >= 5 &&
+                  !isNewQuestionFormOpen(topic.id)
+                "
+              >
+                {{
+                  isNewQuestionFormOpen(topic.id)
+                    ? 'Сохранить вопрос'
+                    : 'Добавить вопрос (макс. 5)'
+                }}
+              </button>
+
+              @if (isNewQuestionFormOpen(topic.id) &&
+              getQuestionDraft(topic.id); as draft) {
+                <div class="quiz-topic__questions-new-form">
+                  <input
+                    pInputText
+                    type="text"
+                    [(ngModel)]="draft.text"
+                    placeholder="Новый вопрос"
+                  />
+                  <input
+                    pInputText
+                    type="text"
+                    [(ngModel)]="draft.answer"
+                    placeholder="Ответ"
+                  />
+                  <p-inputNumber
+                    [(ngModel)]="draft.points"
+                    placeholder="Очки"
+                    [min]="0"
+                  ></p-inputNumber>
+                  <p-inputNumber
+                    [(ngModel)]="draft.seconds"
+                    placeholder="Секунды"
+                    [min]="5"
+                  ></p-inputNumber>
+                </div>
+              }
+            </div>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+    }
+  </p-accordion>
+</div>

@@ -5,7 +5,7 @@ import { FloatLabelModule } from 'primeng/floatlabel';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { ButtonDirective } from 'primeng/button';
+import { ButtonDirective, ButtonIcon } from 'primeng/button';
 import { Textarea } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
@@ -38,6 +38,7 @@ export interface QuizQuestionViewModel {
     ButtonDirective,
     Textarea,
     TooltipModule,
+    ButtonIcon,
   ],
   templateUrl: './quiz-question-editor.component.html',
   styleUrl: './quiz-question-editor.component.scss',
@@ -46,19 +47,40 @@ export interface QuizQuestionViewModel {
 export class QuizQuestionEditorComponent {
   @Input() topicId!: string;
   @Input() question!: QuizQuestionViewModel;
-  @Input() questionTypeOptions: { label: string; value: QuizQuestionType }[] = [];
+  @Input() questionTypeOptions: { label: string; value: QuizQuestionType }[] =
+    [];
   @Input() penaltyModeOptions: { label: string; value: QuizPenaltyMode }[] = [];
 
-  @Output() updateField = new EventEmitter<{ field: 'text' | 'answer' | 'points' | 'seconds' | 'type' | 'penaltyMode' | 'solved'; value: string | number | boolean | null }>();
+  @Output() updateField = new EventEmitter<{
+    field:
+      | 'text'
+      | 'answer'
+      | 'points'
+      | 'seconds'
+      | 'type'
+      | 'penaltyMode'
+      | 'solved';
+    value: string | number | boolean | null;
+  }>();
   @Output() showQuestion = new EventEmitter<void>();
   @Output() showAnswer = new EventEmitter<void>();
   @Output() toggleLock = new EventEmitter<void>();
   @Output() toggleSolved = new EventEmitter<void>();
-  @Output() remove = new EventEmitter<void>();
+  @Output() remove = new EventEmitter<Event>();
 
   private readonly messageService = inject(MessageService);
 
-  onUpdateField(field: 'text' | 'answer' | 'points' | 'seconds' | 'type' | 'penaltyMode' | 'solved', value: string | number | boolean | null): void {
+  onUpdateField(
+    field:
+      | 'text'
+      | 'answer'
+      | 'points'
+      | 'seconds'
+      | 'type'
+      | 'penaltyMode'
+      | 'solved',
+    value: string | number | boolean | null
+  ): void {
     this.updateField.emit({ field, value });
   }
 
@@ -73,4 +95,6 @@ export class QuizQuestionEditorComponent {
       });
     }
   }
+
+  protected readonly event = event;
 }

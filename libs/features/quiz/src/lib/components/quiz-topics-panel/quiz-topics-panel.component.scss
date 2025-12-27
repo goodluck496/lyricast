@@ -1,0 +1,34 @@
+.quiz-panel--topics {
+  padding: 12px;
+}
+
+.quiz-topic__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding-right: 24px;
+}
+
+.quiz-topics__new {
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quiz-topics__new input[pInputText] {
+  flex: 1 1 auto;
+}
+
+.quiz-topic__questions-new {
+  margin-top: 0.75rem;
+}
+
+.quiz-topic__questions-new-form {
+  margin-top: 0.5rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}

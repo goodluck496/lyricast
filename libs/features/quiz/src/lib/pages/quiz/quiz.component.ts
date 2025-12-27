@@ -46,9 +46,12 @@ import {
   AutoCompleteModule,
 } from 'primeng/autocomplete';
 import { QuizSidebarComponent } from '../../components/quiz-sidebar/quiz-sidebar.component';
+import { QuizTeamsPanelComponent } from '../../components/quiz-teams-panel/quiz-teams-panel.component';
+import { QuizTopicsPanelComponent } from '../../components/quiz-topics-panel/quiz-topics-panel.component';
 import { QuizSidebarService } from '../../services/quiz-sidebar.service';
 import { QuizGameService } from '../../services/quiz-game.service';
 import { QuizStateService } from '../../services/quiz-state.service';
+import { NgScrollbarModule } from 'ngx-scrollbar';
 
 @Component({
   selector: 'lyri-quiz-page',
@@ -74,9 +77,12 @@ import { QuizStateService } from '../../services/quiz-state.service';
     AutoCompleteModule,
     ContextMenuModule,
     ProgressSpinnerModule,
+    NgScrollbarModule,
     Toast,
     ConfirmPopup,
     QuizSidebarComponent,
+    QuizTeamsPanelComponent,
+    QuizTopicsPanelComponent,
   ],
   templateUrl: './quiz.component.html',
   styleUrl: './quiz.component.scss',
@@ -84,12 +90,6 @@ import { QuizStateService } from '../../services/quiz-state.service';
   providers: [MessageService, ConfirmationService, QuizSidebarService],
 })
 export class QuizComponent implements OnInit {
-  // левая часть: команды и участники
-  newTeamName = '';
-  newMemberNameByTeamId = new Map<string, string>();
-  // ручная корректировка очков по командам (бонус/штраф)
-  manualDeltaByTeamId = new Map<string, number | null>();
-
   isLoading = true;
 
   // === Multi-quiz management ===
@@ -97,22 +97,6 @@ export class QuizComponent implements OnInit {
   selectedQuiz: QuizSummary | null = null;
   newQuizTitle = '';
   filteredQuizzes: QuizSummary[] = [];
-
-  // Открытые панели аккордеона с темами (для программного разворота при скролле к вопросу)
-  openedTopicIds: string[] = [];
-
-  newTopicTitle = '';
-  newQuestionDraftByTopicId = new Map<
-    string,
-    {
-      text: string;
-      answer: string;
-      points: number | null;
-      seconds: number | null;
-    }
-  >();
-  // управление показом формы нового вопроса по теме
-  private newQuestionFormOpenByTopicId = new Map<string, boolean>();
 
   // варианты типов вопросов и режимов штрафа
   readonly questionTypeOptions: {
@@ -197,11 +181,6 @@ export class QuizComponent implements OnInit {
   }
 
   private scrollToQuestion(topicId: string, questionId: string): void {
-    // раскрываем панель аккордеона с нужной темой, если она была свернута
-    if (!this.openedTopicIds.includes(topicId)) {
-      this.openedTopicIds = [...this.openedTopicIds, topicId];
-    }
-
     // ждём, пока Angular/PrimeNG дорендерят содержимое панели, затем скроллим к элементу
     const maxAttempts = 10;
     let attempts = 0;
@@ -571,214 +550,6 @@ export class QuizComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  // ==== Teams ====
-  addTeam() {
-    const name = this.newTeamName?.trim() || `Команда ${this.teams.length + 1}`;
-    this.game.addTeam(name);
-    this.newTeamName = '';
-  }
-
-  removeTeam(teamId: string) {
-    this.game.removeTeam(teamId);
-    this.newMemberNameByTeamId.delete(teamId);
-  }
-
-  confirmRemoveTeam(event: Event, teamId: string): void {
-    this.confirmationService.confirm({
-      target: event.currentTarget as HTMLElement,
-      message: 'Удалить команду? Это действие нельзя отменить.',
-      icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger p-button-sm',
-      rejectButtonStyleClass: 'p-button-text p-button-sm',
-      accept: () => this.removeTeam(teamId),
-    });
-  }
-
-  updateTeamName(teamId: string, name: string) {
-    this.game.updateTeamName(teamId, name.trim() || name);
-  }
-
-  addMember(teamId: string) {
-    const draft = (this.newMemberNameByTeamId.get(teamId) || '').trim();
-    if (!draft) {
-      return;
-    }
-    this.game.addMember(teamId, draft);
-    this.newMemberNameByTeamId.set(teamId, '');
-  }
-
-  removeMember(teamId: string, memberId: string) {
-    this.game.removeMember(teamId, memberId);
-  }
-
-  // ==== Topics ====
-  addTopic() {
-    const title =
-      this.newTopicTitle?.trim() || `Тема ${this.topics.length + 1}`;
-    this.game.addTopic(title);
-    this.newTopicTitle = '';
-  }
-
-  removeTopic(topicId: string) {
-    this.game.removeTopic(topicId);
-    this.newQuestionDraftByTopicId.delete(topicId);
-  }
-
-  confirmRemoveTopic(event: Event, topicId: string): void {
-    this.confirmationService.confirm({
-      target: event.currentTarget as HTMLElement,
-      message: 'Удалить тему и все её вопросы? Это действие нельзя отменить.',
-      icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger p-button-sm',
-      rejectButtonStyleClass: 'p-button-text p-button-sm',
-      accept: () => this.removeTopic(topicId),
-    });
-  }
-
-  updateTopicTitle(topicId: string, title: string) {
-    this.game.updateTopicTitle(topicId, title.trim() || title);
-  }
-
-  addQuestion(topicId: string) {
-    const draft =
-      this.newQuestionDraftByTopicId.get(topicId) ||
-      ({ text: '', answer: '', points: null, seconds: null } as const);
-
-    const text = draft.text.trim();
-    if (!text) {
-      return;
-    }
-
-    const points = draft.points ?? 0;
-    const seconds = draft.seconds ?? 30;
-
-    const beforeCount =
-      this.topics.find((t) => t.id === topicId)?.questions.length ?? 0;
-
-    this.game.addQuestion(topicId, {
-      text,
-      answer: draft.answer.trim(),
-      points,
-      seconds,
-    });
-
-    const afterCount =
-      this.topics.find((t) => t.id === topicId)?.questions.length ?? 0;
-
-    this.newQuestionDraftByTopicId.set(topicId, {
-      text: '',
-      answer: '',
-      points: null,
-      seconds: null,
-    });
-
-    if (afterCount > beforeCount) {
-      this.newQuestionFormOpenByTopicId.set(topicId, false);
-    }
-  }
-
-  removeQuestion(topicId: string, questionId: string) {
-    this.game.removeQuestion(topicId, questionId);
-  }
-
-  confirmRemoveQuestion(
-    event: Event,
-    topicId: string,
-    questionId: string
-  ): void {
-    this.confirmationService.confirm({
-      target: event.currentTarget as HTMLElement,
-      message: 'Удалить вопрос? Это действие нельзя отменить.',
-      icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger p-button-sm',
-      rejectButtonStyleClass: 'p-button-text p-button-sm',
-      accept: () => this.removeQuestion(topicId, questionId),
-    });
-  }
-
-  updateQuestionField(
-    topicId: string,
-    questionId: string,
-    field:
-      | 'text'
-      | 'answer'
-      | 'points'
-      | 'seconds'
-      | 'type'
-      | 'penaltyMode'
-      | 'solved',
-    value: string | number | boolean | null
-  ) {
-    const topics = this.topics;
-    const topic = topics.find((t) => t.id === topicId);
-    const question = topic?.questions.find((q) => q.id === questionId);
-    if (!topic || !question) {
-      return;
-    }
-
-    const changes: any = {};
-
-    if (field === 'points' || field === 'seconds') {
-      changes[field] = typeof value === 'number' ? value : Number(value ?? 0);
-    } else if (field === 'type') {
-      const allowed: Array<'normal' | 'penalty' | 'bonus'> = [
-        'normal',
-        'penalty',
-        'bonus',
-      ];
-      const v = String(value ?? 'normal') as any;
-      const nextType: 'normal' | 'penalty' | 'bonus' = allowed.includes(v)
-        ? v
-        : 'normal';
-
-      changes.type = nextType;
-      changes.penaltyMode =
-        nextType === 'penalty' ? question.penaltyMode ?? 'subtract' : undefined;
-    } else if (field === 'penaltyMode') {
-      const allowed: Array<'subtract' | 'skip'> = ['subtract', 'skip'];
-      const v = String(value ?? 'subtract') as any;
-      const nextMode: 'subtract' | 'skip' = allowed.includes(v)
-        ? v
-        : 'subtract';
-      changes.penaltyMode = nextMode;
-    } else if (field === 'solved') {
-      const bool = value === true || value === 'true';
-      changes.solved = bool;
-    } else {
-      changes[field] = String(value ?? '');
-    }
-
-    this.game.updateQuestion(topicId, questionId, changes);
-  }
-
-  getQuestionDraft(topicId: string) {
-    if (!this.newQuestionDraftByTopicId.has(topicId)) {
-      this.newQuestionDraftByTopicId.set(topicId, {
-        text: '',
-        answer: '',
-        points: null,
-        seconds: null,
-      });
-    }
-    return this.newQuestionDraftByTopicId.get(topicId)!;
-  }
-
-  isNewQuestionFormOpen(topicId: string): boolean {
-    return this.newQuestionFormOpenByTopicId.get(topicId) === true;
-  }
-
-  onNewQuestionButtonClick(topicId: string): void {
-    const isOpen = this.isNewQuestionFormOpen(topicId);
-    if (!isOpen) {
-      // Открываем форму и инициализируем черновик
-      this.getQuestionDraft(topicId);
-      this.newQuestionFormOpenByTopicId.set(topicId, true);
-      return;
-    }
-
-    // Пытаемся сохранить вопрос
-    this.addQuestion(topicId);
-  }
 
   private generateId(prefix: string): string {
     return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
@@ -836,48 +607,7 @@ export class QuizComponent implements OnInit {
 
   resetStatistics(): void {
     this.game.resetStatistics();
-    this.manualDeltaByTeamId.clear();
     this.cdr.markForCheck();
-  }
-
-  applyManualBonus(teamId: string): void {
-    this.applyManualDelta(teamId, 'manual_bonus');
-  }
-
-  applyManualPenalty(teamId: string): void {
-    this.applyManualDelta(teamId, 'manual_penalty');
-  }
-
-  private applyManualDelta(
-    teamId: string,
-    kind: 'manual_bonus' | 'manual_penalty'
-  ): void {
-    const raw = this.manualDeltaByTeamId.get(teamId);
-    const delta = typeof raw === 'number' ? raw : Number(raw ?? 0);
-    if (!Number.isFinite(delta) || delta === 0) {
-      return;
-    }
-
-    const team = this.teams.find((t) => t.id === teamId);
-    if (!team) {
-      return;
-    }
-
-    const signedDelta =
-      kind === 'manual_bonus' ? Math.abs(delta) : -Math.abs(delta);
-
-    this.game.updateTeamScore(teamId, signedDelta);
-
-    // История: фиксируем ручную корректировку счёта
-    this.game.addManualHistoryEntry(teamId, {
-      kind,
-      topicTitle: 'Ручная корректировка',
-      questionText: '',
-      points: signedDelta,
-    });
-
-    // сбрасываем ввод
-    this.manualDeltaByTeamId.set(teamId, null);
   }
 
   async startQuizCasting(): Promise<void> {

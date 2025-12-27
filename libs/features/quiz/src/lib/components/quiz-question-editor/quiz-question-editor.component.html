@@ -133,9 +133,11 @@
       pButton
       type="button"
       class="quiz-question__remove"
-      (click)="remove.emit()"
+      pTooltip="Удалить"
+      severity="danger"
+      (click)="remove.emit($event)"
     >
-      Удалить
+      <span pButtonIcon class="pi pi-trash"></span>
     </button>
   </div>
 </div>

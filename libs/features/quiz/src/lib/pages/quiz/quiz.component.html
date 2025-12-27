@@ -18,356 +18,90 @@
             <!-- Внутренний горизонтальный сплиттер: слева команды, справа темы/вопросы -->
             <p-splitter style="width: 100%; height: 100%" [panelSizes]="[50, 50]">
               <ng-template pTemplate="panel">
-                <div class="quiz-panel quiz-panel--teams">
-                  <h3>Команды</h3>
-
-                  <div class="quiz-teams__new">
-                    <input
-                      pInputText
-                      type="text"
-                      [(ngModel)]="newTeamName"
-                      placeholder="Название новой команды"
-                    />
-                    <button pButton type="button" (click)="addTeam()">
-                      Добавить команду
-                    </button>
-                  </div>
-                  <p-accordion [multiple]="true">
-                    @for (team of teams; track team.id) {
-                      <p-accordion-panel [value]="team.id">
-                        <p-accordion-header>
-                          <div class="quiz-team__header">
-                            <input
-                              pInputText
-                              type="text"
-                              [ngModel]="team.name"
-                              (ngModelChange)="updateTeamName(team.id, $event)"
-                            />
-                            <button
-                              pButton
-                              type="button"
-                              class="quiz-team__remove"
-                              (click)="confirmRemoveTeam($event, team.id)"
-                            >
-                              Удалить
-                            </button>
-                          </div>
-                        </p-accordion-header>
-
-                        <p-accordion-content>
-                          <div class="quiz-team__body">
-                            <div class="quiz-team__column quiz-team__column--members">
-                              <div class="quiz-team__members-list">
-                                @if (team.members; as members) {
-                                  <ul>
-                                    @for (member of members; track member.id) {
-                                      <li class="quiz-member">
-                                        <span class="quiz-member__name">
-                                          {{ member.name }}
-                                        </span>
-                                        <button
-                                          pButton
-                                          type="button"
-                                          class="quiz-member__remove"
-                                          (click)="removeMember(team.id, member.id)"
-                                        >
-                                          ×
-                                        </button>
-                                      </li>
-                                    }
-                                  </ul>
-                                } @else {
-                                  <div class="quiz-empty">Нет участников</div>
-                                }
-                              </div>
-
-                              <div class="quiz-team__members-new">
-                                <input
-                                  pInputText
-                                  type="text"
-                                  [ngModel]="newMemberNameByTeamId.get(team.id) || ''"
-                                  (ngModelChange)="
-                                    newMemberNameByTeamId.set(team.id, $event)
-                                  "
-                                  placeholder="Имя участника"
-                                />
-                                <button
-                                  pButton
-                                  type="button"
-                                  (click)="addMember(team.id)"
-                                >
-                                  Добавить участника
-                                </button>
-                              </div>
-                            </div>
-
-                            <div class="quiz-team__column quiz-team__column--controls">
-                              <div class="quiz-team__manual-score">
-                                <p-inputNumber
-                                  [ngModel]="manualDeltaByTeamId.get(team.id) ?? null"
-                                  (ngModelChange)="
-                                    manualDeltaByTeamId.set(team.id, $event)
-                                  "
-                                  placeholder="Δ баллов"
-                                  [min]="0"
-                                ></p-inputNumber>
-                                <button
-                                  pButton
-                                  type="button"
-                                  class="quiz-team__manual-bonus"
-                                  severity="success"
-                                  (click)="applyManualBonus(team.id)"
-                                >
-                                  +
-                                </button>
-                                <button
-                                  pButton
-                                  type="button"
-                                  class="quiz-team__manual-penalty"
-                                  severity="danger"
-                                  (click)="applyManualPenalty(team.id)"
-                                >
-                                  -
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </p-accordion-content>
-                      </p-accordion-panel>
-                    }
-                  </p-accordion>
-                </div>
+                <ng-scrollbar style="width: 100%; height: 100%">
+                  <lyri-quiz-teams-panel></lyri-quiz-teams-panel>
+                </ng-scrollbar>
               </ng-template>
 
               <ng-template pTemplate="panel">
-                <div class="quiz-panel quiz-panel--topics">
-                  <h3>Темы и вопросы</h3>
-
-                  <div class="quiz-topics__new">
-                    <input
-                      pInputText
-                      type="text"
-                      [(ngModel)]="newTopicTitle"
-                      placeholder="Название новой темы"
-                    />
-                    <button pButton type="button" (click)="addTopic()">
-                      Добавить тему
-                    </button>
-                  </div>
-
-                  <p-accordion [multiple]="true" [(value)]="openedTopicIds">
-                    @for (topic of topics; track topic.id) {
-                      <p-accordion-panel [value]="topic.id">
-                        <p-accordion-header>
-                          <div class="quiz-topic__header">
-                            <input
-                              pInputText
-                              type="text"
-                              [ngModel]="topic.title"
-                              (input)="$event.stopPropagation()"
-                              (ngModelChange)="updateTopicTitle(topic.id, $event)"
-                            />
-                            <button
-                              pButton
-                              type="button"
-                              class="quiz-topic__remove"
-                              (click)="confirmRemoveTopic($event, topic.id)"
-                            >
-                              Удалить
-                            </button>
-                          </div>
-                        </p-accordion-header>
-
-                        <p-accordion-content>
-                          <div class="quiz-topic__questions">
-                            <div class="quiz-topic__questions-list">
-                              @if (topic.questions; as questions) {
-                                @for (q of
-                                  questions; track q.id) {
-                                  <lyri-quiz-question-editor
-                                    [topicId]="topic.id"
-                                    [question]="q"
-                                    [questionTypeOptions]="questionTypeOptions"
-                                    [penaltyModeOptions]="penaltyModeOptions"
-                                    (updateField)="
-                              updateQuestionField(
-                                topic.id,
-                                q.id,
-                                $event.field,
-                                $event.value
-                              )
-                            "
-                                    (showQuestion)="
-                              showQuestionOnCasting(topic.id, q.id)
-                            "
-                                    (showAnswer)="showAnswerOnCasting(topic.id, q.id)"
-                                    (toggleLock)="toggleQuestionLock(topic.id, q.id)"
-                                    (toggleSolved)="
-                              updateQuestionField(
-                                topic.id,
-                                q.id,
-                                'solved',
-                                !q.solved
-                              )
-                            "
-                                    (remove)="removeQuestion(topic.id, q.id)"
-                                  ></lyri-quiz-question-editor>
-
-                                  <p-divider
-                                    *ngIf="q !== questions[questions.length - 1]"
-                                  ></p-divider>
-                                }
-                              } @else {
-                                <div class="quiz-empty">Нет вопросов</div>
-                              }
-                            </div>
-
-                            <div class="quiz-topic__questions-new">
-                              <button
-                                pButton
-                                type="button"
-                                (click)="onNewQuestionButtonClick(topic.id)"
-                                [disabled]="
-                              topic.questions.length >= 5 &&
-                              !isNewQuestionFormOpen(topic.id)
-                            "
-                              >
-                                {{
-                                  isNewQuestionFormOpen(topic.id)
-                                    ? 'Сохранить вопрос'
-                                    : 'Добавить вопрос (макс. 5)'
-                                }}
-                              </button>
-
-                              @if (isNewQuestionFormOpen(topic.id) &&
-                              getQuestionDraft(topic.id); as draft) {
-                                <div class="quiz-topic__questions-new-form">
-                                  <input
-                                    pInputText
-                                    type="text"
-                                    [(ngModel)]="draft.text"
-                                    placeholder="Новый вопрос"
-                                  />
-                                  <input
-                                    pInputText
-                                    type="text"
-                                    [(ngModel)]="draft.answer"
-                                    placeholder="Ответ"
-                                  />
-                                  <p-inputNumber
-                                    [(ngModel)]="draft.points"
-                                    placeholder="Очки"
-                                    [min]="0"
-                                  ></p-inputNumber>
-                                  <p-inputNumber
-                                    [(ngModel)]="draft.seconds"
-                                    placeholder="Секунды"
-                                    [min]="5"
-                                  ></p-inputNumber>
-                                </div>
-                              }
-                            </div>
-                          </div>
-                        </p-accordion-content>
-                      </p-accordion-panel>
-                    }
-                  </p-accordion>
-                </div>
+                <ng-scrollbar style="width: 100%; height: 100%">
+                  <lyri-quiz-topics-panel></lyri-quiz-topics-panel>
+                </ng-scrollbar>
               </ng-template>
             </p-splitter>
           </ng-template>
 
           <ng-template pTemplate="panel">
-            <!-- Нижняя область: слева статистика команд, справа интерактивная таблица вопросов -->
-            <p-splitter style="width: 100%; height: 100%" [panelSizes]="[35, 65]">
-              <ng-template pTemplate="panel">
-                <div class="quiz-bottom-stats">
-                  <h4>Статистика команд</h4>
-                  <lyri-quiz-stats-table
-                    *ngIf="teams.length > 0; else noTeams"
-                    [teams]="teamsSortedByScore"
-                    tableClass="quiz-bottom-stats__table"
-                    winnerRowClass="quiz-bottom-stats__row--leader"
-                    [highlightFirstPositive]="true"
-                  ></lyri-quiz-stats-table>
-                  <ng-template #noTeams>
-                    <div class="quiz-empty">Нет команд</div>
-                  </ng-template>
-                </div>
-              </ng-template>
+            <!-- Нижняя область: интерактивная таблица вопросов на всю ширину -->
+            <div class="quiz-bottom-table">
+              <p-contextMenu
+                #quizTableCm
+                [model]="quizTableMenuItems"
+              ></p-contextMenu>
 
-              <ng-template pTemplate="panel">
-                <div class="quiz-bottom-table">
-                  <p-contextMenu
-                    #quizTableCm
-                    [model]="quizTableMenuItems"
-                  ></p-contextMenu>
-
-                  <table class="quiz-bottom-table__table">
-                    <thead>
-                    <tr>
-                      <th
-                        class="quiz-bottom-table__th quiz-bottom-table__th--topic"
-                      >
-                        Тема вопросов
-                      </th>
-                      <th class="quiz-bottom-table__th" colspan="5">Баллы</th>
-                    </tr>
-                    <tr class="quiz-bottom-table__subheader">
-                      <th></th>
-                      <th *ngFor="let col of [1, 2, 3, 4, 5]">{{ col }}</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr *ngFor="let topic of topics">
-                      <td class="quiz-bottom-table__topic-cell">
-                        {{ topic.title }}
-                      </td>
-                      <td
-                        class="quiz-bottom-table__points-cell"
-                        *ngFor="let i of [0, 1, 2, 3, 4]"
-                        [ngClass]="{
-                          'quiz-bottom-table__points-cell--active':
-                            activeTopicId === topic.id &&
-                            topic.questions[i] &&
-                            topic.questions[i].id === activeQuestionId,
-                          'quiz-bottom-table__points-cell--solved':
-                            topic.questions[i] && topic.questions[i].solved,
-                          'quiz-bottom-table__points-cell--wrong':
-                            topic.questions[i] && topic.questions[i].burned
-                        }"
-                        (contextmenu)="
-                          topic.questions[i]?.id
-                            ? onPointsCellContextMenu(
-                                $event,
-                                topic.id,
-                                topic.questions[i].id
-                              )
-                            : null
-                        "
-                      >
-                        <ng-container *ngIf="topic.questions[i] as q">
-                          <span class="quiz-bottom-table__points-value">
-                            {{ q.points }}
-                          </span>
-                          <i
-                            *ngIf="(q.type || 'normal') === 'bonus'"
-                            class="pi pi-star quiz-bottom-table__icon quiz-bottom-table__icon--bonus"
-                            pTooltip="Бонусный вопрос"
-                          ></i>
-                          <i
-                            *ngIf="(q.type || 'normal') === 'penalty'"
-                            class="pi pi-minus-circle quiz-bottom-table__icon quiz-bottom-table__icon--penalty"
-                            pTooltip="Штрафной вопрос"
-                          ></i>
-                        </ng-container>
-                      </td>
-                    </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </ng-template>
-            </p-splitter>
+              <table class="quiz-bottom-table__table">
+                <thead>
+                <tr>
+                  <th
+                    class="quiz-bottom-table__th quiz-bottom-table__th--topic"
+                  >
+                    Тема вопросов
+                  </th>
+                  <th class="quiz-bottom-table__th" colspan="5">Баллы</th>
+                </tr>
+                <tr class="quiz-bottom-table__subheader">
+                  <th></th>
+                  <th *ngFor="let col of [1, 2, 3, 4, 5]">{{ col }}</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr *ngFor="let topic of topics">
+                  <td class="quiz-bottom-table__topic-cell">
+                    {{ topic.title }}
+                  </td>
+                  <td
+                    class="quiz-bottom-table__points-cell"
+                    *ngFor="let i of [0, 1, 2, 3, 4]"
+                    [ngClass]="{
+                      'quiz-bottom-table__points-cell--active':
+                        activeTopicId === topic.id &&
+                        topic.questions[i] &&
+                        topic.questions[i].id === activeQuestionId,
+                      'quiz-bottom-table__points-cell--solved':
+                        topic.questions[i] && topic.questions[i].solved,
+                      'quiz-bottom-table__points-cell--wrong':
+                        topic.questions[i] && topic.questions[i].burned
+                    }"
+                    (contextmenu)="
+                      topic.questions[i]?.id
+                        ? onPointsCellContextMenu(
+                            $event,
+                            topic.id,
+                            topic.questions[i].id
+                          )
+                        : null
+                    "
+                  >
+                    <ng-container *ngIf="topic.questions[i] as q">
+                      <span class="quiz-bottom-table__points-value">
+                        {{ q.points }}
+                      </span>
+                      <i
+                        *ngIf="(q.type || 'normal') === 'bonus'"
+                        class="pi pi-star quiz-bottom-table__icon quiz-bottom-table__icon--bonus"
+                        pTooltip="Бонусный вопрос"
+                      ></i>
+                      <i
+                        *ngIf="(q.type || 'normal') === 'penalty'"
+                        class="pi pi-minus-circle quiz-bottom-table__icon quiz-bottom-table__icon--penalty"
+                        pTooltip="Штрафной вопрос"
+                      ></i>
+                    </ng-container>
+                  </td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
           </ng-template>
         </p-splitter>
       </ng-container>

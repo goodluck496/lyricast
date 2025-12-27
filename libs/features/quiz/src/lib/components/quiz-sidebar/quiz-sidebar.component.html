@@ -1,14 +1,12 @@
 <div class="quiz-sidebar">
-  <p-progressSpinner
-    *ngIf="isLoading"
-    styleClass="quiz-sidebar__spinner"
-    strokeWidth="4"
-  ></p-progressSpinner>
-
-  <ng-container *ngIf="!isLoading">
+  @if (isLoading) {
+    <p-progressSpinner
+      styleClass="quiz-sidebar__spinner"
+      strokeWidth="4"
+    ></p-progressSpinner>
+  } @else {
     <!-- Блок: выбор и управление викториной -->
     <section class="quiz-sidebar__section">
-      <!-- <h5 class="quiz-sidebar__section-title">Викторина</h5> -->
       <div class="quiz-sidebar__field">
         <!-- <label>Викторина</label> -->
         <p-autoComplete
@@ -22,148 +20,174 @@
           placeholder="Выберите викторину"
         ></p-autoComplete>
       </div>
-      <div
-        class="quiz-sidebar__field quiz-sidebar__field--inline"
-        *ngIf="!selectOnly"
-      >
-        <input
-          pInputText
-          type="text"
-          [(ngModel)]="newQuizTitle"
-          placeholder="Название новой викторины"
-        />
-        <button
-          pButton
-          type="button"
-          class="quiz-sidebar__button"
-          (click)="createQuiz()"
-        >
-          Создать
-        </button>
-      </div>
-      <div class="quiz-sidebar__buttons-row" *ngIf="!selectOnly">
-        <button
-          pButton
-          type="button"
-          class="quiz-sidebar__button"
-          severity="danger"
-          [disabled]="!selectedQuiz"
-          (click)="confirmDeleteQuiz($event)"
-        >
-          Удалить викторину
-        </button>
-      </div>
+      @if (!selectOnly) {
+        <div class="quiz-sidebar__field quiz-sidebar__field--inline">
+          <input
+            pInputText
+            type="text"
+            [(ngModel)]="newQuizTitle"
+            placeholder="Название новой викторины"
+          />
+          <button
+            pButton
+            type="button"
+            class="quiz-sidebar__button"
+            (click)="createQuiz()"
+          >
+            Создать
+          </button>
+        </div>
+        <div class="quiz-sidebar__buttons-row">
+          <!-- Порядок: начать, сбросить экран, закрыть окно, сохранить, удалить -->
+          <button
+            pButton
+            type="button"
+            class="quiz-sidebar__icon-button"
+            pTooltip="Начать викторину"
+            tooltipPosition="top"
+            [disabled]="isCastingActive || !selectedQuiz"
+            (click)="startQuizCasting()"
+          >
+            <span pButtonIcon class="pi pi-play"></span>
+          </button>
+          <button
+            pButton
+            type="button"
+            class="quiz-sidebar__icon-button"
+            pTooltip="Сбросить экран"
+            tooltipPosition="top"
+            severity="secondary"
+            (click)="stopQuizCasting()"
+          >
+            <span pButtonIcon class="pi pi-window-minimize"></span>
+          </button>
+          <button
+            pButton
+            type="button"
+            class="quiz-sidebar__icon-button"
+            pTooltip="Закрыть окно кастинга"
+            tooltipPosition="top"
+            severity="danger"
+            [disabled]="!isCastingActive"
+            (click)="closeCastingWindow()"
+          >
+            <span pButtonIcon class="pi pi-times"></span>
+          </button>
+          <button
+            pButton
+            type="button"
+            class="quiz-sidebar__icon-button quiz-sidebar__icon-button--primary"
+            pTooltip="Сохранить викторину"
+            tooltipPosition="top"
+            severity="help"
+            [disabled]="!selectedQuiz"
+            (click)="saveState()"
+          >
+            <span pButtonIcon class="pi pi-save"></span>
+          </button>
+          <button
+            pButton
+            type="button"
+            class="quiz-sidebar__icon-button"
+            severity="danger"
+            [disabled]="!selectedQuiz"
+            pTooltip="Удалить викторину"
+            (click)="confirmDeleteQuiz($event)"
+          >
+            <span pButtonIcon class="pi pi-trash"></span>
+          </button>
+        </div>
+      }
     </section>
 
-    <!-- Блок: текущая игра / пульт показа -->
-    <section class="quiz-sidebar__section" *ngIf="!selectOnly">
-      <h5 class="quiz-sidebar__section-title">Текущий вопрос</h5>
-      <div class="quiz-sidebar__field">
-        <label>Команда для текущего вопроса</label>
-        <p-select
-          [options]="teams"
-          optionLabel="name"
-          optionValue="id"
-          [showClear]="true"
-          placeholder="— не выбрано —"
-          [(ngModel)]="selectedTeamId"
-        ></p-select>
-      </div>
-      <div class="quiz-sidebar__buttons-row">
-        <button
-          pButton
-          type="button"
-          class="quiz-sidebar__button"
-          [disabled]="isCastingActive || !selectedQuiz"
-          (click)="startQuizCasting()"
-        >
-          Начать викторину
-        </button>
-        <button
-          pButton
-          type="button"
-          class="quiz-sidebar__button"
-          (click)="stopQuizCasting()"
-        >
-          Сбросить экран
-        </button>
-        <button
-          pButton
-          type="button"
-          severity="danger"
-          class="quiz-sidebar__button"
-          [disabled]="!isCastingActive"
-          (click)="closeCastingWindow()"
-        >
-          Закрыть окно
-        </button>
-      </div>
-    </section>
+    <!-- Блок: текущая игра + оценка ответа -->
+    @if (!selectOnly) {
+      <section class="quiz-sidebar__section">
+        <h5 class="quiz-sidebar__section-title">Текущий вопрос</h5>
+        <div class="quiz-sidebar__field">
+          <p-floatlabel>
+            <p-select
+              [options]="teams"
+              optionLabel="name"
+              optionValue="id"
+              [showClear]="true"
+              [(ngModel)]="selectedTeamId"
+              inputId="teamsId"
+              class="quiz-sidebar__field-input"
+            ></p-select>
+            <label for="teamsId">Команда для текущего вопроса</label>
+          </p-floatlabel>
+        </div>
+        <div class="quiz-sidebar__buttons-row quiz-sidebar__buttons-row--compact">
+          <button
+            pButton
+            type="button"
+            class="quiz-sidebar__button quiz-sidebar__button--correct"
+            severity="success"
+            [disabled]="!canAnswer"
+            (click)="answerCorrect()"
+          >
+            Верно
+          </button>
+          <button
+            pButton
+            type="button"
+            class="quiz-sidebar__button quiz-sidebar__button--wrong"
+            severity="danger"
+            [disabled]="!canAnswer"
+            (click)="answerWrong()"
+          >
+            Неверно
+          </button>
+        </div>
+      </section>
+    }
 
-    <!-- Блок: оценка ответа -->
-    <section class="quiz-sidebar__section" *ngIf="!selectOnly">
-      <h5 class="quiz-sidebar__section-title">Оценка ответа</h5>
-      <div class="quiz-sidebar__buttons-row quiz-sidebar__buttons-row--compact">
-        <button
-          pButton
-          type="button"
-          class="quiz-sidebar__button quiz-sidebar__button--correct"
-          severity="success"
-          [disabled]="!canAnswer"
-          (click)="answerCorrect()"
-        >
-          Верно
-        </button>
-        <button
-          pButton
-          type="button"
-          class="quiz-sidebar__button quiz-sidebar__button--wrong"
-          severity="danger"
-          [disabled]="!canAnswer"
-          (click)="answerWrong()"
-        >
-          Неверно
-        </button>
-      </div>
-    </section>
+    <!-- Блок: статистика команд в сайдбаре -->
+    @if (!selectOnly) {
+      <section class="quiz-sidebar__section">
+        <h5 class="quiz-sidebar__section-title">Статистика команд</h5>
+        <div class="quiz-sidebar__buttons-row quiz-sidebar__buttons-row--compact">
+          <button
+            pButton
+            type="button"
+            class="quiz-sidebar__icon-button"
+            pTooltip="Показать статистику на экране"
+            tooltipPosition="top"
+            severity="info"
+            [disabled]="!selectedQuiz || teams.length === 0"
+            (click)="showStatsOnCasting()"
+          >
+            <span pButtonIcon class="pi pi-chart-bar"></span>
+          </button>
+          <button
+            pButton
+            type="button"
+            class="quiz-sidebar__icon-button"
+            pTooltip="Сбросить статистику"
+            tooltipPosition="top"
+            severity="warn"
+            [disabled]="teams.length === 0"
+            (click)="resetStatistics()"
+          >
+            <span pButtonIcon class="pi pi-sync"></span>
+          </button>
+        </div>
 
-    <!-- Блок: статистика и состояние -->
-    <section class="quiz-sidebar__section" *ngIf="!selectOnly">
-      <h5 class="quiz-sidebar__section-title">Статистика и файл</h5>
-      <div class="quiz-sidebar__buttons-row">
-        <button
-          pButton
-          type="button"
-          class="quiz-sidebar__icon-button"
-          icon="pi pi-chart-bar"
-          pTooltip="Показать статистику"
-          tooltipPosition="top"
-          severity="info"
-          [disabled]="!selectedQuiz"
-          (click)="showStatsOnCasting()"
-        ></button>
-        <button
-          pButton
-          type="button"
-          class="quiz-sidebar__icon-button"
-          icon="pi pi-sync"
-          pTooltip="Сбросить статистику"
-          tooltipPosition="top"
-          [disabled]="!selectedQuiz"
-          (click)="resetStatistics()"
-        ></button>
-        <button
-          pButton
-          type="button"
-          class="quiz-sidebar__icon-button quiz-sidebar__icon-button--primary"
-          icon="pi pi-save"
-          pTooltip="Сохранить викторину"
-          tooltipPosition="top"
-          severity="help"
-          [disabled]="!selectedQuiz"
-          (click)="saveState()"
-        ></button>
-      </div>
-    </section>
-  </ng-container>
+        <div class="quiz-sidebar__stats">
+          <lyri-quiz-stats-table
+            *ngIf="teams.length > 0; else noTeamsSidebar"
+            [teams]="teamsSortedByScore"
+            tableClass="quiz-bottom-stats__table"
+            winnerRowClass="quiz-bottom-stats__row--leader"
+            [highlightFirstPositive]="true"
+          ></lyri-quiz-stats-table>
+          <ng-template #noTeamsSidebar>
+            <div class="quiz-empty">Нет команд</div>
+          </ng-template>
+        </div>
+      </section>
+    }
+
+  }
 </div>

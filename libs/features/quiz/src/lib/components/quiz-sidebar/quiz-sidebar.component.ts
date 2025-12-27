@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonDirective } from 'primeng/button';
+import { ButtonDirective, ButtonIcon } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
@@ -22,6 +22,8 @@ import { QuizGameService } from '../../services/quiz-game.service';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { QuizStateService } from '@lyri-cast/quiz-feature';
 import { QuizSummary } from '../../quiz.types';
+import { FloatLabel } from 'primeng/floatlabel';
+import { QuizStatsTableComponent } from '../quiz-stats-table/quiz-stats-table.component';
 
 @Component({
   selector: 'lyri-quiz-page-sidebar',
@@ -35,6 +37,9 @@ import { QuizSummary } from '../../quiz.types';
     AutoCompleteModule,
     TooltipModule,
     ProgressSpinnerModule,
+    FloatLabel,
+    ButtonIcon,
+    QuizStatsTableComponent,
   ],
   templateUrl: './quiz-sidebar.component.html',
   styleUrl: './quiz-sidebar.component.scss',
@@ -63,6 +68,10 @@ export class QuizSidebarComponent implements OnInit {
 
   get teams() {
     return this.game.teams();
+  }
+
+  get teamsSortedByScore() {
+    return this.game.teamsSortedByScore();
   }
 
   get selectedTeamId(): string | null {
@@ -102,7 +111,7 @@ export class QuizSidebarComponent implements OnInit {
       return;
     }
     this.filteredQuizzes = this.quizzes.filter((q) =>
-      q.title.toLowerCase().includes(query),
+      q.title.toLowerCase().includes(query)
     );
   }
 
@@ -185,9 +194,10 @@ export class QuizSidebarComponent implements OnInit {
         ? {
             id: this.selectedQuiz.id,
             title: this.selectedQuiz.title,
-            date: this.selectedQuiz.date ?? new Date().toISOString().slice(0, 10),
+            date:
+              this.selectedQuiz.date ?? new Date().toISOString().slice(0, 10),
           }
-        : null,
+        : null
     );
 
     this.game.setCastingActive(true);

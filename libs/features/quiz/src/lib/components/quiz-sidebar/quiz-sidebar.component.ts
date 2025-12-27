@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  Input,
   OnInit,
   inject,
 } from '@angular/core';
@@ -10,14 +11,17 @@ import { FormsModule } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { TooltipModule } from 'primeng/tooltip';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import {
   AutoCompleteCompleteEvent,
   AutoCompleteModule,
 } from 'primeng/autocomplete';
-import { QuizStateService, QuizSummary } from '@lyri-cast/quiz-feature';
 import { QuizSidebarService } from '../../services/quiz-sidebar.service';
 import { QuizGameService } from '../../services/quiz-game.service';
 import { MessageService, ConfirmationService } from 'primeng/api';
+import { QuizStateService } from '@lyri-cast/quiz-feature';
+import { QuizSummary } from '../../quiz.types';
 
 @Component({
   selector: 'lyri-quiz-page-sidebar',
@@ -29,6 +33,8 @@ import { MessageService, ConfirmationService } from 'primeng/api';
     InputTextModule,
     SelectModule,
     AutoCompleteModule,
+    TooltipModule,
+    ProgressSpinnerModule,
   ],
   templateUrl: './quiz-sidebar.component.html',
   styleUrl: './quiz-sidebar.component.scss',
@@ -41,6 +47,8 @@ export class QuizSidebarComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly cdr = inject(ChangeDetectorRef);
+
+  @Input() selectOnly = false;
 
   isLoading = false;
 
@@ -78,6 +86,11 @@ export class QuizSidebarComponent implements OnInit {
     this.cdr.markForCheck();
     this.quizzes = await this.sidebarSrv.listQuizzes();
     this.filteredQuizzes = [...this.quizzes];
+    const sharedSelected = this.sidebarSrv.getSelectedQuiz();
+    if (sharedSelected) {
+      this.selectedQuiz =
+        this.quizzes.find((q) => q.id === sharedSelected.id) ?? null;
+    }
     this.isLoading = false;
     this.cdr.markForCheck();
   }
@@ -96,13 +109,20 @@ export class QuizSidebarComponent implements OnInit {
   async onQuizSelected(quiz: QuizSummary | null): Promise<void> {
     if (!quiz) {
       this.selectedQuiz = null;
+      this.sidebarSrv.setSelectedQuiz(null);
+      this.game.clearState();
       return;
     }
+    this.isLoading = true;
+    this.cdr.markForCheck();
     const state = await this.sidebarSrv.loadQuizById(quiz.id);
     if (state) {
       this.game.setState(state);
       this.selectedQuiz = quiz;
+      this.sidebarSrv.setSelectedQuiz(quiz);
     }
+    this.isLoading = false;
+    this.cdr.markForCheck();
   }
 
   async createQuiz(): Promise<void> {
@@ -150,6 +170,7 @@ export class QuizSidebarComponent implements OnInit {
     await this.sidebarSrv.deleteQuizById(id);
     await this.loadQuizzes();
     this.selectedQuiz = null;
+    this.game.clearState();
   }
 
   async startQuizCasting(): Promise<void> {

@@ -1,10 +1,17 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, OnDestroy, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Ng2FittextModule } from 'ng2-fittext';
 import { BridgeService } from '@lyri-cast/common-browser';
-import { QuizState, QuizStateService } from '@lyri-cast/quiz-feature';
-import { filter } from 'rxjs/operators';
 import { QuizStatsTableComponent } from '../../components/quiz-stats-table/quiz-stats-table.component';
+import { QuizState } from '../../quiz.types';
+import { QuizStateService } from '../../services';
 
 @Component({
   selector: 'lyri-quiz-casting',
@@ -22,7 +29,13 @@ export class QuizCastingComponent implements OnInit, OnDestroy {
   state: QuizState | null = null;
 
   currentTopicTitle: string | null = null;
-  currentQuestion: { id: string; text: string; answer: string; points: number | null; seconds: number | null } | null = null;
+  currentQuestion: {
+    id: string;
+    text: string;
+    answer: string;
+    points: number | null;
+    seconds: number | null;
+  } | null = null;
   currentTeamName: string | null = null;
 
   remainingSeconds: number | null = null;
@@ -90,7 +103,9 @@ export class QuizCastingComponent implements OnInit, OnDestroy {
 
       if (event.event === 'QUIZ_SHOW_QUESTION') {
         const payload = event.payload as any;
-        const type = (payload?.type as 'normal' | 'penalty' | 'bonus' | undefined) ?? 'normal';
+        const type =
+          (payload?.type as 'normal' | 'penalty' | 'bonus' | undefined) ??
+          'normal';
         this.currentQuestionType = type;
         this.lastCorrectType = 'none';
         this.lastCorrectDelta = null;
@@ -183,9 +198,12 @@ export class QuizCastingComponent implements OnInit, OnDestroy {
         this.timeExpired = false;
 
         const payload = event.payload as any;
-        const type = (payload?.type as 'normal' | 'penalty' | 'bonus' | undefined) ?? 'normal';
+        const type =
+          (payload?.type as 'normal' | 'penalty' | 'bonus' | undefined) ??
+          'normal';
         this.lastCorrectType = type;
-        this.lastCorrectDelta = typeof payload?.delta === 'number' ? payload.delta : null;
+        this.lastCorrectDelta =
+          typeof payload?.delta === 'number' ? payload.delta : null;
 
         // Показываем зелёный фон и специальный текст
         this.answerStatus = 'correct';
@@ -235,7 +253,9 @@ export class QuizCastingComponent implements OnInit, OnDestroy {
         const payload = event.payload as any;
         const teams = Array.isArray(payload?.teams) ? payload.teams : [];
 
-        this.statsTeams = [...teams].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        this.statsTeams = [...teams].sort(
+          (a, b) => (b.score ?? 0) - (a.score ?? 0)
+        );
 
         // При показе статистики скрываем текущий вопрос и таймер
         this.currentQuestion = null;
@@ -249,7 +269,8 @@ export class QuizCastingComponent implements OnInit, OnDestroy {
         this.timeExpired = false;
 
         this.showStats = true;
-        this.statsHasWinner = this.statsTeams.length > 0 && (this.statsTeams[0].score ?? 0) > 0;
+        this.statsHasWinner =
+          this.statsTeams.length > 0 && (this.statsTeams[0].score ?? 0) > 0;
         this.cdr.markForCheck();
       }
     });
@@ -284,7 +305,9 @@ export class QuizCastingComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const availableIndices = this.gridCells.filter((_, idx) => !this.activeCellFlags[idx]);
+    const availableIndices = this.gridCells.filter(
+      (_, idx) => !this.activeCellFlags[idx]
+    );
     while (currentActive < targetActive && availableIndices.length) {
       const randIndex = Math.floor(Math.random() * availableIndices.length);
       const cellId = availableIndices[randIndex];

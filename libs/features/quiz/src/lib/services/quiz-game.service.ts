@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { QuizState } from '@lyri-cast/quiz-feature';
 import { BridgeService } from '@lyri-cast/common-browser';
+import { QuizState } from '../quiz.types';
 
 export interface QuizTeam {
   id: string;
@@ -41,6 +41,7 @@ export class QuizGameService {
   readonly activeQuestionId = signal<string | null>(null);
 
   readonly isCastingActive = signal(false);
+  readonly hasState = signal(false);
 
   // === Computed ===
   readonly teamsSortedByScore = computed(() =>
@@ -96,6 +97,16 @@ export class QuizGameService {
     this.selectedTeamId.set(null);
     this.activeTopicId.set(null);
     this.activeQuestionId.set(null);
+    this.hasState.set(true);
+  }
+
+  clearState() {
+    this.teams.set([]);
+    this.topics.set([]);
+    this.selectedTeamId.set(null);
+    this.activeTopicId.set(null);
+    this.activeQuestionId.set(null);
+    this.hasState.set(false);
   }
 
   getState(): QuizState {

@@ -6,12 +6,13 @@ import {
   SettingsService,
   WindowService,
 } from '@lyri-cast/common-browser';
-import { QuizState, QuizStateService } from '@lyri-cast/quiz-feature';
 import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
 import { firstValueFrom } from 'rxjs';
 import { filter, skip } from 'rxjs/operators';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Pages } from '@lyri-cast/common-browser';
+import { QuizStateService } from './quiz-state.service';
+import { QuizState, QuizSummary } from '../quiz.types';
 
 @Injectable({ providedIn: 'root' })
 export class QuizSidebarService {
@@ -22,6 +23,16 @@ export class QuizSidebarService {
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
+
+  private _selectedQuiz: QuizSummary | null = null;
+
+  getSelectedQuiz(): QuizSummary | null {
+    return this._selectedQuiz;
+  }
+
+  setSelectedQuiz(quiz: QuizSummary | null): void {
+    this._selectedQuiz = quiz;
+  }
 
   async listQuizzes() {
     return this.quizStateService.listQuizzes();

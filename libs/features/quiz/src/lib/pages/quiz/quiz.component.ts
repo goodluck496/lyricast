@@ -1,10 +1,24 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, ViewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SplitterModule } from 'primeng/splitter';
 import { AccordionModule } from 'primeng/accordion';
 import { FormsModule } from '@angular/forms';
 import { PageContainerComponent } from '@lyri-cast/ui-lib';
-import { PAGE_CONTAINER_TEMPLATES, Pages, WindowService, DEFAULT_CASTING_PAGE_CONFIG, SettingsService, BridgeService } from '@lyri-cast/common-browser';
+import {
+  BridgeService,
+  DEFAULT_CASTING_PAGE_CONFIG,
+  PAGE_CONTAINER_TEMPLATES,
+  Pages,
+  SettingsService,
+  WindowService,
+} from '@lyri-cast/common-browser';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonDirective } from 'primeng/button';
@@ -14,12 +28,12 @@ import { FloatLabelModule } from 'primeng/floatlabel';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TooltipModule } from 'primeng/tooltip';
 import { DividerModule } from 'primeng/divider';
-import { ContextMenuModule, ContextMenu } from 'primeng/contextmenu';
+import { ContextMenu, ContextMenuModule } from 'primeng/contextmenu';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { Toast, ToastModule } from 'primeng/toast';
+import { Toast } from 'primeng/toast';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { CardModule } from 'primeng/card';
-import { QuizState, QuizStateService, QuizSummary } from '@lyri-cast/quiz-feature';
+import { QuizState, QuizSummary } from '../../quiz.types';
 import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -27,10 +41,14 @@ import { filter, skip } from 'rxjs/operators';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { QuizQuestionEditorComponent } from '../../components/quiz-question-editor/quiz-question-editor.component';
 import { QuizStatsTableComponent } from '../../components/quiz-stats-table/quiz-stats-table.component';
-import { AutoCompleteCompleteEvent, AutoCompleteModule } from 'primeng/autocomplete';
+import {
+  AutoCompleteCompleteEvent,
+  AutoCompleteModule,
+} from 'primeng/autocomplete';
 import { QuizSidebarComponent } from '../../components/quiz-sidebar/quiz-sidebar.component';
 import { QuizSidebarService } from '../../services/quiz-sidebar.service';
 import { QuizGameService } from '../../services/quiz-game.service';
+import { QuizStateService } from '../../services/quiz-state.service';
 
 @Component({
   selector: 'lyri-quiz-page',
@@ -274,6 +292,10 @@ export class QuizComponent implements OnInit {
 
   get isCastingActive(): boolean {
     return this.game.isCastingActive();
+  }
+
+  get hasGameState(): boolean {
+    return this.game.hasState();
   }
 
   async ngOnInit(): Promise<void> {
@@ -697,8 +719,7 @@ export class QuizComponent implements OnInit {
     const changes: any = {};
 
     if (field === 'points' || field === 'seconds') {
-      changes[field] =
-        typeof value === 'number' ? value : Number(value ?? 0);
+      changes[field] = typeof value === 'number' ? value : Number(value ?? 0);
     } else if (field === 'type') {
       const allowed: Array<'normal' | 'penalty' | 'bonus'> = [
         'normal',
@@ -712,9 +733,7 @@ export class QuizComponent implements OnInit {
 
       changes.type = nextType;
       changes.penaltyMode =
-        nextType === 'penalty'
-          ? question.penaltyMode ?? 'subtract'
-          : undefined;
+        nextType === 'penalty' ? question.penaltyMode ?? 'subtract' : undefined;
     } else if (field === 'penaltyMode') {
       const allowed: Array<'subtract' | 'skip'> = ['subtract', 'skip'];
       const v = String(value ?? 'subtract') as any;

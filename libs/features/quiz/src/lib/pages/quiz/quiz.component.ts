@@ -21,7 +21,6 @@ import {
 } from '@lyri-cast/common-browser';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { ButtonDirective } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { FloatLabelModule } from 'primeng/floatlabel';
@@ -39,8 +38,8 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { filter, skip } from 'rxjs/operators';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
-import { QuizQuestionEditorComponent } from '../../components/quiz-question-editor/quiz-question-editor.component';
-import { QuizStatsTableComponent } from '../../components/quiz-stats-table/quiz-stats-table.component';
+// NOTE: компоненты редактора вопросов и таблицы статистики теперь живут
+// в сайдбаре/панелях и не используются напрямую в шаблоне QuizComponent.
 import {
   AutoCompleteCompleteEvent,
   AutoCompleteModule,
@@ -64,7 +63,6 @@ import { NgScrollbarModule } from 'ngx-scrollbar';
     PageContainerComponent,
     InputTextModule,
     InputNumberModule,
-    ButtonDirective,
     SelectModule,
     SelectButtonModule,
     FloatLabelModule,
@@ -72,8 +70,6 @@ import { NgScrollbarModule } from 'ngx-scrollbar';
     TooltipModule,
     DividerModule,
     CardModule,
-    QuizQuestionEditorComponent,
-    QuizStatsTableComponent,
     AutoCompleteModule,
     ContextMenuModule,
     ProgressSpinnerModule,
@@ -85,7 +81,7 @@ import { NgScrollbarModule } from 'ngx-scrollbar';
     QuizTopicsPanelComponent,
   ],
   templateUrl: './quiz.component.html',
-  styleUrl: './quiz.component.scss',
+  styleUrls: ['./quiz.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [MessageService, ConfirmationService, QuizSidebarService],
 })
@@ -170,7 +166,8 @@ export class QuizComponent implements OnInit {
     this.withContextQuestion((topicId, questionId) => {
       // при переходе к вопросу с нижней таблицы также подсвечиваем его как активный
       this.game.setActiveQuestion(topicId, questionId);
-      this.scrollToQuestion(topicId, questionId);
+      // даём Angular/PrimeNG тик на обновление состояния и DOM, затем скроллим
+      setTimeout(() => this.scrollToQuestion(topicId, questionId), 0);
     });
   }
 
@@ -181,17 +178,61 @@ export class QuizComponent implements OnInit {
   }
 
   private scrollToQuestion(topicId: string, questionId: string): void {
-    // ждём, пока Angular/PrimeNG дорендерят содержимое панели, затем скроллим к элементу
-    const maxAttempts = 10;
+    const questionSelector = `[data-question-id="${questionId}"]`;
+
+    // Сначала пробуем открыть панель нужной темы: кликаем по заголовку
+    // только один раз для каждой темы, чтобы не схлопнуть её при повторных
+    // переходах "К вопросу" внутри той же темы.
+    if (!this.topicsOpenedByScroll.has(topicId)) {
+      const headerEl = document.querySelector<HTMLElement>(
+        `.quiz-topic__header[data-topic-id="${topicId}"]`
+      );
+
+      headerEl?.click();
+
+      if (headerEl) {
+        this.topicsOpenedByScroll.add(topicId);
+      }
+    }
+
+    // Дополнительно панель темы может открываться через QuizGameService.activeTopicId -> openedTopicIds
+    // в QuizTopicsPanelComponent (effect в конструкторе). Ниже только ждём
+    // появления нужного элемента и скроллим к нему.
+
+    // ждём, пока Angular/PrimeNG дорендерят содержимое панели, затем скроллим к вопросу
+    const maxAttempts = QuizComponent.SCROLL_POLL_MAX_ATTEMPTS;
     let attempts = 0;
 
     const tryScroll = () => {
-      const el = document.querySelector<HTMLElement>(
-        `[data-question-id="${questionId}"]`
+      // Ищем вопрос только внутри панели нужной темы, чтобы не попасть
+      // на одинаковые вопросы в других темах (например, при дублирующихся id).
+      const topicHeader = document.querySelector<HTMLElement>(
+        `.quiz-topic__header[data-topic-id="${topicId}"]`
       );
+      const topicPanel = topicHeader?.closest<HTMLElement>('.p-accordion-panel');
+
+      const searchRoot: ParentNode = topicPanel ?? document;
+      const el = searchRoot.querySelector<HTMLElement>(questionSelector);
 
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Пытаемся прокрутить именно контейнер ngx-scrollbar, если он есть
+        const scrollContainer = el.closest<HTMLElement>('.ng-scroll-viewport');
+
+        if (scrollContainer) {
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+          const offset =
+            elRect.top -
+            containerRect.top -
+            containerRect.height / 2 +
+            elRect.height / 2;
+
+          scrollContainer.scrollBy({ top: offset, behavior: 'smooth' });
+        } else {
+          // fallback: прокручиваем весь документ
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
         el.classList.add('quiz-question--highlight');
         setTimeout(() => {
           el.classList.remove('quiz-question--highlight');
@@ -201,11 +242,12 @@ export class QuizComponent implements OnInit {
 
       attempts++;
       if (attempts < maxAttempts) {
-        setTimeout(tryScroll, 50);
+        setTimeout(tryScroll, QuizComponent.SCROLL_POLL_INTERVAL_MS);
       }
     };
 
-    setTimeout(tryScroll, 0);
+    // даём аккордеону чуть больше времени на открытие и рендер, затем начинаем попытки скролла
+    setTimeout(tryScroll, QuizComponent.SCROLL_POLL_DELAY_MS);
   }
 
   protected readonly Pages = Pages;
@@ -226,6 +268,17 @@ export class QuizComponent implements OnInit {
   private contextTopicId: string | null = null;
   private contextQuestionId: string | null = null;
   @ViewChild('quizTableCm') private quizTableCm?: ContextMenu;
+
+  // Тайминги для перехода "К вопросу":
+  // задержка перед началом поиска вопроса (даём аккордеону открыться),
+  // интервал между попытками поиска элемента и максимальное число попыток.
+  private static readonly SCROLL_POLL_DELAY_MS = 200;
+  private static readonly SCROLL_POLL_INTERVAL_MS = 120;
+  private static readonly SCROLL_POLL_MAX_ATTEMPTS = 40;
+
+  // Темы, для которых мы уже программно открывали панель аккордеона при переходе "К вопросу".
+  // Нужно, чтобы повторные переходы к другим вопросам той же темы не схлопывали панель.
+  private topicsOpenedByScroll = new Set<string>();
 
   get canAnswer(): boolean {
     return this.game.canAnswer();

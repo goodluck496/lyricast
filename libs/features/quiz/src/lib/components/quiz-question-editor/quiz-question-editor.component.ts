@@ -5,7 +5,7 @@ import { FloatLabelModule } from 'primeng/floatlabel';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { ButtonDirective, ButtonIcon } from 'primeng/button';
+import { ButtonDirective, ButtonIcon, ButtonLabel } from 'primeng/button';
 import { Textarea } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
@@ -39,6 +39,7 @@ export interface QuizQuestionViewModel {
     Textarea,
     TooltipModule,
     ButtonIcon,
+    ButtonLabel,
   ],
   templateUrl: './quiz-question-editor.component.html',
   styleUrl: './quiz-question-editor.component.scss',

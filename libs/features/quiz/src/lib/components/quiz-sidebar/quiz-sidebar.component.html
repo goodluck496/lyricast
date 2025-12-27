@@ -54,17 +54,6 @@
             pButton
             type="button"
             class="quiz-sidebar__icon-button"
-            pTooltip="Сбросить экран"
-            tooltipPosition="top"
-            severity="secondary"
-            (click)="stopQuizCasting()"
-          >
-            <span pButtonIcon class="pi pi-window-minimize"></span>
-          </button>
-          <button
-            pButton
-            type="button"
-            class="quiz-sidebar__icon-button"
             pTooltip="Закрыть окно кастинга"
             tooltipPosition="top"
             severity="danger"
@@ -138,6 +127,17 @@
             (click)="answerWrong()"
           >
             Неверно
+          </button>
+          <button
+            pButton
+            type="button"
+            class="quiz-sidebar__icon-button"
+            pTooltip="Сбросить экран"
+            tooltipPosition="top"
+            severity="secondary"
+            (click)="stopQuizCasting()"
+          >
+            <span pButtonIcon class="pi pi-window-minimize"></span>
           </button>
         </div>
       </section>

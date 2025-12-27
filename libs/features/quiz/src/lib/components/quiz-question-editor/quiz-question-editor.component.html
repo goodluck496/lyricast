@@ -98,31 +98,44 @@
       pButton
       type="button"
       class="quiz-question__lock"
-      [icon]="question.burned ? 'pi pi-lock' : 'pi pi-lock-open'"
+      severity="warn"
       pTooltip="Вопрос сгорел, больше нельзя на него отвечать"
       (click)="toggleLock.emit()"
-    ></button>
-    <button
-      pButton
-      type="button"
-      class="quiz-question__solved"
-      [icon]="question.solved ? 'pi pi-check-circle' : 'pi pi-circle'"
-      [severity]="question.solved ? 'success' : undefined"
-      pTooltip="На вопрос уже отвечали"
-      (click)="toggleSolved.emit()"
-    ></button>
-    <button
-      pButton
-      type="button"
-      class="quiz-question__cast"
-      [disabled]="question.solved || question.burned"
-      (click)="showQuestion.emit()"
     >
-      Показать на экране
+      @if(question.burned) {
+        <span pButtonIcon class="pi pi-lock"></span>
+      } @else {
+        <span pButtonIcon class="pi pi-lock-open"></span>
+      }
+
     </button>
     <button
       pButton
       type="button"
+      class="quiz-question__solved"
+      [severity]="question.solved ? 'success' : undefined"
+      pTooltip="На вопрос уже отвечали"
+      (click)="toggleSolved.emit()"
+    >
+      @if(question.solved) {
+        <span pButtonIcon class="pi pi-check-circle"></span>
+      } @else {
+        <span pButtonIcon class="pi pi-circle"></span>
+      }
+    </button>
+    <button
+      pButton
+      type="button"
+      class="quiz-question__cast"
+      pTooltip="Показать на экране"
+      [disabled]="question.solved || question.burned"
+      (click)="showQuestion.emit()">
+      <span pButtonIcon class="pi pi-play"></span>
+    </button>
+    <button
+      pButton
+      type="button"
+      severity="info"
       class="quiz-question__cast"
       [disabled]="(question.type || 'normal') === 'bonus' || (question.type || 'normal') === 'penalty'"
       (click)="showAnswer.emit()"

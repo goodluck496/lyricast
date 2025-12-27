@@ -17,7 +17,7 @@
     @for (topic of topics; track topic.id) {
       <p-accordion-panel [value]="topic.id">
         <p-accordion-header>
-          <div class="quiz-topic__header">
+          <div class="quiz-topic__header" [attr.data-topic-id]="topic.id">
             <input
               pInputText
               type="text"

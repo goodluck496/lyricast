@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AccordionModule } from 'primeng/accordion';
@@ -57,6 +57,21 @@ export class QuizTopicsPanelComponent {
     { label: 'Штраф', value: 'penalty' },
     { label: 'Бонус', value: 'bonus' },
   ];
+
+  constructor() {
+    // Следим за activeTopicId в сервисе и автоматически раскрываем
+    // соответствующую панель аккордеона.
+    effect(() => {
+      const activeId = this.game.activeTopicId();
+      if (!activeId) {
+        return;
+      }
+
+      if (!this.openedTopicIds.includes(activeId)) {
+        this.openedTopicIds = [...this.openedTopicIds, activeId];
+      }
+    });
+  }
 
   readonly penaltyModeOptions: { label: string; value: 'subtract' | 'skip' }[] = [
     { label: 'Вычитать баллы', value: 'subtract' },
@@ -344,5 +359,16 @@ export class QuizTopicsPanelComponent {
 
     const newSolved = !question.solved;
     this.game.updateQuestion(topic.id, question.id, { solved: newSolved });
+
+    // Уведомляем окно кастинга о ручной отметке вопроса как "отвечен" / снятии отметки,
+    // чтобы таблица вопросов на кастинге сразу обновила зелёную подсветку.
+    this.bridge.send(
+      'QUIZ_MARK_SOLVED' as any,
+      {
+        topicId,
+        questionId,
+        solved: newSolved,
+      } as any,
+    );
   }
 }

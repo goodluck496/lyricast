@@ -272,6 +272,10 @@ export class QuizGameService {
         })),
       }))
     );
+
+    // Уведомляем окно кастинга, чтобы оно сбросило локальные маркеры
+    // решённых и "сгоревших" вопросов в своей таблице.
+    this.bridge.send('QUIZ_RESET_STATS' as any, {} as any);
   }
 
   answerCorrect(): void {

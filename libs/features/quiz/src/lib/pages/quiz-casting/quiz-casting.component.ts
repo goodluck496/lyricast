@@ -234,6 +234,21 @@ export class QuizCastingComponent implements OnInit, OnDestroy {
         }
       }
 
+      if (event.event === 'QUIZ_MARK_SOLVED') {
+        const payload = event.payload as any;
+        const qId = payload?.questionId as string | undefined;
+        const solved = payload?.solved === true;
+
+        if (qId) {
+          if (solved) {
+            this.solvedQuestionIds.add(qId);
+          } else {
+            this.solvedQuestionIds.delete(qId);
+          }
+          this.cdr.markForCheck();
+        }
+      }
+
       if (event.event === 'QUIZ_SHOW_ANSWER') {
         const payload = event.payload as any;
         this.currentTopicTitle = payload.topicTitle ?? null;
@@ -271,6 +286,14 @@ export class QuizCastingComponent implements OnInit, OnDestroy {
         this.showStats = true;
         this.statsHasWinner =
           this.statsTeams.length > 0 && (this.statsTeams[0].score ?? 0) > 0;
+        this.cdr.markForCheck();
+      }
+
+      if (event.event === 'QUIZ_RESET_STATS') {
+        // Полный сброс статистики из основного окна: очищаем локальные маркеры
+        // решённых и "сгоревших" вопросов, чтобы таблица вопросов обнулилась.
+        this.solvedQuestionIds.clear();
+        this.burnedQuestionIds.clear();
         this.cdr.markForCheck();
       }
     });

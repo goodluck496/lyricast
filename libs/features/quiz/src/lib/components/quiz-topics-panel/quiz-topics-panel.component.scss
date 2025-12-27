@@ -18,6 +18,20 @@
   gap: 0.5rem;
 }
 
+.quiz-topic__questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+// Временная подсветка вопроса при переходе "К вопросу"
+.quiz-question--highlight {
+  outline: 2px solid var(--primary-color, #3b82f6);
+  outline-offset: 2px;
+  background-color: rgba(59, 130, 246, 0.08);
+  transition: background-color 0.3s ease;
+}
+
 .quiz-topics__new input[pInputText] {
   flex: 1 1 auto;
 }

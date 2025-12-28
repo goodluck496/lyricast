@@ -28,7 +28,7 @@ export interface QuizTopic {
   questions: QuizQuestion[];
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class QuizGameService {
   private readonly bridge = inject(BridgeService);
 

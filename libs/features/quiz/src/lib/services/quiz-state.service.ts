@@ -3,24 +3,9 @@ import { firstValueFrom } from 'rxjs';
 import { QuizApiService } from '@lyri-cast/shared-browser/data-access/quiz';
 import { QuizState, QuizSummary } from '../quiz.types';
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class QuizStateService {
   private readonly api = inject(QuizApiService);
-
-  async load(): Promise<QuizState | null> {
-    // В новой архитектуре "текущая" викторина определяется на клиенте.
-    // Этот метод можно использовать как обёртку над загрузкой выбранного quizId,
-    // но пока оставляем заглушкой, чтобы не ломать существующие вызовы.
-    return null;
-  }
-
-  async save(_state: QuizState): Promise<void> {
-    // Сохранение конкретного квиза теперь делается через saveAsNew с явным meta.id
-    // Этот метод оставлен для совместимости и сейчас ничего не делает.
-    return;
-  }
-
-  // === Multi-quiz helpers ===
 
   async listQuizzes(): Promise<QuizSummary[]> {
     try {
@@ -61,7 +46,7 @@ export class QuizStateService {
 
   async saveAsNew(
     meta: { id?: string; title?: string; date?: string },
-    state: QuizState,
+    state: QuizState
   ): Promise<string | null> {
     try {
       const result = await firstValueFrom(
@@ -70,7 +55,7 @@ export class QuizStateService {
           title: meta.title,
           date: meta.date,
           state: state as any,
-        }),
+        })
       );
 
       const id = (result && result.id) as string | undefined;

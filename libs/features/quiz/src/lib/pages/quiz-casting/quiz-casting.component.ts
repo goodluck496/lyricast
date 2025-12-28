@@ -21,6 +21,7 @@ import { QuizStateService } from '../../services';
   templateUrl: './quiz-casting.component.html',
   styleUrl: './quiz-casting.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [QuizStateService],
 })
 export class QuizCastingComponent implements OnInit, OnDestroy {
   private readonly quizStateService = inject(QuizStateService);
@@ -80,9 +81,6 @@ export class QuizCastingComponent implements OnInit, OnDestroy {
 
     if (quizId) {
       loaded = await this.quizStateService.loadById(quizId);
-    } else {
-      // Fallback для legacy-режима: используем старый механизм загрузки
-      loaded = await this.quizStateService.load();
     }
 
     this.state = loaded;

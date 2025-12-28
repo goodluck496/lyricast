@@ -2,9 +2,9 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  inject,
   Input,
   OnInit,
-  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -17,10 +17,12 @@ import {
   AutoCompleteCompleteEvent,
   AutoCompleteModule,
 } from 'primeng/autocomplete';
-import { QuizSidebarService } from '../../services/quiz-sidebar.service';
-import { QuizGameService } from '../../services/quiz-game.service';
-import { MessageService, ConfirmationService } from 'primeng/api';
-import { QuizStateService } from '@lyri-cast/quiz-feature';
+import {
+  QuizGameService,
+  QuizSidebarService,
+  QuizStateService,
+} from '../../services';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { QuizSummary } from '../../quiz.types';
 import { FloatLabel } from 'primeng/floatlabel';
 import { QuizStatsTableComponent } from '../quiz-stats-table/quiz-stats-table.component';
@@ -218,18 +220,17 @@ export class QuizSidebarComponent implements OnInit {
       return;
     }
 
+    const quiz = this.selectedQuizObj;
+    if (!quiz) {
+      return;
+    }
+
     const state = this.game.getState();
-    await this.sidebarSrv.saveStateForQuiz(
-      state,
-      this.selectedQuizObj
-        ? {
-            id: this.selectedQuizObj.id,
-            title: this.selectedQuizObj.title,
-            date:
-              this.selectedQuizObj.date ?? new Date().toISOString().slice(0, 10),
-          }
-        : null
-    );
+    await this.sidebarSrv.saveStateForQuiz(state, {
+      id: quiz.id,
+      title: quiz.title,
+      date: quiz.date ?? new Date().toISOString().slice(0, 10),
+    });
 
     this.game.setCastingActive(true);
     try {
@@ -267,15 +268,26 @@ export class QuizSidebarComponent implements OnInit {
   }
 
   async saveState(): Promise<void> {
-    const state = this.game.getState();
-    await this.quizStateService.save(state);
-  }
+    const quiz = this.selectedQuizObj;
+    if (!quiz) {
+      return;
+    }
 
-  async reloadState(): Promise<void> {
-    const state = await this.sidebarSrv.loadLegacyState();
-    if (state) {
-      this.game.setState(state);
+    const state = this.game.getState();
+
+    const savedId = await this.sidebarSrv.saveStateForQuiz(state, {
+      id: quiz.id,
+      title: quiz.title,
+      date: quiz.date ?? new Date().toISOString().slice(0, 10),
+    });
+
+    // Если сохранили под конкретным id — обновляем список и выбранную викторину,
+    // чтобы UI был синхронизирован с фактическим состоянием файлов.
+    if (savedId) {
+      await this.loadQuizzes();
+      const updated = this.quizzes.find((q) => q.id === savedId) ?? null;
+      this.selectedQuiz = updated;
+      this.sidebarSrv.setSelectedQuiz(updated);
     }
   }
 }
-

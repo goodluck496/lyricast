@@ -3,18 +3,18 @@ import { Router } from '@angular/router';
 import {
   BridgeService,
   DEFAULT_CASTING_PAGE_CONFIG,
+  Pages,
   SettingsService,
   WindowService,
 } from '@lyri-cast/common-browser';
 import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
 import { firstValueFrom } from 'rxjs';
 import { filter, skip } from 'rxjs/operators';
-import { MessageService, ConfirmationService } from 'primeng/api';
-import { Pages } from '@lyri-cast/common-browser';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { QuizStateService } from './quiz-state.service';
 import { QuizState, QuizSummary } from '../quiz.types';
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class QuizSidebarService {
   private readonly quizStateService = inject(QuizStateService);
   private readonly windowSrv = inject(WindowService);
@@ -63,19 +63,8 @@ export class QuizSidebarService {
         title: trimmed,
         date: new Date().toISOString().slice(0, 10),
       },
-      emptyState,
+      emptyState
     );
-  }
-
-  confirmDeleteQuiz(event: Event, cb: () => void): void {
-    this.confirmationService.confirm({
-      target: event.currentTarget as HTMLElement,
-      message: 'Удалить викторину? Это действие нельзя отменить.',
-      icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger p-button-sm',
-      rejectButtonStyleClass: 'p-button-text p-button-sm',
-      accept: cb,
-    });
   }
 
   async deleteQuizById(id: string): Promise<void> {
@@ -84,36 +73,27 @@ export class QuizSidebarService {
 
   async saveStateForQuiz(
     state: QuizState,
-    selectedQuiz: { id: string; title: string; date: string } | null,
+    selectedQuiz: { id: string; title: string; date: string }
   ): Promise<string | null> {
-    if (selectedQuiz) {
-      const savedId = await this.quizStateService.saveAsNew(
-        {
-          id: selectedQuiz.id,
-          title: selectedQuiz.title,
-          date: selectedQuiz.date,
-        },
-        state,
-      );
+    const savedId = await this.quizStateService.saveAsNew(
+      {
+        id: selectedQuiz.id,
+        title: selectedQuiz.title,
+        date: selectedQuiz.date,
+      },
+      state
+    );
 
-      if (!savedId) {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Ошибка сохранения',
-          detail: 'Не удалось сохранить викторину.',
-        });
-        return null;
-      }
-
-      return savedId;
+    if (!savedId) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Ошибка сохранения',
+        detail: 'Не удалось сохранить викторину.',
+      });
+      return null;
     }
 
-    await this.quizStateService.save(state);
-    return null;
-  }
-
-  async loadLegacyState(): Promise<QuizState | null> {
-    return this.quizStateService.load();
+    return savedId;
   }
 
   async openCastingWindow(): Promise<void> {
@@ -123,7 +103,9 @@ export class QuizSidebarService {
     }
 
     await this.settingsSrv.init();
-    const display = await firstValueFrom(this.settingsSrv.getDisplayForCasting());
+    const display = await firstValueFrom(
+      this.settingsSrv.getDisplayForCasting()
+    );
 
     if (!display) {
       await this.router.navigate([Pages.QUIZ_FEATURE, Pages.CASTING]);
@@ -150,9 +132,9 @@ export class QuizSidebarService {
           skip(1),
           filter(
             (event): event is { event: string; payload: unknown } =>
-              !!event && event.event === APP_COMMON_ACTIONS.appInit,
-          ),
-        ),
+              !!event && event.event === APP_COMMON_ACTIONS.appInit
+          )
+        )
       );
 
       await this.windowSrv.electronContext.send({
@@ -181,7 +163,9 @@ export class QuizSidebarService {
     });
   }
 
-  showStatsOnCasting(teams: { id: string; name: string; score: number }[]): void {
+  showStatsOnCasting(
+    teams: { id: string; name: string; score: number }[]
+  ): void {
     this.bridge.send(
       'QUIZ_SHOW_STATS' as any,
       {
@@ -190,7 +174,7 @@ export class QuizSidebarService {
           name: t.name,
           score: t.score,
         })),
-      } as any,
+      } as any
     );
   }
 

@@ -1,0 +1,101 @@
+.songs-table-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+.songs-table {
+  width: 100%;
+}
+
+.songs-table-page__content {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.songs-table-page__table {
+  flex: 1;
+  min-width: 0;
+}
+
+.songs-table-page__sidebar {
+  display: none;
+  flex: 0 0 40vw;
+  max-width: 40vw;
+  background: var(--surface-ground, #fff);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
+  padding: 16px 20px;
+  display: none;
+}
+
+.songs-table-page__sidebar--open {
+  display: block;
+}
+
+.songs-table-page__sidebar-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-top: 24px;
+}
+
+.songs-table-page__sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.songs-table-page__sidebar-scroll {
+  flex: 1 1 auto;
+}
+
+.songs-table-page__sidebar-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--surface-border, #ddd);
+
+  position: relative;
+
+  &-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}
+
+
+.song-form__line {
+  position: relative;
+}
+
+.song-form__line--with-actions {
+  position: relative;
+}
+
+.song-form__line--with-actions .p-float-label {
+  display: block;
+  width: 100%;
+  padding-right: 40px; // место под иконку удаления
+}
+
+.song-form__line--with-actions .p-float-label textarea {
+  width: 100%;
+}
+
+.song-form__line-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.song-form__lines > .p-button {
+  width: 100%;
+  margin-top: 8px;
+}

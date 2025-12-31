@@ -1,0 +1,22 @@
+generatorName: typescript-angular
+inputSpec: https://kantelers.ru/lyricast/api/swagger.yaml
+outputDir: libs/openapi-client/generated
+
+additionalProperties:
+  ngVersion: "20.3.11"
+  providedInRoot: true
+
+  # удобства типизации/читаемости
+  stringEnums: true
+  withInterfaces: true
+  useSingleRequestParameter: true
+
+  # если хочешь, чтобы DateTime не был string:
+  dateTimeType: Date
+
+  # иногда полезно, если есть много nullable:
+  # supportsES6: true
+
+# (опционально) если хочешь фиксированные имена пакета/модулей:
+# npmName: "@app/api-client"
+# npmVersion: "0.0.0"

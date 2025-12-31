@@ -1,0 +1,252 @@
+<div class="songs-table-page" [class.songs-table-page--sidebar-open]="drawerVisible">
+  <div class="songs-table-page__header">
+    <p-button
+      icon="pi pi-plus"
+      label="Добавить песню"
+      (onClick)="createSong()"
+    ></p-button>
+  </div>
+
+  <div class="songs-table-page__content">
+    <div class="songs-table-page__table">
+      <p-table
+        [value]="songs"
+        [paginator]="true"
+        [rows]="rows"
+        [totalRecords]="totalRecords"
+        [rowsPerPageOptions]="[50, 100]"
+        size="small"
+        [lazy]="true"
+        (onPage)="onPageChange($event)"
+        [scrollable]="true"
+        scrollHeight="calc(100vh - 140px)"
+        styleClass="songs-table"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Id</th>
+            <th>Название</th>
+            <th>Автор</th>
+            <th>Действия</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-song>
+          <tr>
+            <td>{{ song.number }}</td>
+            <td>{{ song.title }}</td>
+            <td>{{ song.author }}</td>
+            <td>
+              <p-button
+                icon="pi pi-pencil"
+                size="small"
+                (onClick)="editSong(song)"
+              ></p-button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+
+    <div
+      class="songs-table-page__sidebar"
+      [class.songs-table-page__sidebar--open]="drawerVisible"
+    >
+      @if (drawerVisible) {
+        <div class="songs-table-page__sidebar-inner">
+          <ng-scrollbar class="songs-table-page__sidebar-scroll">
+            @if (!editingSong && !isNew) {
+              <div class="songs-table-page__sidebar-loading">
+                <p-progressSpinner styleClass="songs-table-page__spinner"></p-progressSpinner>
+                <p>Загрузка песни...</p>
+              </div>
+            }
+
+            @if (editingSong) {
+              <h3>{{ isNew ? 'Новая песня' : 'Редактирование песни' }}</h3>
+
+              <form>
+                <div class="song-form__grid">
+                  <p-float-label>
+                    <input
+                      pInputText
+                      id="number"
+                      type="number"
+                      [(ngModel)]="editingSong.number"
+                      name="number"
+                    />
+                    <label for="number">Номер</label>
+                  </p-float-label>
+
+                  <p-float-label>
+                    <input
+                      pInputText
+                      id="title"
+                      type="text"
+                      [(ngModel)]="editingSong.title"
+                      name="title"
+                    />
+                    <label for="title">Название</label>
+                  </p-float-label>
+
+                  <p-float-label>
+                    <input
+                      pInputText
+                      id="author"
+                      type="text"
+                      [(ngModel)]="editingSong.author"
+                      name="author"
+                    />
+                    <label for="author">Автор</label>
+                  </p-float-label>
+
+                  <p-float-label>
+                    <input
+                      pInputText
+                      id="key"
+                      type="text"
+                      [(ngModel)]="editingSong.key"
+                      name="key"
+                    />
+                    <label for="key">Тональность (key)</label>
+                  </p-float-label>
+
+                  <p-float-label>
+                    <input
+                      pInputText
+                      id="keySignature"
+                      type="text"
+                      [(ngModel)]="editingSong.keySignature"
+                      name="keySignature"
+                    />
+                    <label for="keySignature">Подпись тональности</label>
+                  </p-float-label>
+
+                  <p-float-label>
+                    <input
+                      pInputText
+                      id="ref"
+                      type="text"
+                      [(ngModel)]="editingSong.ref"
+                      name="ref"
+                    />
+                    <label for="ref">Ссылка (ref)</label>
+                  </p-float-label>
+
+                  <p-float-label>
+                    <input
+                      pInputText
+                      id="category"
+                      type="text"
+                      [(ngModel)]="editingSong.category"
+                      name="category"
+                    />
+                    <label for="category">Категория</label>
+                  </p-float-label>
+                </div>
+
+                <div class="song-form__sections">
+                  <div class="song-form__sections-header">
+                    <h4>Куплеты</h4>
+                    <p-button
+                      icon="pi pi-plus"
+                      label="Добавить куплет"
+                      size="small"
+                      (onClick)="addLyric()"
+                    ></p-button>
+                  </div>
+
+                  <p-accordion [(value)]="activeLyricValue" [multiple]="false">
+                    @for (lyric of editingSong.lyrics; track lyric.uniqId; let i = $index) {
+                      <p-accordion-panel [value]="lyric.uniqId">
+                        <p-accordion-header>
+                          <span>{{ lyric.sectionTitle || ('Куплет ' + (i + 1)) }}</span>
+                          <p-button
+                            icon="pi pi-trash"
+                            severity="danger"
+                            size="small"
+                            styleClass="song-form__delete-lyric-btn"
+                            (onClick)="removeLyric(i)"
+                          ></p-button>
+                        </p-accordion-header>
+
+                        <p-accordion-content>
+                          <div class="song-form__section">
+                            <div class="song-form__lines">
+                              <div class="song-form__line">
+                                <p-float-label>
+                                  <input
+                                    pInputText
+                                    [id]="'sectionTitle-' + i"
+                                    type="text"
+                                    [(ngModel)]="lyric.sectionTitle"
+                                    [name]="'sectionTitle-' + i"
+                                  />
+                                  <label [for]="'sectionTitle-' + i">Название куплета</label>
+                                </p-float-label>
+                              </div>
+
+                              @for (line of lyric.lines; track $index; let j = $index) {
+                                <div class="song-form__line song-form__line--with-actions">
+                                  <p-float-label>
+                                <textarea
+                                  pInputTextarea
+                                  [id]="'line-' + i + '-' + j"
+                                  rows="2"
+                                  [(ngModel)]="lyric.lines[j]"
+                                  [name]="'line-' + i + '-' + j"
+                                ></textarea>
+                                    <label [for]="'line-' + i + '-' + j">Строка {{ j + 1 }}</label>
+                                  </p-float-label>
+
+                                  <div class="song-form__line-remove">
+                                    <p-button
+                                      icon="pi pi-trash"
+                                      severity="danger"
+                                      size="small"
+                                      (onClick)="removeLine(lyric, j)"
+                                    ></p-button>
+                                  </div>
+                                </div>
+                              }
+
+                              <p-button
+                                icon="pi pi-plus"
+                                label="Добавить строку"
+                                size="small"
+                                (onClick)="addLine(lyric)"
+                              ></p-button>
+                            </div>
+                          </div>
+                        </p-accordion-content>
+                      </p-accordion-panel>
+                    }
+                  </p-accordion>
+                </div>
+
+              </form>
+            }
+
+
+          </ng-scrollbar>
+
+          <div class="songs-table-page__sidebar-footer">
+            @if (isLoading) {
+              <p-progress-bar mode="indeterminate" class="songs-table-page__sidebar-footer-loader" [style]="{ height: '6px' }" />
+            }
+            <p-button
+              label="Сохранить"
+              (onClick)="saveSong()"
+              [disabled]="!editingSong"
+            ></p-button>
+            <p-button
+              label="Закрыть"
+              severity="secondary"
+              (onClick)="drawerVisible = false; editingSong = null"
+            ></p-button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,71 @@
+/* You can add global styles to this file, and also import other style files */
+@import "bootstrap/dist/css/bootstrap-grid.css";
+@import "primeicons/primeicons.css";
+@import "libs/styles/base";
+@import "libs/styles/fonts";
+
+
+/* Global layout for full-screen app */
+html,
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  min-width: 100vw;
+  overflow: hidden;
+}
+
+lyri-root {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+/* Глобальные стили для формы песни в Drawer (overlay PrimeNG) */
+.song-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 12px;
+  row-gap: 2rem;
+  margin-bottom: 16px;
+}
+
+.song-form__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.song-form__sections-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.song-form__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 8px;
+}
+
+.song-form__line {
+  width: 100%;
+}
+
+.song-form__actions {
+  margin-top: 16px;
+}
+
+.song-form__line textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 100%;
+  min-height: 50px;
+}

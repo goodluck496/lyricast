@@ -1,0 +1,23 @@
+<div class="auth-backdrop" *ngIf="isVisible$ | async">
+  <div class="auth-dialog">
+    <h2>Авторизация</h2>
+
+    <form (ngSubmit)="onSubmit()">
+      <label class="auth-label">
+        Email
+        <input
+          [(ngModel)]="email"
+          name="email"
+          type="email"
+          required
+          autocomplete="email"
+        />
+      </label>
+
+      <div class="auth-actions">
+        <button type="submit">Войти</button>
+        <button type="button" (click)="onCancel()">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>

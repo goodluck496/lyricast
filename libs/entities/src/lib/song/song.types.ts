@@ -23,7 +23,15 @@ export type LyricLine = {
 };
 
 export type Lyric = {
+  /** Внутренний идентификатор куплета в БД (может отсутствовать для новых куплетов). */
+  id?: number;
+
+  /** Идентификатор песни в БД как строка (как было ранее). */
   songId: string;
+
+  /** Числовой идентификатор песни в БД (song_id), если известен. */
+  numericSongId?: number | null;
+
   uniqId: string;
   sectionTitle: string;
   type: LyricTypeEnum;
@@ -45,6 +53,9 @@ export interface SelectedLyricChunk extends Lyric {
 }
 
 export interface ISong {
+  /** Внутренний ID песни в БД (song.id). Может быть undefined для новых песен. */
+  id?: number;
+
   number: number;
   title: string;
   key: string;

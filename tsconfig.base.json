@@ -44,6 +44,9 @@
       "@lyri-cast/free-slide": [
         "libs/shared-browser/data-access/free-slide/src/index.ts"
       ],
+      "@lyri-cast/data-access-dictionaries": [
+        "libs/shared-browser/data-access/dictionaries/src/index.ts"
+      ],
       "@lyri-cast/free-slide-domain": [
         "libs/domains/free-slide-domain/src/index.ts"
       ],
@@ -71,7 +74,8 @@
       "@lyri-cast/ui-lib": ["libs/ui-lib/src/index.ts"],
       "@lyri-cast/worker-kit": ["libs/worker-kit/src/index.ts"],
       "@lyri-cast/quiz-domain": ["libs/domains/quiz-domain/src/index.ts"],
-      "quiz-data-access": ["libs/shared-browser/data-access/quiz/src/index.ts"]
+      "@lyri-cast/data-access-quiz": ["libs/shared-browser/data-access/quiz/src/index.ts"],
+      "@lyri-cast/openapi-client": ["libs/openapi-client/generated/index.ts"],
     }
   },
   "references": [

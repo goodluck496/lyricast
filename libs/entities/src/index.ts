@@ -1,5 +1,6 @@
 export * from './lib/song/song.types'
 export * from './lib/song/song-dto.types'
+export * from './lib/song/song-dict.dto'
 
 export * from './lib/bible/bible.types'
 export * from './lib/bible/bible-dto.types'

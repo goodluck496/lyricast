@@ -162,7 +162,7 @@ export class SongPageSelectService {
     startOffset = 0,
     globalParts: SplitPartsCount
   ): LyricLine[] {
-    const arr = lyric.lines;
+    const arr = lyric.lines.map((l) => l.text);
     const parts = this.decideParts(lyric, globalParts, arr.length);
 
     // один блок — весь текст подряд

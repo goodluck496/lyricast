@@ -38,6 +38,7 @@ export class AssetDomainService {
   }
 
   async create(file: UploadedMulterFile): Promise<Asset> {
+    console.log('file?,',file);
     const hash = createHash('sha256').update(file.buffer as any).digest('hex');
 
     const existingAsset = await this.findOne(hash);

@@ -8,6 +8,7 @@ import {
   ISongBookName,
   ISongForSearch,
   Lyric,
+  LyricLine,
   LyricTypeEnum,
 } from '@lyri-cast/entities';
 
@@ -70,8 +71,37 @@ export class SongsService {
         `${name}${this.fileNameSuffix}`
       );
 
+
       const jsonBook = fs.readFileSync(filePath);
-      const book = JSON.parse(jsonBook.toString());
+      const rawBook = JSON.parse(jsonBook.toString());
+
+      // нормализуем структуру строк куплетов: string[] -> LyricLine[]
+      const book: ISongBook = {
+        ...rawBook,
+        songs: (rawBook.songs || []).map((song: ISong) => ({
+          ...song,
+          lyrics: (song.lyrics || []).map((lyric: Lyric) => {
+            const lines = (lyric.lines || []) as any[];
+            // если это уже LyricLine[], оставляем как есть
+            if (lines.length > 0 && typeof lines[0] !== 'string') {
+              return lyric;
+            }
+            const normalizedLines: LyricLine[] = lines.map(
+              (text: string, index: number): LyricLine => ({
+                id: undefined,
+                rangeIndex: `${index}-${index}`,
+                index,
+                globalSongIndex: index,
+                text,
+              })
+            );
+            return {
+              ...lyric,
+              lines: normalizedLines,
+            } as Lyric;
+          }),
+        })),
+      };
 
       this.bookCache[name] = book;
 
@@ -195,7 +225,7 @@ export class SongsService {
         item.title.toLowerCase().includes(preparedText) ||
         !!item.lyrics.find((lyric) =>
           lyric.lines.find((el) => {
-            return el.trim().toLowerCase().includes(preparedText);
+            return el.text.trim().toLowerCase().includes(preparedText);
           })
         )
     );
@@ -210,9 +240,12 @@ export class SongsService {
   }
 
   convertToSearchSong(song: ISong, query: string): ISongForSearch {
+    const preparedQuery = query.toLowerCase();
     const inlineContent = song.lyrics.reduce((acc, curr) => {
-      if (curr.lines.toString().toLowerCase().includes(query)) {
-        acc += curr.lines.join(' ');
+      const texts = (curr.lines || []).map((l) => l.text);
+      const joined = texts.join(' ').toLowerCase();
+      if (joined.includes(preparedQuery)) {
+        acc += texts.join(' ');
       }
       return acc;
     }, '');

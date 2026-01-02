@@ -9,7 +9,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { NgScrollbarModule } from 'ngx-scrollbar';
 
 import { FormsModule } from '@angular/forms';
-import { ISong, Lyric, LyricTypeEnum } from '@lyri-cast/entities';
+import { ISong, Lyric, LyricLine, LyricTypeEnum } from '@lyri-cast/entities';
 import { SongsDictionaryApiService } from '@lyri-cast/data-access-dictionaries';
 import { Textarea } from 'primeng/textarea';
 import { debounceTime } from 'rxjs';
@@ -125,7 +125,15 @@ export class SongsTablePageComponent implements OnInit {
       sectionTitle: '',
       type: LyricTypeEnum.COUPLET,
       splitLinesCount: 1,
-      lines: [''],
+      lines: [
+        {
+          id: undefined,
+          rangeIndex: '0-0',
+          index: 0,
+          globalSongIndex: 0,
+          text: '',
+        },
+      ],
     };
 
     this.editingSong.lyrics = [...this.editingSong.lyrics, newLyric];
@@ -135,8 +143,16 @@ export class SongsTablePageComponent implements OnInit {
     if (!lyric.lines) {
       lyric.lines = [];
     }
+    const idx = lyric.lines.length;
+    const newLine: LyricLine = {
+      id: undefined,
+      rangeIndex: `${idx}-${idx}`,
+      index: idx,
+      globalSongIndex: idx,
+      text: '',
+    };
 
-    lyric.lines = [...lyric.lines, ''];
+    lyric.lines = [...lyric.lines, newLine];
   }
 
   removeLine(lyric: Lyric, index: number): void {

@@ -62,6 +62,9 @@
     },
     "serve": {
       "continuous": true,
+      "options": {
+        "port": 0
+      },
       "executor": "@angular/build:dev-server",
       "configurations": {
         "production": {

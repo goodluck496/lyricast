@@ -6,6 +6,7 @@ export enum LyricTypeEnum {
 }
 
 export type LyricLine = {
+  id?: number;
   /**
    * Номер строки в куплете, здесь может быть как индекс в массиве,
    * так и диапазон индексов, типо 0-4 или 0-2
@@ -36,12 +37,10 @@ export type Lyric = {
   sectionTitle: string;
   type: LyricTypeEnum;
   splitLinesCount: number;
-  lines: string[];
-};
-
-export type LyricForCasting = Omit<Lyric, 'lines'> & {
   lines: LyricLine[];
 };
+
+export type LyricForCasting = Lyric;
 
 export type LyricSelectedForCasting = LyricLine & {
   lyric: LyricForCasting;

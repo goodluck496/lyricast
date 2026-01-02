@@ -1,4 +1,4 @@
-import { ISong, ISongBookName, Lyric, LyricTypeEnum } from '@lyri-cast/entities';
+import { ISong, ISongBookName, Lyric, LyricLine, LyricTypeEnum } from '@lyri-cast/entities';
 import { SongDatabaseInfoDto, SongSearchResultDto } from '@lyri-cast/entities';
 import { RegistryItem, RegistryItemMeta } from '@lyri-cast/openapi-client';
 import { SongBase, SongFull, SongSearchResponse, Lyric as ApiLyric, LyricLine as ApiLyricLine } from '@lyri-cast/openapi-client';
@@ -61,7 +61,15 @@ export function mapApiLyricToLyric(api: ApiLyric): Lyric {
     sectionTitle: api.sectionTitle,
     type: mapApiLyricType(api.type),
     splitLinesCount: api.splitLinesCount ?? 1,
-    lines: (api.lines || []).map(mapApiLyricLineToText),
+    lines: (api.lines || []).map(
+      (line: ApiLyricLine): LyricLine => ({
+        id: line.id,
+        rangeIndex: String(line.rangeIndex ?? ''),
+        index: line.lineIndex ?? 0,
+        globalSongIndex: line.globalSongIndex ?? 0,
+        text: String(line.text ?? ''),
+      })
+    ),
   };
 }
 
@@ -75,11 +83,4 @@ function mapApiLyricType(type: string): LyricTypeEnum {
     default:
       return LyricTypeEnum.COUPLET;
   }
-}
-
-function mapApiLyricLineToText(line: ApiLyricLine): string {
-  if (!line) {
-    return '';
-  }
-  return String(line.text ?? '');
 }

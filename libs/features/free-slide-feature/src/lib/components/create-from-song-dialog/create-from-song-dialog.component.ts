@@ -6,7 +6,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { BehaviorSubject, debounceTime, filter, map, of, switchMap, tap } from 'rxjs';
-import { IShortSong, ISong, ISongBookName, Lyric, LyricTypeEnum, PresentationDto, SlideDto, SerializedState } from '@lyri-cast/entities';
+import { IShortSong, ISong, ISongBookName, Lyric, LyricLine, LyricTypeEnum, PresentationDto, SlideDto, SerializedState } from '@lyri-cast/entities';
 import { ListBoxComponent, IUiLyriItemInList, IUiLyriListItem, AssetStorageService, ListBoxTemplates } from '@lyri-cast/form';
 import { SongsApiService } from '@lyri-cast/data-access-songs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -234,11 +234,11 @@ export class CreateFromSongDialogComponent {
   }
 
   private toHtml(lyric: Lyric): string {
-    return lyric.lines.join('<br />');
+    return (lyric.lines || []).map((l) => l.text).join('<br />');
   }
 
   private splitLyricIfNeeded(lyric: Lyric, split: number | -1): string[] {
-    const arr = lyric.lines;
+    const arr = (lyric.lines || []).map((l: LyricLine) => l.text);
     if (split === -1 || arr.length <= 1) return [this.toHtml(lyric)];
     const parts = Math.min(Math.max(2, Math.floor(split)), arr.length);
     const prepared = arr.map((text, i) => ({ text, i }));

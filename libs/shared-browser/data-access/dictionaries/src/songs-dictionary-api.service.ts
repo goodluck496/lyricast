@@ -13,6 +13,7 @@ import {
 import {
   ISong,
   Lyric as AppLyric,
+  LyricLine,
   SongDatabaseInfoDto,
   SongSearchResultDto,
 } from '@lyri-cast/entities';
@@ -90,13 +91,13 @@ export class SongsDictionaryApiService {
       song.lyrics && song.lyrics.length > 0
         ? song.lyrics.map((lyric: AppLyric, lyricIndex: number): ApiLyric => {
             const lines: ApiLyricLine[] = (lyric.lines || []).map(
-              (text, lineIndex) => ({
-                id: 0,
+              (line: LyricLine, lineIndex: number): ApiLyricLine => ({
+                id: line.id ?? 0,
                 lyricId: lyric.id ?? 0,
-                rangeIndex: null,
-                lineIndex,
-                globalSongIndex: null,
-                text: text ?? '',
+                rangeIndex: line.rangeIndex ?? null,
+                lineIndex: line.index ?? lineIndex,
+                globalSongIndex: line.globalSongIndex ?? null,
+                text: line.text ?? '',
               })
             );
 

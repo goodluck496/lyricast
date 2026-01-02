@@ -85,7 +85,7 @@
     "forge:make": "electron-forge make",
     "build:apps": "npm-run-all -c build:browser _build:electron",
     "dist:electron": "electron-builder -c tools/electron-builder.config.js",
-    "publish:electron": "electron-builder -c tools/electron-builder.config.js -p always",
+    "publish:electron": "electron-builder -c tools/electron-builder.config.js -p always"
   },
   "private": true,
   "dependencies": {

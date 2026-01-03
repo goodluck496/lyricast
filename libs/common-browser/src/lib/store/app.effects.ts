@@ -37,8 +37,12 @@ export class AppEffects {
     switch (eventData.event) {
       case APP_COMMON_ACTIONS.openPage: {
         const data = eventData.payload as ActionOpenPageProps;
+        // Прокидываем все поддерживаемые поля (path, windowProps, queryParams),
+        // чтобы параметры маршрута (в т.ч. quizId для кастинга) доходили до окна.
         return AppActions.openPage({
           path: data.path,
+          windowProps: data.windowProps,
+          queryParams: data.queryParams,
         });
       }
       case APP_COMMON_ACTIONS.openedPage: {
@@ -65,7 +69,10 @@ export class AppEffects {
       filter(() => this.bridge.windowType !== AppWindowTypes.MAIN),
       tap((data) => {
         this.router
-          .navigate([...data.path], { replaceUrl: true })
+          .navigate([...data.path], {
+            replaceUrl: true,
+            ...(data.queryParams ? { queryParams: data.queryParams } : {}),
+          })
           .then((r) => console.log('open page', r));
       }),
       map((data) => ({ type: APP_COMMON_ACTIONS.openPage, payload: data }))

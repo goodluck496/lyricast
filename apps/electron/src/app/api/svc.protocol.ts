@@ -16,9 +16,19 @@ function filterHeaders(src: Headers): Headers {
   src.forEach((v, k) => {
     const lk = k.toLowerCase();
     // не прокидываем hop-by-hop и конфликтующие заголовки
-    if (lk === 'host' || lk === 'connection' || lk === 'content-length' || lk === 'transfer-encoding' || lk === 'expect') {
-      return;
-    }
+    if ([
+      'host',
+      'connection',
+      'keep-alive',
+      'proxy-authenticate',
+      'proxy-authorization',
+      'te',
+      'trailer',
+      'transfer-encoding',
+      'upgrade',
+      'content-length',     // важно: убираем
+      'expect',             // бывает 100-continue
+    ].includes(lk)) return;
     out.set(k, v);
   });
   return out;
@@ -59,9 +69,12 @@ export function registerSvcProtocol(registry: WorkersRegistry) {
 
       // Тело запроса: для GET/HEAD вовсе не передаём body
       let body: RequestInit['body'] | undefined = undefined;
-      if (req.method !== 'GET' && req.method !== 'HEAD' && req.body != null) {
-        // В Node нужен duplex: 'half' при наличии body
-        body = req.body as unknown as ReadableStream<Uint8Array>;
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        const buffer = await req.arrayBuffer();
+
+        if (buffer.byteLength > 0) {
+          body = Buffer.from(buffer) as any;
+        }
       }
 
       // Готовим init без мутирующих полей

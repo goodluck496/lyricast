@@ -2,16 +2,15 @@ import { inject, Injectable } from '@angular/core';
 import { AppWindowTypes } from '@lyri-cast/common-electron';
 import { AppActions } from '@lyri-cast/common-browser';
 import {
+  selectCastingPaused,
   SongActions,
   SongActionsEnum,
   SongPageState,
   SongPresentationNavigatePayload,
   SongStartCastingPayload,
-  selectCastingPaused
 } from '@lyri-cast/song-store';
 import { Store } from '@ngrx/store';
-import { Observable, tap } from 'rxjs';
-import { Actions, ofType } from '@ngrx/effects';
+import { Actions } from '@ngrx/effects';
 
 @Injectable({ providedIn: 'root' })
 export class CastingService {

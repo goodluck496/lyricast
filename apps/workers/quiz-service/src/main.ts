@@ -1,0 +1,62 @@
+import 'reflect-metadata';
+import { parentPort } from 'node:worker_threads';
+import { NestFactory } from '@nestjs/core';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express';
+import { QuizDomainModule } from '@lyri-cast/quiz-domain';
+
+
+type Msg =
+  | { t: 'ready'; port: number }
+  | { t: 'error'; error: string; stack?: string }
+  | { t: 'dispose' };
+
+const log = new Logger('QuizWorker');
+
+async function bootstrap() {
+  try {
+    const expressApp = express();
+    // Express 5 deprecates app.router and its getter throws, but Nest's
+    // ExpressAdapter still probes this property. We shim the getter to
+    // return the internal _router without throwing.
+    const adapter = new ExpressAdapter(expressApp);
+    const app = await NestFactory.create(QuizDomainModule, adapter, {
+      logger: ['error', 'warn', 'log'],
+      cors: false, // ходим через main-прокси
+    });
+
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true })
+    );
+    app.enableShutdownHooks();
+
+    // слушаем СЛУЧАЙНЫЙ порт только на loopback
+    await app.listen(0, '127.0.0.1');
+
+    const addr = app.getHttpServer().address();
+    const port = typeof addr === 'object' && addr ? (addr as any).port : 0;
+
+    log.log(`HTTP on http://127.0.0.1:${port}`);
+    parentPort?.postMessage({ t: 'ready', port } as Msg);
+
+    parentPort?.on('message', async (m: Msg) => {
+      if (m?.t === 'dispose') {
+        try {
+          await app.close();
+        } finally {
+          process.exit(0);
+        }
+      }
+    });
+  } catch (e: any) {
+    parentPort?.postMessage({
+      t: 'error',
+      error: e?.message ?? String(e),
+      stack: e?.stack,
+    } as Msg);
+    process.exit(1);
+  }
+}
+
+bootstrap();

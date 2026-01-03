@@ -27,7 +27,12 @@ export const initialState: AppState = {
 };
 
 export type ActionOpenedWindow = { procId: number; type: AppWindowTypes };
-export type ActionOpenPageProps = { path: Pages[], windowProps?: OpenWindowArgs };
+export type ActionOpenPageProps = {
+  path: Pages[];
+  windowProps?: OpenWindowArgs;
+  // Дополнительные параметры маршрута (query params) для окна кастинга и др.
+  queryParams?: Record<string, unknown>;
+};
 export type ActionCloseWindowProps = {
   windowType: AppWindowTypes;
 };

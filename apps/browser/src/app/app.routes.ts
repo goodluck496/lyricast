@@ -49,6 +49,11 @@ export const appRoutes: Route[] = [
           ),
       },
       {
+        path: Pages.QUIZ_FEATURE,
+        loadChildren: () =>
+          import('@lyri-cast/quiz-feature').then((c) => c.quizFeatureRoutes),
+      },
+      {
         path: Pages.SETTINGS,
         loadComponent: () =>
           import('./pages/settings/settings.component').then(
@@ -93,6 +98,14 @@ export const appRoutes: Route[] = [
     loadChildren: () =>
       import('@lyri-cast/free-slide-feature').then(
         (c) => c.freeSlideFeatureRoutes
+      ),
+  },
+
+  {
+    path: Pages.QUIZ_FEATURE,
+    loadChildren: () =>
+      import('@lyri-cast/quiz-feature').then(
+        (c) => c.quizFeatureRoutes,
       ),
   },
 

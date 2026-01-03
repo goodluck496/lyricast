@@ -1,0 +1,125 @@
+<div class="quiz-panel quiz-panel--teams">
+  <h3>Команды</h3>
+
+  <div class="quiz-teams__new">
+    <input
+      pInputText
+      type="text"
+      [(ngModel)]="newTeamName"
+      placeholder="Название новой команды"
+    />
+    <button pButton type="button" (click)="addTeam()">
+      Добавить команду
+    </button>
+  </div>
+
+  <p-accordion [multiple]="true">
+    @for (team of teams; track team.id) {
+      <p-accordion-panel [value]="team.id">
+        <p-accordion-header>
+          <div class="quiz-team__header">
+            <input
+              pInputText
+              type="text"
+              [ngModel]="team.name"
+              (click)="$event.stopPropagation()"
+              (ngModelChange)="updateTeamName(team.id, $event)"
+            />
+            <button
+              pButton
+              type="button"
+              class="quiz-team__remove"
+              severity="danger"
+              pTooltip="Удалить команду"
+              (click)="confirmRemoveTeam($event, team.id)"
+            >
+              <span pButtonIcon class="pi pi-trash"></span>
+            </button>
+          </div>
+        </p-accordion-header>
+
+        <p-accordion-content>
+          <div class="quiz-team__body">
+            <div class="quiz-team__column quiz-team__column--members">
+              <div class="quiz-team__members-list">
+                @if (team.members; as members) {
+                  <ul>
+                    @for (member of members; track member.id) {
+                      <li class="quiz-member">
+                        <span class="quiz-member__name">
+                          {{ member.name }}
+                        </span>
+                        <button
+                          pButton
+                          type="button"
+                          class="quiz-team__member-remove"
+                          severity="danger"
+                          pTooltip="Удалить участника"
+                          (click)="removeMember(team.id, member.id)"
+                        >
+                          <span pButtonIcon class="pi pi-trash"></span>
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <div class="quiz-empty">Нет участников</div>
+                }
+              </div>
+
+              <div class="quiz-team__members-new">
+                <input
+                  pInputText
+                  type="text"
+                  [ngModel]="newMemberNameByTeamId.get(team.id) || ''"
+                  (ngModelChange)="
+                    newMemberNameByTeamId.set(team.id, $event)
+                  "
+                  placeholder="Имя участника"
+                />
+                <button
+                  pButton
+                  type="button"
+                  (click)="addMember(team.id)"
+                >
+                  Добавить участника
+                </button>
+              </div>
+            </div>
+
+            <div class="quiz-team__column quiz-team__column--controls">
+              <div class="quiz-team__manual-score">
+                <p-inputNumber
+                  [ngModel]="manualDeltaByTeamId.get(team.id) ?? null"
+                  (ngModelChange)="
+                    manualDeltaByTeamId.set(team.id, $event)
+                  "
+                  placeholder="Δ баллов"
+                  [min]="0"
+                ></p-inputNumber>
+                <button
+                  pButton
+                  type="button"
+                  class="quiz-team__manual-bonus"
+                  severity="success"
+                  (click)="applyManualBonus(team.id)"
+                >
+                  +
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  class="quiz-team__manual-penalty"
+                  severity="danger"
+                  (click)="applyManualPenalty(team.id)"
+                >
+                  -
+                </button>
+              </div>
+            </div>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+    }
+  </p-accordion>
+</div>

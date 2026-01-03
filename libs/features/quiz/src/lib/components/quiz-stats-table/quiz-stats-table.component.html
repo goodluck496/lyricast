@@ -1,0 +1,27 @@
+<ng-container *ngIf="teams?.length; else noTeams">
+  <table [ngClass]="tableClass">
+    <thead>
+      <tr>
+        <th>Команда</th>
+        <th>Баллы</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let team of teams; index as i; trackBy: trackByTeam"
+        [ngClass]="
+          highlightFirstPositive && i === 0 && (team.score ?? 0) > 0 && !!winnerRowClass
+            ? winnerRowClass
+            : ''
+        "
+      >
+        <td>{{ team.name }}</td>
+        <td>{{ team.score ?? 0 }}</td>
+      </tr>
+    </tbody>
+  </table>
+</ng-container>
+
+<ng-template #noTeams>
+  <div class="quiz-stats-table__empty">Нет команд</div>
+</ng-template>

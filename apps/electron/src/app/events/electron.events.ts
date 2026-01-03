@@ -147,6 +147,7 @@ ipcMain.handle(ElectronActionEvents.SAVE_SETTINGS, async (_event, settings) => {
   await fs.promises.writeFile(file, JSON.stringify(settings, null, 2), 'utf-8');
 });
 
+//
 // todo УДАЛИТЬ т.к. неудобно использовать "голые" воркеры оч сложно подключать к ним какие-то фреймворки
 //
 // const pool = new FileWorkerPool({ threads: 2 });

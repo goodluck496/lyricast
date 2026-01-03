@@ -1,0 +1,156 @@
+<div class="quiz-question-editor" [attr.data-question-id]="question.id">
+  <div class="quiz-question-editor__badge-row">
+    <div class="quiz-question-editor__badge" *ngIf="question.solved">
+      Отвечен
+    </div>
+    <div
+      class="quiz-question-editor__badge quiz-question-editor__badge--burned"
+      *ngIf="!question.solved && question.burned"
+    >
+      Сгорел
+    </div>
+  </div>
+
+  <div class="quiz-question-editor__row">
+    <p-floatlabel>
+      <textarea
+        pTextarea
+        rows="3"
+        [ngModel]="question.text"
+        (ngModelChange)="onUpdateField('text', $event)"
+        id="question-text-{{ question.id }}"
+      ></textarea>
+      <label for="question-text-{{ question.id }}">Текст вопроса</label>
+    </p-floatlabel>
+  </div>
+
+  <div
+    class="quiz-question-editor__row"
+    *ngIf="(question.type || 'normal') !== 'bonus'"
+  >
+    <p-floatlabel>
+      <textarea
+        pTextarea
+        rows="2"
+        [ngModel]="question.answer"
+        (ngModelChange)="onUpdateField('answer', $event)"
+        [disabled]="(question.type || 'normal') === 'penalty'"
+        id="question-answer-{{ question.id }}"
+      ></textarea>
+      <label for="question-answer-{{ question.id }}">Ответ</label>
+    </p-floatlabel>
+  </div>
+
+  <div class="quiz-question-editor__row quiz-question-editor__row--types">
+    <p-floatlabel>
+      <label for="question-points-{{ question.id }}">Тип вопроса</label>
+
+    </p-floatlabel>
+      <p-selectButton
+        [options]="questionTypeOptions"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="question.type || 'normal'"
+        (ngModelChange)="onTypeChange($event)"
+      ></p-selectButton>
+      <ng-container *ngIf="(question.type || 'normal') === 'penalty'">
+        <p-selectButton
+          [options]="penaltyModeOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="question.penaltyMode || 'subtract'"
+          (ngModelChange)="onUpdateField('penaltyMode', $event)"
+        ></p-selectButton>
+        <div class="quiz-question-editor__type-hint">
+          Этот вопрос штрафной: на экране он сразу будет как при истечении времени.
+        </div>
+      </ng-container>
+
+  </div>
+
+  <div class="quiz-question-editor__row quiz-question-editor__row--meta">
+    <div class="quiz-question-editor__meta-field">
+      <p-floatlabel>
+        <p-inputNumber
+          [ngModel]="question.points"
+          (ngModelChange)="onUpdateField('points', $event)"
+          inputId="question-points-{{ question.id }}"
+          [min]="0"
+        ></p-inputNumber>
+        <label for="question-points-{{ question.id }}">Очки</label>
+      </p-floatlabel>
+    </div>
+    <div class="quiz-question-editor__meta-field">
+      <p-floatlabel>
+        <p-inputNumber
+          [ngModel]="question.seconds"
+          (ngModelChange)="onUpdateField('seconds', $event)"
+          inputId="question-seconds-{{ question.id }}"
+          [min]="5"
+        ></p-inputNumber>
+        <label for="question-seconds-{{ question.id }}">Секунды</label>
+      </p-floatlabel>
+    </div>
+  </div>
+
+  <div class="quiz-question-editor__row quiz-question-editor__row--buttons">
+    <button
+      pButton
+      type="button"
+      class="quiz-question__lock"
+      severity="warn"
+      pTooltip="Вопрос сгорел, больше нельзя на него отвечать"
+      (click)="toggleLock.emit()"
+    >
+      @if(question.burned) {
+        <span pButtonIcon class="pi pi-lock"></span>
+      } @else {
+        <span pButtonIcon class="pi pi-lock-open"></span>
+      }
+
+    </button>
+    <button
+      pButton
+      type="button"
+      class="quiz-question__solved"
+      [severity]="question.solved ? 'success' : undefined"
+      pTooltip="На вопрос уже отвечали"
+      (click)="toggleSolved.emit()"
+    >
+      @if(question.solved) {
+        <span pButtonIcon class="pi pi-check-circle"></span>
+      } @else {
+        <span pButtonIcon class="pi pi-circle"></span>
+      }
+    </button>
+    <button
+      pButton
+      type="button"
+      class="quiz-question__cast"
+      pTooltip="Показать на экране"
+      [disabled]="question.solved || question.burned"
+      (click)="showQuestion.emit()">
+      <span pButtonIcon class="pi pi-play"></span>
+    </button>
+    <button
+      pButton
+      type="button"
+      severity="info"
+      class="quiz-question__cast"
+      [disabled]="(question.type || 'normal') === 'bonus' || (question.type || 'normal') === 'penalty'"
+      (click)="showAnswer.emit()"
+    >
+      Ответ
+    </button>
+    <button
+      pButton
+      type="button"
+      class="quiz-question__remove"
+      pTooltip="Удалить"
+      severity="danger"
+      (click)="remove.emit($event)"
+    >
+      <span pButtonIcon class="pi pi-trash"></span>
+    </button>
+  </div>
+</div>

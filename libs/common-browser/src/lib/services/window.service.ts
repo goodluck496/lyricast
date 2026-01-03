@@ -38,6 +38,8 @@ export class WindowService {
           onAppUpdateStatus: (cb: (status: any) => void) => void 0,
           loadUserSettings: () => Promise.resolve(null),
           saveUserSettings: () => Promise.resolve(void 0),
+          loadQuizState: () => Promise.resolve(null),
+          saveQuizState: () => Promise.resolve(void 0),
           platform: '',
         };
   }

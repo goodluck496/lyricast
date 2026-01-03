@@ -107,6 +107,12 @@ export class MainComponent implements OnInit {
       visible: true,
     },
     {
+      routerLink: ['./', Pages.QUIZ_FEATURE, Pages.QUIZ],
+      label: PageTitlesMap.get(Pages.QUIZ) ?? 'Викторина',
+      icon: 'grid',
+      visible: true,
+    },
+    {
       routerLink: ['./', Pages.SETTINGS],
       label: PageTitlesMap.get(Pages.SETTINGS) ?? Pages.SETTINGS,
       icon: 'control',

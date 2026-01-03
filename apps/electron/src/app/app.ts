@@ -149,6 +149,7 @@ export default class App {
       urlObject = new URL(`http://localhost:${App.fileServerPort}`);
     }
 
+
     const openedWindow = App.openedWindows[windowType];
     openedWindow.loadURL(urlObject.href).then(() => {
       if (windowType === AppWindowTypes.MAIN && !environment.production) {
@@ -184,8 +185,8 @@ export default class App {
           App.openedWindows.MAIN.focus();
 
           if (!environment.production) {
-            // открываем devTools для отладки
-            // App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
+            // открываем devTools для отладки//
+            App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
           }
 
           if (App.openedWindows.MAIN.isFocused()) {

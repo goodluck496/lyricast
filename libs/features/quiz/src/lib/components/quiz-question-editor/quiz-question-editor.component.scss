@@ -1,0 +1,84 @@
+:host {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+}
+
+.quiz-question-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+// Временная подсветка вопроса при переходе "К вопросу"
+.quiz-question--highlight {
+  outline: 2px solid var(--primary-color, #3b82f6);
+  outline-offset: 2px;
+  background-color: rgba(59, 130, 246, 0.08);
+  transition: background-color 0.3s ease;
+}
+
+.quiz-question-editor__badge-row {
+  min-height: 1.5rem;
+}
+
+.quiz-question-editor__badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background-color: #16a34a22;
+  color: #16a34a;
+  font-size: 0.75rem;
+}
+
+.quiz-question-editor__badge--burned {
+  background-color: #b91c1c22;
+  color: #b91c1c;
+}
+
+.quiz-question-editor__row {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.quiz-question-editor__row > p-floatLabel,
+.quiz-question-editor__row > .p-float-label,
+.quiz-question-editor__row textarea[pTextarea] {
+  width: 100%;
+  max-width: 100%;
+  min-height: 32px;
+  max-height: 128px;
+}
+
+.quiz-question-editor__row--types {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.quiz-question-editor__type-hint {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #b91c1c; /* красный, но не кричащий */
+}
+
+.quiz-question-editor__row--meta {
+  align-items: center;
+}
+
+.quiz-question-editor__meta-field {
+  flex: 1 1 0;
+}
+
+.quiz-question-editor__row--buttons {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.quiz-question__lock,
+.quiz-question__solved,
+.quiz-question__cast,
+.quiz-question__remove {
+  margin-right: 0.25rem;
+}

@@ -22,6 +22,11 @@ export const WORKER_SPECS = [
     rootApiPath: 'assets',
     distSubdir: 'asset-service',
   },
+  {
+    name: 'quiz',
+    rootApiPath: 'quiz',
+    distSubdir: 'quiz-service',
+  },
 ] satisfies ReadonlyArray<WorkerSpec>;
 
 export type WorkerName = (typeof WORKER_SPECS)[number]['name'];

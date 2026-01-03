@@ -1,0 +1,133 @@
+<lyri-page-container [pagePath]="[Pages.MAIN, Pages.QUIZ_FEATURE, Pages.QUIZ]">
+  <ng-container page-content>
+    <p-toast position="bottom-center"></p-toast>
+    <div class="quiz-loading-overlay" *ngIf="isLoading">
+      <p-progress-spinner
+        strokeWidth="4"
+      ></p-progress-spinner>
+    </div>
+    <div class="quiz-page" *ngIf="!isLoading">
+      <ng-container *ngIf="hasGameState; else noQuizSelected">
+        <!-- Внешний вертикальный сплиттер: сверху команды/вопросы, снизу интерактивная таблица -->
+        <p-splitter
+          style="width: 100%; height: 100%"
+          layout="vertical"
+          [panelSizes]="[70, 30]"
+        >
+          <ng-template pTemplate="panel">
+            <!-- Внутренний горизонтальный сплиттер: слева команды, справа темы/вопросы -->
+            <p-splitter style="width: 100%; height: 100%" [panelSizes]="[50, 50]">
+              <ng-template pTemplate="panel">
+                <ng-scrollbar style="width: 100%; height: 100%">
+                  <lyri-quiz-teams-panel></lyri-quiz-teams-panel>
+                </ng-scrollbar>
+              </ng-template>
+
+              <ng-template pTemplate="panel">
+                <ng-scrollbar style="width: 100%; height: 100%">
+                  <lyri-quiz-topics-panel></lyri-quiz-topics-panel>
+                </ng-scrollbar>
+              </ng-template>
+            </p-splitter>
+          </ng-template>
+
+          <ng-template pTemplate="panel">
+            <!-- Нижняя область: интерактивная таблица вопросов на всю ширину -->
+            <div class="quiz-bottom-table">
+              <p-contextMenu
+                #quizTableCm
+                [model]="quizTableMenuItems"
+              ></p-contextMenu>
+
+              <table class="quiz-bottom-table__table">
+                <thead>
+                <tr>
+                  <th
+                    class="quiz-bottom-table__th quiz-bottom-table__th--topic"
+                  >
+                    Тема вопросов
+                  </th>
+                  <th class="quiz-bottom-table__th" colspan="5">Баллы</th>
+                </tr>
+                <tr class="quiz-bottom-table__subheader">
+                  <th></th>
+                  <th *ngFor="let col of [1, 2, 3, 4, 5]">{{ col }}</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr *ngFor="let topic of topics">
+                  <td class="quiz-bottom-table__topic-cell">
+                    {{ topic.title }}
+                  </td>
+                  <td
+                    class="quiz-bottom-table__points-cell"
+                    *ngFor="let i of [0, 1, 2, 3, 4]"
+                    [ngClass]="{
+                      'quiz-bottom-table__points-cell--active':
+                        activeTopicId === topic.id &&
+                        topic.questions[i] &&
+                        topic.questions[i].id === activeQuestionId,
+                      'quiz-bottom-table__points-cell--solved':
+                        topic.questions[i] && topic.questions[i].solved,
+                      'quiz-bottom-table__points-cell--wrong':
+                        topic.questions[i] && topic.questions[i].burned
+                    }"
+                    (contextmenu)="
+                      topic.questions[i]?.id
+                        ? onPointsCellContextMenu(
+                            $event,
+                            topic.id,
+                            topic.questions[i].id
+                          )
+                        : null
+                    "
+                  >
+                    <ng-container *ngIf="topic.questions[i] as q">
+                      <span class="quiz-bottom-table__points-value">
+                        {{ q.points }}
+                      </span>
+                      <i
+                        *ngIf="(q.type || 'normal') === 'bonus'"
+                        class="pi pi-star quiz-bottom-table__icon quiz-bottom-table__icon--bonus"
+                        pTooltip="Бонусный вопрос"
+                      ></i>
+                      <i
+                        *ngIf="(q.type || 'normal') === 'penalty'"
+                        class="pi pi-minus-circle quiz-bottom-table__icon quiz-bottom-table__icon--penalty"
+                        pTooltip="Штрафной вопрос"
+                      ></i>
+                    </ng-container>
+                  </td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </ng-template>
+        </p-splitter>
+      </ng-container>
+      <ng-template #noQuizSelected>
+        <div class="quiz-empty quiz-empty--page">
+          <div>
+            <div>
+              Выберите викторину
+            </div>
+            <div class="quiz-empty__selector">
+              <lyri-quiz-page-sidebar [selectOnly]="true"></lyri-quiz-page-sidebar>
+            </div>
+          </div>
+        </div>
+      </ng-template>
+    </div>
+  </ng-container>
+
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR">
+    @if (hasGameState) {
+      <lyri-quiz-page-sidebar />
+    }
+
+  </ng-template>
+
+
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER"></ng-template>
+  <p-confirmpopup />
+</lyri-page-container>

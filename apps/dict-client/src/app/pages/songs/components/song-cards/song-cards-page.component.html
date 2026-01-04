@@ -13,6 +13,32 @@
         </div>
       }
 
+      @if (db.version) {
+        <div class="db-card__version-badge">
+          <p-badge 
+            [value]="'v' + db.version" 
+            severity="info" 
+            size="small"
+            [pTooltip]="versionTooltipTmpl"
+            tooltipPosition="top"
+          ></p-badge>
+          <ng-template #versionTooltipTmpl>
+            <div class="version-tooltip-content">
+              @if (db.updatedAt) {
+                <div class="version-tooltip-line">
+                  Обновлено: {{ formatDate(db.updatedAt) }}
+                </div>
+              }
+              @if (db.updatedBy) {
+                <div class="version-tooltip-line">
+                  Пользователь: {{ db.updatedBy }}
+                </div>
+              }
+            </div>
+          </ng-template>
+        </div>
+      }
+
       <div class="db-card__content">
         <h3 class="db-card__title">
           {{ db.title || db.db }}

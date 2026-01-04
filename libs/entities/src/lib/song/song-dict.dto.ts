@@ -15,6 +15,12 @@ export interface SongDatabaseInfoDto {
   songCount?: number;
   /** Обложка в формате data:URL */
   coverImage?: string;
+  /** Версия справочника */
+  version?: number;
+  /** Email пользователя, который последним обновил справочник */
+  updatedBy?: string;
+  /** Дата последнего обновления справочника (ISO) */
+  updatedAt?: string;
 }
 
 /**

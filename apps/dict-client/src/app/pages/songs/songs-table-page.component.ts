@@ -2,18 +2,13 @@ import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { TableModule, TablePageEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { AccordionModule } from 'primeng/accordion';
-import { FloatLabelModule } from 'primeng/floatlabel';
-import { InputTextModule } from 'primeng/inputtext';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { NgScrollbarModule } from 'ngx-scrollbar';
-
-import { FormsModule } from '@angular/forms';
-import { ISong, Lyric, LyricLine, LyricTypeEnum } from '@lyri-cast/entities';
+import { BadgeModule } from 'primeng/badge';
+import { TooltipModule } from 'primeng/tooltip';
+import { ISong, SongDatabaseInfoDto } from '@lyri-cast/entities';
 import { SongsDictionaryApiService } from '@lyri-cast/data-access-dictionaries';
-import { Textarea } from 'primeng/textarea';
-import { debounceTime } from 'rxjs';
-import { ProgressBar } from 'primeng/progressbar';
+import { SkeletonModule } from 'primeng/skeleton';
+
+import { SongEditorSidebarComponent } from './components/song-editor-sidebar/song-editor-sidebar.component';
 
 @Component({
   standalone: true,
@@ -21,14 +16,10 @@ import { ProgressBar } from 'primeng/progressbar';
   imports: [
     TableModule,
     ButtonModule,
-    AccordionModule,
-    FloatLabelModule,
-    InputTextModule,
-    ProgressSpinnerModule,
-    NgScrollbarModule,
-    FormsModule,
-    Textarea,
-    ProgressBar,
+    BadgeModule,
+    TooltipModule,
+    SkeletonModule,
+    SongEditorSidebarComponent,
   ],
   templateUrl: './songs-table-page.component.html',
   styleUrl: './songs-table-page.component.scss',
@@ -40,20 +31,67 @@ export class SongsTablePageComponent implements OnInit {
   dbId!: string;
   songs: ISong[] = [];
 
+  currentDb: SongDatabaseInfoDto | null = null;
+
   totalRecords = 0;
   rows = 50;
 
   drawerVisible = false;
-  editingSong: ISong | null = null;
-  isNew = false;
-  isLoading = false;
+  selectedSongId: string | null = null;
 
-  // значение активной панели аккордеона (uniqId куплета)
-  activeLyricValue: string | null = null;
+  isEditingRow(song: ISong): boolean {
+    if (!this.selectedSongId) {
+      return false;
+    }
+
+    return String(song.id ?? song.number) === this.selectedSongId;
+  }
 
   ngOnInit(): void {
     this.dbId = this.route.snapshot.paramMap.get('dbId')!;
+    this.loadDbMeta();
     this.loadSongs(1, this.rows);
+  }
+
+  private loadDbMeta(): void {
+    this.api.getSongDatabases().subscribe((dbs) => {
+      this.currentDb = dbs.find((d) => d.db === this.dbId) ?? null;
+    });
+  }
+
+  private saveBlob(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  downloadSqlite(): void {
+    this.api.downloadDb(this.dbId).subscribe((blob) => {
+      const safeName = (
+        this.currentDb?.title ||
+        this.currentDb?.db ||
+        this.dbId
+      ).replace(/\s+/g, '_');
+      this.saveBlob(blob, `${safeName}.sqlite`);
+    });
+  }
+
+  downloadJson(): void {
+    this.api.exportBook(this.dbId).subscribe((res) => {
+      const safeName = (
+        this.currentDb?.title ||
+        this.currentDb?.db ||
+        this.dbId
+      ).replace(/\s+/g, '_');
+      const content = JSON.stringify(res.data, null, 2);
+      const blob = new Blob([content], {
+        type: 'application/json;charset=utf-8',
+      });
+      this.saveBlob(blob, `${safeName}.json`);
+    });
   }
 
   loadSongs(page: number, pageSize: number): void {
@@ -67,40 +105,13 @@ export class SongsTablePageComponent implements OnInit {
   }
 
   createSong(): void {
-    this.isNew = true;
-    this.editingSong = this.api.createEmptySong();
     this.drawerVisible = true;
+    this.selectedSongId = null;
   }
 
   editSong(song: ISong): void {
-    this.isNew = false;
     this.drawerVisible = true;
-    this.editingSong = null;
-
-    // здесь предполагаем, что song.number совпадает с songId на сервере
-    this.api.getSong(this.dbId, String(song.number)).subscribe((fullSong) => {
-      this.editingSong = fullSong;
-
-      // по умолчанию открываем первый куплет, если он есть
-      this.activeLyricValue =
-        fullSong.lyrics && fullSong.lyrics.length > 0
-          ? fullSong.lyrics[0].uniqId
-          : null;
-    });
-  }
-
-  saveSong(): void {
-    if (!this.editingSong) return;
-    this.isLoading = true;
-    this.api
-      .saveSong(this.dbId, this.editingSong)
-      .pipe(debounceTime(300))
-      .subscribe(() => {
-        // this.drawerVisible = false;
-        // this.editingSong = null;
-        this.isLoading = false;
-        this.loadSongs(1, this.rows);
-      });
+    this.selectedSongId = String(song.id ?? song.number);
   }
 
   onPageChange(event: TablePageEvent): void {
@@ -112,64 +123,21 @@ export class SongsTablePageComponent implements OnInit {
     this.loadSongs(page, event.rows ?? this.rows);
   }
 
-  addLyric(): void {
-    if (!this.editingSong) return;
-
-    if (!this.editingSong.lyrics) {
-      this.editingSong.lyrics = [];
-    }
-
-    const newLyric: Lyric = {
-      songId: '',
-      uniqId: `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      sectionTitle: '',
-      type: LyricTypeEnum.COUPLET,
-      splitLinesCount: 1,
-      lines: [
-        {
-          id: undefined,
-          rangeIndex: '0-0',
-          index: 0,
-          globalSongIndex: 0,
-          text: '',
-        },
-      ],
-    };
-
-    this.editingSong.lyrics = [...this.editingSong.lyrics, newLyric];
+  onSidebarSaved(): void {
+    this.loadSongs(1, this.rows);
+    this.loadDbMeta(); // Обновляем метаданные для получения новой версии и счетчика
   }
 
-  addLine(lyric: Lyric): void {
-    if (!lyric.lines) {
-      lyric.lines = [];
-    }
-    const idx = lyric.lines.length;
-    const newLine: LyricLine = {
-      id: undefined,
-      rangeIndex: `${idx}-${idx}`,
-      index: idx,
-      globalSongIndex: idx,
-      text: '',
-    };
-
-    lyric.lines = [...lyric.lines, newLine];
+  onSidebarClosed(): void {
+    this.drawerVisible = false;
+    this.selectedSongId = null;
   }
 
-  removeLine(lyric: Lyric, index: number): void {
-    if (!lyric.lines || index < 0 || index >= lyric.lines.length) {
-      return;
-    }
-
-    const lines = [...lyric.lines];
-    lines.splice(index, 1);
-    lyric.lines = lines;
-  }
-
-  removeLyric(index: number): void {
-    if (!this.editingSong || !this.editingSong.lyrics) return;
-
-    const lyrics = [...this.editingSong.lyrics];
-    lyrics.splice(index, 1);
-    this.editingSong.lyrics = lyrics;
+  formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return `${date.toLocaleDateString('ru-RU')} ${date.toLocaleTimeString(
+      'ru-RU',
+      { hour: '2-digit', minute: '2-digit' }
+    )}`;
   }
 }

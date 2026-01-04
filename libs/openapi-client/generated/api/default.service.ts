@@ -31,9 +31,19 @@ import { ApiPhpActionSongSavePost200Response } from '../model/apiPhpActionSongSa
 // @ts-ignore
 import { AuthResponse } from '../model/authResponse';
 // @ts-ignore
+import { BookVersionsCheckRequest } from '../model/bookVersionsCheckRequest';
+// @ts-ignore
+import { BookVersionsCheckResponse } from '../model/bookVersionsCheckResponse';
+// @ts-ignore
 import { SongSaveRequest } from '../model/songSaveRequest';
 // @ts-ignore
 import { SongSearchResponse } from '../model/songSearchResponse';
+// @ts-ignore
+import { SqliteCreatorPhpActionExportBookGet200Response } from '../model/sqliteCreatorPhpActionExportBookGet200Response';
+// @ts-ignore
+import { SqliteCreatorPhpActionExportBookGet400Response } from '../model/sqliteCreatorPhpActionExportBookGet400Response';
+// @ts-ignore
+import { SqliteCreatorPhpActionExportBookGet404Response } from '../model/sqliteCreatorPhpActionExportBookGet404Response';
 
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
@@ -43,12 +53,15 @@ import {
     DefaultServiceInterface,
     ApiPhpGetRequestParams,
     ApiPhpactionauthLoginPostRequestParams,
+    ApiPhpactionbookVersionsCheckPostRequestParams,
     ApiPhpactiondbDeletePostRequestParams,
     ApiPhpactiondownloadDbGetRequestParams,
     ApiPhpactionsongDeletePostRequestParams,
     ApiPhpactionsongGetGetRequestParams,
     ApiPhpactionsongSavePostRequestParams,
-    ApiPhpactionsongSearchGetRequestParams
+    ApiPhpactionsongSearchGetRequestParams,
+    SqliteCreatorPhpactiondownloadGetRequestParams,
+    SqliteCreatorPhpactionexportBookGetRequestParams
 } from './default.serviceInterface';
 
 
@@ -200,6 +213,90 @@ export class DefaultService extends BaseService implements DefaultServiceInterfa
             {
                 context: localVarHttpContext,
                 body: apiPhpActionAuthLoginPostRequest,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * Проверить, какие справочники (книги) свежее на сервере
+     * Клиент присылает массив книг (song_books.file_key) и их локальных версий. Сервер возвращает список книг, у которых версия на сервере больше. Для каждой такой книги возвращается ссылка для скачивания (экспорт в JSON). 
+     * @endpoint post /api.php?action=book.versions.check
+     * @param requestParameters
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<BookVersionsCheckResponse>;
+    public apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<BookVersionsCheckResponse>>;
+    public apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<BookVersionsCheckResponse>>;
+    public apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        const bookVersionsCheckRequest = requestParameters?.bookVersionsCheckRequest;
+        if (bookVersionsCheckRequest === null || bookVersionsCheckRequest === undefined) {
+            throw new Error('Required parameter bookVersionsCheckRequest was null or undefined when calling apiPhpactionbookVersionsCheckPost.');
+        }
+        const db = requestParameters?.db;
+
+        let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'db',
+            <any>db,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (bearerAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('bearerAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'application/json'
+        ];
+        const httpContentTypeSelected: string | undefined = this.configuration.selectHeaderContentType(consumes);
+        if (httpContentTypeSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Content-Type', httpContentTypeSelected);
+        }
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/api.php?action=book.versions.check`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<BookVersionsCheckResponse>('post', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                body: bookVersionsCheckRequest,
+                params: localVarQueryParameters.toHttpParams(),
                 responseType: <any>responseType_,
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,
@@ -826,6 +923,144 @@ export class DefaultService extends BaseService implements DefaultServiceInterfa
         let localVarPath = `/api.php?action=song.search`;
         const { basePath, withCredentials } = this.configuration;
         return this.httpClient.request<SongSearchResponse>('get', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                params: localVarQueryParameters.toHttpParams(),
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * Скачать сырой SQLite-файл (экспорт .sqlite)
+     * @endpoint get /sqlite-creator.php?action=download
+     * @param requestParameters
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public sqliteCreatorPhpactiondownloadGet(requestParameters: SqliteCreatorPhpactiondownloadGetRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/octet-stream', context?: HttpContext, transferCache?: boolean}): Observable<Blob>;
+    public sqliteCreatorPhpactiondownloadGet(requestParameters: SqliteCreatorPhpactiondownloadGetRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/octet-stream', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Blob>>;
+    public sqliteCreatorPhpactiondownloadGet(requestParameters: SqliteCreatorPhpactiondownloadGetRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/octet-stream', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Blob>>;
+    public sqliteCreatorPhpactiondownloadGet(requestParameters: SqliteCreatorPhpactiondownloadGetRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/octet-stream', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        const db = requestParameters?.db;
+        if (db === null || db === undefined) {
+            throw new Error('Required parameter db was null or undefined when calling sqliteCreatorPhpactiondownloadGet.');
+        }
+
+        let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'db',
+            <any>db,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        let localVarHeaders = this.defaultHeaders;
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/octet-stream'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let localVarPath = `/sqlite-creator.php?action=download`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request('get', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                params: localVarQueryParameters.toHttpParams(),
+                responseType: "blob",
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * Экспорт книги песен в JSON
+     * Возвращает структуру ISongBook на основе SQLite-базы. Если параметр &#x60;fileKey&#x60; не указан, а в БД только одна книга, она будет выбрана автоматически. Иначе &#x60;fileKey&#x60; обязателен. 
+     * @endpoint get /sqlite-creator.php?action=exportBook
+     * @param requestParameters
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<SqliteCreatorPhpActionExportBookGet200Response>;
+    public sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<SqliteCreatorPhpActionExportBookGet200Response>>;
+    public sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<SqliteCreatorPhpActionExportBookGet200Response>>;
+    public sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        const db = requestParameters?.db;
+        if (db === null || db === undefined) {
+            throw new Error('Required parameter db was null or undefined when calling sqliteCreatorPhpactionexportBookGet.');
+        }
+        const fileKey = requestParameters?.fileKey;
+
+        let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'db',
+            <any>db,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'fileKey',
+            <any>fileKey,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        let localVarHeaders = this.defaultHeaders;
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/sqlite-creator.php?action=exportBook`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<SqliteCreatorPhpActionExportBookGet200Response>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 params: localVarQueryParameters.toHttpParams(),

@@ -9,8 +9,8 @@ export const appRoutes: Route[] = [
       {
         path: 'songs',
         loadComponent: () =>
-          import('./pages/songs/songs-dbs-page.component').then(
-            (c) => c.SongsDbsPageComponent
+          import('./pages/songs/components/song-cards/song-cards-page.component').then(
+            (c) => c.SongCardsPageComponent
           ),
       },
       {

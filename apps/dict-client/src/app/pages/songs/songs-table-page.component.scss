@@ -5,8 +5,65 @@
   height: 100%;
 }
 
+.songs-table-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 64px;
+}
+
+.songs-table-page__collection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.songs-table-page__collection-cover {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--surface-200, #e5e7eb);
+  flex: 0 0 auto;
+}
+
+.songs-table-page__collection-info {
+  min-width: 0;
+}
+
+.songs-table-page__collection-title {
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40vw;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.songs-table-page__collection-count {
+  color: var(--text-color-secondary, #6b7280);
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.songs-table-page__collection-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .songs-table {
   width: 100%;
+}
+
+.songs-table__row--editing > td {
+  background: var(--primary-50, rgba(59, 130, 246, 0.08));
 }
 
 .songs-table-page__content {
@@ -35,67 +92,12 @@
   display: block;
 }
 
-.songs-table-page__sidebar-loading {
+.version-tooltip-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding-top: 24px;
+  gap: 4px;
 }
 
-.songs-table-page__sidebar-inner {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.songs-table-page__sidebar-scroll {
-  flex: 1 1 auto;
-}
-
-.songs-table-page__sidebar-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--surface-border, #ddd);
-
-  position: relative;
-
-  &-loader {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-  }
-}
-
-
-.song-form__line {
-  position: relative;
-}
-
-.song-form__line--with-actions {
-  position: relative;
-}
-
-.song-form__line--with-actions .p-float-label {
-  display: block;
-  width: 100%;
-  padding-right: 40px; // место под иконку удаления
-}
-
-.song-form__line--with-actions .p-float-label textarea {
-  width: 100%;
-}
-
-.song-form__line-remove {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-}
-
-.song-form__lines > .p-button {
-  width: 100%;
-  margin-top: 8px;
+.version-tooltip-line {
+  white-space: nowrap;
 }

@@ -34,6 +34,18 @@ export interface RegistryItemMeta {
      */
     coverImage?: string | null;
     /**
+     * Версия книги (монотонно растёт при изменениях песен)
+     */
+    version?: number;
+    /**
+     * Email пользователя, который последним обновил книгу
+     */
+    updatedBy?: string | null;
+    /**
+     * Дата последнего обновления книги (ISO)
+     */
+    updatedAt?: string | null;
+    /**
      * Размер файла SQLite в байтах
      */
     size?: number;

@@ -1,0 +1,196 @@
+<p-confirmpopup></p-confirmpopup>
+
+<div class="songs-table-page__sidebar-inner">
+  <ng-scrollbar class="songs-table-page__sidebar-scroll">
+    @if (facade.isLoading) {
+      <div class="songs-table-page__sidebar-loading">
+        <p-progressSpinner styleClass="songs-table-page__spinner"></p-progressSpinner>
+        <p>Загрузка песни...</p>
+      </div>
+    }
+
+    @if (!facade.isLoading && facade.song) {
+      <h3>{{ facade.isNew ? 'Новая песня' : 'Редактирование песни' }}</h3>
+
+      <form>
+        <div class="song-form__grid">
+          <p-float-label>
+            <input
+              pInputText
+              id="number"
+              type="number"
+              [(ngModel)]="facade.song.number"
+              name="number"
+            />
+            <label for="number">Номер</label>
+          </p-float-label>
+
+          <p-float-label>
+            <input
+              pInputText
+              id="title"
+              type="text"
+              [(ngModel)]="facade.song.title"
+              name="title"
+            />
+            <label for="title">Название</label>
+          </p-float-label>
+
+          <p-float-label>
+            <input
+              pInputText
+              id="author"
+              type="text"
+              [(ngModel)]="facade.song.author"
+              name="author"
+            />
+            <label for="author">Автор</label>
+          </p-float-label>
+
+          <p-float-label>
+            <input
+              pInputText
+              id="key"
+              type="text"
+              [(ngModel)]="facade.song.key"
+              name="key"
+            />
+            <label for="key">Тональность (key)</label>
+          </p-float-label>
+
+          <p-float-label>
+            <input
+              pInputText
+              id="keySignature"
+              type="text"
+              [(ngModel)]="facade.song.keySignature"
+              name="keySignature"
+            />
+            <label for="keySignature">Подпись тональности</label>
+          </p-float-label>
+
+          <p-float-label>
+            <input
+              pInputText
+              id="ref"
+              type="text"
+              [(ngModel)]="facade.song.ref"
+              name="ref"
+            />
+            <label for="ref">Ссылка (ref)</label>
+          </p-float-label>
+
+          <p-float-label>
+            <input
+              pInputText
+              id="category"
+              type="text"
+              [(ngModel)]="facade.song.category"
+              name="category"
+            />
+            <label for="category">Категория</label>
+          </p-float-label>
+        </div>
+
+        <div class="song-form__sections">
+          <div class="song-form__sections-header">
+            <h4>Куплеты</h4>
+            <p-button
+              icon="pi pi-plus"
+              label="Добавить куплет"
+              size="small"
+              (onClick)="facade.addLyric()"
+            ></p-button>
+          </div>
+
+          <div
+            cdkDropList
+            [cdkDropListData]="facade.song.lyrics || []"
+            (cdkDropListDropped)="reorderLyrics($event)"
+          >
+            <p-accordion [(value)]="facade.activeLyricValue" [multiple]="false">
+              @for (lyric of (facade.song.lyrics || []); track lyric.uniqId; let i = $index) {
+                <p-accordion-panel [value]="lyric.uniqId" cdkDrag cdkDragLockAxis="y">
+                  <p-accordion-header>
+                    <span class="song-form__accordion-header">
+                      <span class="song-form__drag-handle" cdkDragHandle aria-label="Переместить">
+                        <i class="pi pi-bars"></i>
+                      </span>
+                      <span>{{ lyric.sectionTitle || ('Куплет ' + (i + 1)) }}</span>
+                    </span>
+                    <p-button
+                      icon="pi pi-trash"
+                      severity="danger"
+                      size="small"
+                      styleClass="song-form__delete-lyric-btn"
+                      (onClick)="confirmRemoveLyric(i, $event)"
+                    ></p-button>
+                  </p-accordion-header>
+
+                  <p-accordion-content>
+                    <div class="song-form__section">
+                      <div class="song-form__lines">
+                        <div class="song-form__line song-form__line--inline">
+                          <p-float-label style="flex: 1 1 auto;">
+                            <input
+                              pInputText
+                              [id]="'sectionTitle-' + lyric.uniqId"
+                              type="text"
+                              [(ngModel)]="lyric.sectionTitle"
+                              [name]="'sectionTitle-' + lyric.uniqId"
+                            />
+                            <label [for]="'sectionTitle-' + lyric.uniqId">Название блока</label>
+                          </p-float-label>
+
+                          <div style="flex: 0 0 180px;">
+                            <p-selectButton
+                              [options]="facade.lyricTypeOptions"
+                              optionLabel="label"
+                              optionValue="value"
+                              [ngModel]="lyric.type || facade.LyricTypeEnum.COUPLET"
+                              (ngModelChange)="facade.setLyricType(lyric, $event)"
+                              [id]="'sectionType-' + lyric.uniqId"
+                              [name]="'sectionType-' + lyric.uniqId"
+                            ></p-selectButton>
+                          </div>
+                        </div>
+
+                        <div class="song-form__line">
+                          <p-float-label>
+                            <textarea
+                              pInputTextarea
+                              [id]="'lyric-text-' + lyric.uniqId"
+                              rows="6"
+                              [ngModel]="facade.linesToText(lyric.lines)"
+                              (ngModelChange)="facade.updateLyricLinesFromText(lyric, $event)"
+                              [name]="'lyric-text-' + lyric.uniqId"
+                            ></textarea>
+                            <label [for]="'lyric-text-' + lyric.uniqId"
+                              >Текст блока (каждая строка с новой строки)</label
+                            >
+                          </p-float-label>
+                        </div>
+                      </div>
+                    </div>
+                  </p-accordion-content>
+                </p-accordion-panel>
+              }
+            </p-accordion>
+          </div>
+        </div>
+      </form>
+    }
+  </ng-scrollbar>
+
+  <div class="songs-table-page__sidebar-footer">
+    @if (facade.isSaving) {
+      <p-progress-bar
+        mode="indeterminate"
+        class="songs-table-page__sidebar-footer-loader"
+        [style]="{ height: '6px' }"
+      />
+    }
+    <p-button label="Сохранить" (onClick)="saveSong()" [disabled]="!facade.song"></p-button>
+    <p-button label="Закрыть" severity="secondary" (onClick)="close()"></p-button>
+  </div>
+</div>

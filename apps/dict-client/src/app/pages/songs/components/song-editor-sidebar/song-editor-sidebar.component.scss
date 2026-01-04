@@ -1,0 +1,99 @@
+.songs-table-page__sidebar-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-top: 24px;
+}
+
+.songs-table-page__sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.songs-table-page__sidebar-scroll {
+  flex: 1 1 auto;
+}
+
+.songs-table-page__sidebar-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--surface-border, #ddd);
+
+  position: relative;
+
+  &-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}
+
+.song-form__line {
+  position: relative;
+}
+
+.song-form__line--inline {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.song-form__accordion-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+}
+
+.song-form__drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  cursor: grab;
+}
+
+.song-form__drag-handle:active {
+  cursor: grabbing;
+}
+
+:host ::ng-deep .p-accordion .p-accordion-header-link {
+  display: flex;
+  align-items: center;
+}
+
+:host ::ng-deep .p-accordion .song-form__delete-lyric-btn {
+  margin-left: auto;
+  margin-right: 32px !important;
+}
+
+.song-form__line--with-actions {
+  position: relative;
+}
+
+.song-form__line--with-actions .p-float-label {
+  display: block;
+  width: 100%;
+  padding-right: 40px; // место под иконку удаления
+}
+
+.song-form__line--with-actions .p-float-label textarea {
+  width: 100%;
+}
+
+.song-form__line-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.song-form__lines > .p-button {
+  width: 100%;
+  margin-top: 8px;
+}

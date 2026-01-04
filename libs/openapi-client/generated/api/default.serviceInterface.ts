@@ -18,8 +18,13 @@ import { ApiPhpActionRegistryListGet200Response } from '../model/models';
 import { ApiPhpActionSongGetGet200Response } from '../model/models';
 import { ApiPhpActionSongSavePost200Response } from '../model/models';
 import { AuthResponse } from '../model/models';
+import { BookVersionsCheckRequest } from '../model/models';
+import { BookVersionsCheckResponse } from '../model/models';
 import { SongSaveRequest } from '../model/models';
 import { SongSearchResponse } from '../model/models';
+import { SqliteCreatorPhpActionExportBookGet200Response } from '../model/models';
+import { SqliteCreatorPhpActionExportBookGet400Response } from '../model/models';
+import { SqliteCreatorPhpActionExportBookGet404Response } from '../model/models';
 
 
 import { Configuration }                                     from '../configuration';
@@ -32,6 +37,11 @@ export interface ApiPhpGetRequestParams {
 
 export interface ApiPhpactionauthLoginPostRequestParams {
     apiPhpActionAuthLoginPostRequest: ApiPhpActionAuthLoginPostRequest;
+}
+
+export interface ApiPhpactionbookVersionsCheckPostRequestParams {
+    bookVersionsCheckRequest: BookVersionsCheckRequest;
+    db?: string;
 }
 
 export interface ApiPhpactiondbDeletePostRequestParams {
@@ -67,6 +77,15 @@ export interface ApiPhpactionsongSearchGetRequestParams {
     includeLyrics?: 0 | 1;
 }
 
+export interface SqliteCreatorPhpactiondownloadGetRequestParams {
+    db: string;
+}
+
+export interface SqliteCreatorPhpactionexportBookGetRequestParams {
+    db: string;
+    fileKey?: string;
+}
+
 
 export interface DefaultServiceInterface {
     defaultHeaders: HttpHeaders;
@@ -87,6 +106,14 @@ export interface DefaultServiceInterface {
 * @param requestParameters
      */
     apiPhpactionauthLoginPost(requestParameters: ApiPhpactionauthLoginPostRequestParams, extraHttpRequestParams?: any): Observable<AuthResponse>;
+
+    /**
+     * Проверить, какие справочники (книги) свежее на сервере
+     * Клиент присылает массив книг (song_books.file_key) и их локальных версий. Сервер возвращает список книг, у которых версия на сервере больше. Для каждой такой книги возвращается ссылка для скачивания (экспорт в JSON). 
+     * @endpoint post /api.php?action=book.versions.check
+* @param requestParameters
+     */
+    apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, extraHttpRequestParams?: any): Observable<BookVersionsCheckResponse>;
 
     /**
      * Удалить SQLite-файл и связанные служебные файлы
@@ -149,5 +176,21 @@ export interface DefaultServiceInterface {
 * @param requestParameters
      */
     apiPhpactionsongSearchGet(requestParameters: ApiPhpactionsongSearchGetRequestParams, extraHttpRequestParams?: any): Observable<SongSearchResponse>;
+
+    /**
+     * Скачать сырой SQLite-файл (экспорт .sqlite)
+     * 
+     * @endpoint get /sqlite-creator.php?action=download
+* @param requestParameters
+     */
+    sqliteCreatorPhpactiondownloadGet(requestParameters: SqliteCreatorPhpactiondownloadGetRequestParams, extraHttpRequestParams?: any): Observable<Blob>;
+
+    /**
+     * Экспорт книги песен в JSON
+     * Возвращает структуру ISongBook на основе SQLite-базы. Если параметр &#x60;fileKey&#x60; не указан, а в БД только одна книга, она будет выбрана автоматически. Иначе &#x60;fileKey&#x60; обязателен. 
+     * @endpoint get /sqlite-creator.php?action=exportBook
+* @param requestParameters
+     */
+    sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, extraHttpRequestParams?: any): Observable<SqliteCreatorPhpActionExportBookGet200Response>;
 
 }

@@ -4,11 +4,14 @@ import {
   HttpEvent,
   HttpHandler,
   HttpHandlerFn,
+  HttpContextToken,
   HttpRequest,
 } from '@angular/common/http';
 import { catchError, Observable, switchMap, throwError } from 'rxjs';
 import { AuthTokenStore } from './auth-token.store';
 import { AuthFlowService } from './auth-flow.service';
+
+const AUTH_RETRY_CONTEXT = new HttpContextToken<boolean>(() => false);
 
 function addAuthHeader(
   req: HttpRequest<unknown>,
@@ -27,13 +30,22 @@ function handleAuthError(
   req: HttpRequest<unknown>,
   next: HttpHandlerFn
 ): Observable<HttpEvent<unknown>> {
-  if (err instanceof HttpErrorResponse && err.status === 401) {
+  if (err instanceof HttpErrorResponse && [401, 403].includes(err.status)) {
     const tokenStore = inject(AuthTokenStore);
     const authFlow = inject(AuthFlowService);
+
+    if (req.context.get(AUTH_RETRY_CONTEXT)) {
+      tokenStore.clear();
+      return throwError(() => err);
+    }
+
     tokenStore.clear();
     return authFlow.getOrRequestToken().pipe(
       switchMap((newToken) => {
-        const authReq = addAuthHeader(req, newToken);
+        const authReq = addAuthHeader(
+          req.clone({ context: req.context.set(AUTH_RETRY_CONTEXT, true) }),
+          newToken
+        );
         return next(authReq);
       })
     );

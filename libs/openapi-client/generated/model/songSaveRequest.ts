@@ -15,9 +15,9 @@ export interface SongSaveRequest {
     bookFileKey: string;
     number: number;
     title: string;
-    songKey: string;
-    keySignature: string;
-    author: string;
+    songKey?: string;
+    keySignature?: string;
+    author?: string;
     ref?: string | null;
     category?: string | null;
     /**

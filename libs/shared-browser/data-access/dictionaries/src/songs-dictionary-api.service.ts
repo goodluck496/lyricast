@@ -9,6 +9,7 @@ import {
   LyricLine as ApiLyricLine,
   SongSaveRequest,
   SongSearchResponse,
+  SqliteCreatorPhpActionExportBookGet200Response,
 } from '@lyri-cast/openapi-client';
 import {
   ISong,
@@ -22,6 +23,7 @@ import {
   mapSongSearchResponseToDto,
   mapSongUnionToISong,
 } from './songs-dictionary.mappers';
+
 
 export interface SongSearchOptions {
   db: string;
@@ -138,6 +140,10 @@ export class SongsDictionaryApiService {
 
   downloadDb(db: string): Observable<Blob> {
     return this.api.apiPhpactiondownloadDbGet({ db });
+  }
+
+  exportBook(db: string, fileKey?: string): Observable<SqliteCreatorPhpActionExportBookGet200Response> {
+    return this.api.sqliteCreatorPhpactionexportBookGet({ db, fileKey });
   }
 
   createEmptySong(): ISong {

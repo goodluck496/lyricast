@@ -17,6 +17,8 @@ import Aura from '@primeuix/themes/aura';
 import { provideApi } from '@lyri-cast/openapi-client';
 import { authInterceptor, AUTH_OVERLAY_PORT } from '@lyri-cast/shared-browser/data-access/dictionaries';
 import { AuthOverlayService } from './auth/auth-overlay.service';
+import { MessageService } from 'primeng/api';
+import { apiErrorToastInterceptor } from './interceptors/api-error-toast.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -24,7 +26,10 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes, withHashLocation()),
-    provideHttpClient(withInterceptorsFromDi(), withInterceptors([authInterceptor])),
+    provideHttpClient(
+      withInterceptorsFromDi(),
+      withInterceptors([authInterceptor, apiErrorToastInterceptor])
+    ),
 
 
     providePrimeNG({
@@ -37,6 +42,8 @@ export const appConfig: ApplicationConfig = {
     }),
 
     provideApi('https://kantelers.ru/lyricast/api'),
+
+    MessageService,
 
     // {
     //   provide: HTTP_INTERCEPTORS,

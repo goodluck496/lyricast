@@ -14,6 +14,9 @@ export function mapRegistryItemToSongDatabaseInfoDto(item: RegistryItem): SongDa
     sizeBytes: typeof item.size === 'number' ? item.size : typeof meta.size === 'number' ? meta.size : undefined,
     songCount: typeof meta.songCount === 'number' ? meta.songCount : undefined,
     coverImage: typeof meta.coverImage === 'string' ? meta.coverImage : undefined,
+    version: typeof meta.version === 'number' ? meta.version : undefined,
+    updatedBy: typeof meta.updatedBy === 'string' ? meta.updatedBy : undefined,
+    updatedAt: typeof meta.updatedAt === 'string' ? meta.updatedAt : undefined,
   };
 }
 

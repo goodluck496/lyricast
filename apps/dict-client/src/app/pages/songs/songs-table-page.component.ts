@@ -81,16 +81,11 @@ export class SongsTablePageComponent implements OnInit {
 
   downloadJson(): void {
     this.api.exportBook(this.dbId).subscribe((res) => {
-      const safeName = (
-        this.currentDb?.title ||
-        this.currentDb?.db ||
-        this.dbId
-      ).replace(/\s+/g, '_');
-      const content = JSON.stringify(res.data, null, 2);
+      const content = JSON.stringify(res, null, 2);
       const blob = new Blob([content], {
         type: 'application/json;charset=utf-8',
       });
-      this.saveBlob(blob, `${safeName}.json`);
+      this.saveBlob(blob, `${res.header.bookKey}.songs.json`);
     });
   }
 

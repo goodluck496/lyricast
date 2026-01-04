@@ -131,7 +131,7 @@
                     <div class="song-form__section">
                       <div class="song-form__lines">
                         <div class="song-form__line song-form__line--inline">
-                          <p-float-label style="flex: 1 1 auto;">
+                          <p-float-label>
                             <input
                               pInputText
                               [id]="'sectionTitle-' + lyric.uniqId"
@@ -140,6 +140,18 @@
                               [name]="'sectionTitle-' + lyric.uniqId"
                             />
                             <label [for]="'sectionTitle-' + lyric.uniqId">Название блока</label>
+                          </p-float-label>
+
+                          <p-float-label class="song-form__split-field">
+                            <p-inputNumber
+                              [id]="'splitLinesCount-' + lyric.uniqId"
+                              [(ngModel)]="lyric.splitLinesCount"
+                              [name]="'splitLinesCount-' + lyric.uniqId"
+                              [min]="1"
+                              [showButtons]="true"
+                              inputId="splitLinesCount"
+                            />
+                            <label [for]="'splitLinesCount-' + lyric.uniqId">Сплит</label>
                           </p-float-label>
 
                           <div style="flex: 0 0 180px;">

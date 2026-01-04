@@ -7,6 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ConfirmationService } from 'primeng/api';
 import { FloatLabelModule } from 'primeng/floatlabel';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { ProgressBar } from 'primeng/progressbar';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -29,6 +30,7 @@ import { SongEditorSidebarFacade } from './song-editor-sidebar.facade';
     DragDropModule,
     FloatLabelModule,
     FormsModule,
+    InputNumberModule,
     InputTextModule,
     NgScrollbarModule,
     ProgressBar,

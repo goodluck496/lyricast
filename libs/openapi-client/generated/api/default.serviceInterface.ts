@@ -12,19 +12,19 @@ import { HttpHeaders }                                       from '@angular/comm
 import { Observable }                                        from 'rxjs';
 
 import { ApiPhpActionAuthLoginPostRequest } from '../model/models';
+import { ApiPhpActionBookVersionsCheckPost200Response } from '../model/models';
 import { ApiPhpActionDbDeletePost200Response } from '../model/models';
+import { ApiPhpActionExportBookGet400Response } from '../model/models';
+import { ApiPhpActionExportBookGet404Response } from '../model/models';
 import { ApiPhpActionPingGet200Response } from '../model/models';
 import { ApiPhpActionRegistryListGet200Response } from '../model/models';
 import { ApiPhpActionSongGetGet200Response } from '../model/models';
 import { ApiPhpActionSongSavePost200Response } from '../model/models';
 import { AuthResponse } from '../model/models';
 import { BookVersionsCheckRequest } from '../model/models';
-import { BookVersionsCheckResponse } from '../model/models';
+import { SongBookExport } from '../model/models';
 import { SongSaveRequest } from '../model/models';
 import { SongSearchResponse } from '../model/models';
-import { SqliteCreatorPhpActionExportBookGet200Response } from '../model/models';
-import { SqliteCreatorPhpActionExportBookGet400Response } from '../model/models';
-import { SqliteCreatorPhpActionExportBookGet404Response } from '../model/models';
 
 
 import { Configuration }                                     from '../configuration';
@@ -41,7 +41,6 @@ export interface ApiPhpactionauthLoginPostRequestParams {
 
 export interface ApiPhpactionbookVersionsCheckPostRequestParams {
     bookVersionsCheckRequest: BookVersionsCheckRequest;
-    db?: string;
 }
 
 export interface ApiPhpactiondbDeletePostRequestParams {
@@ -50,6 +49,11 @@ export interface ApiPhpactiondbDeletePostRequestParams {
 
 export interface ApiPhpactiondownloadDbGetRequestParams {
     db: string;
+}
+
+export interface ApiPhpactionexportBookGetRequestParams {
+    db?: string;
+    fileKey?: string;
 }
 
 export interface ApiPhpactionsongDeletePostRequestParams {
@@ -109,11 +113,11 @@ export interface DefaultServiceInterface {
 
     /**
      * Проверить, какие справочники (книги) свежее на сервере
-     * Клиент присылает массив книг (song_books.file_key) и их локальных версий. Сервер возвращает список книг, у которых версия на сервере больше. Для каждой такой книги возвращается ссылка для скачивания (экспорт в JSON). 
+     * Если в теле запроса не передан массив books или он пустой, возвращает все доступные справочники с их версиями. Иначе клиент присылает массив книг (song_books.file_key) и их локальных версий, а сервер возвращает список книг, у которых версия на сервере больше. Для каждой такой книги возвращается ссылка для скачивания (экспорт в JSON). 
      * @endpoint post /api.php?action=book.versions.check
 * @param requestParameters
      */
-    apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, extraHttpRequestParams?: any): Observable<BookVersionsCheckResponse>;
+    apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, extraHttpRequestParams?: any): Observable<ApiPhpActionBookVersionsCheckPost200Response>;
 
     /**
      * Удалить SQLite-файл и связанные служебные файлы
@@ -124,12 +128,20 @@ export interface DefaultServiceInterface {
     apiPhpactiondbDeletePost(requestParameters: ApiPhpactiondbDeletePostRequestParams, extraHttpRequestParams?: any): Observable<ApiPhpActionDbDeletePost200Response>;
 
     /**
-     * Скачать SQLite-файл
+     * Скачать SQLite-файл (требует авторизации)
      * 
      * @endpoint get /api.php?action=download.db
 * @param requestParameters
      */
     apiPhpactiondownloadDbGet(requestParameters: ApiPhpactiondownloadDbGetRequestParams, extraHttpRequestParams?: any): Observable<Blob>;
+
+    /**
+     * Экспорт книги песен в JSON (требует авторизации)
+     * Возвращает структуру ISongBook на основе SQLite-базы, включая метаданные книги. Требует авторизацию. Если параметр &#x60;fileKey&#x60; не указан, а в БД только одна книга, она будет выбрана автоматически. Иначе &#x60;fileKey&#x60; обязателен. 
+     * @endpoint get /api.php?action=exportBook
+* @param requestParameters
+     */
+    apiPhpactionexportBookGet(requestParameters: ApiPhpactionexportBookGetRequestParams, extraHttpRequestParams?: any): Observable<SongBookExport>;
 
     /**
      * Проверка доступности API
@@ -187,10 +199,10 @@ export interface DefaultServiceInterface {
 
     /**
      * Экспорт книги песен в JSON
-     * Возвращает структуру ISongBook на основе SQLite-базы. Если параметр &#x60;fileKey&#x60; не указан, а в БД только одна книга, она будет выбрана автоматически. Иначе &#x60;fileKey&#x60; обязателен. 
+     * Возвращает структуру ISongBook на основе SQLite-базы, включая метаданные книги. Если параметр &#x60;fileKey&#x60; не указан, а в БД только одна книга, она будет выбрана автоматически. Иначе &#x60;fileKey&#x60; обязателен. 
      * @endpoint get /sqlite-creator.php?action=exportBook
 * @param requestParameters
      */
-    sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, extraHttpRequestParams?: any): Observable<SqliteCreatorPhpActionExportBookGet200Response>;
+    sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, extraHttpRequestParams?: any): Observable<SongBookExport>;
 
 }

@@ -19,7 +19,13 @@ import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 // @ts-ignore
 import { ApiPhpActionAuthLoginPostRequest } from '../model/apiPhpActionAuthLoginPostRequest';
 // @ts-ignore
+import { ApiPhpActionBookVersionsCheckPost200Response } from '../model/apiPhpActionBookVersionsCheckPost200Response';
+// @ts-ignore
 import { ApiPhpActionDbDeletePost200Response } from '../model/apiPhpActionDbDeletePost200Response';
+// @ts-ignore
+import { ApiPhpActionExportBookGet400Response } from '../model/apiPhpActionExportBookGet400Response';
+// @ts-ignore
+import { ApiPhpActionExportBookGet404Response } from '../model/apiPhpActionExportBookGet404Response';
 // @ts-ignore
 import { ApiPhpActionPingGet200Response } from '../model/apiPhpActionPingGet200Response';
 // @ts-ignore
@@ -33,17 +39,11 @@ import { AuthResponse } from '../model/authResponse';
 // @ts-ignore
 import { BookVersionsCheckRequest } from '../model/bookVersionsCheckRequest';
 // @ts-ignore
-import { BookVersionsCheckResponse } from '../model/bookVersionsCheckResponse';
+import { SongBookExport } from '../model/songBookExport';
 // @ts-ignore
 import { SongSaveRequest } from '../model/songSaveRequest';
 // @ts-ignore
 import { SongSearchResponse } from '../model/songSearchResponse';
-// @ts-ignore
-import { SqliteCreatorPhpActionExportBookGet200Response } from '../model/sqliteCreatorPhpActionExportBookGet200Response';
-// @ts-ignore
-import { SqliteCreatorPhpActionExportBookGet400Response } from '../model/sqliteCreatorPhpActionExportBookGet400Response';
-// @ts-ignore
-import { SqliteCreatorPhpActionExportBookGet404Response } from '../model/sqliteCreatorPhpActionExportBookGet404Response';
 
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
@@ -56,6 +56,7 @@ import {
     ApiPhpactionbookVersionsCheckPostRequestParams,
     ApiPhpactiondbDeletePostRequestParams,
     ApiPhpactiondownloadDbGetRequestParams,
+    ApiPhpactionexportBookGetRequestParams,
     ApiPhpactionsongDeletePostRequestParams,
     ApiPhpactionsongGetGetRequestParams,
     ApiPhpactionsongSavePostRequestParams,
@@ -225,33 +226,21 @@ export class DefaultService extends BaseService implements DefaultServiceInterfa
 
     /**
      * Проверить, какие справочники (книги) свежее на сервере
-     * Клиент присылает массив книг (song_books.file_key) и их локальных версий. Сервер возвращает список книг, у которых версия на сервере больше. Для каждой такой книги возвращается ссылка для скачивания (экспорт в JSON). 
+     * Если в теле запроса не передан массив books или он пустой, возвращает все доступные справочники с их версиями. Иначе клиент присылает массив книг (song_books.file_key) и их локальных версий, а сервер возвращает список книг, у которых версия на сервере больше. Для каждой такой книги возвращается ссылка для скачивания (экспорт в JSON). 
      * @endpoint post /api.php?action=book.versions.check
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<BookVersionsCheckResponse>;
-    public apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<BookVersionsCheckResponse>>;
-    public apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<BookVersionsCheckResponse>>;
+    public apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<ApiPhpActionBookVersionsCheckPost200Response>;
+    public apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<ApiPhpActionBookVersionsCheckPost200Response>>;
+    public apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<ApiPhpActionBookVersionsCheckPost200Response>>;
     public apiPhpactionbookVersionsCheckPost(requestParameters: ApiPhpactionbookVersionsCheckPostRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         const bookVersionsCheckRequest = requestParameters?.bookVersionsCheckRequest;
         if (bookVersionsCheckRequest === null || bookVersionsCheckRequest === undefined) {
             throw new Error('Required parameter bookVersionsCheckRequest was null or undefined when calling apiPhpactionbookVersionsCheckPost.');
         }
-        const db = requestParameters?.db;
-
-        let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
-
-        localVarQueryParameters = this.addToHttpParams(
-            localVarQueryParameters,
-            'db',
-            <any>db,
-            QueryParamStyle.Form,
-            true,
-        );
-
 
         let localVarHeaders = this.defaultHeaders;
 
@@ -292,11 +281,10 @@ export class DefaultService extends BaseService implements DefaultServiceInterfa
 
         let localVarPath = `/api.php?action=book.versions.check`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<BookVersionsCheckResponse>('post', `${basePath}${localVarPath}`,
+        return this.httpClient.request<ApiPhpActionBookVersionsCheckPost200Response>('post', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 body: bookVersionsCheckRequest,
-                params: localVarQueryParameters.toHttpParams(),
                 responseType: <any>responseType_,
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,
@@ -388,7 +376,7 @@ export class DefaultService extends BaseService implements DefaultServiceInterfa
     }
 
     /**
-     * Скачать SQLite-файл
+     * Скачать SQLite-файл (требует авторизации)
      * @endpoint get /api.php?action=download.db
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
@@ -417,6 +405,9 @@ export class DefaultService extends BaseService implements DefaultServiceInterfa
 
         let localVarHeaders = this.defaultHeaders;
 
+        // authentication (bearerAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('bearerAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
         const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
             'application/octet-stream'
         ]);
@@ -436,6 +427,86 @@ export class DefaultService extends BaseService implements DefaultServiceInterfa
                 context: localVarHttpContext,
                 params: localVarQueryParameters.toHttpParams(),
                 responseType: "blob",
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * Экспорт книги песен в JSON (требует авторизации)
+     * Возвращает структуру ISongBook на основе SQLite-базы, включая метаданные книги. Требует авторизацию. Если параметр &#x60;fileKey&#x60; не указан, а в БД только одна книга, она будет выбрана автоматически. Иначе &#x60;fileKey&#x60; обязателен. 
+     * @endpoint get /api.php?action=exportBook
+     * @param requestParameters
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public apiPhpactionexportBookGet(requestParameters?: ApiPhpactionexportBookGetRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<SongBookExport>;
+    public apiPhpactionexportBookGet(requestParameters?: ApiPhpactionexportBookGetRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<SongBookExport>>;
+    public apiPhpactionexportBookGet(requestParameters?: ApiPhpactionexportBookGetRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<SongBookExport>>;
+    public apiPhpactionexportBookGet(requestParameters?: ApiPhpactionexportBookGetRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        const db = requestParameters?.db;
+        const fileKey = requestParameters?.fileKey;
+
+        let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'db',
+            <any>db,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'fileKey',
+            <any>fileKey,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (bearerAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('bearerAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/api.php?action=exportBook`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<SongBookExport>('get', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                params: localVarQueryParameters.toHttpParams(),
+                responseType: <any>responseType_,
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,
                 observe: observe,
@@ -996,16 +1067,16 @@ export class DefaultService extends BaseService implements DefaultServiceInterfa
 
     /**
      * Экспорт книги песен в JSON
-     * Возвращает структуру ISongBook на основе SQLite-базы. Если параметр &#x60;fileKey&#x60; не указан, а в БД только одна книга, она будет выбрана автоматически. Иначе &#x60;fileKey&#x60; обязателен. 
+     * Возвращает структуру ISongBook на основе SQLite-базы, включая метаданные книги. Если параметр &#x60;fileKey&#x60; не указан, а в БД только одна книга, она будет выбрана автоматически. Иначе &#x60;fileKey&#x60; обязателен. 
      * @endpoint get /sqlite-creator.php?action=exportBook
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<SqliteCreatorPhpActionExportBookGet200Response>;
-    public sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<SqliteCreatorPhpActionExportBookGet200Response>>;
-    public sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<SqliteCreatorPhpActionExportBookGet200Response>>;
+    public sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<SongBookExport>;
+    public sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<SongBookExport>>;
+    public sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<SongBookExport>>;
     public sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         const db = requestParameters?.db;
         if (db === null || db === undefined) {
@@ -1060,7 +1131,7 @@ export class DefaultService extends BaseService implements DefaultServiceInterfa
 
         let localVarPath = `/sqlite-creator.php?action=exportBook`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<SqliteCreatorPhpActionExportBookGet200Response>('get', `${basePath}${localVarPath}`,
+        return this.httpClient.request<SongBookExport>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 params: localVarQueryParameters.toHttpParams(),

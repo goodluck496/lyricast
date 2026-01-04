@@ -16,6 +16,10 @@ import { SongBookExportHeader } from './songBookExportHeader';
  */
 export interface SongBookExport { 
     header: SongBookExportHeader;
+    /**
+     * Метаданные книги (из song_book_meta)
+     */
+    meta: { [key: string]: string; };
     songs: Array<SongBookExportSong>;
 }
 

@@ -97,3 +97,13 @@
   width: 100%;
   margin-top: 8px;
 }
+
+.song-form__split-field {
+  width: 90px;
+  ::ng-deep p-inputNumber {
+    width: 100%;
+    input {
+      width: 100%;
+    }
+  }
+}

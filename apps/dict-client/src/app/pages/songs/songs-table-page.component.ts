@@ -70,11 +70,9 @@ export class SongsTablePageComponent implements OnInit {
 
   downloadSqlite(): void {
     this.api.downloadDb(this.dbId).subscribe((blob) => {
-      const safeName = (
-        this.currentDb?.title ||
-        this.currentDb?.db ||
-        this.dbId
-      ).replace(/\s+/g, '_');
+      const safeName = (this.currentDb?.db || this.dbId)
+        .replace(/\s+/g, '_')
+        .replace('.sqlite', '');
       this.saveBlob(blob, `${safeName}.sqlite`);
     });
   }

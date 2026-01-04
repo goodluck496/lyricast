@@ -1,0 +1,23 @@
+generatorName: typescript-nestjs
+inputSpec: https://kantelers.ru/lyricast/api/swagger.yaml
+outputDir: libs/openapi/backend/songs-domain
+
+additionalProperties:
+  # удобства типизации/читаемости
+  stringEnums: true
+  withInterfaces: true
+  useSingleRequestParameter: true
+
+  # если хочешь, чтобы DateTime не был string:
+  dateTimeType: Date
+
+  # NestJS специфичные настройки
+  supportsES6: true
+  withSeparateModelsAndApi: true
+  modelPropertyNaming: camelCase
+  apiPackage: api
+  modelPackage: models
+
+# (опционально) если хочешь фиксированные имена пакета/модулей:
+# npmName: "@app/api-nestjs"
+# npmVersion: "0.0.0"

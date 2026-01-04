@@ -1,7 +1,7 @@
 import { ISong, ISongBookName, Lyric, LyricLine, LyricTypeEnum } from '@lyri-cast/entities';
 import { SongDatabaseInfoDto, SongSearchResultDto } from '@lyri-cast/entities';
-import { RegistryItem, RegistryItemMeta } from '@lyri-cast/openapi-client';
-import { SongBase, SongFull, SongSearchResponse, Lyric as ApiLyric, LyricLine as ApiLyricLine } from '@lyri-cast/openapi-client';
+import { RegistryItem, RegistryItemMeta } from '@lyri-cast/openapi-songs-dictionary';
+import { SongBase, SongFull, SongSearchResponse, Lyric as ApiLyric, LyricLine as ApiLyricLine } from '@lyri-cast/openapi-songs-dictionary';
 
 export function mapRegistryItemToSongDatabaseInfoDto(item: RegistryItem): SongDatabaseInfoDto {
   const meta = (item.meta || {}) as RegistryItemMeta;

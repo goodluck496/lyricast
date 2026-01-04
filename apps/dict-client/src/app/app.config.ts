@@ -14,7 +14,7 @@ import {
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
-import { provideApi } from '@lyri-cast/openapi-client';
+import { provideApi } from '@lyri-cast/openapi-songs-dictionary';
 import { authInterceptor, AUTH_OVERLAY_PORT } from '@lyri-cast/shared-browser/data-access/dictionaries';
 import { AuthOverlayService } from './auth/auth-overlay.service';
 import { MessageService } from 'primeng/api';

@@ -10,7 +10,7 @@ import {
   SongBookExport,
   SongSaveRequest,
   SongSearchResponse,
-} from '@lyri-cast/openapi-client';
+} from '@lyri-cast/openapi-songs-dictionary';
 import {
   ISong,
   Lyric as AppLyric,
@@ -23,10 +23,6 @@ import {
   mapSongSearchResponseToDto,
   mapSongUnionToISong,
 } from './songs-dictionary.mappers';
-import {
-  SqliteCreatorPhpActionExportBookGet200Response
-} from '../../../../openapi-client/generated/model/sqliteCreatorPhpActionExportBookGet200Response';
-
 
 export interface SongSearchOptions {
   db: string;
@@ -146,7 +142,7 @@ export class SongsDictionaryApiService {
   }
 
   exportBook(db: string, fileKey?: string): Observable<SongBookExport> {
-    return this.api.sqliteCreatorPhpactionexportBookGet({ db, fileKey });
+    return this.api.apiPhpactionexportBookGet({ db, fileKey });
   }
 
   createEmptySong(): ISong {

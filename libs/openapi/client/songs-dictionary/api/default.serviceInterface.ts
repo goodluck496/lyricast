@@ -81,15 +81,6 @@ export interface ApiPhpactionsongSearchGetRequestParams {
     includeLyrics?: 0 | 1;
 }
 
-export interface SqliteCreatorPhpactiondownloadGetRequestParams {
-    db: string;
-}
-
-export interface SqliteCreatorPhpactionexportBookGetRequestParams {
-    db: string;
-    fileKey?: string;
-}
-
 
 export interface DefaultServiceInterface {
     defaultHeaders: HttpHeaders;
@@ -188,21 +179,5 @@ export interface DefaultServiceInterface {
 * @param requestParameters
      */
     apiPhpactionsongSearchGet(requestParameters: ApiPhpactionsongSearchGetRequestParams, extraHttpRequestParams?: any): Observable<SongSearchResponse>;
-
-    /**
-     * Скачать сырой SQLite-файл (экспорт .sqlite)
-     * 
-     * @endpoint get /sqlite-creator.php?action=download
-* @param requestParameters
-     */
-    sqliteCreatorPhpactiondownloadGet(requestParameters: SqliteCreatorPhpactiondownloadGetRequestParams, extraHttpRequestParams?: any): Observable<Blob>;
-
-    /**
-     * Экспорт книги песен в JSON
-     * Возвращает структуру ISongBook на основе SQLite-базы, включая метаданные книги. Если параметр &#x60;fileKey&#x60; не указан, а в БД только одна книга, она будет выбрана автоматически. Иначе &#x60;fileKey&#x60; обязателен. 
-     * @endpoint get /sqlite-creator.php?action=exportBook
-* @param requestParameters
-     */
-    sqliteCreatorPhpactionexportBookGet(requestParameters: SqliteCreatorPhpactionexportBookGetRequestParams, extraHttpRequestParams?: any): Observable<SongBookExport>;
 
 }

@@ -1,6 +1,6 @@
 generatorName: typescript-angular
 inputSpec: https://kantelers.ru/lyricast/api/swagger.yaml
-outputDir: libs/openapi-client/generated
+outputDir: libs/openapi/client/songs-dictionary
 
 additionalProperties:
   ngVersion: "20.3.11"

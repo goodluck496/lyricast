@@ -7,6 +7,9 @@
         routerLinkActive="page__menu-item--active"
         [class.page__menu-item--disabled]="page.disabled"
       >
+        @if (page.icon) {
+          <lyri-icon [name]="page.icon"></lyri-icon>
+        }
         {{ page.label }}
       </div>
     }

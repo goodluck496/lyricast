@@ -14,7 +14,7 @@ const ICON_IMPORTERS: Record<LyriIconName, () => Promise<LyriIcon | any>> = {
   bullet_list: () => import('./lyri-icons/lyri-bullet-list.icon'),
 };
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: 'platform' })
 export class IconsService {
   private registry = new Map<string, string>();
 

@@ -21,7 +21,6 @@ export type SongDictionaryCardDto = {
   updatedBy?: string;
   isInstalled: boolean;
   needsUpdate: boolean;
-  downloadUrl?: string;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -85,7 +84,6 @@ export class SongsApiService {
 
   installSongDictionary(payload: {
     fileKey: string;
-    downloadUrl?: string;
   }): Observable<{ ok: boolean }> {
     return this.http.post<{ ok: boolean }>(
       `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/dictionaries/install`,

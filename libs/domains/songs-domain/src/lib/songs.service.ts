@@ -41,7 +41,6 @@ export type SongDictionaryCardDto = {
   updatedBy?: string;
   isInstalled: boolean;
   needsUpdate: boolean;
-  downloadUrl?: string;
 };
 
 @Injectable()
@@ -226,15 +225,51 @@ export class SongsService {
     const data = ((res as any)?.data ?? res) as ApiPhpActionBookVersionsCheckPost200Response;
 
     if (data && typeof data === 'object' && 'updates' in data) {
+      if (process.env.NODE_ENV !== 'production') {
+        const updatesArr = Array.isArray((data as any).updates) ? (data as any).updates : [];
+        const withUrl = updatesArr.filter((u: any) => typeof u?.downloadUrl === 'string' && u.downloadUrl.trim()).length;
+        console.log('[songs] book.versions.check returned updates', {
+          count: updatesArr.length,
+          withDownloadUrl: withUrl,
+        });
+      }
       return data as BookVersionsCheckResponse;
     }
     // если апдейтов нет, сервер иногда может вернуть AllBooksResponse. Конвертим в пустые updates.
     if (data && typeof data === 'object' && 'books' in data) {
+      const allBooks = data as unknown as AllBooksResponse;
+      const mappedUpdates = (Array.isArray(allBooks.books) ? allBooks.books : [])
+        .map((b: any) => {
+          const rawUrl: unknown = b?.downloadUrl;
+          const downloadUrl =
+            typeof rawUrl === 'string' && rawUrl.trim() ? String(rawUrl) : undefined;
+          return {
+            fileKey: String(b?.fileKey ?? ''),
+            version: Number(b?.version) || 0,
+            ...(downloadUrl ? { downloadUrl } : {}),
+          };
+        })
+        .filter((u: any) => typeof u.fileKey === 'string' && u.fileKey);
+
+      if (process.env.NODE_ENV !== 'production') {
+        const withUrl = mappedUpdates.filter(
+          (u: any) => typeof u?.downloadUrl === 'string' && u.downloadUrl.trim()
+        ).length;
+        console.log('[songs] book.versions.check returned books (mapped to updates)', {
+          booksCount: Array.isArray((allBooks as any).books) ? (allBooks as any).books.length : 0,
+          mappedUpdatesCount: mappedUpdates.length,
+          withDownloadUrl: withUrl,
+        });
+      }
+
       return {
-        ok: (data as any).ok ?? true,
-        db: (data as any).db ?? '',
-        updates: [],
-        totalCount: 0,
+        ok: (allBooks as any).ok ?? true,
+        db: (allBooks as any).db ?? '',
+        updates: mappedUpdates as any,
+        totalCount:
+          typeof (allBooks as any).totalCount === 'number'
+            ? (allBooks as any).totalCount
+            : mappedUpdates.length,
       };
     }
     throw new Error('Unexpected response for book.versions.check (expected updates)');
@@ -335,14 +370,12 @@ export class SongsService {
         songCount?: number;
       }
     >;
-    downloadUrlByKey: Map<string, string>;
   }): SongDictionaryCardDto[] {
     const {
       allKeys,
       localBooksByKey,
       remoteVersionByKey,
       remoteMetaByKey,
-      downloadUrlByKey,
     } = params;
 
     const cards: SongDictionaryCardDto[] = [];
@@ -402,7 +435,6 @@ export class SongsService {
         updatedBy: remoteMeta?.updatedBy || localUpdatedBy,
         isInstalled,
         needsUpdate,
-        downloadUrl: downloadUrlByKey.get(fileKey),
       });
     }
 
@@ -511,22 +543,16 @@ export class SongsService {
       this.toLocalVersionItem(fileKey, localBooksByKey)
     );
 
-    const updates = await this.fetchUpdatesForBooks(checkPayloadBooks, authHeader);
-    const downloadUrlByKey = new Map<string, string>();
-    for (const u of Array.isArray(updates.updates) ? updates.updates : []) {
-      if (u?.fileKey && u?.downloadUrl) {
-        downloadUrlByKey.set(u.fileKey, String(u.downloadUrl));
-      }
-    }
+    await this.fetchUpdatesForBooks(checkPayloadBooks, authHeader);
 
     const cards = this.buildCards({
       allKeys: Array.from(allKeys.values()),
       localBooksByKey,
       remoteVersionByKey: serverVersionByKey,
       remoteMetaByKey,
-      downloadUrlByKey,
     });
 
+    console.log('carss', cards.map(el => ({...el, coverImage: ''})));
     return cards.sort((a, b) => a.title.localeCompare(b.title));
   }
 
@@ -544,6 +570,7 @@ export class SongsService {
       const local = this.readBook(fileKey);
       const localVersionRaw = local?.meta?.version;
       const localVersion = localVersionRaw != null ? Number(localVersionRaw) : 0;
+      //
 
       const item: BookVersionItem = {
         fileKey,
@@ -553,7 +580,21 @@ export class SongsService {
       const upd = Array.isArray(updates.updates)
         ? updates.updates.find((u: any) => u?.fileKey === fileKey)
         : undefined;
-      url = upd?.downloadUrl ? String(upd.downloadUrl) : undefined;
+
+      const rawUrl: unknown = (upd as any)?.downloadUrl;
+      url = typeof rawUrl === 'string' && rawUrl.trim() ? rawUrl : undefined;
+
+      if (!url) {
+        const allBooks = await this.fetchAllServerBooks(authHeader);
+        const book = Array.isArray(allBooks.books)
+          ? allBooks.books.find((b: any) => b?.fileKey === fileKey)
+          : undefined;
+        const rawUrlFromBooks: unknown = (book as any)?.downloadUrl;
+        url =
+          typeof rawUrlFromBooks === 'string' && rawUrlFromBooks.trim()
+            ? rawUrlFromBooks
+            : undefined;
+      }
     }
 
     if (!url) {

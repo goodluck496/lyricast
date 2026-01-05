@@ -357,7 +357,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
       await firstValueFrom(
         this.songsApi.installSongDictionary({
           fileKey: card.fileKey,
-          downloadUrl: card.downloadUrl,
         })
       );
 

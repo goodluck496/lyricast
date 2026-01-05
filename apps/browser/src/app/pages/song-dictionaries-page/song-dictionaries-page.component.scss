@@ -1,0 +1,15 @@
+:host {
+  display: block;
+  padding: 32px;
+}
+
+.song-dicts-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__subtitle {
+    opacity: 0.8;
+    margin: 0;
+  }
+}

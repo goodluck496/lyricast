@@ -330,6 +330,15 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     this.songBooksDict$.pipe(take(1)).subscribe((data) => {
+      if (!Array.isArray(data) || data.length === 0) {
+        // Clear route cache to ensure dictionaries page loads every time
+        const reuseStrategy = this.router.routeReuseStrategy as any;
+        if (reuseStrategy && typeof reuseStrategy.clearByPathContains === 'function') {
+          reuseStrategy.clearByPathContains(Pages.SONGS_FEATURE);
+        }
+        this.router.navigateByUrl(['/', Pages.MAIN, 'dictionaries'].join('/'));
+        return;
+      }
       this.songBooksDict = [...data];
       const book = data.find((el) => el.searchKey.includes('pesn'));
       if (!book) {

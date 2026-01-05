@@ -63,12 +63,23 @@ function browserScopedAuthInterceptor(
 
   // В основном приложении токен нужен только для синхронизации справочников,
   // чтобы оверлей авторизации не всплывал при запуске приложения.
-  const isSongsDictionariesRequest =
-    req.url.includes('svc://') &&
-    (req.url.includes('/songs/dictionaries') ||
-      req.url.includes('/songs/dictionaries/install'));
+  const isDictionarySyncRequest = (() => {
+    if (!req.url.includes('svc://')) {
+      return false;
+    }
 
-  if (!isSongsDictionariesRequest) {
+    // Extend this list when new dictionary types appear.
+    // Goal: only dictionary sync endpoints should trigger auth overlay in browser app.
+    const allowedPaths = [
+      // Songs dictionaries
+      '/songs/dictionaries',
+      '/songs/dictionaries/install',
+    ];
+
+    return allowedPaths.some((p) => req.url.includes(p));
+  })();
+
+  if (!isDictionarySyncRequest) {
     return next(req);
   }
 

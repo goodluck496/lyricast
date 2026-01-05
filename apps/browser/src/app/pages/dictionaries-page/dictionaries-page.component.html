@@ -1,0 +1,36 @@
+<div class="dict-page">
+  <h2>Справочники</h2>
+
+  <div class="dict-page__section">
+    <h3>Песни</h3>
+
+    @if (localSongBooksCount$ | async; as cnt) {
+      @if (cnt > 0) {
+        <p class="dict-page__hint">Локальные справочники: {{ cnt }}</p>
+      } @else {
+        <p class="dict-page__hint">
+          Локальных справочников нет. Нажмите «Управлять справочниками», чтобы
+          загрузить/обновить.
+        </p>
+      }
+    }
+
+    <div class="dict-page__actions">
+      <button
+        pButton
+        severity="primary"
+        (click)="showSongsManager.set(!showSongsManager())"
+      >
+        @if (showSongsManager()) {
+          Скрыть
+        } @else {
+          Управлять справочниками
+        }
+      </button>
+    </div>
+
+    @if (showSongsManager()) {
+      <lyri-song-dictionaries-manager [autoLoad]="true"></lyri-song-dictionaries-manager>
+    }
+  </div>
+</div>

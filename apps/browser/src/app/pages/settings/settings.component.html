@@ -1,4 +1,4 @@
-<p-tabs [value]="0">
+<p-tabs [(value)]="activeTab">
   <p-tablist>
     <p-tab [value]="0">Выбор экрана</p-tab>
     <p-tab [value]="1">Обновления</p-tab>
@@ -134,108 +134,12 @@
     </p-tabpanel>
 
     <p-tabpanel [value]="4">
-      <p-accordion [multiple]="false">
-        <p-accordion-panel value="songs">
-          <p-accordion-header>
-            <div class="settings__dict-accordion-header">
-              <span>Песни</span>
-              <div class="settings__dict-accordion-actions">
-                <button
-                  pButton
-                  severity="secondary"
-                  [disabled]="songDictionariesLoading"
-                  (click)="onReloadSongDictionaries($event)"
-                >
-                  @if (songDictionariesLoading) {
-                    <p-progress-spinner strokeWidth="5"
-                                        [style]="{ width: '20px', height: '20px' }"></p-progress-spinner>
-                  } @else {
-                    <span pButtonIcon class="pi pi-refresh"></span>
-                    <span pButtonLabel>Обновить</span>
-                  }
-
-                </button>
-
-                <button
-                  pButton
-                  severity="danger"
-                  [loading]="songDictionariesClearBusy"
-                  [disabled]="songDictionariesLoading || songDictionariesClearBusy"
-                  (click)="onClearSongDictionaries($event)"
-                >
-                  <span pButtonLabel>Очистить</span>
-                </button>
-              </div>
-            </div>
-          </p-accordion-header>
-          <p-accordion-content>
-            @if (songDictionariesLoading) {
-              <div class="settings__dict-loading">
-                <p-progressSpinner></p-progressSpinner>
-              </div>
-            } @else {
-              <div class="settings__dict-grid">
-                @for (card of songDictionaries; track card.fileKey) {
-                  <div
-                    class="settings__dict-card"
-                    [class.settings__dict-card--missing]="!card.isInstalled"
-                  >
-                    <lyri-song-dictionary-card [db]="toSongDatabaseInfo(card)" [size]="'sm'">
-                      <div cardActions class="settings__dict-actions">
-                        @if (card.needsUpdate) {
-                          <button
-                            pButton
-                            class="settings__dict-badge"
-                            severity="warn"
-                            (click)="onInstallOrUpdateDictionary($event, card)"
-                          >
-                            <span pButtonIcon class="pi pi-refresh"></span>
-                          </button>
-                        }
-
-                        @if (card.isInstalled) {
-                          <button
-                            pButton
-                            class="settings__dict-badge"
-                            severity="danger"
-                            (click)="onDeleteDictionary($event, card)"
-                          >
-                            <span pButtonIcon class="pi pi-trash"></span>
-                          </button>
-                        }
-
-                        @if (!card.isInstalled) {
-                          <button
-                            pButton
-                            severity="primary"
-                            (click)="onInstallOrUpdateDictionary($event, card)"
-                          >
-                            <span pButtonIcon class="pi pi-plus"></span>
-                          </button>
-                        }
-                      </div>
-                    </lyri-song-dictionary-card>
-
-                    @if (songDictionaryBusyByKey[card.fileKey]) {
-                      <div class="settings__dict-overlay">
-                        <p-progressSpinner></p-progressSpinner>
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
-            }
-          </p-accordion-content>
-        </p-accordion-panel>
-      </p-accordion>
+      @if (activeTab === 4) {
+        <lyri-song-dictionaries-manager
+          [autoLoad]="true"
+          (authCancelled)="activeTab = 0"
+        ></lyri-song-dictionaries-manager>
+      }
     </p-tabpanel>
   </p-tabpanels>
-
-  <p-confirmpopup>
-    <ng-template #content let-data>
-      @if (data) {
-        <div [innerHTML]="data.message"></div>
-      }
-    </ng-template>
-  </p-confirmpopup>
 </p-tabs>

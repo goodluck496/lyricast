@@ -23,10 +23,12 @@ export class CustomReuseStrategy implements RouteReuseStrategy {
 
   shouldDetach(route: ActivatedRouteSnapshot): boolean {
     // Определяет, нужно ли сохранять состояние страницы
-    if (route.routeConfig?.path?.includes(Pages.CASTING)) {
+    const path = route.routeConfig?.path || '';
+    // Never cache casting pages or song pages
+    if (path.includes(Pages.CASTING) || path.includes(Pages.SONGS)) {
       return false;
     }
-    return true; // Определите логику для конкретных страниц
+    return true;
   }
 
   getKey(route: ActivatedRouteSnapshot): string {

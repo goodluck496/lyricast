@@ -117,19 +117,11 @@ export class AppComponent implements OnInit {
         if (isCastingPage || !isBibleFeature) {
           this.isLoading.set(false);
         }
-      });
 
-    const isRoot = this.router.isActive('/', {
-      paths: 'exact',
-      queryParams: 'exact',
-      fragment: 'ignored',
-      matrixParams: 'ignored',
-    });
-    if (isRoot) {
-      this.onGo();
-    } else {
-      this.onGo(this.router.url);
-    }
+        if (event.urlAfterRedirects === '/') {
+          this.onGo();
+        }
+      });
 
     this.settingsSrv.init();
 

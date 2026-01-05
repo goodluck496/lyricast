@@ -384,12 +384,13 @@ export class SongsService {
       const localVersionRaw = local?.meta?.version;
       const localVersion = localVersionRaw != null ? Number(localVersionRaw) : undefined;
       const remoteVersion = remoteVersionByKey.get(fileKey);
-      const needsUpdate =
-        localVersion != null && remoteVersion != null
-          ? localVersion < remoteVersion
-          : false;
-
       const isInstalled = !!local;
+
+      const needsUpdate =
+        isInstalled && remoteVersion != null
+          ? (Number.isFinite(localVersion as any) ? (localVersion as number) : 0) <
+            remoteVersion
+          : false;
       const remoteMeta = remoteMetaByKey.get(fileKey);
 
       let localSizeBytes: number | undefined;

@@ -29,10 +29,11 @@ import {
 import { SnowfallManager } from '../services/common/snowfall.service';
 import { SplashScreenComponent } from './components/splash-screen/splash-screen.component';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { AuthOverlayComponent } from './auth/auth-overlay.component';
 
 @Component({
   standalone: true,
-  imports: [RouterModule, SplashScreenComponent],
+  imports: [RouterModule, SplashScreenComponent, AuthOverlayComponent],
   selector: 'lyri-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
@@ -90,6 +91,16 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Fallback: if initial data loading never completes (e.g. worker not started),
+    // unblock UI so user can navigate to Settings and see errors.
+    setTimeout(() => {
+      if (this.loadingStatusService.isInitialLoading()) {
+        this.loadingStatusService.finishInitialLoading();
+        this.isLoading.set(false);
+        this.cdr.detectChanges();
+      }
+    }, 8000);
+
     this.router.events
       .pipe(
         filter(

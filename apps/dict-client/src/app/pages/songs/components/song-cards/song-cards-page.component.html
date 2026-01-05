@@ -1,71 +1,9 @@
 <div class="db-cards">
   @for (db of dbs; track db.db) {
-    <p-card
-      (click)="openDb(db)"
-      styleClass="db-card"
-      [ngStyle]="db.coverImage ? { 'background-image': 'url(' + db.coverImage + ')' } : null"
-    >
-      <div class="db-card__overlay"></div>
-
-      @if (db.language) {
-        <div class="db-card__badge">
-          {{ db.language }}
-        </div>
-      }
-
-      @if (db.version) {
-        <div class="db-card__version-badge">
-          <p-badge 
-            [value]="'v' + db.version" 
-            severity="info" 
-            size="small"
-            [pTooltip]="versionTooltipTmpl"
-            tooltipPosition="top"
-          ></p-badge>
-          <ng-template #versionTooltipTmpl>
-            <div class="version-tooltip-content">
-              @if (db.updatedAt) {
-                <div class="version-tooltip-line">
-                  Обновлено: {{ formatDate(db.updatedAt) }}
-                </div>
-              }
-              @if (db.updatedBy) {
-                <div class="version-tooltip-line">
-                  Пользователь: {{ db.updatedBy }}
-                </div>
-              }
-            </div>
-          </ng-template>
-        </div>
-      }
-
-      <div class="db-card__content">
-        <h3 class="db-card__title">
-          {{ db.title || db.db }}
-        </h3>
-
-        <p class="db-card__subtitle">
-          {{ db.db }}
-        </p>
-
-        <p class="db-card__description">
-          {{ db.description }}
-        </p>
-
-        <div class="db-card__meta">
-          @if (db.sizeBytes != null) {
-            <span>
-              {{ (db.sizeBytes / 1024 / 1024).toFixed(1) }} MB
-            </span>
-          }
-
-          @if (db.songCount != null) {
-            <span>
-              · {{ db.songCount }} песен
-            </span>
-          }
-        </div>
-      </div>
-    </p-card>
+    <lyri-song-dictionary-card
+      [db]="db"
+      [clickable]="true"
+      (cardClick)="openDb(db)"
+    ></lyri-song-dictionary-card>
   }
 </div>

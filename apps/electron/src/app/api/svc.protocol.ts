@@ -67,6 +67,16 @@ export function registerSvcProtocol(registry: WorkersRegistry) {
       // Заголовки
       const headers = filterHeaders(req.headers);
 
+      // Некоторые окружения/схемы могут не прокидывать Authorization в req.headers,
+      // но наш authInterceptor всегда добавляет X-Auth-Token. Восстанавливаем Bearer.
+      const xAuthToken =
+        headers.get('x-auth-token') ??
+        headers.get('X-Auth-Token') ??
+        headers.get('X-AUTH-TOKEN');
+      if (!headers.get('authorization') && xAuthToken) {
+        headers.set('authorization', `Bearer ${xAuthToken}`);
+      }
+
       // Тело запроса: для GET/HEAD вовсе не передаём body
       let body: RequestInit['body'] | undefined = undefined;
       if (req.method !== 'GET' && req.method !== 'HEAD') {

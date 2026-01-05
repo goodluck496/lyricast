@@ -224,7 +224,7 @@ export class DefaultService extends BaseService implements DefaultServiceInterfa
 
     /**
      * Проверить, какие справочники (книги) свежее на сервере
-     * Если в теле запроса не передан массив books или он пустой, возвращает все доступные справочники с их версиями. Иначе клиент присылает массив книг (song_books.file_key) и их локальных версий, а сервер возвращает список книг, у которых версия на сервере больше. Для каждой такой книги возвращается ссылка для скачивания (экспорт в JSON). 
+     * Если в теле запроса не передан массив books или он пустой, возвращает все доступные справочники с их версиями. Иначе клиент присылает массив книг (song_books.file_key) и их локальных версий, а сервер возвращает список книг, у которых версия на сервере больше. Для каждой такой книги возвращается ссылка для скачивания (экспорт в JSON). Книги ищутся во всех доступных SQLite файлах по fileKey. 
      * @endpoint post /api.php?action=book.versions.check
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.

@@ -17,11 +17,10 @@
                 severity="info"
                 size="small"
                 [pTooltip]="versionTooltipTmpl"
-                [tooltipOptions]="{hideDelay: 500}"
                 tooltipPosition="bottom"
               ></p-badge>
               <ng-template #versionTooltipTmpl>
-                <div class="version-tooltip-content">
+                <div class="version-tooltip-content version-tooltip-content--nowrap">
                   @if (currentDb.updatedAt) {
                     <div class="version-tooltip-line">
                       Обновлено: {{ formatDate(currentDb.updatedAt) }}

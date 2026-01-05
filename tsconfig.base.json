@@ -76,6 +76,7 @@
       "@lyri-cast/quiz-domain": ["libs/domains/quiz-domain/src/index.ts"],
       "@lyri-cast/data-access-quiz": ["libs/shared-browser/data-access/quiz/src/index.ts"],
       "@lyri-cast/openapi-songs-dictionary": ["libs/openapi/client/songs-dictionary/index.ts"],
+      "@lyri-cast/openapi-backend-songs-domain": ["libs/openapi/backend/songs-domain/index.ts"],
     }
   },
   "references": [

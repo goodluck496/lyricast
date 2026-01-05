@@ -1,0 +1,118 @@
+<p-card
+  (click)="onClick()"
+  styleClass="db-card"
+  [class.db-card--clickable]="clickable"
+  [class.db-card--sm]="size === 'sm'"
+  [class.db-card--md]="size === 'md'"
+  [pTooltip]="size === 'sm' ? detailsTooltipTmpl : ''"
+  tooltipPosition="top"
+  [ngStyle]="
+    db.coverImage ? { 'background-image': 'url(' + db.coverImage + ')' } : null
+  "
+>
+  <div class="db-card__overlay"></div>
+
+  @if (size === 'md' && db.language) {
+    <div class="db-card__badge">
+      {{ db.language }}
+    </div>
+  }
+
+  @if (db.version) {
+    <div class="db-card__version-badge">
+      <p-badge
+        [value]="'v' + db.version"
+        severity="info"
+        size="small"
+        [pTooltip]="versionTooltipTmpl"
+        tooltipPosition="top"
+      ></p-badge>
+
+      <ng-template #versionTooltipTmpl>
+        <div class="version-tooltip-content version-tooltip-content--nowrap">
+          @if (db.updatedAt) {
+            <div class="version-tooltip-line">
+              Обновлено: {{ formatDate(db.updatedAt) }}
+            </div>
+          }
+          @if (db.updatedBy) {
+            <div class="version-tooltip-line">Пользователь: {{ db.updatedBy }}</div>
+          }
+        </div>
+      </ng-template>
+    </div>
+  }
+
+  <div class="db-card__content">
+    <h3 class="db-card__title">{{ db.title || db.db }}</h3>
+
+    @if (size === 'md') {
+      <p class="db-card__subtitle">{{ db.db }}</p>
+    }
+
+    @if (size === 'md' && db.description) {
+      <p class="db-card__description">
+        {{ db.description }}
+      </p>
+    }
+
+    <div class="db-card__meta">
+      @if (size === 'md') {
+        @if (db.sizeBytes != null) {
+          <span> {{ (db.sizeBytes / 1024 / 1024).toFixed(1) }} MB </span>
+        }
+
+        @if (db.songCount != null) {
+          <span>· {{ db.songCount }} песен</span>
+        }
+      } @else {
+        @if (db.songCount != null) {
+          <span>{{ db.songCount }} песен</span>
+        } @else {
+          <span>—</span>
+        }
+      }
+    </div>
+
+    @if (size === 'md' && (db.updatedAt || db.updatedBy)) {
+      <div class="db-card__updated">
+        @if (db.updatedAt) {
+          <span>Обновлено: {{ formatDate(db.updatedAt) }}</span>
+        }
+        @if (db.updatedBy) {
+          <span>· {{ db.updatedBy }}</span>
+        }
+      </div>
+    }
+
+    <div class="db-card__actions" (click)="$event.stopPropagation()">
+      <ng-content select="[cardActions]"></ng-content>
+    </div>
+  </div>
+
+  <ng-template #detailsTooltipTmpl>
+    <div class="version-tooltip-content version-tooltip-content--nowrap">
+      @if (db.language) {
+        <div class="version-tooltip-line">Язык: {{ db.language }}</div>
+      }
+      <div class="version-tooltip-line">Файл: {{ db.db }}</div>
+      @if (db.sizeBytes != null) {
+        <div class="version-tooltip-line">
+          Размер: {{ (db.sizeBytes / 1024 / 1024).toFixed(1) }} MB
+        </div>
+      }
+      @if (db.version != null) {
+        <div class="version-tooltip-line">Версия: v{{ db.version }}</div>
+      }
+      @if (db.songCount != null) {
+        <div class="version-tooltip-line">Песен: {{ db.songCount }}</div>
+      }
+      @if (db.updatedAt) {
+        <div class="version-tooltip-line">Обновлено: {{ formatDate(db.updatedAt) }}</div>
+      }
+      @if (db.updatedBy) {
+        <div class="version-tooltip-line">Кем: {{ db.updatedBy }}</div>
+      }
+    </div>
+  </ng-template>
+</p-card>

@@ -231,10 +231,11 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         filter(() => this.isActivePage())
       )
       .subscribe((event: KeyboardEvent) => {
+        console.log('event',event);
         const selectedLyric = this.songPageSelectSrv.selectedLyric();
         if (selectedLyric) {
-          if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
-            this.onNavigateSlide(event.key === 'ArrowDown' ? 'next' : 'prev');
+          if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(event.key)) {
+            this.onNavigateSlide(event.key === 'ArrowDown' || event.key === 'PageDown' ? 'next' : 'prev');
           }
 
           if (event.key === 'Enter') {

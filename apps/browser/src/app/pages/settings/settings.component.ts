@@ -8,14 +8,14 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouteReuseStrategy } from '@angular/router';
 import {
   SettingsService,
   UserSettingsService,
   WindowService,
 } from '@lyri-cast/common-browser';
 import { AppDisplay } from '@lyri-cast/common-electron';
-import { CardModule } from 'primeng/card';
-import { ButtonDirective } from 'primeng/button';
+import { ButtonDirective, ButtonIcon, ButtonLabel } from 'primeng/button';
 import { Observable } from 'rxjs';
 import { DividerModule } from 'primeng/divider';
 import { AssetManagementComponent } from '@lyri-cast/asset-management';
@@ -25,6 +25,18 @@ import { SelectModule } from 'primeng/select';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { SnowfallManager } from '../../../services/common/snowfall.service';
 import { ToggleSwitch } from 'primeng/toggleswitch';
+import { SongsApiService, SongDictionaryCardDto } from '@lyri-cast/data-access-songs';
+import { firstValueFrom } from 'rxjs';
+import { AccordionModule } from 'primeng/accordion';
+import { ConfirmPopup } from 'primeng/confirmpopup';
+import { ConfirmationService } from 'primeng/api';
+import { BadgeModule } from 'primeng/badge';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { Pages } from '@lyri-cast/common-browser';
+import { CustomReuseStrategy } from '../../../services/common/router-reuse.strategy';
+import { SongDatabaseInfoDto } from '@lyri-cast/entities';
+import { SongDictionaryCardComponent } from '@lyri-cast/ui-lib';
+import { Card } from 'primeng/card';
 
 @Component({
   selector: 'lyri-settings',
@@ -32,7 +44,6 @@ import { ToggleSwitch } from 'primeng/toggleswitch';
   imports: [
     CommonModule,
     FormsModule,
-    CardModule,
     ButtonDirective,
     DividerModule,
     AssetManagementComponent,
@@ -41,7 +52,16 @@ import { ToggleSwitch } from 'primeng/toggleswitch';
     SelectModule,
     FloatLabelModule,
     ToggleSwitch,
+    AccordionModule,
+    ConfirmPopup,
+    BadgeModule,
+    ProgressSpinnerModule,
+    ButtonLabel,
+    ButtonIcon,
+    SongDictionaryCardComponent,
+    Card,
   ],
+  providers: [ConfirmationService],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -52,6 +72,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
   windowSrv = inject(WindowService);
   userSettings = inject(UserSettingsService);
   snowfall = inject(SnowfallManager);
+  songsApi = inject(SongsApiService);
+  confirmationService = inject(ConfirmationService);
+  routeReuse = inject(RouteReuseStrategy);
 
   displays: AppDisplay[] = [];
 
@@ -82,6 +105,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
   selectedFont = 'sans-serif';
   isDarkTheme = true;
   snowEnabled = false;
+
+  songDictionaries: SongDictionaryCardDto[] = [];
+  songDictionariesLoading = false;
+  songDictionaryBusyByKey: Record<string, boolean> = {};
+  songDictionariesClearBusy = false;
 
   async ngOnInit() {
     const srv = await this.settingsSrv.init();
@@ -191,6 +219,159 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.snowEnabled = this.snowfall.isEnabled();
 
     this.cdr.detectChanges();
+
+    await this.reloadSongDictionaries();
+  }
+
+  toSongDatabaseInfo(card: SongDictionaryCardDto): SongDatabaseInfoDto {
+    // Used only for unified card rendering
+    return {
+      db: card.fileKey,
+      title: card.title,
+      language: card.language,
+      coverImage: card.coverImage,
+      sizeBytes: card.sizeBytes,
+      songCount: card.songCount,
+      version: card.remoteVersion ?? card.localVersion,
+      updatedAt: card.updatedAt,
+      updatedBy: card.updatedBy,
+    };
+  }
+
+  async reloadSongDictionaries(): Promise<void> {
+    this.songDictionariesLoading = true;
+    this.cdr.detectChanges();
+    try {
+      this.songDictionaries = await firstValueFrom(
+        this.songsApi.getSongDictionaries()
+      );
+    } catch (e) {
+      console.log('Failed to load song dictionaries', e);
+      this.songDictionaries = [];
+    } finally {
+      this.songDictionariesLoading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  private async deleteDictionary(card: SongDictionaryCardDto): Promise<void> {
+    this.songDictionaryBusyByKey[card.fileKey] = true;
+    this.cdr.detectChanges();
+    try {
+      await firstValueFrom(
+        this.songsApi.deleteSongDictionary({
+          fileKey: card.fileKey,
+        })
+      );
+
+      if (this.routeReuse instanceof CustomReuseStrategy) {
+        this.routeReuse.clearByPathContains(Pages.SONGS);
+      }
+
+      await this.reloadSongDictionaries();
+    } catch (e) {
+      console.log('Failed to delete dictionary', e);
+    } finally {
+      this.songDictionaryBusyByKey[card.fileKey] = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  private async clearSongDictionaries(): Promise<void> {
+    this.songDictionariesClearBusy = true;
+    this.cdr.detectChanges();
+    try {
+      await firstValueFrom(this.songsApi.clearSongDictionaries());
+
+      if (this.routeReuse instanceof CustomReuseStrategy) {
+        this.routeReuse.clearByPathContains(Pages.SONGS);
+      }
+
+      await this.reloadSongDictionaries();
+    } catch (e) {
+      console.log('Failed to clear dictionaries', e);
+    } finally {
+      this.songDictionariesClearBusy = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  onReloadSongDictionaries(event?: Event): void {
+    event?.stopPropagation();
+    void this.reloadSongDictionaries();
+  }
+
+  onClearSongDictionaries(event: Event): void {
+    event.stopPropagation();
+
+    this.confirmationService.confirm({
+      target: event.target as any,
+      message:
+        'Удалить все скачанные справочники?<br>Встроенные справочники удалены не будут.',
+      rejectLabel: 'Нет',
+      acceptLabel: 'Да',
+      rejectButtonProps: { severity: 'secondary' },
+      acceptButtonProps: { severity: 'danger' },
+      accept: () => {
+        void this.clearSongDictionaries();
+      },
+    });
+  }
+
+  onDeleteDictionary(event: Event, card: SongDictionaryCardDto): void {
+    event.stopPropagation();
+    this.confirmationService.confirm({
+      target: event.target as any,
+      message: `Удалить справочник "${card.title}"?`,
+      acceptLabel: 'Да',
+      rejectLabel: 'Нет',
+      rejectButtonProps: { severity: 'secondary' },
+      acceptButtonProps: { severity: 'danger' },
+      accept: () => {
+        void this.deleteDictionary(card);
+      },
+    });
+  }
+
+  onInstallOrUpdateDictionary(event: Event, card: SongDictionaryCardDto): void {
+    const actionLabel = card.isInstalled ? 'обновить' : 'установить';
+    this.confirmationService.confirm({
+      target: event.target as any,
+      message: `Вы уверены, что хотите ${actionLabel} справочник? <br> Загрузка может занять некоторое время.`,
+      acceptLabel: 'Да',
+      rejectLabel: 'Нет',
+      rejectButtonProps: { severity: 'secondary' },
+      acceptButtonProps: { severity: 'danger' },
+      accept: () => {
+        void this.installOrUpdateDictionary(card);
+      },
+    });
+  }
+
+  private async installOrUpdateDictionary(
+    card: SongDictionaryCardDto
+  ): Promise<void> {
+    this.songDictionaryBusyByKey[card.fileKey] = true;
+    this.cdr.detectChanges();
+    try {
+      await firstValueFrom(
+        this.songsApi.installSongDictionary({
+          fileKey: card.fileKey,
+          downloadUrl: card.downloadUrl,
+        })
+      );
+
+      if (this.routeReuse instanceof CustomReuseStrategy) {
+        this.routeReuse.clearByPathContains(Pages.SONGS);
+      }
+
+      await this.reloadSongDictionaries();
+    } catch (e) {
+      console.log('Failed to install dictionary', e);
+    } finally {
+      this.songDictionaryBusyByKey[card.fileKey] = false;
+      this.cdr.detectChanges();
+    }
   }
 
   onSnowToggle(enabled: boolean) {

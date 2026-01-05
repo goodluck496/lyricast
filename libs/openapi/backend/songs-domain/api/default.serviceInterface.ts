@@ -12,20 +12,20 @@
 
 import { Observable }                                        from 'rxjs';
 
-import { ApiPhpActionAuthLoginPostRequest } from '../models/apiPhpActionAuthLoginPostRequest';
-import { ApiPhpActionBookVersionsCheckPost200Response } from '../models/apiPhpActionBookVersionsCheckPost200Response';
-import { ApiPhpActionDbDeletePost200Response } from '../models/apiPhpActionDbDeletePost200Response';
-import { ApiPhpActionExportBookGet400Response } from '../models/apiPhpActionExportBookGet400Response';
-import { ApiPhpActionExportBookGet404Response } from '../models/apiPhpActionExportBookGet404Response';
-import { ApiPhpActionPingGet200Response } from '../models/apiPhpActionPingGet200Response';
-import { ApiPhpActionRegistryListGet200Response } from '../models/apiPhpActionRegistryListGet200Response';
-import { ApiPhpActionSongGetGet200Response } from '../models/apiPhpActionSongGetGet200Response';
-import { ApiPhpActionSongSavePost200Response } from '../models/apiPhpActionSongSavePost200Response';
-import { AuthResponse } from '../models/authResponse';
-import { BookVersionsCheckRequest } from '../models/bookVersionsCheckRequest';
-import { SongBookExport } from '../models/songBookExport';
-import { SongSaveRequest } from '../models/songSaveRequest';
-import { SongSearchResponse } from '../models/songSearchResponse';
+import { ApiPhpActionAuthLoginPostRequest } from '../model/apiPhpActionAuthLoginPostRequest';
+import { ApiPhpActionBookVersionsCheckPost200Response } from '../model/apiPhpActionBookVersionsCheckPost200Response';
+import { ApiPhpActionDbDeletePost200Response } from '../model/apiPhpActionDbDeletePost200Response';
+import { ApiPhpActionExportBookGet400Response } from '../model/apiPhpActionExportBookGet400Response';
+import { ApiPhpActionExportBookGet404Response } from '../model/apiPhpActionExportBookGet404Response';
+import { ApiPhpActionPingGet200Response } from '../model/apiPhpActionPingGet200Response';
+import { ApiPhpActionRegistryListGet200Response } from '../model/apiPhpActionRegistryListGet200Response';
+import { ApiPhpActionSongGetGet200Response } from '../model/apiPhpActionSongGetGet200Response';
+import { ApiPhpActionSongSavePost200Response } from '../model/apiPhpActionSongSavePost200Response';
+import { AuthResponse } from '../model/authResponse';
+import { BookVersionsCheckRequest } from '../model/bookVersionsCheckRequest';
+import { SongBookExport } from '../model/songBookExport';
+import { SongSaveRequest } from '../model/songSaveRequest';
+import { SongSearchResponse } from '../model/songSearchResponse';
 
 
 import { Configuration }                                     from '../configuration';
@@ -52,7 +52,7 @@ export interface DefaultServiceInterface {
 
     /**
     * Проверить, какие справочники (книги) свежее на сервере
-    * Если в теле запроса не передан массив books или он пустой, возвращает все доступные справочники с их версиями. Иначе клиент присылает массив книг (song_books.file_key) и их локальных версий, а сервер возвращает список книг, у которых версия на сервере больше. Для каждой такой книги возвращается ссылка для скачивания (экспорт в JSON). 
+    * Если в теле запроса не передан массив books или он пустой, возвращает все доступные справочники с их версиями. Иначе клиент присылает массив книг (song_books.file_key) и их локальных версий, а сервер возвращает список книг, у которых версия на сервере больше. Для каждой такой книги возвращается ссылка для скачивания (экспорт в JSON). Книги ищутся во всех доступных SQLite файлах по fileKey. 
     * @param bookVersionsCheckRequest 
     */
     apiPhpactionbookVersionsCheckPost(bookVersionsCheckRequest: BookVersionsCheckRequest, extraHttpRequestParams?: any): Observable<ApiPhpActionBookVersionsCheckPost200Response>;

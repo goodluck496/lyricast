@@ -1,10 +1,81 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Param,
+  Post,
+  Query,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { SongsService } from './songs.service';
 import { IShortSong, ISongForSearch } from '@lyri-cast/entities';
 
 @Controller('songs')
 export class SongsController {
   constructor(private readonly songsService: SongsService) {}
+
+  @Get('dictionaries')
+  getDictionaries(
+    @Headers('authorization') authorization?: string,
+    @Headers('x-auth-token') xAuthToken?: string,
+    @Query('authToken') authToken?: string
+  ) {
+    const auth =
+      authorization ??
+      (xAuthToken ? `Bearer ${xAuthToken}` : undefined) ??
+      (authToken ? `Bearer ${authToken}` : undefined);
+    if (!auth) {
+      throw new UnauthorizedException('Authorization is required');
+    }
+
+    return this.songsService.getDictionariesStatus(auth).catch((e) => {
+      const msg = String((e as any)?.message ?? e);
+      if (msg.includes('401') || msg.includes('403')) {
+        throw new UnauthorizedException('Unauthorized');
+      }
+      throw e;
+    });
+  }
+
+  @Post('dictionaries/install')
+  async installDictionary(
+    @Body() body: { fileKey: string; downloadUrl?: string },
+    @Headers('authorization') authorization?: string,
+    @Headers('x-auth-token') xAuthToken?: string,
+    @Query('authToken') authToken?: string
+  ) {
+    const auth =
+      authorization ??
+      (xAuthToken ? `Bearer ${xAuthToken}` : undefined) ??
+      (authToken ? `Bearer ${authToken}` : undefined);
+    if (!auth) {
+      throw new UnauthorizedException('Authorization is required');
+    }
+
+    await this.songsService.installDictionary(
+      body.fileKey,
+      auth,
+      body.downloadUrl
+    ).catch((e) => {
+      const msg = String((e as any)?.message ?? e);
+      if (msg.includes('401') || msg.includes('403')) {
+        throw new UnauthorizedException('Unauthorized');
+      }
+      throw e;
+    });
+    return { ok: true };
+  }
+
+  @Post('dictionaries/delete')
+  deleteDictionary(@Body() body: { fileKey: string }) {
+    return this.songsService.deleteDictionary(body.fileKey);
+  }
+
+  @Post('dictionaries/clear')
+  clearDictionaries() {
+    return this.songsService.clearDictionaries();
+  }
 
   @Get('book-names')
   getBookNames() {
@@ -38,3 +109,4 @@ export class SongsController {
     );
   }
 }
+

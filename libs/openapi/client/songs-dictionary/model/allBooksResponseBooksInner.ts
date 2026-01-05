@@ -22,5 +22,9 @@ export interface AllBooksResponseBooksInner {
      * Имя SQLite-файла
      */
     db: string;
+    /**
+     * URL для скачивания книги (экспорт в JSON)
+     */
+    downloadUrl: string;
 }
 

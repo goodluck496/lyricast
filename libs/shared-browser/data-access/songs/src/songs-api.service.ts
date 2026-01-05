@@ -8,6 +8,22 @@ import {
   ISongForSearch,
 } from '@lyri-cast/entities';
 
+export type SongDictionaryCardDto = {
+  fileKey: string;
+  title: string;
+  language?: string;
+  coverImage?: string;
+  sizeBytes?: number;
+  songCount?: number;
+  localVersion?: number;
+  remoteVersion?: number;
+  updatedAt?: string;
+  updatedBy?: string;
+  isInstalled: boolean;
+  needsUpdate: boolean;
+  downloadUrl?: string;
+};
+
 @Injectable({ providedIn: 'root' })
 export class SongsApiService {
   BASE_API_TOKEN = 'svc://'; //inject(BASE_API_TOKEN);
@@ -58,6 +74,36 @@ export class SongsApiService {
   getSong(book: ISongBookName, songId: number): Observable<ISong> {
     return this.http.get<ISong>(
       `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/book/${book.fileKey}/${songId}`
+    );
+  }
+
+  getSongDictionaries(): Observable<SongDictionaryCardDto[]> {
+    return this.http.get<SongDictionaryCardDto[]>(
+      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/dictionaries`
+    );
+  }
+
+  installSongDictionary(payload: {
+    fileKey: string;
+    downloadUrl?: string;
+  }): Observable<{ ok: boolean }> {
+    return this.http.post<{ ok: boolean }>(
+      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/dictionaries/install`,
+      payload
+    );
+  }
+
+  deleteSongDictionary(payload: { fileKey: string }): Observable<{ ok: true; deleted: boolean }> {
+    return this.http.post<{ ok: true; deleted: boolean }>(
+      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/dictionaries/delete`,
+      payload
+    );
+  }
+
+  clearSongDictionaries(): Observable<{ ok: true; deletedCount: number }> {
+    return this.http.post<{ ok: true; deletedCount: number }>(
+      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/dictionaries/clear`,
+      {}
     );
   }
 }

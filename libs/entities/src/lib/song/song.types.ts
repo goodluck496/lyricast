@@ -98,6 +98,15 @@ export interface ISongBookHeader {
 
 export interface ISongBook {
   header: ISongBookHeader;
+  meta?: {
+    coverImage?: string;
+    language?: string;
+    source?: string;
+    title?: string;
+    updated_at?: string | Date;
+    updated_by?: string;
+    version?: string;
+  };
   songs: ISong[];
 }
 

@@ -8,6 +8,19 @@ import { Pages } from '@lyri-cast/common-browser';
 export class CustomReuseStrategy implements RouteReuseStrategy {
   storedRoutes: { [key: string]: DetachedRouteHandle } = {};
 
+  clearAll(): void {
+    this.storedRoutes = {};
+  }
+
+  clearByPathContains(pathPart: string): void {
+    const keys = Object.keys(this.storedRoutes);
+    for (const key of keys) {
+      if (key.includes(pathPart)) {
+        delete this.storedRoutes[key];
+      }
+    }
+  }
+
   shouldDetach(route: ActivatedRouteSnapshot): boolean {
     // Определяет, нужно ли сохранять состояние страницы
     if (route.routeConfig?.path?.includes(Pages.CASTING)) {

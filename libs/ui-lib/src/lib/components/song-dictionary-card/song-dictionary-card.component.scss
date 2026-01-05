@@ -1,0 +1,140 @@
+.db-card {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+}
+
+.db-card--md {
+  width: 400px;
+  max-width: 400px;
+  height: 400px;
+  max-height: 400px;
+}
+
+.db-card--sm {
+  width: 150px;
+  max-width: 150px;
+  height: 150px;
+  max-height: 150px;
+}
+
+.db-card--clickable {
+  cursor: pointer;
+}
+
+.db-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3),
+    rgba(0, 0, 0, 0.7)
+  );
+}
+
+.db-card__badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.7);
+  font-size: 12px;
+  z-index: 1;
+}
+
+.db-card--sm .db-card__badge {
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  font-size: 10px;
+}
+
+.db-card__version-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+}
+
+.db-card--sm .db-card__version-badge {
+  top: 8px;
+  right: 8px;
+}
+
+.db-card__content {
+  position: absolute;
+  inset: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  z-index: 1;
+}
+
+.db-card--sm .db-card__content {
+  padding: 10px;
+  gap: 6px;
+}
+
+.db-card__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.db-card--sm .db-card__title {
+  font-size: 14px;
+  line-height: 1.15;
+}
+
+.db-card__subtitle {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.db-card--sm .db-card__subtitle {
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.db-card__description {
+  margin: 0;
+  font-size: 14px;
+}
+
+.db-card__meta {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.db-card--sm .db-card__meta {
+  font-size: 11px;
+  gap: 6px;
+}
+
+.db-card__updated {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.db-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.db-card--sm .db-card__actions {
+  gap: 6px;
+}

@@ -15,9 +15,5 @@ export interface BookVersionsCheckRequest {
      * Массив книг для проверки версий. Если отсутствует или пустой, возвращаются все доступные книги
      */
     books: Array<BookVersionItem>;
-    /**
-     * Имя БД для проверки (по умолчанию songs.sqlite). Используется только если передан массив books
-     */
-    db: string;
 }
 

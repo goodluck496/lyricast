@@ -99,7 +99,6 @@ export class SongEditorSidebarFacade {
     });
 
     lyric.lines = newLines;
-    lyric.splitLinesCount = Math.max(1, newLines.length);
   }
 
   setLyricType(lyric: Lyric, type: LyricTypeEnum): void {

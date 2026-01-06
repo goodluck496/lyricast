@@ -1,8 +1,52 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .songs-table-page {
   display: flex;
   flex-direction: column;
   gap: 12px;
   height: 100%;
+}
+
+.songs-table-page__content {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.songs-table-page__table {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.songs-table-page__search {
+  flex-shrink: 0;
+  max-width: 400px;
+  margin-bottom: 8px;
+  z-index: 1;
+}
+
+.songs-table {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 44px);
+}
+
+.songs-table .p-paginator {
+  flex-shrink: 0;
+  height: 44px;
 }
 
 .songs-table-page__header {
@@ -58,24 +102,8 @@
   gap: 4px;
 }
 
-.songs-table {
-  width: 100%;
-}
-
 .songs-table__row--editing > td {
   background: var(--primary-50, rgba(59, 130, 246, 0.08));
-}
-
-.songs-table-page__content {
-  display: flex;
-  gap: 12px;
-  flex: 1;
-  min-height: 0;
-}
-
-.songs-table-page__table {
-  flex: 1;
-  min-width: 0;
 }
 
 .songs-table-page__sidebar {
@@ -85,7 +113,6 @@
   background: var(--surface-ground, #fff);
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
   padding: 16px 20px;
-  display: none;
 }
 
 .songs-table-page__sidebar--open {

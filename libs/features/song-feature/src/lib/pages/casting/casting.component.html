@@ -10,7 +10,7 @@
         <section
           class="slides__section">
           <div [fittext]="true"
-               [maxFontSize]="140"
+               [maxFontSize]="115"
                [activateOnResize]="true">
             <div class="slides__content"></div>
           </div>
@@ -28,6 +28,7 @@
                      [activateOnResize]="true">
                   <div
                     [innerHTML]="sanitizer.bypassSecurityTrustHtml(line.text)"
+                    [class.single-line]="lyric.lines.length === 1"
                     class="slides__content"></div>
                 </div>
 

@@ -58,9 +58,8 @@
     font-weight: bold;
     color: #ffdd00;
 
-
-    // white-space: nowrap;
-
-
+    &.single-line {
+      white-space: nowrap;
+    }
   }
 }

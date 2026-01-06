@@ -51,14 +51,17 @@ export class SongCastingPreviewComponent implements OnDestroy, AfterViewInit {
     this.cdr.detectChanges();
     this.deckRef?.layout();
     this.deckRef?.sync();
+    
+    // Trigger resize event for fit-text to recalculate
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
   }
 
   initDeck(): void {
     this.initTimeoutId = setTimeout(async () => {
       try {
         this.deckRef = new Reveal(this.elRef.nativeElement.querySelector('.reveal'), {
-          width: 400,
-          height: 300,
           margin: -1,
           transition: 'fade',
           disableLayout: true,
@@ -100,7 +103,13 @@ export class SongCastingPreviewComponent implements OnDestroy, AfterViewInit {
         } else {
           this.closePreview();
         }
-      });
+        
+        // Trigger resize event when text changes
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+        }, 100);
+        
+              });
   }
 
   ngOnDestroy() {

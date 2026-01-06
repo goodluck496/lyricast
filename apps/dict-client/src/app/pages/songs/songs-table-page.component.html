@@ -3,7 +3,7 @@
     <div class="songs-table-page__collection">
       <div
         class="songs-table-page__collection-cover"
-        [style.backgroundImage]="currentDb?.coverImage ? 'url(' + currentDb?.coverImage + ')' : null"
+        [style.background-image]="currentDb?.coverImage ? 'url(' + currentDb?.coverImage + ')' : null"
       ></div>
 
       <div class="songs-table-page__collection-info">
@@ -66,6 +66,19 @@
 
   <div class="songs-table-page__content">
     <div class="songs-table-page__table">
+      <div class="songs-table-page__search">
+        <p-iconfield>
+          <p-inputicon [class]="isSearching ? 'pi pi-spinner pi-spin' : 'pi pi-search'" />
+          <input
+            type="text"
+            pInputText
+            placeholder="Поиск"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange($event)"
+          />
+        </p-iconfield>
+      </div>
+
       <p-table
         [value]="songs"
         [paginator]="true"
@@ -76,7 +89,7 @@
         [lazy]="true"
         (onPage)="onPageChange($event)"
         [scrollable]="true"
-        scrollHeight="calc(100vh - 140px)"
+        scrollHeight="flex"
         styleClass="songs-table"
       >
         <ng-template pTemplate="header">

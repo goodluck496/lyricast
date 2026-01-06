@@ -107,7 +107,7 @@
     "openapi:songs:gen": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm openapi-generator-cli generate -c tools/openapi/openapi-gen-song-dictionary-client.config.yml",
+        "command": "pnpm openapi-generator-cli generate -c tools/openapi/openapi-gen-song-dictionary-client.config.yml --additional-properties=tsconfig=tsconfig.openapi.json && node tools/openapi/add-ts-nocheck.js",
         "cwd": "."
       }
     }

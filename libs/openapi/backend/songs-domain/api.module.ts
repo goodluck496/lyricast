@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { DynamicModule, Module, Global, Provider } from '@nestjs/common';
 import { HttpModule, HttpService } from '@nestjs/axios';
 import { AsyncConfiguration, Configuration, ConfigurationFactory } from './configuration';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { HttpHeaders, HttpParams, HttpParameterCodec } from '@angular/common/http';
 import { Param } from './param';
 

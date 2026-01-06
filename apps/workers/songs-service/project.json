@@ -32,7 +32,7 @@
     "openapi:gen": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm openapi-generator-cli generate -c tools/openapi/openapi-gen-song-backend.config.yml",
+        "command": "pnpm openapi-generator-cli generate -c tools/openapi/openapi-gen-song-backend.config.yml --additional-properties=tsconfig=tsconfig.openapi.json && node tools/openapi/add-ts-nocheck.js",
         "cwd": "."
       }
     }

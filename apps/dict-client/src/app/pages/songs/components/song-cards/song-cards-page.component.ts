@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 import { SongDatabaseInfoDto } from '@lyri-cast/entities';
 import { SongsDictionaryApiService } from '@lyri-cast/data-access-dictionaries';
 import { SongDictionaryCardComponent } from '@lyri-cast/ui-lib';
+import { AuthOverlayService } from '../../../../auth/auth-overlay.service';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   standalone: true,
@@ -15,12 +17,22 @@ import { SongDictionaryCardComponent } from '@lyri-cast/ui-lib';
 export class SongCardsPageComponent implements OnInit {
   private api = inject(SongsDictionaryApiService);
   private router = inject(Router);
+  private authOverlay = inject(AuthOverlayService);
 
   dbs: SongDatabaseInfoDto[] = [];
 
   ngOnInit(): void {
-    this.api.getSongDatabases().subscribe((dbs) => {
-      this.dbs = dbs;
+    this.api.getSongDatabases().subscribe({
+      next: (dbs) => {
+        this.dbs = dbs;
+      },
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 401) {
+          this.authOverlay.openAndWaitForToken().subscribe(() => {
+            this.ngOnInit(); // Retry after auth
+          });
+        }
+      }
     });
   }
 

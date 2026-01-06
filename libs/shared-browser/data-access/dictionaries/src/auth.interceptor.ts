@@ -2,7 +2,6 @@ import { inject } from '@angular/core';
 import {
   HttpErrorResponse,
   HttpEvent,
-  HttpHandler,
   HttpHandlerFn,
   HttpContextToken,
   HttpRequest,
@@ -28,12 +27,11 @@ function addAuthHeader(
 function handleAuthError(
   err: unknown,
   req: HttpRequest<unknown>,
-  next: HttpHandlerFn
+  next: HttpHandlerFn,
+  tokenStore: AuthTokenStore,
+  authFlow: AuthFlowService
 ): Observable<HttpEvent<unknown>> {
   if (err instanceof HttpErrorResponse && [401, 403].includes(err.status)) {
-    const tokenStore = inject(AuthTokenStore);
-    const authFlow = inject(AuthFlowService);
-
     if (req.context.get(AUTH_RETRY_CONTEXT)) {
       tokenStore.clear();
       return throwError(() => err);
@@ -71,7 +69,7 @@ export function authInterceptor(
   if (token) {
     const authReq = addAuthHeader(req, token);
     return next(authReq)
-      .pipe(catchError((err) => handleAuthError(err, req, next)));
+      .pipe(catchError((err) => handleAuthError(err, req, next, tokenStore, authFlow)));
   }
 
   return authFlow.getOrRequestToken().pipe(
@@ -79,7 +77,7 @@ export function authInterceptor(
       const authReq = addAuthHeader(req, newToken);
       return next(authReq);
     }),
-    catchError((err) => handleAuthError(err, req, next))
+    catchError((err) => handleAuthError(err, req, next, tokenStore, authFlow))
   );
 }
 /*

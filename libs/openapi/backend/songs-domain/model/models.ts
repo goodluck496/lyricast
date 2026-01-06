@@ -1,3 +1,4 @@
+// @ts-nocheck
 export * from './allBooksResponse';
 export * from './allBooksResponseBooksInner';
 export * from './apiPhpActionAuthLoginPostRequest';

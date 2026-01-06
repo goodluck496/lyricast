@@ -1,3 +1,4 @@
+// @ts-nocheck
 export * from './default.service';
 import { DefaultService } from './default.service';
 export * from './default.serviceInterface';

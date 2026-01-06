@@ -553,7 +553,6 @@ export class SongsService {
       remoteMetaByKey,
     });
 
-    console.log('carss', cards.map(el => ({...el, coverImage: ''})));
     return cards.sort((a, b) => a.title.localeCompare(b.title));
   }
 

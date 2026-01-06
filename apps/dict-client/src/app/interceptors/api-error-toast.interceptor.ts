@@ -41,6 +41,11 @@ export const apiErrorToastInterceptor: HttpInterceptorFn = (
   return next(req).pipe(
     catchError((err: unknown) => {
       if (err instanceof HttpErrorResponse) {
+        // Skip 401 errors - handled by auth flow
+        if (err.status === 401) {
+          return throwError(() => err);
+        }
+
         // Не дублируем сообщения для auth.login: там пользователь и так видит ошибку в оверлее
         const isLogin = req.url.includes('action=auth.login');
 

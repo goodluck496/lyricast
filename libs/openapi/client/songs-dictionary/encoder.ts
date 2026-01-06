@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { HttpParameterCodec } from '@angular/common/http';
 
 /**

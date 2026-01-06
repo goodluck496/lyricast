@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Lyricast Dictionary API
  * API для работы со справочниками песен/Библии на основе SQLite

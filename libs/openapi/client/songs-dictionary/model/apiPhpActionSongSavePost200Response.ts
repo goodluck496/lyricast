@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Lyricast Dictionary API
  *

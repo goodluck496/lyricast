@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { HttpService } from '@nestjs/axios';
 import { ModuleMetadata, Type } from '@nestjs/common/interfaces';
 

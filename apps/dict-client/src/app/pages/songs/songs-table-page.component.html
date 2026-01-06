@@ -42,26 +42,31 @@
 
       <div class="songs-table-page__collection-actions">
         <p-button
-          icon="pi pi-database"
           severity="secondary"
           [rounded]="true"
           [text]="true"
           (onClick)="downloadSqlite()"
           title="Скачать sqlite"
-        ></p-button>
+        >
+          <i class="pi pi-database" pButtonIcon></i>
+        </p-button>
 
         <p-button
-          icon="pi pi-file"
           severity="secondary"
           [rounded]="true"
           [text]="true"
           (onClick)="downloadJson()"
           title="Скачать json"
-        ></p-button>
+        >
+          <i class="pi pi-file" pButtonIcon></i>
+        </p-button>
       </div>
     </div>
 
-    <p-button icon="pi pi-plus" label="Добавить песню" (onClick)="createSong()"></p-button>
+    <p-button (onClick)="createSong()">
+      <i class="pi pi-plus" pButtonIcon></i>
+      <span pButtonLabel>Добавить песню</span>
+    </p-button>
   </div>
 
   <div class="songs-table-page__content">
@@ -90,7 +95,7 @@
         (onPage)="onPageChange($event)"
         [scrollable]="true"
         scrollHeight="flex"
-        styleClass="songs-table"
+        class="songs-table"
       >
         <ng-template pTemplate="header">
           <tr>
@@ -108,10 +113,11 @@
             <td>{{ song.author }}</td>
             <td>
               <p-button
-                icon="pi pi-pencil"
                 size="small"
                 (onClick)="editSong(song)"
-              ></p-button>
+              >
+                <i class="pi pi-pencil" pButtonIcon></i>
+              </p-button>
             </td>
           </tr>
         </ng-template>

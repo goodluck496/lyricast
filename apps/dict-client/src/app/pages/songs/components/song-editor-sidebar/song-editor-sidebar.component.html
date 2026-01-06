@@ -4,7 +4,7 @@
   <ng-scrollbar class="songs-table-page__sidebar-scroll">
     @if (facade.isLoading) {
       <div class="songs-table-page__sidebar-loading">
-        <p-progressSpinner styleClass="songs-table-page__spinner"></p-progressSpinner>
+        <p-progressSpinner class="songs-table-page__spinner"></p-progressSpinner>
         <p>Загрузка песни...</p>
       </div>
     }
@@ -96,11 +96,12 @@
           <div class="song-form__sections-header">
             <h4>Куплеты</h4>
             <p-button
-              icon="pi pi-plus"
-              label="Добавить куплет"
               size="small"
               (onClick)="facade.addLyric()"
-            ></p-button>
+            >
+              <i class="pi pi-plus" pButtonIcon></i>
+              <span pButtonLabel>Добавить куплет</span>
+            </p-button>
           </div>
 
           <div
@@ -119,12 +120,13 @@
                       <span>{{ lyric.sectionTitle || ('Куплет ' + (i + 1)) }}</span>
                     </span>
                     <p-button
-                      icon="pi pi-trash"
                       severity="danger"
                       size="small"
-                      styleClass="song-form__delete-lyric-btn"
+                      class="song-form__delete-lyric-btn"
                       (onClick)="confirmRemoveLyric(i, $event)"
-                    ></p-button>
+                    >
+                      <i class="pi pi-trash" pButtonIcon></i>
+                    </p-button>
                   </p-accordion-header>
 
                   <p-accordion-content>
@@ -202,7 +204,11 @@
         [style]="{ height: '6px' }"
       />
     }
-    <p-button label="Сохранить" (onClick)="saveSong()" [disabled]="!facade.song"></p-button>
-    <p-button label="Закрыть" severity="secondary" (onClick)="close()"></p-button>
+    <p-button (onClick)="saveSong()" [disabled]="!facade.song">
+      <span pButtonLabel>Сохранить</span>
+    </p-button>
+    <p-button severity="secondary" (onClick)="close()">
+      <span pButtonLabel>Закрыть</span>
+    </p-button>
   </div>
 </div>

@@ -13,7 +13,7 @@ import { AuthOverlayService } from './auth-overlay.service';
 })
 export class AuthOverlayComponent {
   private readonly authOverlayService = inject(AuthOverlayService);
-  email = '';
+  email = this.authOverlayService.getStoredEmail();
 
   readonly isVisible$ = this.authOverlayService.isVisible$;
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { catchError, Observable, of } from 'rxjs';
 import {
@@ -7,6 +7,7 @@ import {
   ISongBookName,
   ISongForSearch,
 } from '@lyri-cast/entities';
+import { BASE_API_TOKEN } from '@lyri-cast/common';
 
 export type SongDictionaryCardDto = {
   fileKey: string;
@@ -25,16 +26,26 @@ export type SongDictionaryCardDto = {
 
 @Injectable({ providedIn: 'root' })
 export class SongsApiService {
-  BASE_API_TOKEN = 'svc://'; //inject(BASE_API_TOKEN);
-  API_SONGS_TOKEN = 'songs';
+  private readonly baseApiToken = inject(BASE_API_TOKEN);
+  private http = inject(HttpClient);
 
-  constructor(private http: HttpClient) {}
+  private buildUrl(path: string): string {
+    const normalizedPath = path.replace(/^\/+/, '');
+    const rawBase = this.baseApiToken ?? 'svc://';
+    const hasProtocolSuffix = rawBase.endsWith('://');
+    const trimmedBase = hasProtocolSuffix
+      ? rawBase
+      : rawBase.replace(/\/+$/, '');
+    const songsBase = hasProtocolSuffix
+      ? `${trimmedBase}songs`
+      : `${trimmedBase}/songs`;
+
+    return `${songsBase}/${normalizedPath}`;
+  }
 
   getAllSongBooks(): Observable<ISongBookName[]> {
     return this.http
-      .get<ISongBookName[]>(
-        `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/book-names/`
-      )
+      .get<ISongBookName[]>(this.buildUrl('book-names'))
       .pipe(
         catchError((err) => {
           console.log(err);
@@ -45,7 +56,7 @@ export class SongsApiService {
 
   getAllSongsByBook(book: ISongBookName): Observable<IShortSong[]> {
     return this.http.get<IShortSong[]>(
-      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/book-songs/${book.fileKey}`
+      this.buildUrl(`book-songs/${book.fileKey}`)
     );
   }
 
@@ -58,10 +69,9 @@ export class SongsApiService {
     });
 
     return this.http
-      .get<ISongForSearch[]>(
-        `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/find/${book.fileKey}`,
-        { params }
-      )
+      .get<ISongForSearch[]>(this.buildUrl(`find/${book.fileKey}`), {
+        params,
+      })
       .pipe(
         catchError((err) => {
           console.log('error', err);
@@ -72,13 +82,13 @@ export class SongsApiService {
 
   getSong(book: ISongBookName, songId: number): Observable<ISong> {
     return this.http.get<ISong>(
-      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/book/${book.fileKey}/${songId}`
+      this.buildUrl(`book/${book.fileKey}/${songId}`)
     );
   }
 
   getSongDictionaries(): Observable<SongDictionaryCardDto[]> {
     return this.http.get<SongDictionaryCardDto[]>(
-      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/dictionaries`
+      this.buildUrl('dictionaries')
     );
   }
 
@@ -86,21 +96,21 @@ export class SongsApiService {
     fileKey: string;
   }): Observable<{ ok: boolean }> {
     return this.http.post<{ ok: boolean }>(
-      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/dictionaries/install`,
+      this.buildUrl('dictionaries/install'),
       payload
     );
   }
 
   deleteSongDictionary(payload: { fileKey: string }): Observable<{ ok: true; deleted: boolean }> {
     return this.http.post<{ ok: true; deleted: boolean }>(
-      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/dictionaries/delete`,
+      this.buildUrl('dictionaries/delete'),
       payload
     );
   }
 
   clearSongDictionaries(): Observable<{ ok: true; deletedCount: number }> {
     return this.http.post<{ ok: true; deletedCount: number }>(
-      `${this.BASE_API_TOKEN}/${this.API_SONGS_TOKEN}/dictionaries/clear`,
+      this.buildUrl('dictionaries/clear'),
       {}
     );
   }

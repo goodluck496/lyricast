@@ -36,6 +36,8 @@ module.exports = {
     '**/*.node',
     '**/better-sqlite3/**',
     '**/chokidar/**',
+    '**/@nestjs/axios/**',
+    '**/axios/**',
   ],
   directories: {
     output: 'dist',

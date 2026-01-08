@@ -12,8 +12,8 @@ import { AuthOverlayService } from './auth-overlay.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuthOverlayComponent {
-  private readonly authOverlayService = inject(AuthOverlayService)
-  email = '';
+  private readonly authOverlayService = inject(AuthOverlayService);
+  email = this.authOverlayService.getStoredEmail();
 
   readonly isVisible$ = this.authOverlayService.isVisible$;
 

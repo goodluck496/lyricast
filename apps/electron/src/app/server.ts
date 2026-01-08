@@ -19,7 +19,14 @@ export async function startFileServer(): Promise<{ port: number; server: http.Se
   app.use(express.static(staticRoot));
 
   // Fallback for SPAs: always serve index.html for any non-file route
-  app.get('*', (req, res) => {
+  app.get(/.*/, (req, res) => {
+    res.sendFile(join(staticRoot, 'index.html'));
+  });
+
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/svc/')) {
+      return next();
+    }
     res.sendFile(join(staticRoot, 'index.html'));
   });
 

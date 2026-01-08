@@ -1,10 +1,13 @@
 import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, firstValueFrom } from 'rxjs';
 import { AuthApiService, AuthOverlayPort } from '@lyri-cast/shared-browser/data-access/dictionaries';
+import { AuthStorageService } from '@lyri-cast/common-browser';
 
 @Injectable({ providedIn: 'root' })
 export class AuthOverlayService implements AuthOverlayPort {
-  private readonly authApi = inject(AuthApiService)
+  private readonly authApi = inject(AuthApiService);
+  private readonly authStorage = inject(AuthStorageService);
+
   private loginSubject?: Subject<string>;
   private readonly visibleSubject = new BehaviorSubject<boolean>(false);
 
@@ -19,9 +22,17 @@ export class AuthOverlayService implements AuthOverlayPort {
     return this.loginSubject.asObservable();
   }
 
+  getStoredEmail(): string {
+    return this.authStorage.getStoredEmail() ?? '';
+  }
+
   async submitEmail(email: string): Promise<void> {
-    const response = await firstValueFrom(this.authApi.login(email));
+    const trimmedEmail = email.trim();
+    await this.authStorage.saveEmail(trimmedEmail);
+
+    const response = await firstValueFrom(this.authApi.login(trimmedEmail));
     const token = response.token;
+    await this.authStorage.saveToken(token);
 
     this.visibleSubject.next(false);
     if (this.loginSubject) {

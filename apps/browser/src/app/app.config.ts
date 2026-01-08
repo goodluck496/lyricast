@@ -1,5 +1,6 @@
 import {
   ApplicationConfig,
+  APP_INITIALIZER,
   inject,
   Injectable,
   LOCALE_ID,
@@ -9,6 +10,7 @@ import { provideRouter, RouteReuseStrategy } from '@angular/router';
 import { appRoutes } from './app.routes';
 import { BASE_API_TOKEN } from '@lyri-cast/common';
 import {
+  HttpErrorResponse,
   HttpEvent,
   HttpHandlerFn,
   HttpRequest,
@@ -16,7 +18,7 @@ import {
   withInterceptors,
   withInterceptorsFromDi,
 } from '@angular/common/http';
-import { Observable, of, switchMap } from 'rxjs';
+import { catchError, from, Observable, of, switchMap, throwError } from 'rxjs';
 import { CustomReuseStrategy } from '../services/common/router-reuse.strategy';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideState, provideStore } from '@ngrx/store';
@@ -49,6 +51,7 @@ import {
 import { AuthOverlayService } from './auth/auth-overlay.service';
 import { registerLocaleData } from '@angular/common';
 import localeRu from '@angular/common/locales/ru';
+import { AuthStorageService } from '@lyri-cast/common-browser';
 
 registerLocaleData(localeRu);
 
@@ -64,19 +67,29 @@ function browserScopedAuthInterceptor(
   // В основном приложении токен нужен только для синхронизации справочников,
   // чтобы оверлей авторизации не всплывал при запуске приложения.
   const isDictionarySyncRequest = (() => {
-    if (!req.url.includes('svc://')) {
-      return false;
-    }
-
     // Extend this list when new dictionary types appear.
     // Goal: only dictionary sync endpoints should trigger auth overlay in browser app.
     const allowedPaths = [
       // Songs dictionaries
       '/songs/dictionaries',
       '/songs/dictionaries/install',
+      '/songs/dictionaries/delete',
+      '/songs/dictionaries/clear',
     ];
 
-    return allowedPaths.some((p) => req.url.includes(p));
+    const normalizedPath = (() => {
+      try {
+        const url = new URL(req.url);
+        const hostPrefix = url.protocol === 'svc:' && url.hostname
+          ? `/${url.hostname}`
+          : '';
+        return `${hostPrefix}${url.pathname}`.replace(/\/+/g, '/');
+      } catch {
+        return req.url;
+      }
+    })();
+
+    return allowedPaths.some((p) => normalizedPath.startsWith(p));
   })();
 
   if (!isDictionarySyncRequest) {
@@ -88,20 +101,48 @@ function browserScopedAuthInterceptor(
   const tokenStore = inject(AuthTokenStore);
   const authFlow = inject(AuthFlowService);
 
-  const existing = tokenStore.getToken();
-  const ensureToken$ = existing ? of(String(existing)) : authFlow.getOrRequestToken();
+  const sendWithToken = (
+    tokenValue: string,
+    retried: boolean
+  ): Observable<HttpEvent<unknown>> => {
+    const authReq = req.clone({
+      setParams: { authToken: tokenValue },
+      setHeaders: {
+        Authorization: `Bearer ${tokenValue}`,
+        'X-Auth-Token': tokenValue,
+      },
+    });
 
-  return ensureToken$.pipe(
-    switchMap((token) => {
-      const tokenStr = String(token);
-      const authReq = req.clone({
-        setParams: { authToken: tokenStr },
-        setHeaders: {
-          Authorization: `Bearer ${tokenStr}`,
-          'X-Auth-Token': tokenStr,
-        },
-      });
-      return next(authReq);
+    console.log('authreq', authReq);
+
+    return next(authReq).pipe(
+      catchError((err) => {
+        if (
+          !retried &&
+          err instanceof HttpErrorResponse &&
+          [401, 403].includes(err.status)
+        ) {
+          tokenStore.clear();
+          return authFlow.getOrRequestToken().pipe((nextToken) =>
+            sendWithToken(String(nextToken), true)
+          );
+        }
+
+        return throwError(() => err);
+      })
+    );
+  };
+
+  return from(tokenStore.whenReady()).pipe(
+    switchMap(() => {
+      const existing = tokenStore.getToken();
+      const ensureToken$ = existing
+        ? of(String(existing))
+        : authFlow.getOrRequestToken();
+
+      return ensureToken$.pipe(
+        switchMap((token) => sendWithToken(String(token), false))
+      );
     })
   );
 }
@@ -138,6 +179,19 @@ export class CustomLuxonDateAdapter extends LuxonDateAdapter {
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    {
+      provide: APP_INITIALIZER,
+      multi: true,
+      useFactory: () => {
+        const authStorage = inject(AuthStorageService);
+        const tokenStore = inject(AuthTokenStore, { optional: true });
+        return () =>
+          Promise.all([
+            authStorage.whenReady(),
+            tokenStore?.whenReady() ?? Promise.resolve(),
+          ]);
+      },
+    },
     { provide: LOCALE_ID, useValue: 'ru-RU' },
     provideAnimationsAsync(),
     { provide: RouteReuseStrategy, useClass: CustomReuseStrategy },
@@ -145,7 +199,7 @@ export const appConfig: ApplicationConfig = {
       withInterceptorsFromDi(),
       withInterceptors([browserScopedAuthInterceptor])
     ),
-    { provide: BASE_API_TOKEN, useValue: 'http://localhost:3000/api' },
+    { provide: BASE_API_TOKEN, useValue: 'svc://' },
     //для оптимизации, чтобы вспылтие события не взызывало двойного обнаржуния изменений
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes),

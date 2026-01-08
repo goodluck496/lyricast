@@ -18,12 +18,9 @@ export interface BookMetaSaveRequest {
      */
     fileKey: string;
     /**
-     * Объект ключ-значение, который будет upsert-нут в song_book_meta
+     * Объект ключ-значение, который будет upsert-нут в song_book_meta. Если передан key coverImage (data:URL), сервер автоматически пережмёт изображение до максимального размера 512x512 px. 
      */
     meta?: { [key: string]: string; } | null;
-    /**
-     * Список meta-ключей, которые нужно удалить
-     */
     deleteKeys?: Array<string> | null;
 }
 

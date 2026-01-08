@@ -1,0 +1,78 @@
+<div class="meta-dialog">
+  <div class="meta-dialog__form">
+    <p-float-label class="field">
+      <input
+        id="metaTitle"
+        type="text"
+        pInputText
+        [(ngModel)]="metaForm.title"
+        placeholder=" "
+      />
+      <label for="metaTitle">Название</label>
+    </p-float-label>
+
+    <p-float-label class="field">
+      <textarea
+        id="metaDescription"
+        pTextarea
+        [(ngModel)]="metaForm.description"
+        rows="3"
+        autoResize="true"
+        placeholder=" "
+      ></textarea>
+      <label for="metaDescription">Описание</label>
+    </p-float-label>
+
+    <p-float-label class="field">
+      <input
+        id="metaLanguage"
+        type="text"
+        pInputText
+        [(ngModel)]="metaForm.language"
+        placeholder=" "
+      />
+      <label for="metaLanguage">Язык (ru, en, ky...)</label>
+    </p-float-label>
+
+    <div class="form-field form-field--upload">
+      <label for="metaCover">Обложка (изображение)</label>
+      <p-fileUpload
+        mode="basic"
+        name="cover"
+        accept="image/*"
+        chooseLabel="Выбрать файл"
+        [auto]="true"
+        [customUpload]="true"
+        (uploadHandler)="onCoverUpload($event)"
+      ></p-fileUpload>
+      @if (metaForm.coverImage) {
+        <small class="hint">Изображение будет сжато на сервере до 512x512</small>
+      }
+    </div>
+  </div>
+
+  @if (previewDb; as dbPreview) {
+    <div class="meta-dialog__preview">
+      <div class="meta-dialog__preview-title">Предпросмотр карточки</div>
+      <lyri-song-dictionary-card
+        [db]="dbPreview"
+        [clickable]="false"
+        size="md"
+      ></lyri-song-dictionary-card>
+    </div>
+  }
+</div>
+
+<div class="meta-dialog__footer">
+  <p-button
+    label="Сохранить"
+    [loading]="metaSaving"
+    (onClick)="onSave()"
+  ></p-button>
+  <p-button
+    label="Отмена"
+    severity="secondary"
+    [text]="true"
+    (onClick)="onCancel()"
+  ></p-button>
+</div>

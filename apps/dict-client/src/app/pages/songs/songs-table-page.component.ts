@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { TableModule, TablePageEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -11,9 +12,11 @@ import { ISong, SongDatabaseInfoDto } from '@lyri-cast/entities';
 import { SongsDictionaryApiService } from '@lyri-cast/data-access-dictionaries';
 import { SkeletonModule } from 'primeng/skeleton';
 import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, distinctUntilChanged, switchMap, takeUntil, of } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs';
+import { DialogModule } from 'primeng/dialog';
 
 import { SongEditorSidebarComponent } from './components/song-editor-sidebar/song-editor-sidebar.component';
+import { MetaDialogComponent } from './components/meta-dialog/meta-dialog.component';
 
 @Component({
   standalone: true,
@@ -24,11 +27,14 @@ import { SongEditorSidebarComponent } from './components/song-editor-sidebar/son
     BadgeModule,
     TooltipModule,
     SkeletonModule,
+    CommonModule,
     InputTextModule,
     IconFieldModule,
     InputIconModule,
     FormsModule,
+    DialogModule,
     SongEditorSidebarComponent,
+    MetaDialogComponent,
   ],
   templateUrl: './songs-table-page.component.html',
   styleUrl: './songs-table-page.component.scss',
@@ -52,6 +58,8 @@ export class SongsTablePageComponent implements OnInit {
   searchQuery = '';
   isSearching = false;
   private searchSubject$ = new Subject<string>();
+
+  metaDialogVisible = false;
 
   isEditingRow(song: ISong): boolean {
     if (!this.selectedSongId) {
@@ -81,24 +89,24 @@ export class SongsTablePageComponent implements OnInit {
         distinctUntilChanged(),
         switchMap((query) => {
           this.isSearching = true;
-          
+
           if (!query.trim()) {
             // If query is empty, load all songs
-            return this.api.searchSongs({ 
-              db: this.dbId, 
-              page: 1, 
-              pageSize: this.rows, 
-              includeLyrics: false 
+            return this.api.searchSongs({
+              db: this.dbId,
+              page: 1,
+              pageSize: this.rows,
+              includeLyrics: false,
             });
           }
-          
+
           // Search with query
-          return this.api.searchSongs({ 
-            db: this.dbId, 
-            page: 1, 
-            pageSize: this.rows, 
+          return this.api.searchSongs({
+            db: this.dbId,
+            page: 1,
+            pageSize: this.rows,
             query: query,
-            includeLyrics: false 
+            includeLyrics: false,
           });
         })
       )
@@ -111,7 +119,7 @@ export class SongsTablePageComponent implements OnInit {
         },
         error: () => {
           this.isSearching = false;
-        }
+        },
       });
   }
 
@@ -156,25 +164,27 @@ export class SongsTablePageComponent implements OnInit {
 
   loadSongs(page: number, pageSize: number, query?: string): void {
     this.isSearching = !!query;
-    
+
     // Use the searchSongs API which already handles both regular search and text search
-    this.api.searchSongs({ 
-      db: this.dbId, 
-      page, 
-      pageSize, 
-      query: query || undefined,
-      includeLyrics: false 
-    }).subscribe({
-      next: (res) => {
-        this.songs = res.items;
-        this.totalRecords = res.totalCount;
-        this.rows = res.pageSize;
-        this.isSearching = false;
-      },
-      error: () => {
-        this.isSearching = false;
-      }
-    });
+    this.api
+      .searchSongs({
+        db: this.dbId,
+        page,
+        pageSize,
+        query: query || undefined,
+        includeLyrics: false,
+      })
+      .subscribe({
+        next: (res) => {
+          this.songs = res.items;
+          this.totalRecords = res.totalCount;
+          this.rows = res.pageSize;
+          this.isSearching = false;
+        },
+        error: () => {
+          this.isSearching = false;
+        },
+      });
   }
 
   createSong(): void {
@@ -193,27 +203,29 @@ export class SongsTablePageComponent implements OnInit {
       (event.first ?? 0) / (event.rows ?? this.rows)
     );
     const page = pageIndex + 1; // PrimeNG pages are 0-based, API использует 1-based
-    
+
     if (this.searchQuery.trim()) {
       // If there's a search query, update search with new page
       this.isSearching = true;
-      this.api.searchSongs({ 
-        db: this.dbId, 
-        page, 
-        pageSize: event.rows ?? this.rows, 
-        query: this.searchQuery,
-        includeLyrics: false 
-      }).subscribe({
-        next: (res) => {
-          this.songs = res.items;
-          this.totalRecords = res.totalCount;
-          this.rows = res.pageSize;
-          this.isSearching = false;
-        },
-        error: () => {
-          this.isSearching = false;
-        }
-      });
+      this.api
+        .searchSongs({
+          db: this.dbId,
+          page,
+          pageSize: event.rows ?? this.rows,
+          query: this.searchQuery,
+          includeLyrics: false,
+        })
+        .subscribe({
+          next: (res) => {
+            this.songs = res.items;
+            this.totalRecords = res.totalCount;
+            this.rows = res.pageSize;
+            this.isSearching = false;
+          },
+          error: () => {
+            this.isSearching = false;
+          },
+        });
     } else {
       // Regular pagination without search
       this.loadSongs(page, event.rows ?? this.rows);
@@ -242,5 +254,19 @@ export class SongsTablePageComponent implements OnInit {
       'ru-RU',
       { hour: '2-digit', minute: '2-digit' }
     )}`;
+  }
+
+  openMetaDialog(): void {
+    if (!this.currentDb) return;
+    this.metaDialogVisible = true;
+  }
+
+  closeMetaDialog(): void {
+    this.metaDialogVisible = false;
+  }
+
+  onMetaSaved(): void {
+    this.metaDialogVisible = false;
+    this.loadDbMeta();
   }
 }

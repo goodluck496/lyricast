@@ -6,6 +6,8 @@ import { ISong } from './song.types';
 export interface SongDatabaseInfoDto {
   /** Имя файла БД, например 'songs_ru.sqlite' */
   db: string;
+  /** Ключ сборника (song_books.file_key) */
+  fileKey?: string;
   title?: string;
   description?: string;
   language?: string;

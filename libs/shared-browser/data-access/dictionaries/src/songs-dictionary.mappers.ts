@@ -8,6 +8,7 @@ export function mapRegistryItemToSongDatabaseInfoDto(item: RegistryItem): SongDa
 
   return {
     db: item.db,
+    fileKey: typeof meta.fileKey === 'string' ? meta.fileKey : undefined,
     title: typeof meta.title === 'string' ? meta.title : undefined,
     description: typeof meta.description === 'string' ? meta.description : undefined,
     language: typeof meta.language === 'string' ? meta.language : undefined,

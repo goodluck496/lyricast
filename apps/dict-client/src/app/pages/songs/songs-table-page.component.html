@@ -46,7 +46,8 @@
           [rounded]="true"
           [text]="true"
           (onClick)="downloadSqlite()"
-          title="Скачать sqlite"
+          pTooltip="Скачать sqlite"
+          tooltipPosition="bottom"
         >
           <i class="pi pi-database" pButtonIcon></i>
         </p-button>
@@ -56,9 +57,21 @@
           [rounded]="true"
           [text]="true"
           (onClick)="downloadJson()"
-          title="Скачать json"
+          pTooltip="Скачать json"
+          tooltipPosition="bottom"
         >
           <i class="pi pi-file" pButtonIcon></i>
+        </p-button>
+
+        <p-button
+          severity="secondary"
+          [rounded]="true"
+          [text]="true"
+          (onClick)="openMetaDialog()"
+          pTooltip="Настройки справочника"
+          tooltipPosition="bottom"
+        >
+          <i class="pi pi-cog" pButtonIcon></i>
         </p-button>
       </div>
     </div>
@@ -138,4 +151,26 @@
       }
     </div>
   </div>
+
+  <p-dialog
+    header="Настройки справочника"
+    [(visible)]="metaDialogVisible"
+    [modal]="true"
+    [style]="{ width: '900px', maxWidth: '95vw' }"
+    [draggable]="false"
+    [closable]="true"
+    [contentStyle]="{ overflow: 'visible' }"
+    [breakpoints]="{ '960px': '95vw' }"
+    [closeOnEscape]="false"
+    [dismissableMask]="false"
+    (onHide)="closeMetaDialog()"
+  >
+    <lyri-meta-dialog
+      [dbId]="dbId"
+      [currentDb]="currentDb"
+      [visible]="metaDialogVisible"
+      (saved)="onMetaSaved()"
+      (closed)="closeMetaDialog()"
+    ></lyri-meta-dialog>
+  </p-dialog>
 </div>

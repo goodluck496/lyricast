@@ -4,6 +4,7 @@ import {
   ApiPhpActionRegistryListGet200Response,
   ApiPhpActionSongGetGet200Response,
   ApiPhpActionSongSavePost200Response,
+  BookMetaSaveRequest,
   DefaultService,
   Lyric as ApiLyric,
   LyricLine as ApiLyricLine,
@@ -156,5 +157,30 @@ export class SongsDictionaryApiService {
       lyrics: [],
       bookName: { fileKey: '', humanName: '' },
     };
+  }
+
+  updateBookMeta(
+    db: string,
+    fileKey: string,
+    meta: { title: string | null; description: string | null; language: string | null; coverImage: string | null }
+  ) {
+    const payload: BookMetaSaveRequest = {
+      fileKey,
+      meta: Object.entries(meta).reduce<Record<string, string>>((acc, [key, value]) => {
+        if (value === null) {
+          return acc;
+        }
+        acc[key] = value;
+        return acc;
+      }, {}),
+      deleteKeys: Object.entries(meta)
+        .filter(([, value]) => value === null)
+        .map(([key]) => key),
+    };
+
+    return this.api.apiPhpactionbookMetaSavePost({
+      db,
+      bookMetaSaveRequest: payload,
+    });
   }
 }

@@ -6,7 +6,6 @@ import {
 import { provideRouter, withHashLocation } from '@angular/router';
 import { appRoutes } from './app.routes';
 import {
-  HTTP_INTERCEPTORS,
   provideHttpClient,
   withInterceptors,
   withInterceptorsFromDi,
@@ -15,7 +14,10 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
 import { provideApi } from '@lyri-cast/openapi-songs-dictionary';
-import { authInterceptor, AUTH_OVERLAY_PORT } from '@lyri-cast/shared-browser/data-access/dictionaries';
+import {
+  AUTH_OVERLAY_PORT,
+  authInterceptor,
+} from '@lyri-cast/shared-browser/data-access/dictionaries';
 import { AuthOverlayService } from './auth/auth-overlay.service';
 import { MessageService } from 'primeng/api';
 import { apiErrorToastInterceptor } from './interceptors/api-error-toast.interceptor';
@@ -31,7 +33,6 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([authInterceptor, apiErrorToastInterceptor])
     ),
 
-
     providePrimeNG({
       theme: {
         preset: Aura,
@@ -44,12 +45,6 @@ export const appConfig: ApplicationConfig = {
     provideApi('https://kantelers.ru/lyricast/api'),
 
     MessageService,
-
-    // {
-    //   provide: HTTP_INTERCEPTORS,
-    //   useClass: AuthInterceptor,
-    //   multi: true,
-    // },
 
     {
       provide: AUTH_OVERLAY_PORT,

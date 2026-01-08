@@ -23,6 +23,8 @@ import { ApiPhpActionRegistryListGet200Response } from '../model/apiPhpActionReg
 import { ApiPhpActionSongGetGet200Response } from '../model/apiPhpActionSongGetGet200Response';
 import { ApiPhpActionSongSavePost200Response } from '../model/apiPhpActionSongSavePost200Response';
 import { AuthResponse } from '../model/authResponse';
+import { BookMetaSaveRequest } from '../model/bookMetaSaveRequest';
+import { BookMetaSaveResponse } from '../model/bookMetaSaveResponse';
 import { BookVersionsCheckRequest } from '../model/bookVersionsCheckRequest';
 import { SongBookExport } from '../model/songBookExport';
 import { SongSaveRequest } from '../model/songSaveRequest';
@@ -50,6 +52,14 @@ export interface DefaultServiceInterface {
     * @param apiPhpActionAuthLoginPostRequest 
     */
     apiPhpactionauthLoginPost(apiPhpActionAuthLoginPostRequest: ApiPhpActionAuthLoginPostRequest, extraHttpRequestParams?: any): Observable<AuthResponse>;
+
+    /**
+    * Обновить мета-информацию сборника
+    * Позволяет частично обновить или удалить произвольные meta-ключи для указанного справочника (song_books.file_key). При любом изменении автоматически увеличивает версию книги и записывает автора изменений. 
+    * @param bookMetaSaveRequest 
+    * @param db Имя SQLite-файла (по умолчанию songs.sqlite)
+    */
+    apiPhpactionbookMetaSavePost(bookMetaSaveRequest: BookMetaSaveRequest, db?: string, extraHttpRequestParams?: any): Observable<BookMetaSaveResponse>;
 
     /**
     * Проверить, какие справочники (книги) свежее на сервере

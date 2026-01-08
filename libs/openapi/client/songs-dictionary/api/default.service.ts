@@ -38,6 +38,10 @@ import { ApiPhpActionSongSavePost200Response } from '../model/apiPhpActionSongSa
 // @ts-ignore
 import { AuthResponse } from '../model/authResponse';
 // @ts-ignore
+import { BookMetaSaveRequest } from '../model/bookMetaSaveRequest';
+// @ts-ignore
+import { BookMetaSaveResponse } from '../model/bookMetaSaveResponse';
+// @ts-ignore
 import { BookVersionsCheckRequest } from '../model/bookVersionsCheckRequest';
 // @ts-ignore
 import { SongBookExport } from '../model/songBookExport';
@@ -54,6 +58,7 @@ import {
     DefaultServiceInterface,
     ApiPhpGetRequestParams,
     ApiPhpactionauthLoginPostRequestParams,
+    ApiPhpactionbookMetaSavePostRequestParams,
     ApiPhpactionbookVersionsCheckPostRequestParams,
     ApiPhpactiondbDeletePostRequestParams,
     ApiPhpactiondownloadDbGetRequestParams,
@@ -213,6 +218,90 @@ export class DefaultService extends BaseService implements DefaultServiceInterfa
             {
                 context: localVarHttpContext,
                 body: apiPhpActionAuthLoginPostRequest,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * Обновить мета-информацию сборника
+     * Позволяет частично обновить или удалить произвольные meta-ключи для указанного справочника (song_books.file_key). При любом изменении автоматически увеличивает версию книги и записывает автора изменений. 
+     * @endpoint post /api.php?action=book.meta.save
+     * @param requestParameters
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public apiPhpactionbookMetaSavePost(requestParameters: ApiPhpactionbookMetaSavePostRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<BookMetaSaveResponse>;
+    public apiPhpactionbookMetaSavePost(requestParameters: ApiPhpactionbookMetaSavePostRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<BookMetaSaveResponse>>;
+    public apiPhpactionbookMetaSavePost(requestParameters: ApiPhpactionbookMetaSavePostRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<BookMetaSaveResponse>>;
+    public apiPhpactionbookMetaSavePost(requestParameters: ApiPhpactionbookMetaSavePostRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        const bookMetaSaveRequest = requestParameters?.bookMetaSaveRequest;
+        if (bookMetaSaveRequest === null || bookMetaSaveRequest === undefined) {
+            throw new Error('Required parameter bookMetaSaveRequest was null or undefined when calling apiPhpactionbookMetaSavePost.');
+        }
+        const db = requestParameters?.db;
+
+        let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'db',
+            <any>db,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (bearerAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('bearerAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'application/json'
+        ];
+        const httpContentTypeSelected: string | undefined = this.configuration.selectHeaderContentType(consumes);
+        if (httpContentTypeSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Content-Type', httpContentTypeSelected);
+        }
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/api.php?action=book.meta.save`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<BookMetaSaveResponse>('post', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                body: bookMetaSaveRequest,
+                params: localVarQueryParameters.toHttpParams(),
                 responseType: <any>responseType_,
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,

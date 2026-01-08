@@ -11,6 +11,8 @@ export * from './apiPhpActionRegistryListGet200Response';
 export * from './apiPhpActionSongGetGet200Response';
 export * from './apiPhpActionSongSavePost200Response';
 export * from './authResponse';
+export * from './bookMetaSaveRequest';
+export * from './bookMetaSaveResponse';
 export * from './bookUpdateItem';
 export * from './bookVersionItem';
 export * from './bookVersionsCheckRequest';

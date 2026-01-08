@@ -21,6 +21,8 @@ model/apiPhpActionRegistryListGet200Response.ts
 model/apiPhpActionSongGetGet200Response.ts
 model/apiPhpActionSongSavePost200Response.ts
 model/authResponse.ts
+model/bookMetaSaveRequest.ts
+model/bookMetaSaveResponse.ts
 model/bookUpdateItem.ts
 model/bookVersionItem.ts
 model/bookVersionsCheckRequest.ts

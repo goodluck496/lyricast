@@ -26,6 +26,8 @@ import { ApiPhpActionRegistryListGet200Response } from '../model/apiPhpActionReg
 import { ApiPhpActionSongGetGet200Response } from '../model/apiPhpActionSongGetGet200Response';
 import { ApiPhpActionSongSavePost200Response } from '../model/apiPhpActionSongSavePost200Response';
 import { AuthResponse } from '../model/authResponse';
+import { BookMetaSaveRequest } from '../model/bookMetaSaveRequest';
+import { BookMetaSaveResponse } from '../model/bookMetaSaveResponse';
 import { BookVersionsCheckRequest } from '../model/bookVersionsCheckRequest';
 import { SongBookExport } from '../model/songBookExport';
 import { SongSaveRequest } from '../model/songSaveRequest';
@@ -67,6 +69,27 @@ export interface DefaultServiceApiPhpactionauthLoginPostRequest {
      * @memberof DefaultServiceApiPhpactionauthLoginPost
      */
     readonly 'ApiPhpActionAuthLoginPostRequest': ApiPhpActionAuthLoginPostRequest
+}
+
+/**
+ * Request parameters for apiPhpactionbookMetaSavePost operation in DefaultService.
+ * @export
+ * @interface DefaultServiceApiPhpactionbookMetaSavePostRequest
+ */
+export interface DefaultServiceApiPhpactionbookMetaSavePostRequest {
+    /**
+     * 
+     * @type {BookMetaSaveRequest}
+     * @memberof DefaultServiceApiPhpactionbookMetaSavePost
+     */
+    readonly 'BookMetaSaveRequest': BookMetaSaveRequest
+
+    /**
+     * Имя SQLite-файла (по умолчанию songs.sqlite)
+     * @type {string}
+     * @memberof DefaultServiceApiPhpactionbookMetaSavePost
+     */
+    readonly db?: string
 }
 
 /**
@@ -382,6 +405,73 @@ export class DefaultService implements DefaultServiceInterface {
                         withCredentials: this.configuration.withCredentials,
                         ...apiPhpactionauthLoginPostOpts?.config,
                         headers: {...headers, ...apiPhpactionauthLoginPostOpts?.config?.headers},
+                    }
+                );
+            })
+        );
+    }
+    /**
+     * Обновить мета-информацию сборника
+     * Позволяет частично обновить или удалить произвольные meta-ключи для указанного справочника (song_books.file_key). При любом изменении автоматически увеличивает версию книги и записывает автора изменений. 
+     * @param {DefaultServiceApiPhpactionbookMetaSavePostRequest} requestParameters Request parameters.
+     * @param {*} [apiPhpactionbookMetaSavePostOpts.config] Override http request option.
+     */
+    public apiPhpactionbookMetaSavePost(requestParameters: DefaultServiceApiPhpactionbookMetaSavePostRequest, apiPhpactionbookMetaSavePostOpts?: { config?: AxiosRequestConfig }): Observable<AxiosResponse<BookMetaSaveResponse>>;
+    public apiPhpactionbookMetaSavePost(requestParameters: DefaultServiceApiPhpactionbookMetaSavePostRequest, apiPhpactionbookMetaSavePostOpts?: { config?: AxiosRequestConfig }): Observable<any> {
+        const {
+            'BookMetaSaveRequest': bookMetaSaveRequest,
+            db,
+        } = requestParameters;
+
+        if (bookMetaSaveRequest === null || bookMetaSaveRequest === undefined) {
+            throw new Error('Required parameter bookMetaSaveRequest was null or undefined when calling apiPhpactionbookMetaSavePost.');
+        }
+
+        let queryParameters = new URLSearchParams();
+        if (db !== undefined && db !== null) {
+            queryParameters.append('db', <any>db);
+        }
+
+        let headers = {...this.defaultHeaders};
+
+        let accessTokenObservable: Observable<any> = of(null);
+
+        // authentication (bearerAuth) required
+        if (typeof this.configuration.accessToken === 'function') {
+            accessTokenObservable = from(Promise.resolve(this.configuration.accessToken()));
+        } else if (this.configuration.accessToken) {
+            accessTokenObservable = from(Promise.resolve(this.configuration.accessToken));
+        }
+        // to determine the Accept header
+        let httpHeaderAccepts: string[] = [
+            'application/json'
+        ];
+        const httpHeaderAcceptSelected: string | undefined = this.configuration.selectHeaderAccept(httpHeaderAccepts);
+        if (httpHeaderAcceptSelected != undefined) {
+            headers['Accept'] = httpHeaderAcceptSelected;
+        }
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'application/json'
+        ];
+        const httpContentTypeSelected: string | undefined = this.configuration.selectHeaderContentType(consumes);
+        if (httpContentTypeSelected != undefined) {
+            headers['Content-Type'] = httpContentTypeSelected;
+        }
+        return accessTokenObservable.pipe(
+            switchMap((accessToken) => {
+                if (accessToken) {
+                    headers['Authorization'] = `Bearer ${accessToken}`;
+                }
+
+                return this.httpClient.post<BookMetaSaveResponse>(`${this.basePath}/api.php?action=book.meta.save`,
+                    bookMetaSaveRequest,
+                    {
+                        params: queryParameters,
+                        withCredentials: this.configuration.withCredentials,
+                        ...apiPhpactionbookMetaSavePostOpts?.config,
+                        headers: {...headers, ...apiPhpactionbookMetaSavePostOpts?.config?.headers},
                     }
                 );
             })

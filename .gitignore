@@ -58,3 +58,6 @@ tools/publish-release.ps1
 .github/instructions/nx.instructions.md
 
 sync_config.jsonc
+
+screenshots/*
+temp/*

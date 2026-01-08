@@ -22,6 +22,8 @@ import { ApiPhpActionRegistryListGet200Response } from '../model/models';
 import { ApiPhpActionSongGetGet200Response } from '../model/models';
 import { ApiPhpActionSongSavePost200Response } from '../model/models';
 import { AuthResponse } from '../model/models';
+import { BookMetaSaveRequest } from '../model/models';
+import { BookMetaSaveResponse } from '../model/models';
 import { BookVersionsCheckRequest } from '../model/models';
 import { SongBookExport } from '../model/models';
 import { SongSaveRequest } from '../model/models';
@@ -38,6 +40,11 @@ export interface ApiPhpGetRequestParams {
 
 export interface ApiPhpactionauthLoginPostRequestParams {
     apiPhpActionAuthLoginPostRequest: ApiPhpActionAuthLoginPostRequest;
+}
+
+export interface ApiPhpactionbookMetaSavePostRequestParams {
+    bookMetaSaveRequest: BookMetaSaveRequest;
+    db?: string;
 }
 
 export interface ApiPhpactionbookVersionsCheckPostRequestParams {
@@ -102,6 +109,14 @@ export interface DefaultServiceInterface {
 * @param requestParameters
      */
     apiPhpactionauthLoginPost(requestParameters: ApiPhpactionauthLoginPostRequestParams, extraHttpRequestParams?: any): Observable<AuthResponse>;
+
+    /**
+     * Обновить мета-информацию сборника
+     * Позволяет частично обновить или удалить произвольные meta-ключи для указанного справочника (song_books.file_key). При любом изменении автоматически увеличивает версию книги и записывает автора изменений. 
+     * @endpoint post /api.php?action=book.meta.save
+* @param requestParameters
+     */
+    apiPhpactionbookMetaSavePost(requestParameters: ApiPhpactionbookMetaSavePostRequestParams, extraHttpRequestParams?: any): Observable<BookMetaSaveResponse>;
 
     /**
      * Проверить, какие справочники (книги) свежее на сервере

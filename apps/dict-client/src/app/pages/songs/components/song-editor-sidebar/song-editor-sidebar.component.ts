@@ -49,14 +49,20 @@ export class SongEditorSidebarComponent implements OnChanges {
 
   @Input({ required: true }) dbId!: string;
   @Input() songId: string | null = null;
+  @Input() nextNumber: number | null = null;
+  @Input() bookFileKey: string | null = null;
 
   @Output() saved = new EventEmitter<void>();
   @Output() closed = new EventEmitter<void>();
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['dbId'] || changes['songId']) {
+    if (
+      changes['dbId'] ||
+      changes['songId'] ||
+      (this.songId == null && (changes['nextNumber'] || changes['bookFileKey']))
+    ) {
       if (!this.dbId) return;
-      this.facade.load(this.dbId, this.songId);
+      this.facade.load(this.dbId, this.songId, this.nextNumber, this.bookFileKey);
     }
   }
 

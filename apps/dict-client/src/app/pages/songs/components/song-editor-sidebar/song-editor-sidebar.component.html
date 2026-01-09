@@ -178,6 +178,8 @@
                               [ngModel]="facade.linesToText(lyric.lines)"
                               (ngModelChange)="facade.updateLyricLinesFromText(lyric, $event)"
                               [name]="'lyric-text-' + lyric.uniqId"
+                              (keydown.arrowup)="$event.stopPropagation()"
+                              (keydown.arrowdown)="$event.stopPropagation()"
                             ></textarea>
                             <label [for]="'lyric-text-' + lyric.uniqId"
                               >Текст блока (каждая строка с новой строки)</label
@@ -204,8 +206,12 @@
         [style]="{ height: '6px' }"
       />
     }
-    <p-button (onClick)="saveSong()" [disabled]="!facade.song">
-      <span pButtonLabel>Сохранить</span>
+    <p-button
+      (onClick)="saveSong()"
+      [disabled]="!facade.song"
+      [severity]="facade.isNew ? 'info' : undefined"
+    >
+      <span pButtonLabel>{{ facade.isNew ? 'Создать' : 'Сохранить' }}</span>
     </p-button>
     <p-button severity="secondary" (onClick)="close()">
       <span pButtonLabel>Закрыть</span>

@@ -145,6 +145,8 @@
         <lyri-song-editor-sidebar
           [dbId]="dbId"
           [songId]="selectedSongId"
+          [nextNumber]="nextSongNumber"
+          [bookFileKey]="currentDb?.fileKey ?? null"
           (saved)="onSidebarSaved()"
           (closed)="onSidebarClosed()"
         />

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { debounceTime, finalize, Observable } from 'rxjs';
+import { debounceTime, finalize, Observable, tap } from 'rxjs';
 
 import { ISong, Lyric, LyricLine, LyricTypeEnum } from '@lyri-cast/entities';
 import { SongsDictionaryApiService } from '@lyri-cast/data-access-dictionaries';
@@ -27,7 +27,12 @@ export class SongEditorSidebarFacade {
     { label: 'Припев', value: LyricTypeEnum.CHORUS },
   ];
 
-  load(dbId: string, songId: string | null): void {
+  load(
+    dbId: string,
+    songId: string | null,
+    nextNumber?: number | null,
+    bookFileKey?: string | null
+  ): void {
     this.dbId = dbId;
     this.songId = songId;
 
@@ -37,6 +42,8 @@ export class SongEditorSidebarFacade {
       this.isNew = true;
       this.isLoading = false;
       this.song = this.api.createEmptySong();
+      this.song.bookName.fileKey = bookFileKey || dbId;
+      this.song.number = nextNumber && nextNumber > 0 ? nextNumber : 1;
       if (!this.song.lyrics) {
         this.song.lyrics = [];
       }
@@ -69,10 +76,27 @@ export class SongEditorSidebarFacade {
       throw new Error('SongEditorSidebarFacade.save: song or dbId is missing');
     }
 
+    if (!this.song.bookName?.fileKey) {
+      this.song.bookName = {
+        ...(this.song.bookName || { humanName: '' }),
+        fileKey: this.dbId,
+      };
+    }
+
     this.isSaving = true;
-    return this.api
-      .saveSong(this.dbId, this.song)
-      .pipe(debounceTime(300), finalize(() => (this.isSaving = false)));
+    return this.api.saveSong(this.dbId, this.song).pipe(
+      tap((res) => {
+        if (res?.id) {
+          this.songId = String(res.id);
+          if (this.song) {
+            this.song.id = res.id;
+          }
+          this.isNew = false;
+        }
+      }),
+      debounceTime(300),
+      finalize(() => (this.isSaving = false))
+    );
   }
 
   linesToText(lines: LyricLine[] | null | undefined): string {
@@ -140,7 +164,7 @@ export class SongEditorSidebarFacade {
     const newLyric: Lyric = {
       songId: '',
       uniqId: `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      sectionTitle: '',
+      sectionTitle: `Куплет ${this.song.lyrics.length + 1}`,
       type: LyricTypeEnum.COUPLET,
       splitLinesCount: 1,
       lines: [

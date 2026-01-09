@@ -51,6 +51,7 @@ export class SongsTablePageComponent implements OnInit {
 
   totalRecords = 0;
   rows = 50;
+  nextSongNumber: number | null = null;
 
   drawerVisible = false;
   selectedSongId: string | null = null;
@@ -115,6 +116,7 @@ export class SongsTablePageComponent implements OnInit {
           this.songs = res.items;
           this.totalRecords = res.totalCount;
           this.rows = res.pageSize;
+          this.nextSongNumber = this.computeNextSongNumber(res.items);
           this.isSearching = false;
         },
         error: () => {
@@ -189,11 +191,13 @@ export class SongsTablePageComponent implements OnInit {
 
   createSong(): void {
     this.drawerVisible = true;
+    this.nextSongNumber = this.computeNextSongNumber(this.songs);
     this.selectedSongId = null;
   }
 
   editSong(song: ISong): void {
     this.drawerVisible = true;
+    this.nextSongNumber = null;
     this.selectedSongId = String(song.id ?? song.number);
   }
 
@@ -254,6 +258,24 @@ export class SongsTablePageComponent implements OnInit {
       'ru-RU',
       { hour: '2-digit', minute: '2-digit' }
     )}`;
+  }
+
+  private computeNextSongNumber(songs: ISong[] | null | undefined): number {
+    const baseByMeta = (this.currentDb?.songCount ?? 0) + 1;
+
+    if (!songs || songs.length === 0) {
+      return baseByMeta || 1;
+    }
+
+    const pageMax =
+      Math.max(
+        ...songs
+          .map((s) => s.number ?? 0)
+          .filter((n) => Number.isFinite(n) && n > 0),
+        0
+      ) + 1;
+
+    return Math.max(baseByMeta, pageMax, 1);
   }
 
   openMetaDialog(): void {

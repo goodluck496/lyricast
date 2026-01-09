@@ -1,8 +1,8 @@
 export default {
-  displayName: 'dict-client',
+  displayName: 'dictionary-client',
   preset: '../../jest.preset.js',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
-  coverageDirectory: '../../coverage/apps/dict-client',
+  coverageDirectory: '../../coverage/apps/dictionary-client',
   transform: {
     '^.+\\.(ts|mjs|js|html)$': [
       'jest-preset-angular',

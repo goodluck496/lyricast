@@ -1,8 +1,7 @@
 import {
-  ApplicationConfig,
   APP_INITIALIZER,
+  ApplicationConfig,
   inject,
-  Injectable,
   LOCALE_ID,
   provideZoneChangeDetection,
 } from '@angular/core';
@@ -19,7 +18,13 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideState, provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { provideEffects } from '@ngrx/effects';
-import { AppEffects, AppReducer } from '@lyri-cast/common-browser';
+import {
+  AppEffects,
+  AppReducer,
+  AuthStorageService,
+  CustomLuxonDateAdapter,
+  RU_LUXON_DATE_FORMATS,
+} from '@lyri-cast/common-browser';
 import {
   NavigatorFeatureEffects,
   NavigatorFeatureName,
@@ -44,11 +49,6 @@ import {
 import { AuthOverlayService } from './auth/auth-overlay.service';
 import { registerLocaleData } from '@angular/common';
 import localeRu from '@angular/common/locales/ru';
-import {
-  AuthStorageService,
-  CustomLuxonDateAdapter,
-  RU_LUXON_DATE_FORMATS,
-} from '@lyri-cast/common-browser';
 
 registerLocaleData(localeRu);
 

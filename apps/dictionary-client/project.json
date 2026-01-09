@@ -1,9 +1,9 @@
 {
-  "name": "dict-client",
+  "name": "dictionary-client",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "prefix": "lyri",
-  "sourceRoot": "apps/dict-client/src",
+  "sourceRoot": "apps/dictionary-client/src",
   "tags": [],
   "targets": {
     "build": {
@@ -12,12 +12,12 @@
         "{options.outputPath}"
       ],
       "options": {
-        "outputPath": "dist/apps/dict-client",
-        "browser": "apps/dict-client/src/main.ts",
+        "outputPath": "dist/apps/dictionary-client",
+        "browser": "apps/dictionary-client/src/main.ts",
         "polyfills": [
           "zone.js"
         ],
-        "tsConfig": "apps/dict-client/tsconfig.app.json",
+        "tsConfig": "apps/dictionary-client/tsconfig.app.json",
         "inlineStyleLanguage": "scss",
         "stylePreprocessorOptions": {
           "includePaths": [
@@ -29,11 +29,11 @@
         "assets": [
           {
             "glob": "**/*",
-            "input": "apps/dict-client/public"
+            "input": "apps/dictionary-client/public"
           }
         ],
         "styles": [
-          "apps/dict-client/src/styles.scss"
+          "apps/dictionary-client/src/styles.scss"
         ]
       },
       "configurations": {
@@ -68,10 +68,10 @@
       "executor": "@angular/build:dev-server",
       "configurations": {
         "production": {
-          "buildTarget": "dict-client:build:production"
+          "buildTarget": "dictionary-client:build:production"
         },
         "development": {
-          "buildTarget": "dict-client:build:development"
+          "buildTarget": "dictionary-client:build:development"
         }
       },
       "defaultConfiguration": "development"
@@ -79,7 +79,7 @@
     "extract-i18n": {
       "executor": "@angular/build:extract-i18n",
       "options": {
-        "buildTarget": "dict-client:build"
+        "buildTarget": "dictionary-client:build"
       }
     },
     "lint": {
@@ -91,16 +91,16 @@
         "{workspaceRoot}/coverage/{projectRoot}"
       ],
       "options": {
-        "jestConfig": "apps/dict-client/jest.config.ts",
-        "tsConfig": "apps/dict-client/tsconfig.spec.json"
+        "jestConfig": "apps/dictionary-client/jest.config.ts",
+        "tsConfig": "apps/dictionary-client/tsconfig.spec.json"
       }
     },
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
       "options": {
-        "buildTarget": "dict-client:build",
-        "staticFilePath": "dist/apps/dict-client/browser",
+        "buildTarget": "dictionary-client:build",
+        "staticFilePath": "dist/apps/dictionary-client/browser",
         "spa": true
       }
     },

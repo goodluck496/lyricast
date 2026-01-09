@@ -1,11 +1,15 @@
 import {
   ActivatedRouteSnapshot,
   Route,
+  Router,
   RouterStateSnapshot,
+  UrlTree,
 } from '@angular/router';
 import { MainComponent } from './pages/main/main.component';
 import { MainComponentService, Pages } from '@lyri-cast/common-browser';
 import { Component, inject } from '@angular/core';
+import { SongsApiService } from '@lyri-cast/data-access-songs';
+import { catchError, map, of } from 'rxjs';
 
 @Component({
   standalone: true,
@@ -14,16 +18,58 @@ import { Component, inject } from '@angular/core';
 })
 class EmptyPageComponent {}
 
+function ensureSongDictionariesGuard(
+  state?: RouterStateSnapshot
+): import('rxjs').Observable<boolean | UrlTree> {
+  const songsApi = inject(SongsApiService);
+  const router = inject(Router);
+
+  // Allow dictionaries page itself, even if there are no local dictionaries,
+  // otherwise we'd get an infinite redirect loop.
+  if (state?.url?.includes(`/${Pages.MAIN}/dictionaries`)) {
+    return of(true);
+  }
+
+  return songsApi.getAllSongBooks().pipe(
+    map((books) => {
+      if (Array.isArray(books) && books.length > 0) {
+        return true;
+      }
+      return router.createUrlTree(['/', Pages.MAIN, 'dictionaries']);
+    }),
+    catchError(() => of(router.createUrlTree(['/', Pages.MAIN, 'dictionaries'])))
+  );
+}
+
 export const appRoutes: Route[] = [
+  {
+    path: 'dictionaries',
+    redirectTo: `${Pages.MAIN}/dictionaries`,
+    pathMatch: 'full',
+  },
+  {
+    path: 'song-dictionaries',
+    redirectTo: `${Pages.MAIN}/dictionaries`,
+    pathMatch: 'full',
+  },
   {
     path: Pages.MAIN,
     component: MainComponent,
     canActivate: [
+      (_: ActivatedRouteSnapshot, rss: RouterStateSnapshot) =>
+        ensureSongDictionariesGuard(rss),
       (_: ActivatedRouteSnapshot, rss: RouterStateSnapshot) => {
         return !rss.url.includes(Pages.CASTING);
       },
     ],
     children: [
+      {
+        path: 'dictionaries',
+        loadComponent: () =>
+          import('./pages/dictionaries-page/dictionaries-page.component').then(
+            (c) => c.DictionariesPageComponent
+          ),
+      },
       {
         path: Pages.SONGS_FEATURE,
         loadChildren: () =>
@@ -87,6 +133,10 @@ export const appRoutes: Route[] = [
     path: Pages.SONGS_FEATURE,
     loadChildren: () =>
       import('@lyri-cast/song-feature').then((c) => c.SongFeatureRoutes),
+    canActivate: [
+      (_: ActivatedRouteSnapshot, rss: RouterStateSnapshot) =>
+        ensureSongDictionariesGuard(rss),
+    ],
   },
   {
     path: Pages.BIBLE_FEATURE,

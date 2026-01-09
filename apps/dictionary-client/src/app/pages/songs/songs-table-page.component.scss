@@ -1,0 +1,197 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.songs-table-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+.songs-table-page__content {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.songs-table-page__table {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.songs-table-page__search {
+  flex-shrink: 0;
+  max-width: 400px;
+  margin-bottom: 8px;
+  z-index: 1;
+}
+
+.songs-table {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 44px);
+}
+
+.songs-table .p-paginator {
+  flex-shrink: 0;
+  height: 44px;
+}
+
+.songs-table-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 64px;
+}
+
+.songs-table-page__collection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.songs-table-page__collection-cover {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--surface-200, #e5e7eb);
+  flex: 0 0 auto;
+}
+
+.songs-table-page__collection-info {
+  min-width: 0;
+}
+
+.songs-table-page__collection-title {
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40vw;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.songs-table-page__collection-count {
+  color: var(--text-color-secondary, #6b7280);
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.songs-table-page__collection-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.songs-table__row--editing > td {
+  background: var(--primary-50, rgba(59, 130, 246, 0.08));
+}
+
+.songs-table-page__sidebar {
+  display: none;
+  flex: 0 0 50vw;
+  max-width: 50vw;
+  background: var(--surface-ground, #fff);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
+  padding: 16px 20px;
+}
+
+.songs-table-page__sidebar--open {
+  display: block;
+}
+
+.meta-dialog {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+  padding-bottom: 8px;
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.meta-dialog__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+p-floatLabel {
+  width: 100%;
+  display: block;
+
+  input,
+  textarea {
+    width: 100%;
+  }
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-weight: 600;
+  }
+
+  .hint {
+    color: var(--text-color-secondary, #6b7280);
+  }
+
+  &--upload p-fileupload {
+    width: 100%;
+  }
+}
+
+.meta-dialog__preview {
+  background: var(--surface-card, #fff);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.meta-dialog__preview-title {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.meta-dialog__preview lyri-song-dictionary-card {
+  width: 100%;
+  display: block;
+
+  .db-card--md {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+}
+
+.meta-dialog__footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 12px;
+}

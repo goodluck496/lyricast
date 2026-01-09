@@ -53,7 +53,7 @@ export class AssetStorageService {
       }
       fileToUpload = new File([blobOrFile], filename, { type: mimeType });
     }
-
+    console.log('files ot upload ', fileToUpload);
     const asset$ = this.assetsApiService.uploadAsset(fileToUpload).pipe(map((dto) => dto.id));
     return firstValueFrom(asset$);
   }

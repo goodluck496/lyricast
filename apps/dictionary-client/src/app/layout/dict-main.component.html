@@ -1,0 +1,22 @@
+<div class="page__wrapper">
+  <div class="page__menu">
+    @for (page of pages; track page.label) {
+      <div
+        class="page__menu-item"
+        [routerLink]="page.routerLink"
+        routerLinkActive="page__menu-item--active"
+        [class.page__menu-item--disabled]="page.disabled"
+      >
+        @if (page.icon) {
+          <lyri-icon [name]="page.icon"></lyri-icon>
+        }
+        {{ page.label }}
+      </div>
+    }
+
+  </div>
+
+  <div class="page__content page__content--without-sidebar">
+    <router-outlet></router-outlet>
+  </div>
+</div>

@@ -1,0 +1,115 @@
+{
+  "name": "dictionary-client",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "lyri",
+  "sourceRoot": "apps/dictionary-client/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/apps/dictionary-client",
+        "browser": "apps/dictionary-client/src/main.ts",
+        "polyfills": [
+          "zone.js"
+        ],
+        "tsConfig": "apps/dictionary-client/tsconfig.app.json",
+        "inlineStyleLanguage": "scss",
+        "stylePreprocessorOptions": {
+          "includePaths": [
+            ".",
+            "libs"
+          ]
+        },
+        "baseHref": "./",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/dictionary-client/public"
+          }
+        ],
+        "styles": [
+          "apps/dictionary-client/src/styles.scss"
+        ]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "continuous": true,
+      "options": {
+        "port": 0
+      },
+      "executor": "@angular/build:dev-server",
+      "configurations": {
+        "production": {
+          "buildTarget": "dictionary-client:build:production"
+        },
+        "development": {
+          "buildTarget": "dictionary-client:build:development"
+        }
+      },
+      "defaultConfiguration": "development"
+    },
+    "extract-i18n": {
+      "executor": "@angular/build:extract-i18n",
+      "options": {
+        "buildTarget": "dictionary-client:build"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
+      "options": {
+        "jestConfig": "apps/dictionary-client/jest.config.ts",
+        "tsConfig": "apps/dictionary-client/tsconfig.spec.json"
+      }
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "dictionary-client:build",
+        "staticFilePath": "dist/apps/dictionary-client/browser",
+        "spa": true
+      }
+    },
+    "openapi:songs:gen": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm openapi-generator-cli generate -c tools/openapi/openapi-gen-song-dictionary-client.config.yml --additional-properties=tsconfig=tsconfig.openapi.json && node tools/openapi/add-ts-nocheck.js",
+        "cwd": "."
+      }
+    }
+  }
+}

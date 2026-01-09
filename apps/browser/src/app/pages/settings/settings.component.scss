@@ -52,4 +52,88 @@
     align-items: center;
     gap: 8px;
   }
+
+  &__dict-loading {
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  &__dict-accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+    padding-right: 12px;
+  }
+
+  &__dict-accordion-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__dict-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 150px));
+    gap: 16px;
+  }
+
+  &__dict-card {
+    position: relative;
+  }
+
+  &__dict-card--missing {
+    opacity: 0.5;
+  }
+
+  &__dict-title {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__dict-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__dict-badge {
+    cursor: pointer;
+  }
+
+  &__dict-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+  }
+
+  &__dict-install {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  &__dict-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  &__dict-actions {
+    display: flex;
+    gap: 8px;
+  }
+
 }

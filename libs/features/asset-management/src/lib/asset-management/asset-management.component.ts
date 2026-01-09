@@ -69,6 +69,7 @@ export class AssetManagementComponent implements OnInit {
       return;
     }
 
+    console.log('files', files);
     const uploadObservables = files.map((file) =>
       this.assetsApiService.uploadAsset(file)
     );

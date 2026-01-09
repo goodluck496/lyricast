@@ -6,6 +6,7 @@ export enum LyricTypeEnum {
 }
 
 export type LyricLine = {
+  id?: number;
   /**
    * Номер строки в куплете, здесь может быть как индекс в массиве,
    * так и диапазон индексов, типо 0-4 или 0-2
@@ -23,17 +24,23 @@ export type LyricLine = {
 };
 
 export type Lyric = {
+  /** Внутренний идентификатор куплета в БД (может отсутствовать для новых куплетов). */
+  id?: number;
+
+  /** Идентификатор песни в БД как строка (как было ранее). */
   songId: string;
+
+  /** Числовой идентификатор песни в БД (song_id), если известен. */
+  numericSongId?: number | null;
+
   uniqId: string;
   sectionTitle: string;
   type: LyricTypeEnum;
   splitLinesCount: number;
-  lines: string[];
-};
-
-export type LyricForCasting = Omit<Lyric, 'lines'> & {
   lines: LyricLine[];
 };
+
+export type LyricForCasting = Lyric;
 
 export type LyricSelectedForCasting = LyricLine & {
   lyric: LyricForCasting;
@@ -45,6 +52,9 @@ export interface SelectedLyricChunk extends Lyric {
 }
 
 export interface ISong {
+  /** Внутренний ID песни в БД (song.id). Может быть undefined для новых песен. */
+  id?: number;
+
   number: number;
   title: string;
   key: string;
@@ -88,6 +98,15 @@ export interface ISongBookHeader {
 
 export interface ISongBook {
   header: ISongBookHeader;
+  meta?: {
+    coverImage?: string;
+    language?: string;
+    source?: string;
+    title?: string;
+    updated_at?: string | Date;
+    updated_by?: string;
+    version?: string;
+  };
   songs: ISong[];
 }
 

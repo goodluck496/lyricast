@@ -9,5 +9,5 @@ export type CreateAssetDto = {
   originalName: string;
   mimeType: string;
   size: number;
-  buffer: Buffer;
+  buffer:string;// Buffer;
 };

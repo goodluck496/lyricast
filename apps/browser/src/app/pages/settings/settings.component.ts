@@ -8,13 +8,13 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouteReuseStrategy } from '@angular/router';
 import {
   SettingsService,
   UserSettingsService,
   WindowService,
 } from '@lyri-cast/common-browser';
 import { AppDisplay } from '@lyri-cast/common-electron';
-import { CardModule } from 'primeng/card';
 import { ButtonDirective } from 'primeng/button';
 import { Observable } from 'rxjs';
 import { DividerModule } from 'primeng/divider';
@@ -25,6 +25,8 @@ import { SelectModule } from 'primeng/select';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { SnowfallManager } from '../../../services/common/snowfall.service';
 import { ToggleSwitch } from 'primeng/toggleswitch';
+import { Card } from 'primeng/card';
+import { SongDictionariesManagerComponent } from '../../components/song-dictionaries-manager/song-dictionaries-manager.component';
 
 @Component({
   selector: 'lyri-settings',
@@ -32,7 +34,6 @@ import { ToggleSwitch } from 'primeng/toggleswitch';
   imports: [
     CommonModule,
     FormsModule,
-    CardModule,
     ButtonDirective,
     DividerModule,
     AssetManagementComponent,
@@ -41,6 +42,8 @@ import { ToggleSwitch } from 'primeng/toggleswitch';
     SelectModule,
     FloatLabelModule,
     ToggleSwitch,
+    Card,
+    SongDictionariesManagerComponent,
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
@@ -52,6 +55,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
   windowSrv = inject(WindowService);
   userSettings = inject(UserSettingsService);
   snowfall = inject(SnowfallManager);
+  routeReuse = inject(RouteReuseStrategy);
+
+  activeTab = 0;
 
   displays: AppDisplay[] = [];
 

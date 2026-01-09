@@ -1,0 +1,178 @@
+<div class="songs-table-page" [class.songs-table-page--sidebar-open]="drawerVisible">
+  <div class="songs-table-page__header">
+    <div class="songs-table-page__collection">
+      <div
+        class="songs-table-page__collection-cover"
+        [style.background-image]="currentDb?.coverImage ? 'url(' + currentDb?.coverImage + ')' : null"
+      ></div>
+
+      <div class="songs-table-page__collection-info">
+        <div class="songs-table-page__collection-title">
+          @if (currentDb) {
+            {{ currentDb.title || currentDb.db || dbId }}
+            <span class="songs-table-page__collection-count">({{ totalRecords }})</span>
+            @if (currentDb.version) {
+              <p-badge
+                [value]="'v' + currentDb.version"
+                severity="info"
+                size="small"
+                [pTooltip]="versionTooltipTmpl"
+                tooltipPosition="bottom"
+              ></p-badge>
+              <ng-template #versionTooltipTmpl>
+                <div class="version-tooltip-content version-tooltip-content--nowrap">
+                  @if (currentDb.updatedAt) {
+                    <div class="version-tooltip-line">
+                      Обновлено: {{ formatDate(currentDb.updatedAt) }}
+                    </div>
+                  }
+                  @if (currentDb.updatedBy) {
+                    <div class="version-tooltip-line">
+                      Пользователь: {{ currentDb.updatedBy }}
+                    </div>
+                  }
+                </div>
+              </ng-template>
+            }
+          } @else {
+            <p-skeleton width="220px" height="18px"></p-skeleton>
+          }
+        </div>
+      </div>
+
+      <div class="songs-table-page__collection-actions">
+        <p-button
+          severity="secondary"
+          [rounded]="true"
+          [text]="true"
+          (onClick)="downloadSqlite()"
+          pTooltip="Скачать sqlite"
+          tooltipPosition="bottom"
+        >
+          <i class="pi pi-database" pButtonIcon></i>
+        </p-button>
+
+        <p-button
+          severity="secondary"
+          [rounded]="true"
+          [text]="true"
+          (onClick)="downloadJson()"
+          pTooltip="Скачать json"
+          tooltipPosition="bottom"
+        >
+          <i class="pi pi-file" pButtonIcon></i>
+        </p-button>
+
+        <p-button
+          severity="secondary"
+          [rounded]="true"
+          [text]="true"
+          (onClick)="openMetaDialog()"
+          pTooltip="Настройки справочника"
+          tooltipPosition="bottom"
+        >
+          <i class="pi pi-cog" pButtonIcon></i>
+        </p-button>
+      </div>
+    </div>
+
+    <p-button (onClick)="createSong()">
+      <i class="pi pi-plus" pButtonIcon></i>
+      <span pButtonLabel>Добавить песню</span>
+    </p-button>
+  </div>
+
+  <div class="songs-table-page__content">
+    <div class="songs-table-page__table">
+      <div class="songs-table-page__search">
+        <p-iconfield>
+          <p-inputicon [class]="isSearching ? 'pi pi-spinner pi-spin' : 'pi pi-search'" />
+          <input
+            type="text"
+            pInputText
+            placeholder="Поиск"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange($event)"
+          />
+        </p-iconfield>
+      </div>
+
+      <p-table
+        [value]="songs"
+        [paginator]="true"
+        [rows]="rows"
+        [totalRecords]="totalRecords"
+        [rowsPerPageOptions]="[50, 100]"
+        size="small"
+        [lazy]="true"
+        (onPage)="onPageChange($event)"
+        [scrollable]="true"
+        scrollHeight="flex"
+        class="songs-table"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Id</th>
+            <th>Название</th>
+            <th>Автор</th>
+            <th>Действия</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-song>
+          <tr [class.songs-table__row--editing]="isEditingRow(song)">
+            <td>{{ song.number }}</td>
+            <td>{{ song.title }}</td>
+            <td>{{ song.author }}</td>
+            <td>
+              <p-button
+                size="small"
+                (onClick)="editSong(song)"
+              >
+                <i class="pi pi-pencil" pButtonIcon></i>
+              </p-button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+
+    <div
+      class="songs-table-page__sidebar"
+      [class.songs-table-page__sidebar--open]="drawerVisible"
+    >
+      @if (drawerVisible) {
+        <lyri-song-editor-sidebar
+          [dbId]="dbId"
+          [songId]="selectedSongId"
+          [nextNumber]="nextSongNumber"
+          [bookFileKey]="currentDb?.fileKey ?? null"
+          (saved)="onSidebarSaved()"
+          (closed)="onSidebarClosed()"
+        />
+      }
+    </div>
+  </div>
+
+  <p-dialog
+    header="Настройки справочника"
+    [(visible)]="metaDialogVisible"
+    [modal]="true"
+    [style]="{ width: '900px', maxWidth: '95vw' }"
+    [draggable]="false"
+    [closable]="true"
+    [contentStyle]="{ overflow: 'visible' }"
+    [breakpoints]="{ '960px': '95vw' }"
+    [closeOnEscape]="false"
+    [dismissableMask]="false"
+    (onHide)="closeMetaDialog()"
+  >
+    <lyri-meta-dialog
+      [dbId]="dbId"
+      [currentDb]="currentDb"
+      [visible]="metaDialogVisible"
+      (saved)="onMetaSaved()"
+      (closed)="closeMetaDialog()"
+    ></lyri-meta-dialog>
+  </p-dialog>
+</div>

@@ -1,0 +1,26 @@
+:host {
+  display: block;
+  padding: 32px;
+}
+
+.dict-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__hint {
+    opacity: 0.85;
+    margin: 0;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+  }
+}

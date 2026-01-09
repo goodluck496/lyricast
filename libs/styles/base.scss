@@ -28,6 +28,39 @@
   text-overflow: ellipsis;
 }
 
+:root {
+  --p-tooltip-max-width: 30rem;
+}
+
+.p-tooltip {
+  max-width: var(--p-tooltip-max-width);
+}
+
+/* If the tooltip contains a nowrap variant, allow it to grow beyond max-width (supported in modern Chromium). */
+.p-tooltip:has(.version-tooltip-content--nowrap) {
+  max-width: none;
+}
+
+.version-tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.version-tooltip-line {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.version-tooltip-content--nowrap {
+  max-width: none;
+}
+
+.version-tooltip-content--nowrap .version-tooltip-line {
+  white-space: nowrap;
+}
+
 html.my-app-dark {
   .ql-snow.ql-toolbar button,
   .ql-snow .ql-toolbar button,

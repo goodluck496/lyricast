@@ -48,7 +48,7 @@ assets/complete-jsons/**/*
 assets/raw/**/*
 assets/sqlRaw/**/*
 .vscode/**/*
-llm-docs/**/*
+# llm-docs/**/*
 temp-scripts/**/*
 
 data
@@ -56,3 +56,8 @@ data
 tools/publish-release.ps1
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
+
+sync_config.jsonc
+
+screenshots/*
+temp/*

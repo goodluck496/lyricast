@@ -77,7 +77,12 @@ export class UserSettingsService {
     snowEnabled: boolean;
   }): Promise<void> {
     try {
-      await this.windowSrv.electronContext.saveUserSettings(settings);
+      const existing =
+        (await this.windowSrv.electronContext.loadUserSettings()) ?? {};
+      await this.windowSrv.electronContext.saveUserSettings({
+        ...existing,
+        ...settings,
+      });
     } catch {
       // ignore persistence errors
     }

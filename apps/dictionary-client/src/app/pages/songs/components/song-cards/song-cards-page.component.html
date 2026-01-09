@@ -1,0 +1,9 @@
+<div class="db-cards">
+  @for (db of dbs; track db.db) {
+    <lyri-song-dictionary-card
+      [db]="db"
+      [clickable]="true"
+      (cardClick)="openDb(db)"
+    ></lyri-song-dictionary-card>
+  }
+</div>

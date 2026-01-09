@@ -1,9 +1,10 @@
-<p-tabs [value]="0">
+<p-tabs [(value)]="activeTab">
   <p-tablist>
     <p-tab [value]="0">Выбор экрана</p-tab>
     <p-tab [value]="1">Обновления</p-tab>
     <p-tab [value]="2">Файлы презентаций</p-tab>
     <p-tab [value]="3">Оформление</p-tab>
+    <p-tab [value]="4">Справочники</p-tab>
   </p-tablist>
   <p-tabpanels>
     <p-tabpanel [value]="0">
@@ -19,7 +20,7 @@
               </ng-template>
 
               <p>
-                {{ display.bounds.width }}x{{ display.bounds.height }} \
+                {{ display.bounds.width }}x{{ display.bounds.height }}
                 {{ display.displayFrequency.toFixed(0) }} Гц
               </p>
 
@@ -75,8 +76,8 @@
                 (ngModelChange)="onThemeToggle($event)"
                 onLabel="Тёмная"
                 offLabel="Светлая"
-                onIcon="pi pi-moon"
-                offIcon="pi pi-sun"
+                [onIcon]="'pi pi-moon'"
+                [offIcon]="'pi pi-sun'"
               ></p-toggleButton>
             </div>
           </div>
@@ -130,6 +131,15 @@
       </div>
 
 
+    </p-tabpanel>
+
+    <p-tabpanel [value]="4">
+      @if (activeTab === 4) {
+        <lyri-song-dictionaries-manager
+          [autoLoad]="true"
+          (authCancelled)="activeTab = 0"
+        ></lyri-song-dictionaries-manager>
+      }
     </p-tabpanel>
   </p-tabpanels>
 </p-tabs>

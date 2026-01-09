@@ -20,6 +20,7 @@
     "_build:electron": "nx run electron:build:production",
     "_package:electron": "nx run electron:package",
     "_build:dictionary-client": "nx run dictionary-client:build:production",
+    "build:dictionary-api": "nx run dictionary-api:build:production",
     "noop0.1": "---  workers build block  ---",
     "songs-worker:build": "nx run songs-service:build",
     "bible-worker:build": "nx run bible-service:build",

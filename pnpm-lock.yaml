@@ -136,7 +136,7 @@ importers:
         specifier: ^6.1.8
         version: 6.6.2
       express:
-        specifier: ^5.2.1
+        specifier: 5.2.1
         version: 5.2.1
       imask:
         specifier: ^7.6.1

@@ -3,16 +3,25 @@ import { DynamicModule, Module, Global, Provider } from '@nestjs/common';
 import { HttpModule, HttpService } from '@nestjs/axios';
 import { AsyncConfiguration, Configuration, ConfigurationFactory } from './configuration';
 
-import { DefaultService } from './api/default.service';
+import { AuthService } from './api/auth.service';
+import { CatalogsService } from './api/catalogs.service';
+import { HealthService } from './api/health.service';
+import { SongsService } from './api/songs.service';
 
 @Global()
 @Module({
   imports:      [ HttpModule ],
   exports:      [
-    DefaultService
+    AuthService,
+    CatalogsService,
+    HealthService,
+    SongsService
   ],
   providers: [
-    DefaultService
+    AuthService,
+    CatalogsService,
+    HealthService,
+    SongsService
   ]
 })
 export class ApiModule {

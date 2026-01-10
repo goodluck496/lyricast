@@ -3,4 +3,58 @@
   flex-wrap: wrap;
   gap: 16px;
   padding: 16px;
+  align-content: flex-start;
+  align-items: flex-start;
+}
+
+.db-cards > * {
+  flex: 0 0 auto;
+}
+
+.db-card--action {
+  border: 4px solid color-mix(in srgb, var(--p-success-color, #22c55e) 35%, transparent);
+  background: transparent;
+  color: color-mix(in srgb, var(--p-success-color, #22c55e) 70%, white);
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+  border-radius: 24px;
+  min-width: 400px;
+  min-height: 400px;
+  box-sizing: border-box;
+  opacity: 0.55;
+}
+
+.db-card--action:hover {
+  border-color: var(--p-success-color, #22c55e);
+  color: var(--p-success-color, #22c55e);
+  opacity: 1;
+}
+
+.db-card--action__icon {
+  font-size: 64px;
+  line-height: 1;
+}
+
+.db-card--action__label {
+  font-size: 18px;
+  text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.db-card--skeleton {
+  width: 400px;
+  height: 400px;
+  border-radius: 24px;
 }

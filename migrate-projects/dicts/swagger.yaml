@@ -1,0 +1,974 @@
+openapi: 3.0.3
+info:
+  title: Lyricast Dictionary API
+  version: 1.0.0
+  description: API для работы со справочниками песен/Библии на основе SQLite
+
+servers:
+  - url: /api
+
+paths:
+  /api.php:
+    get:
+      summary: API router
+      description: |
+        Все действия задаются через query-параметр `action`.
+      parameters:
+        - in: query
+          name: action
+          required: true
+          schema:
+            type: string
+          description: Имя действия.
+        - in: query
+          name: db
+          required: false
+          schema:
+            type: string
+          description: Имя SQLite-файла (по умолчанию songs.sqlite).
+      responses:
+        '400':
+          description: Missing or invalid action
+        '404':
+          description: Unknown action
+
+  /api.php?action=ping:
+    get:
+      summary: Проверка доступности API
+      security: []  # ping доступен без авторизации
+      responses:
+        '200':
+          description: API is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  action:
+                    type: string
+                  pong:
+                    type: boolean
+                  time:
+                    type: string
+                    format: date-time
+                required: [ok, action, pong, time]
+
+  /api.php?action=registry.list:
+    get:
+      summary: Список SQLite-справочников
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список файлов в DATA_DIR
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  dir:
+                    type: string
+                    description: Имя каталога DATA_DIR
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RegistryItem'
+                  totalCount:
+                    type: integer
+                required: [ok, dir, items, totalCount]
+
+  /api.php?action=db.delete:
+    post:
+      summary: Удалить SQLite-файл и связанные служебные файлы
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                db:
+                  type: string
+                  description: Имя SQLite-файла (например songs.sqlite)
+              required: [db]
+      responses:
+        '200':
+          description: Файл удалён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  db:
+                    type: string
+                  deleted:
+                    type: array
+                    items:
+                      type: string
+                required: [ok, db]
+        '400':
+          description: Неверное имя файла
+        '404':
+          description: Файл не найден
+        '500':
+          description: Не удалось удалить один или несколько файлов
+
+  /api.php?action=auth.login:
+    post:
+      summary: Авторизация по email, выдача токена
+      description: |
+        Создаёт/обновляет пользователя и устройство, возвращает токен сессии.
+        Поддерживает JSON (`application/json`) и form-urlencoded (`application/x-www-form-urlencoded`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required: [email]
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required: [email]
+      responses:
+        '200':
+          description: Успешная авторизация, токен выдан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Не передан email
+        '401':
+          description: Ошибка авторизации (email не разрешён, внутренняя ошибка и т.п.)
+        '403':
+          description: Устройство не разрешено для этого email
+
+  /api.php?action=download.db:
+    get:
+      summary: Скачать SQLite-файл (требует авторизации)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: db
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SQLite file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid db name
+        '401':
+          description: Требуется токен авторизации
+        '404':
+          description: DB file not found
+
+  /api.php?action=song.search:
+    get:
+      summary: Поиск песен
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: db
+          required: false
+          schema:
+            type: string
+          description: Имя БД (по умолчанию songs.sqlite)
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+          description: Поиск по title/author/ref/category
+        - in: query
+          name: number
+          required: false
+          schema:
+            type: integer
+          description: Точный номер песни
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: pageSize
+          required: false
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - in: query
+          name: includeLyrics
+          required: false
+          schema:
+            type: integer
+            enum: [0, 1]
+          description: 1 — вернуть полные объекты песен с lyrics
+      responses:
+        '200':
+          description: Результаты поиска
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SongSearchResponse'
+        '401':
+          description: Требуется токен авторизации
+
+  /api.php?action=song.get:
+    get:
+      summary: Получить одну песню (полную)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: db
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Полная песня
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  db:
+                    type: string
+                  song:
+                    $ref: '#/components/schemas/SongFull'
+                required: [ok, db, song]
+        '401':
+          description: Требуется токен авторизации
+        '404':
+          description: Song not found
+
+  /api.php?action=song.save:
+    post:
+      summary: Создание или обновление песни
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: db
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SongSaveRequest'
+      responses:
+        '200':
+          description: Песня сохранена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  db:
+                    type: string
+                  id:
+                    type: integer
+                required: [ok, db, id]
+        '400':
+          description: Missing required fields
+        '401':
+          description: Требуется токен авторизации
+        '500':
+          description: Failed to save song
+
+  /api.php?action=song.delete:
+    post:
+      summary: Удалить песню
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: db
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: id
+          required: false
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+      responses:
+        '200':
+          description: Песня удалена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  db:
+                    type: string
+                  id:
+                    type: integer
+                required: [ok, db, id]
+        '400':
+          description: Invalid song id
+        '401':
+          description: Требуется токен авторизации
+
+  /api.php?action=exportBook:
+    get:
+      summary: Экспорт книги песен в JSON (требует авторизации)
+      description: |
+        Возвращает структуру ISongBook на основе SQLite-базы, включая метаданные книги.
+        Требует авторизацию. Если параметр `fileKey` не указан, а в БД только одна книга,
+        она будет выбрана автоматически. Иначе `fileKey` обязателен.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: db
+          required: false
+          schema:
+            type: string
+          description: Имя SQLite-файла (по умолчанию songs.sqlite)
+        - in: query
+          name: fileKey
+          required: false
+          schema:
+            type: string
+          description: |
+            Ключ книги (song_books.file_key). Если в song_books несколько книг и
+            параметр не указан, вернётся ошибка с перечнем доступных ключей.
+      responses:
+        '200':
+          description: Успешный экспорт книги в JSON
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SongBookExport'
+        '400':
+          description: Некорректные параметры (отсутствует fileKey при нескольких книгах и т.п.)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  error:
+                    type: string
+                  availableFileKeys:
+                    type: array
+                    items:
+                      type: string
+                required: [ok, error]
+        '401':
+          description: Требуется токен авторизации
+        '404':
+          description: Книга с указанным fileKey не найдена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  error:
+                    type: string
+                required: [ok, error]
+
+  /api.php?action=book.meta.save:
+    post:
+      summary: Обновить мета-информацию сборника
+      description: |
+        Позволяет частично обновить или удалить произвольные meta-ключи для указанного справочника (song_books.file_key).
+        При любом изменении автоматически увеличивает версию книги и записывает автора изменений.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: db
+          required: false
+          schema:
+            type: string
+          description: Имя SQLite-файла (по умолчанию songs.sqlite)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookMetaSaveRequest'
+      responses:
+        '200':
+          description: Метаданные обновлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookMetaSaveResponse'
+        '400':
+          description: Некорректные параметры (отсутствует fileKey, невалидный meta/deleteKeys и т.п.)
+        '401':
+          description: Требуется токен авторизации
+        '404':
+          description: Книга не найдена
+        '500':
+          description: Не удалось обновить метаданные
+
+  /api.php?action=book.versions.check:
+    post:
+      summary: Проверить, какие справочники (книги) свежее на сервере
+      description: |
+        Если в теле запроса не передан массив books или он пустой, возвращает все доступные справочники с их версиями.
+        Иначе клиент присылает массив книг (song_books.file_key) и их локальных версий,
+        а сервер возвращает список книг, у которых версия на сервере больше.
+        Для каждой такой книги возвращается ссылка для скачивания (экспорт в JSON).
+        Книги ищутся во всех доступных SQLite файлах по fileKey.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookVersionsCheckRequest'
+      responses:
+        '200':
+          description: Список справочников (все доступные или только более свежие)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/BookVersionsCheckResponse'
+                  - $ref: '#/components/schemas/AllBooksResponse'
+        '400':
+          description: Некорректное тело запроса
+        '401':
+          description: Требуется токен авторизации
+
+components:
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        token:
+          type: string
+        userId:
+          type: integer
+        deviceId:
+          type: integer
+        expiresIn:
+          type: integer
+          description: Время жизни токена в секундах
+      required: [ok, token, userId, deviceId, expiresIn]
+
+    RegistryItem:
+      type: object
+      properties:
+        db:
+          type: string
+        size:
+          type: integer
+        mtime:
+          type: integer
+        meta:
+          type: object
+          nullable: true
+          description: Краткая мета-информация для отображения (основной сборник)
+          properties:
+            fileKey:
+              type: string
+              nullable: true
+              description: Ключ сборника (song_books.file_key)
+            language:
+              type: string
+              nullable: true
+              description: Язык сборника (из meta.language)
+            title:
+              type: string
+              nullable: true
+              description: Название сборника (из meta.title первой книги)
+            description:
+              type: string
+              nullable: true
+              description: Описание сборника (из meta.description первой книги)
+            coverImage:
+              type: string
+              nullable: true
+              description: Обложка в формате data:URL (из meta.coverImage первой книги)
+            version:
+              type: integer
+              description: Версия книги (монотонно растёт при изменениях песен)
+            updatedBy:
+              type: string
+              nullable: true
+              description: Email пользователя, который последним обновил книгу
+            updatedAt:
+              type: string
+              nullable: true
+              format: date-time
+              description: Дата последнего обновления книги (ISO)
+            size:
+              type: integer
+              description: Размер файла SQLite в байтах
+            songCount:
+              type: integer
+              description: Общее количество песен во всех сборниках этой БД
+        metaError:
+          type: string
+          nullable: true
+          description: Сообщение об ошибке чтения метаданных для данной БД (если есть)
+      required: [db, size, mtime]
+
+    SongBase:
+      type: object
+      properties:
+        id:
+          type: integer
+        bookFileKey:
+          type: string
+        number:
+          type: integer
+        title:
+          type: string
+        songKey:
+          type: string
+        keySignature:
+          type: string
+        author:
+          type: string
+        ref:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+      required:
+        - id
+        - bookFileKey
+        - number
+        - title
+        - songKey
+        - keySignature
+        - author
+
+    LyricLine:
+      type: object
+      properties:
+        id:
+          type: integer
+        lyricId:
+          type: integer
+        rangeIndex:
+          type: string
+          nullable: true
+        lineIndex:
+          type: integer
+        globalSongIndex:
+          type: integer
+          nullable: true
+        text:
+          type: string
+      required: [id, lyricId, lineIndex, text]
+
+    Lyric:
+      type: object
+      properties:
+        id:
+          type: integer
+        songId:
+          type: integer
+        uniqId:
+          type: string
+        sectionTitle:
+          type: string
+        type:
+          type: string
+        splitLinesCount:
+          type: integer
+          nullable: true
+        sortIndex:
+          type: integer
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/LyricLine'
+      required: [id, songId, uniqId, sectionTitle, type, lines]
+
+    SongFull:
+      allOf:
+        - $ref: '#/components/schemas/SongBase'
+        - type: object
+          properties:
+            lyrics:
+              type: array
+              items:
+                $ref: '#/components/schemas/Lyric'
+          required: [lyrics]
+
+    SongSaveRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          nullable: true
+        bookFileKey:
+          type: string
+        number:
+          type: integer
+        title:
+          type: string
+        songKey:
+          type: string
+        keySignature:
+          type: string
+        author:
+          type: string
+        ref:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        lyrics:
+          type: array
+          description: Полная структура куплетов/припевов и строк, такая же как у SongFull.lyrics
+          items:
+            $ref: '#/components/schemas/Lyric'
+      required:
+        - bookFileKey
+        - number
+        - title
+
+    SongSearchResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        db:
+          type: string
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalCount:
+          type: integer
+        items:
+          type: array
+          description: >
+            Если includeLyrics=0 — массив SongBase.
+            Если includeLyrics=1 — массив SongFull.
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/SongBase'
+              - $ref: '#/components/schemas/SongFull'
+      required: [ok, db, page, pageSize, total, totalCount, items]
+
+    BookVersionItem:
+      type: object
+      properties:
+        fileKey:
+          type: string
+          description: Ключ книги (song_books.file_key)
+        version:
+          type: integer
+          description: Версия книги (монотонно растёт)
+      required: [fileKey, version]
+
+    BookVersionsCheckRequest:
+      type: object
+      properties:
+        books:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookVersionItem'
+          description: Массив книг для проверки версий. Если отсутствует или пустой, возвращаются все доступные книги
+      required: [books]
+
+    AllBooksResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        books:
+          type: array
+          items:
+            type: object
+            properties:
+              fileKey:
+                type: string
+                description: Ключ книги (song_books.file_key)
+              version:
+                type: integer
+                description: Версия книги на сервере
+              db:
+                type: string
+                description: Имя SQLite-файла
+              downloadUrl:
+                type: string
+                description: URL для скачивания книги (экспорт в JSON)
+            required: [fileKey, version, db, downloadUrl]
+        totalCount:
+          type: integer
+      required: [ok, books, totalCount]
+
+    BookUpdateItem:
+      type: object
+      properties:
+        fileKey:
+          type: string
+          description: Ключ книги (song_books.file_key)
+        version:
+          type: integer
+          description: Версия книги на сервере
+        downloadUrl:
+          type: string
+          description: URL для скачивания книги (экспорт в JSON)
+      required: [fileKey, version, downloadUrl]
+
+    BookVersionsCheckResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        db:
+          type: string
+        updates:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookUpdateItem'
+        totalCount:
+          type: integer
+      required: [ok, db, updates, totalCount]
+
+    BookMetaSaveRequest:
+      type: object
+      properties:
+        fileKey:
+          type: string
+          description: song_books.file_key, который нужно обновить
+        meta:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+          description: >
+            Объект ключ-значение, который будет upsert-нут в song_book_meta.
+            Если передан key coverImage (data:URL), сервер автоматически пережмёт изображение до максимального размера 512x512 px.
+        deleteKeys:
+          type: array
+          nullable: true
+          items:
+            type: string
+      required: [fileKey]
+
+    BookMetaSaveResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        db:
+          type: string
+        fileKey:
+          type: string
+        updatedKeys:
+          type: array
+          items:
+            type: string
+          description: Ключи, которые были успешно обновлены/созданы
+        deletedKeys:
+          type: array
+          items:
+            type: string
+          description: Ключи, которые были удалены
+        version:
+          type: integer
+          description: Текущая версия справочника после изменений
+      required: [ok, db, fileKey, updatedKeys, deletedKeys, version]
+
+    SongBookExportHeader:
+      type: object
+      description: Заголовок экспортируемой книги (ISongBook.header)
+      properties:
+        number:
+          type: string
+        title:
+          type: string
+        author:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        bookKey:
+          type: string
+        disabled:
+          type: boolean
+      required: [number, title, author, updatedAt, bookKey, disabled]
+
+    SongBookExportBookName:
+      type: object
+      description: Информация о книге внутри экспортируемой песни
+      properties:
+        fileKey:
+          type: string
+        humanName:
+          type: string
+      required: [fileKey, humanName]
+
+    SongBookExportLyricLine:
+      type: object
+      description: Строка текста в экспортируемой песне
+      properties:
+        id:
+          type: integer
+        songId:
+          type: string
+          description: Номер песни в виде строки
+        rangeIndex:
+          type: string
+          nullable: true
+        index:
+          type: integer
+        globalSongIndex:
+          type: integer
+          nullable: true
+        text:
+          type: string
+      required: [id, songId, index, text]
+
+    SongBookExportLyric:
+      type: object
+      description: Секция песни (куплет/припев) в экспортируемой книге
+      properties:
+        songId:
+          type: string
+        uniqId:
+          type: string
+        sectionTitle:
+          type: string
+        type:
+          type: string
+        splitLinesCount:
+          type: integer
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/SongBookExportLyricLine'
+      required: [songId, uniqId, sectionTitle, type, splitLinesCount, lines]
+
+    SongBookExportSong:
+      type: object
+      description: Песня в экспортируемой книге
+      properties:
+        number:
+          type: integer
+        title:
+          type: string
+        key:
+          type: string
+        keySignature:
+          type: string
+        author:
+          type: string
+        meta:
+          type: array
+          items:
+            type: string
+        lyrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/SongBookExportLyric'
+        ref:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        bookName:
+          $ref: '#/components/schemas/SongBookExportBookName'
+      required:
+        - number
+        - title
+        - key
+        - keySignature
+        - author
+        - meta
+        - lyrics
+        - bookName
+
+    SongBookExport:
+      type: object
+      description: Полная структура экспортируемой книги песен (ISongBook)
+      properties:
+        header:
+          $ref: '#/components/schemas/SongBookExportHeader'
+        meta:
+          type: object
+          description: Метаданные книги (из song_book_meta)
+          additionalProperties:
+            type: string
+          example:
+            title: "Сборник песен"
+            language: "ru"
+            description: "Описание сборника"
+            coverImage: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ..."
+        songs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SongBookExportSong'
+      required: [header, songs, meta]
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

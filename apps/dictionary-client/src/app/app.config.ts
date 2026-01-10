@@ -42,7 +42,8 @@ export const appConfig: ApplicationConfig = {
       },
     }),
 
-    provideApi('https://kantelers.ru/lyricast/api'),
+    // provideApi('https://kantelers.ru/lyricast/api'), // продовый бэкенд
+    provideApi('http://localhost:3000'), // локальный dictionary-api
 
     MessageService,
 

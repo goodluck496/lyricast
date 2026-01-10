@@ -30,15 +30,23 @@ export class AuthOverlayService implements AuthOverlayPort {
     const trimmedEmail = email.trim();
     await this.authStorage.saveEmail(trimmedEmail);
 
-    const response = await firstValueFrom(this.authApi.login(trimmedEmail));
-    const token = response.token;
-    await this.authStorage.saveToken(token);
+    try {
+      const response = await firstValueFrom(this.authApi.login(trimmedEmail));
+      const token = response.token;
+      await this.authStorage.saveToken(token);
 
-    this.visibleSubject.next(false);
-    if (this.loginSubject) {
-      this.loginSubject.next(token);
-      this.loginSubject.complete();
-      this.loginSubject = undefined;
+      this.visibleSubject.next(false);
+      if (this.loginSubject) {
+        this.loginSubject.next(token);
+        this.loginSubject.complete();
+        this.loginSubject = undefined;
+      }
+    } catch (error) {
+      console.error('[AuthOverlay] Login failed', error);
+      if (this.loginSubject) {
+        this.loginSubject.error(error instanceof Error ? error : new Error('Login failed'));
+        this.loginSubject = undefined;
+      }
     }
   }
 

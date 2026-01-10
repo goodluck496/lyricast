@@ -2,7 +2,12 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class AppService {
-  getData(): { message: string } {
-    return { message: 'Hello API' };
+  ping() {
+    return {
+      ok: true,
+      action: 'ping',
+      pong: true,
+      time: new Date().toISOString(),
+    };
   }
 }

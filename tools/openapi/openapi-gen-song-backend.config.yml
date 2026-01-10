@@ -1,5 +1,6 @@
 generatorName: typescript-nestjs
-inputSpec: https://kantelers.ru/lyricast/api/swagger.yaml
+#inputSpec: https://kantelers.ru/lyricast/api/swagger.yaml
+inputSpec: http://localhost:3000/swagger-json
 outputDir: libs/openapi/backend/songs-domain
 
 additionalProperties:

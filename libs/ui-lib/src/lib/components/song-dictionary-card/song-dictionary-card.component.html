@@ -58,7 +58,7 @@
 
     <div class="db-card__meta">
       @if (size === 'md') {
-        @if (db.sizeBytes !== null) {
+        @if (db.sizeBytes !== null && db.sizeBytes !== undefined) {
           <span> {{ (db.sizeBytes / 1024 / 1024).toFixed(1) }} MB </span>
         }
 
@@ -96,7 +96,7 @@
         <div class="version-tooltip-line">Язык: {{ db.language }}</div>
       }
       <div class="version-tooltip-line">Файл: {{ db.db }}</div>
-      @if (db.sizeBytes !== null) {
+      @if (db.sizeBytes !== null && db.sizeBytes !== undefined) {
         <div class="version-tooltip-line">
           Размер: {{ (db.sizeBytes / 1024 / 1024).toFixed(1) }} MB
         </div>

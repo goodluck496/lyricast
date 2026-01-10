@@ -15,6 +15,12 @@ async function bootstrap() {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
+  const allowedOrigins = new Set<string>([
+    'https://lyricast-dictionary-client.onrender.com',
+    'https://lyricast-dictionary-api.onrender.com',
+    'https://lyricast.onrender.com',
+  ]);
+
   app.enableCors({
     origin: (origin, callback) => {
       // allow non-browser requests
@@ -27,10 +33,15 @@ async function bootstrap() {
         return callback(null, true);
       }
 
+      if (allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+
       return callback(new Error(`CORS blocked for origin: ${origin}`), false);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Auth-Token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Auth-Token', 'Accept'],
+    credentials: true,
   });
 
   const globalPrefix = 'api';

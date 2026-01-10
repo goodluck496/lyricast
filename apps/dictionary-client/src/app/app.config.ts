@@ -21,6 +21,7 @@ import {
 import { AuthOverlayService } from './auth/auth-overlay.service';
 import { MessageService } from 'primeng/api';
 import { apiErrorToastInterceptor } from './interceptors/api-error-toast.interceptor';
+import { environment } from '../../environments/environment';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -42,8 +43,7 @@ export const appConfig: ApplicationConfig = {
       },
     }),
 
-    // provideApi('https://kantelers.ru/lyricast/api'), // продовый бэкенд
-    provideApi('http://localhost:3000'), // локальный dictionary-api
+    provideApi(environment.API_URL),
 
     MessageService,
 

@@ -6,8 +6,6 @@ import * as schema from '../../lib/db/schema';
 export const PG_POOL = Symbol('PG_POOL');
 export const DRIZZLE = Symbol('DRIZZLE');
 
-const defaultUrl = 'postgres://user:password@localhost:5432/dictionary';
-
 function buildPoolConfig(): PoolConfig {
   const url = process.env.DICTIONARY_DB_URL;
   if (url && url.trim() !== '') {

@@ -5,7 +5,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  Min,
 } from 'class-validator';
 import { SongLyricDto } from './song-lyrics.dto';
 

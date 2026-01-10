@@ -1,6 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomBytes } from 'crypto';
-import { and, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { DatabaseService } from '../database/database.service';
 import * as schema from '../../lib/db/schema';
 import { CreateCatalogDto } from './dto/create-catalog.dto';
@@ -221,8 +225,8 @@ export class CatalogsService {
         .where(
           and(
             eq(schema.catalogMeta.catalogId, id),
-            inArray(schema.catalogMeta.metaKey, dto.deleteKeys),
-          ),
+            inArray(schema.catalogMeta.metaKey, dto.deleteKeys)
+          )
         );
     }
 
@@ -232,9 +236,12 @@ export class CatalogsService {
 
   async remove(id: number) {
     const db = this.db.client;
-    const res = await db.delete(schema.catalogs).where(eq(schema.catalogs.id, id)).returning({
-      id: schema.catalogs.id,
-    });
+    const res = await db
+      .delete(schema.catalogs)
+      .where(eq(schema.catalogs.id, id))
+      .returning({
+        id: schema.catalogs.id,
+      });
     if (res.length === 0) throw new NotFoundException('Catalog not found');
     await this.bumpDatasetVersion();
     return { ok: true, id };
@@ -261,13 +268,15 @@ export class CatalogsService {
   }
 
   private slugify(value: string): string {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .replace(/--+/g, '-')
-      .slice(0, 64) || 'catalog';
+    return (
+      value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .replace(/--+/g, '-')
+        .slice(0, 64) || 'catalog'
+    );
   }
 }

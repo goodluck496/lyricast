@@ -1,5 +1,11 @@
-import { ISong, ISongBookName, Lyric, LyricLine, LyricTypeEnum } from '@lyri-cast/entities';
-import { SongDatabaseInfoDto, SongSearchResultDto } from '@lyri-cast/entities';
+import {
+  ISong,
+  ISongBookName,
+  Lyric,
+  LyricLine,
+  LyricTypeEnum,
+  SongDatabaseInfoDto,
+} from '@lyri-cast/entities';
 import {
   RegistryItemDto,
   RegistryItemMetaDto,
@@ -7,10 +13,13 @@ import {
   SongLyricLineDto,
 } from '@lyri-cast/openapi-songs-dictionary';
 
-export function mapRegistryItemToSongDatabaseInfoDto(item: RegistryItemDto): SongDatabaseInfoDto {
+export function mapRegistryItemToSongDatabaseInfoDto(
+  item: RegistryItemDto
+): SongDatabaseInfoDto {
   const meta: RegistryItemMetaDto = {
     version: typeof item.meta?.version === 'number' ? item.meta.version : 0,
-    songCount: typeof item.meta?.songCount === 'number' ? item.meta.songCount : 0,
+    songCount:
+      typeof item.meta?.songCount === 'number' ? item.meta.songCount : 0,
     fileKey: item.meta?.fileKey,
     language: item.meta?.language,
     title: item.meta?.title,
@@ -24,10 +33,12 @@ export function mapRegistryItemToSongDatabaseInfoDto(item: RegistryItemDto): Son
     db: String(item.id),
     fileKey: typeof meta.fileKey === 'string' ? meta.fileKey : undefined,
     title: typeof meta.title === 'string' ? meta.title : undefined,
-    description: typeof meta.description === 'string' ? meta.description : undefined,
+    description:
+      typeof meta.description === 'string' ? meta.description : undefined,
     language: typeof meta.language === 'string' ? meta.language : undefined,
     songCount: typeof meta.songCount === 'number' ? meta.songCount : undefined,
-    coverImage: typeof meta.coverImage === 'string' ? meta.coverImage : undefined,
+    coverImage:
+      typeof meta.coverImage === 'string' ? meta.coverImage : undefined,
     version: typeof meta.version === 'number' ? meta.version : undefined,
     updatedBy: typeof meta.updatedBy === 'string' ? meta.updatedBy : undefined,
     updatedAt: typeof meta.updatedAt === 'string' ? meta.updatedAt : undefined,
@@ -58,7 +69,9 @@ export function mapSongUnionToISong(song: unknown): ISong {
     humanName: String(base.songBookId ?? ''),
   };
 
-  const lyrics: Lyric[] = Array.isArray(base.lyrics) ? base.lyrics.map(mapApiLyricToLyric) : [];
+  const lyrics: Lyric[] = Array.isArray(base.lyrics)
+    ? base.lyrics.map(mapApiLyricToLyric)
+    : [];
 
   return {
     id: base.id,
@@ -93,7 +106,8 @@ function mapApiLyricLineToLyricLine(line: SongLyricLineDto): LyricLine {
     id: 0,
     rangeIndex: String(line.rangeIndex ?? ''),
     index: typeof line.lineIndex === 'number' ? line.lineIndex : 0,
-    globalSongIndex: typeof line.globalSongIndex === 'number' ? line.globalSongIndex : 0,
+    globalSongIndex:
+      typeof line.globalSongIndex === 'number' ? line.globalSongIndex : 0,
     text: String(line.text ?? ''),
   };
 }

@@ -830,7 +830,7 @@ export class SongsService {
   private async bumpSongBookAndCatalogVersion(
     db: NodePgDatabase<typeof schema>,
     songBookId: number,
-    updatedBy: string = 'system',
+    updatedBy = 'system',
   ) {
     const [songBook] = await db
       .select({ id: schema.songBooks.id, catalogId: schema.songBooks.catalogId })

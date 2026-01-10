@@ -52,7 +52,6 @@ export class SongsService {
   bookCache: Record<string, ISongBook> = {};
   songCache: Record<string, ISong> = {};
 
-  isReady = false;
   constructor(private readonly http: HttpService) {
     this.assetsPath = path.resolve(
       process.env?.['assetsPath'] ?? '',

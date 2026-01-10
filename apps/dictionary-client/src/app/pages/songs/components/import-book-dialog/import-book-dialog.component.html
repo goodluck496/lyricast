@@ -114,7 +114,7 @@
       @if (isImportMode) {
         <div class="import-dialog__upload">
           <label>SongBookExport JSON</label>
-          <p-fileUpload
+          <p-fileupload
             mode="basic"
             name="jsonFile"
             accept=".json,application/json"
@@ -123,7 +123,7 @@
             [disabled]="submitting"
             [chooseLabel]="jsonFile?.name || 'Загрузить JSON'"
             (uploadHandler)="onJsonFileUpload($event)"
-          ></p-fileUpload>
+          ></p-fileupload>
           <small class="import-dialog__hint">
             @if (jsonFile) {
               {{ formatBytes(jsonFile.size) || 'Размер неизвестен' }}
@@ -141,7 +141,7 @@
 
       <div class="import-dialog__upload">
         <label>Обложка (image/*)</label>
-        <p-fileUpload
+        <p-fileupload
           mode="basic"
           name="coverFile"
           accept="image/*"
@@ -150,7 +150,7 @@
           [disabled]="submitting"
           [chooseLabel]="coverFile?.name || 'Загрузить обложку'"
           (uploadHandler)="onCoverFileUpload($event)"
-        ></p-fileUpload>
+        ></p-fileupload>
         <small class="import-dialog__hint">
           @if (coverFile) {
             {{ formatBytes(coverFile.size) || 'Размер неизвестен' }}
@@ -199,13 +199,12 @@
   </div>
 
   <div class="import-dialog__footer">
-    <button
-      pButton
+    <p-button
       type="submit"
       [label]="isImportMode ? 'Импортировать' : 'Создать новый'"
       [disabled]="submitting"
       [loading]="submitting"
-    ></button>
+    ></p-button>
     <p-button
       label="Отмена"
       severity="secondary"

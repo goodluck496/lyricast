@@ -36,7 +36,7 @@
 
     <div class="form-field form-field--upload">
       <label for="metaCover">Обложка (изображение)</label>
-      <p-fileUpload
+      <p-fileupload
         mode="basic"
         name="cover"
         accept="image/*"
@@ -44,7 +44,7 @@
         [auto]="true"
         [customUpload]="true"
         (uploadHandler)="onCoverUpload($event)"
-      ></p-fileUpload>
+      ></p-fileupload>
       @if (metaForm.coverImage) {
         <small class="hint">Изображение будет сжато на сервере до 512x512</small>
       }

@@ -10,6 +10,7 @@ import {
   Put,
   Query,
   UseGuards,
+  Res,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
@@ -24,6 +25,7 @@ import {
 import { ImportSongBookDto } from './dto/import-song-book.dto';
 import { UpdateSongBookMetaDto } from './dto/update-song-book-meta.dto';
 import { CreateSongBookDto } from './dto/create-song-book.dto';
+import { Response } from 'express';
 
 @ApiTags('songs')
 @ApiBearerAuth()
@@ -83,10 +85,64 @@ export class SongsController {
    * Экспортирует книгу песен (SongBook) в формате SongBookExport.
    */
   @Get('song-books/:songBookId/export')
-  @ApiOperation({ summary: 'Экспорт книги песен в JSON (SongBookExport)' })
+  @ApiOperation({ summary: 'Экспортирует книгу песен в JSON (SongBookExport)' })
   @ApiOkResponse({ type: SongBookExportDto, description: 'SongBookExport' })
   exportSongBook(@Param('songBookId', ParseIntPipe) songBookId: number) {
     return this.service.exportSongBook(songBookId);
+  }
+
+  /**
+   * Создаёт задачу экспорта SongBook в JSON (фоново, с пуллингом статуса).
+   */
+  @Post('song-books/:songBookId/export-json')
+  @ApiOperation({ summary: 'Создать задачу экспорта SongBook в JSON' })
+  createJsonExportJob(@Param('songBookId', ParseIntPipe) songBookId: number) {
+    return this.service.createJsonExportJob(songBookId);
+  }
+
+  /**
+   * Создаёт задачу экспорта SongBook в SQLite (фоново).
+   */
+  @Post('song-books/:songBookId/export-sqlite')
+  @ApiOperation({ summary: 'Создать задачу экспорта SongBook в SQLite' })
+  createSqliteExportJob(@Param('songBookId', ParseIntPipe) songBookId: number) {
+    return this.service.createSqliteExportJob(songBookId);
+  }
+
+  /**
+   * Получить статус задачи экспорта.
+   */
+  @Get('export-jobs/:jobId')
+  @ApiOperation({ summary: 'Статус задачи экспорта SongBook в SQLite' })
+  getExportJob(@Param('jobId') jobId: string) {
+    return this.service.getExportJob(jobId);
+  }
+
+  /**
+   * Отменить задачу экспорта.
+   */
+  @Post('export-jobs/:jobId/cancel')
+  @ApiOperation({ summary: 'Отменить задачу экспорта SongBook' })
+  cancelExportJob(@Param('jobId') jobId: string) {
+    return this.service.cancelExportJob(jobId);
+  }
+
+  /**
+   * Скачать готовый файл экспорта.
+   */
+  @Get('export-jobs/:jobId/file')
+  @ApiOperation({ summary: 'Скачать файл экспорта SongBook (SQLite)' })
+  async downloadExportFile(@Param('jobId') jobId: string, @Res() res: Response) {
+    const { path, fileName } = this.service.getExportedFile(jobId);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+    // RFC 6266 safe header: ascii fallback + filename*
+    const fallbackName = Buffer.from(fileName, 'utf8').toString('ascii').replace(/[^\x20-\x7E]/g, '_');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${fallbackName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    );
+    return res.download(path, fileName);
   }
 
   /**

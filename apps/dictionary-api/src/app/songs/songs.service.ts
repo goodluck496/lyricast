@@ -18,6 +18,10 @@ import { ImportSongBookDto } from './dto/import-song-book.dto';
 import { CreateSongBookDto } from './dto/create-song-book.dto';
 import { Buffer } from 'buffer';
 import sharp from 'sharp';
+import Database from 'better-sqlite3';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { existsSync, unlinkSync, readdirSync, mkdirSync } from 'fs';
 
 type SongRecord = typeof schema.songs.$inferSelect;
 type SongWithMeta = SongRecord & { meta: string[]; lyrics: SongLyricDto[] };
@@ -26,11 +30,33 @@ type SharpFormat = (typeof SHARP_FORMATS)[number];
 const MAX_COVER_IMAGE_BYTES = 300 * 1024;
 const COVER_MAX_DIMENSION = 512;
 
+type ExportJobStatus = 'pending' | 'running' | 'done' | 'failed' | 'cancelled';
+type ExportJobFormat = 'sqlite' | 'json';
+type ExportJob = {
+  id: string;
+  songBookId: number;
+  format: ExportJobFormat;
+  status: ExportJobStatus;
+  progress: number;
+  createdAt: Date;
+  updatedAt: Date;
+  error?: string;
+  filePath?: string;
+  fileName?: string;
+};
+
 @Injectable()
 export class SongsService {
   private readonly logger = new Logger(SongsService.name);
+  private readonly exportJobs = new Map<string, ExportJob>();
+  private readonly exportDir: string;
 
-  constructor(@Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>) {}
+  constructor(@Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>) {
+    const userDataPath = process.env.USER_DATA_PATH;
+    this.exportDir = userDataPath ? join(userDataPath, 'temp', 'exports') : join(tmpdir(), 'lyricast-exports');
+    mkdirSync(this.exportDir, { recursive: true });
+    this.cleanupTempExports();
+  }
 
   /**
    * Создаёт песню с лирикой/метаданными и повышает версии song_book и каталога.
@@ -447,6 +473,660 @@ export class SongsService {
       meta: bookMeta,
       songs: resultSongs,
     };
+  }
+
+  /**
+   * Создаёт задачу экспорта SongBook в SQLite и возвращает jobId.
+   */
+  async createSqliteExportJob(songBookId: number) {
+    const jobId = randomUUID();
+    const now = new Date();
+    const job: ExportJob = {
+      id: jobId,
+      songBookId,
+      format: 'sqlite',
+      status: 'pending',
+      progress: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.exportJobs.set(jobId, job);
+
+    // запускаем без ожидания
+    void this.runSqliteExportJob(jobId, songBookId);
+    return { jobId };
+  }
+
+  /**
+   * Возвращает статус задачи экспорта.
+   */
+  getExportJob(jobId: string) {
+    const job = this.exportJobs.get(jobId);
+    if (!job) {
+      throw new NotFoundException('Export job not found');
+    }
+    return {
+      jobId: job.id,
+      format: job.format,
+      status: job.status,
+      progress: job.progress,
+      error: job.error ?? null,
+      downloadUrl: job.status === 'done' ? `/api/songs/export-jobs/${job.id}/file` : null,
+    };
+  }
+
+  /**
+   * Возвращает путь к готовому файлу экспорта (проверяет статус).
+   */
+  getExportedFile(jobId: string): { path: string; fileName: string } {
+    const job = this.exportJobs.get(jobId);
+    if (!job) {
+      throw new NotFoundException('Export job not found');
+    }
+    if (job.status !== 'done' || !job.filePath || !job.fileName || !existsSync(job.filePath)) {
+      throw new BadRequestException('Export is not ready');
+    }
+    return { path: job.filePath, fileName: job.fileName };
+  }
+
+  private async runSqliteExportJob(jobId: string, songBookId: number) {
+    this.updateExportJob(jobId, { status: 'running', progress: 5 });
+    this.logger.log(`[export:${jobId}] start sqlite export for songBookId=${songBookId}`);
+
+    try {
+      this.ensureNotCancelled(jobId);
+      const datasetMeta = await this.loadDatasetMeta(this.db);
+      const book = await this.db.query.songBooks.findFirst({
+        where: eq(schema.songBooks.id, songBookId),
+      });
+      if (!book) {
+        throw new NotFoundException('Song book not found');
+      }
+      this.ensureNotCancelled(jobId);
+      const catalog = await this.db.query.catalogs.findFirst({
+        where: eq(schema.catalogs.id, book.catalogId),
+      });
+      const bookMeta = await this.loadSongBookMeta(this.db, book.fileKey);
+      const songs = await this.db
+        .select()
+        .from(schema.songs)
+        .where(eq(schema.songs.songBookId, songBookId))
+        .orderBy(schema.songs.number);
+
+      this.ensureNotCancelled(jobId);
+      this.updateExportJob(jobId, { progress: 25 });
+      this.logger.log(`[export:${jobId}] songs fetched: ${songs.length}`);
+
+      const songsWithDetails = await this.loadSongsWithDetailsBulk(songs, jobId);
+
+      this.ensureNotCancelled(jobId);
+      this.updateExportJob(jobId, { progress: 80 });
+      this.logger.log(`[export:${jobId}] building sqlite file…`);
+
+      const safeKey = book.fileKey?.trim() || 'songbook';
+      const fileName = `${safeKey}.sqlite`;
+      const filePath = join(this.exportDir, `dictionary-export-${jobId}.sqlite`);
+
+      this.buildSqliteFile({
+        filePath,
+        datasetMeta,
+        catalog,
+        book,
+        bookMeta,
+        songs: songsWithDetails,
+      });
+
+      this.updateExportJob(jobId, {
+        status: 'done',
+        progress: 100,
+        filePath,
+        fileName,
+        error: undefined,
+      });
+      this.logger.log(`[export:${jobId}] done. file=${filePath}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown export error';
+      this.logger.error(`Export job ${jobId} failed`, err as Error);
+      this.updateExportJob(jobId, { status: 'failed', progress: 100, error: message });
+    }
+  }
+
+  /**
+   * Создаёт задачу экспорта SongBook в JSON файл (фоново).
+   */
+  async createJsonExportJob(songBookId: number) {
+    const jobId = randomUUID();
+    const now = new Date();
+    const job: ExportJob = {
+      id: jobId,
+      songBookId,
+      format: 'json',
+      status: 'pending',
+      progress: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.exportJobs.set(jobId, job);
+
+    void this.runJsonExportJob(jobId, songBookId);
+    return { jobId };
+  }
+
+  private async runJsonExportJob(jobId: string, songBookId: number) {
+    this.updateExportJob(jobId, { status: 'running', progress: 5 });
+    try {
+      this.logger.log(`[export:${jobId}] start json export for songBookId=${songBookId}`);
+      this.ensureNotCancelled(jobId);
+      const { payload, fileName } = await this.buildJsonExport(songBookId, jobId);
+
+      this.ensureNotCancelled(jobId);
+      this.updateExportJob(jobId, { progress: 85 });
+      const filePath = join(this.exportDir, `dictionary-export-${jobId}.json`);
+      await this.saveJsonToFile(payload, filePath);
+
+      this.updateExportJob(jobId, {
+        status: 'done',
+        progress: 100,
+        filePath,
+        fileName,
+        error: undefined,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown export error';
+      this.logger.error(`Export JSON job ${jobId} failed`, err as Error);
+      const status: ExportJobStatus = message === 'Cancelled' ? 'cancelled' : 'failed';
+      this.updateExportJob(jobId, { status, progress: 100, error: status === 'failed' ? message : undefined });
+    }
+  }
+
+  private async buildJsonExport(
+    songBookId: number,
+    jobId?: string,
+  ): Promise<{ payload: SongBookExport; fileName: string }> {
+    const book = await this.db.query.songBooks.findFirst({
+      where: eq(schema.songBooks.id, songBookId),
+    });
+    if (!book) throw new NotFoundException('Song book not found');
+
+    const bookMeta = await this.loadSongBookMeta(this.db, book.fileKey);
+    const songs = await this.db
+      .select()
+      .from(schema.songs)
+      .where(eq(schema.songs.songBookId, songBookId))
+      .orderBy(schema.songs.number);
+
+    this.updateExportJob(jobId ?? '', { progress: 25 });
+    this.logger.log(`[export:${jobId ?? 'json'}] songs fetched: ${songs.length}`);
+
+    const songsWithDetails = await this.loadSongsWithDetailsBulk(songs, jobId);
+    this.ensureNotCancelled(jobId ?? '');
+    this.updateExportJob(jobId ?? '', { progress: 70 });
+
+    const resultSongs: SongBookExport['songs'] = songsWithDetails.map(({ song, meta, lyrics }) => ({
+      number: song.number,
+      title: song.title,
+      key: song.songKey,
+      keySignature: song.keySignature,
+      author: song.author,
+      meta,
+      lyrics: lyrics.map((l) => ({
+        songId: String(song.number),
+        uniqId: l.uniqId,
+        sectionTitle: l.sectionTitle,
+        type: l.type,
+        splitLinesCount: l.splitLinesCount,
+        lines: l.lines.map((ln) => ({
+          id: ln.id,
+          songId: String(song.number),
+          rangeIndex: ln.rangeIndex ?? undefined,
+          index: ln.lineIndex,
+          globalSongIndex: ln.globalSongIndex ?? undefined,
+          text: ln.text,
+        })),
+      })),
+      ref: song.ref,
+      category: song.category,
+      bookName: {
+        fileKey: book.fileKey,
+        humanName: book.humanName,
+      },
+    }));
+
+    const payload: SongBookExport = {
+      header: {
+        number: book.headerNumber,
+        title: book.headerTitle,
+        author: book.headerAuthor,
+        updatedAt: book.headerUpdatedAt?.toISOString?.() ?? new Date().toISOString(),
+        bookKey: book.headerBookKey,
+        disabled: book.headerDisabled,
+      },
+      meta: bookMeta,
+      songs: resultSongs,
+    };
+
+    const safeKey = book.fileKey?.trim() || 'songbook';
+    const fileName = `${safeKey}.songs.json`;
+
+    return { payload, fileName };
+  }
+
+  cancelExportJob(jobId: string) {
+    const job = this.exportJobs.get(jobId);
+    if (!job) {
+      throw new NotFoundException('Export job not found');
+    }
+    if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') {
+      return { ok: true, status: job.status };
+    }
+    this.updateExportJob(jobId, { status: 'cancelled', progress: 100, error: 'Cancelled' });
+    if (job.filePath && existsSync(job.filePath)) {
+      unlinkSync(job.filePath);
+    }
+    return { ok: true, status: 'cancelled' };
+  }
+
+  private updateExportJob(jobId: string, patch: Partial<ExportJob>) {
+    const current = this.exportJobs.get(jobId);
+    if (!current) return;
+    const updated: ExportJob = {
+      ...current,
+      ...patch,
+      updatedAt: new Date(),
+    };
+    this.exportJobs.set(jobId, updated);
+  }
+
+  private ensureNotCancelled(jobId: string) {
+    if (!jobId) return;
+    const job = this.exportJobs.get(jobId);
+    if (job?.status === 'cancelled') {
+      throw new Error('Cancelled');
+    }
+  }
+
+  private buildSqliteFile({
+    filePath,
+    datasetMeta,
+    catalog,
+    book,
+    bookMeta,
+    songs,
+  }: {
+    filePath: string;
+    datasetMeta: typeof schema.datasetMeta.$inferSelect | null;
+    catalog: typeof schema.catalogs.$inferSelect | null;
+    book: typeof schema.songBooks.$inferSelect;
+    bookMeta: Record<string, string>;
+    songs: Array<{
+      song: typeof schema.songs.$inferSelect;
+      meta: string[];
+      lyrics: Awaited<ReturnType<typeof this.loadLyricsWithLines>>;
+    }>;
+  }) {
+    if (existsSync(filePath)) {
+      unlinkSync(filePath);
+    }
+
+    const dbSqlite = new Database(filePath);
+    try {
+      dbSqlite.pragma('journal_mode = WAL');
+      dbSqlite.exec(`
+        CREATE TABLE catalogs (
+          id INTEGER PRIMARY KEY,
+          code TEXT NOT NULL,
+          type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          version INTEGER NOT NULL,
+          updated_at TEXT
+        );
+        CREATE TABLE song_books (
+          id INTEGER PRIMARY KEY,
+          catalog_id INTEGER NOT NULL,
+          file_key TEXT NOT NULL,
+          human_name TEXT NOT NULL,
+          header_number TEXT NOT NULL,
+          header_title TEXT NOT NULL,
+          header_author TEXT NOT NULL,
+          header_updated_at TEXT NOT NULL,
+          header_book_key TEXT NOT NULL,
+          header_disabled INTEGER NOT NULL,
+          version INTEGER NOT NULL,
+          updated_by TEXT,
+          updated_at TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+        CREATE TABLE song_book_meta (
+          file_key TEXT NOT NULL,
+          meta_key TEXT NOT NULL,
+          meta_value TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE songs (
+          id INTEGER PRIMARY KEY,
+          song_book_id INTEGER NOT NULL,
+          number INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          song_key TEXT NOT NULL,
+          key_signature TEXT NOT NULL,
+          author TEXT NOT NULL,
+          ref TEXT,
+          category TEXT
+        );
+        CREATE TABLE song_meta (
+          song_id INTEGER NOT NULL,
+          idx INTEGER NOT NULL,
+          value TEXT NOT NULL
+        );
+        CREATE TABLE lyrics (
+          id INTEGER PRIMARY KEY,
+          song_id INTEGER NOT NULL,
+          uniq_id TEXT NOT NULL,
+          section_title TEXT NOT NULL,
+          type TEXT NOT NULL,
+          split_lines_count INTEGER NOT NULL,
+          sort_index INTEGER NOT NULL
+        );
+        CREATE TABLE lyric_lines (
+          id INTEGER PRIMARY KEY,
+          lyric_id INTEGER NOT NULL,
+          range_index TEXT,
+          line_index INTEGER NOT NULL,
+          global_song_index INTEGER,
+          text TEXT NOT NULL,
+          repeat_count INTEGER NOT NULL
+        );
+        CREATE TABLE dataset_meta (
+          id INTEGER PRIMARY KEY,
+          schema_version INTEGER NOT NULL,
+          version TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+
+      if (catalog) {
+        const stmt = dbSqlite.prepare(
+          `INSERT INTO catalogs (id, code, type, title, version, updated_at)
+           VALUES (@id, @code, @type, @title, @version, @updated_at)`,
+        );
+        stmt.run({
+          id: catalog.id,
+          code: catalog.code,
+          type: catalog.type,
+          title: catalog.title,
+          version: catalog.version,
+          updated_at: catalog.updatedAt?.toISOString?.() ?? null,
+        });
+      }
+
+      const bookStmt = dbSqlite.prepare(
+        `INSERT INTO song_books (
+          id, catalog_id, file_key, human_name, header_number, header_title, header_author,
+          header_updated_at, header_book_key, header_disabled, version, updated_by, updated_at, created_at
+        ) VALUES (
+          @id, @catalog_id, @file_key, @human_name, @header_number, @header_title, @header_author,
+          @header_updated_at, @header_book_key, @header_disabled, @version, @updated_by, @updated_at, @created_at
+        )`,
+      );
+      bookStmt.run({
+        id: book.id,
+        catalog_id: book.catalogId,
+        file_key: book.fileKey,
+        human_name: book.humanName,
+        header_number: book.headerNumber,
+        header_title: book.headerTitle,
+        header_author: book.headerAuthor,
+        header_updated_at: book.headerUpdatedAt.toISOString(),
+        header_book_key: book.headerBookKey,
+        header_disabled: book.headerDisabled ? 1 : 0,
+        version: book.version,
+        updated_by: book.updatedBy ?? null,
+        updated_at: book.updatedAt.toISOString(),
+        created_at: book.createdAt.toISOString(),
+      });
+
+      const metaStmt = dbSqlite.prepare(
+        `INSERT INTO song_book_meta (file_key, meta_key, meta_value, updated_at)
+         VALUES (@file_key, @meta_key, @meta_value, @updated_at)`,
+      );
+      for (const [key, value] of Object.entries(bookMeta)) {
+        metaStmt.run({
+          file_key: book.fileKey,
+          meta_key: key,
+          meta_value: value,
+          updated_at: book.updatedAt.toISOString(),
+        });
+      }
+
+      const songStmt = dbSqlite.prepare(
+        `INSERT INTO songs (
+          id, song_book_id, number, title, song_key, key_signature, author, ref, category
+        ) VALUES (
+          @id, @song_book_id, @number, @title, @song_key, @key_signature, @author, @ref, @category
+        )`,
+      );
+      const songMetaStmt = dbSqlite.prepare(
+        `INSERT INTO song_meta (song_id, idx, value) VALUES (@song_id, @idx, @value)`,
+      );
+      const lyricsStmt = dbSqlite.prepare(
+        `INSERT INTO lyrics (
+          id, song_id, uniq_id, section_title, type, split_lines_count, sort_index
+        ) VALUES (
+          @id, @song_id, @uniq_id, @section_title, @type, @split_lines_count, @sort_index
+        )`,
+      );
+      const lyricLinesStmt = dbSqlite.prepare(
+        `INSERT INTO lyric_lines (
+          id, lyric_id, range_index, line_index, global_song_index, text, repeat_count
+        ) VALUES (
+          @id, @lyric_id, @range_index, @line_index, @global_song_index, @text, @repeat_count
+        )`,
+      );
+
+      for (const item of songs) {
+        const { song, meta, lyrics } = item;
+        songStmt.run({
+          id: song.id,
+          song_book_id: song.songBookId,
+          number: song.number,
+          title: song.title,
+          song_key: song.songKey,
+          key_signature: song.keySignature,
+          author: song.author,
+          ref: song.ref ?? null,
+          category: song.category ?? null,
+        });
+
+        meta.forEach((value, idx) => {
+          songMetaStmt.run({ song_id: song.id, idx, value });
+        });
+
+        for (const l of lyrics) {
+          const currentLyricId = l.id;
+          lyricsStmt.run({
+            id: currentLyricId,
+            song_id: song.id,
+            uniq_id: l.uniqId,
+            section_title: l.sectionTitle,
+            type: l.type,
+            split_lines_count: l.splitLinesCount,
+            sort_index: l.sortIndex,
+          });
+
+          for (const line of l.lines) {
+            lyricLinesStmt.run({
+              id: line.id,
+              lyric_id: currentLyricId,
+              range_index: line.rangeIndex ?? null,
+              line_index: line.lineIndex,
+              global_song_index: line.globalSongIndex ?? null,
+              text: line.text,
+              repeat_count: line.repeatCount ?? 1,
+            });
+          }
+        }
+      }
+
+      if (datasetMeta) {
+        const datasetStmt = dbSqlite.prepare(
+          `INSERT INTO dataset_meta (id, schema_version, version, updated_at)
+           VALUES (@id, @schema_version, @version, @updated_at)`,
+        );
+        datasetStmt.run({
+          id: datasetMeta.id,
+          schema_version: datasetMeta.schemaVersion,
+          version: datasetMeta.version,
+          updated_at: datasetMeta.updatedAt.toISOString(),
+        });
+      }
+    } finally {
+      dbSqlite.close();
+    }
+  }
+
+  private async loadDatasetMeta(db: NodePgDatabase<typeof schema>) {
+    await this.ensureDatasetMeta(db);
+    const [meta] = await db.select().from(schema.datasetMeta).where(eq(schema.datasetMeta.id, 1));
+    return meta ?? null;
+  }
+
+  private async loadSongsWithDetailsBulk(
+    songs: typeof schema.songs.$inferSelect[],
+    jobId?: string,
+  ): Promise<
+    Array<{
+      song: typeof schema.songs.$inferSelect;
+      meta: string[];
+      lyrics: Awaited<ReturnType<typeof this.loadLyricsWithLines>>;
+    }>
+  > {
+    const BATCH = 100;
+    const result = [];
+    const total = songs.length || 1;
+    const started = Date.now();
+
+    for (let start = 0; start < songs.length; start += BATCH) {
+      this.ensureNotCancelled(jobId ?? '');
+      const slice = songs.slice(start, start + BATCH);
+      const batchStart = Date.now();
+      const songIds = slice.map((s) => s.id);
+
+      // meta одним запросом
+      const metaRows = await this.db
+        .select({
+          songId: schema.songMeta.songId,
+          idx: schema.songMeta.idx,
+          value: schema.songMeta.value,
+        })
+        .from(schema.songMeta)
+        .where(inArray(schema.songMeta.songId, songIds))
+        .orderBy(schema.songMeta.songId, schema.songMeta.idx);
+      this.ensureNotCancelled(jobId ?? '');
+      const metaMap = new Map<number, string[]>();
+      for (const row of metaRows) {
+        if (!metaMap.has(row.songId)) metaMap.set(row.songId, []);
+        metaMap.get(row.songId)![row.idx] = row.value;
+      }
+
+      // lyrics одним запросом
+      const lyricsRows = await this.db
+        .select({
+          id: schema.lyrics.id,
+          songId: schema.lyrics.songId,
+          uniqId: schema.lyrics.uniqId,
+          sectionTitle: schema.lyrics.sectionTitle,
+          type: schema.lyrics.type,
+          splitLinesCount: schema.lyrics.splitLinesCount,
+          sortIndex: schema.lyrics.sortIndex,
+        })
+        .from(schema.lyrics)
+        .where(inArray(schema.lyrics.songId, songIds))
+        .orderBy(schema.lyrics.songId, schema.lyrics.sortIndex);
+      this.ensureNotCancelled(jobId ?? '');
+
+      const lyricIds = lyricsRows.map((l) => l.id);
+      const linesRows =
+        lyricIds.length === 0
+          ? []
+          : await this.db
+              .select({
+                lyricId: schema.lyricLines.lyricId,
+                id: schema.lyricLines.id,
+                rangeIndex: schema.lyricLines.rangeIndex,
+                lineIndex: schema.lyricLines.lineIndex,
+                globalSongIndex: schema.lyricLines.globalSongIndex,
+                text: schema.lyricLines.text,
+                repeatCount: schema.lyricLines.repeatCount,
+              })
+              .from(schema.lyricLines)
+              .where(inArray(schema.lyricLines.lyricId, lyricIds))
+              .orderBy(schema.lyricLines.lyricId, schema.lyricLines.lineIndex);
+      this.ensureNotCancelled(jobId ?? '');
+
+      const linesMap = new Map<number, typeof linesRows>();
+      for (const row of linesRows) {
+        if (!linesMap.has(row.lyricId)) linesMap.set(row.lyricId, []);
+        linesMap.get(row.lyricId)!.push(row);
+      }
+
+      for (const song of slice) {
+        this.ensureNotCancelled(jobId ?? '');
+        const meta = metaMap.get(song.id) ?? [];
+        const lyrics = lyricsRows
+          .filter((l) => l.songId === song.id)
+          .map((l) => ({
+            id: l.id,
+            uniqId: l.uniqId,
+            sectionTitle: l.sectionTitle,
+            type: l.type,
+            splitLinesCount: l.splitLinesCount,
+            sortIndex: l.sortIndex,
+            lines: (linesMap.get(l.id) ?? []).map((ln) => ({
+              id: ln.id,
+              rangeIndex: ln.rangeIndex,
+              lineIndex: ln.lineIndex,
+              globalSongIndex: ln.globalSongIndex,
+              text: ln.text,
+              repeatCount: ln.repeatCount,
+            })),
+          }));
+        result.push({ song, meta, lyrics });
+      }
+
+      const processed = Math.min(start + BATCH, songs.length);
+      const progressStep = 25 + Math.floor((processed / total) * 50); // 25..75
+      this.updateExportJob(jobId, { progress: progressStep });
+      const batchMs = Date.now() - batchStart;
+      this.logger.debug(`[export:${jobId}] processed songs ${processed}/${total} (+${batchMs} ms)`);
+    }
+
+    const totalMs = Date.now() - started;
+    this.logger.log(`[export:${jobId}] songs details loaded in ${totalMs} ms`);
+
+    return result;
+  }
+
+  private cleanupTempExports() {
+    try {
+      const files = readdirSync(this.exportDir, { withFileTypes: true });
+      for (const file of files) {
+        if (!file.isFile()) continue;
+        if (!file.name.startsWith('dictionary-export-')) continue;
+        const fullPath = join(this.exportDir, file.name);
+        try {
+          unlinkSync(fullPath);
+        } catch {
+          // ignore cleanup errors
+        }
+      }
+    } catch {
+      // ignore cleanup errors
+    }
+  }
+
+  private async saveJsonToFile(data: unknown, filePath: string) {
+    const serialized = JSON.stringify(data, null, 2);
+    await import('fs/promises').then(({ writeFile }) => writeFile(filePath, serialized, 'utf-8'));
   }
 
   /**

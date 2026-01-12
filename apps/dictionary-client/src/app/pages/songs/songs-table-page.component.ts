@@ -17,6 +17,7 @@ import { DialogModule } from 'primeng/dialog';
 
 import { SongEditorSidebarComponent } from './components/song-editor-sidebar/song-editor-sidebar.component';
 import { MetaDialogComponent } from './components/meta-dialog/meta-dialog.component';
+import { ExportService } from '../../export/export.service';
 
 @Component({
   standalone: true,
@@ -43,6 +44,7 @@ export class SongsTablePageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(SongsDictionaryApiService);
   private destroy$ = new Subject<void>();
+  private exportService = inject(ExportService);
 
   dbId!: string;
   songs: ISong[] = [];
@@ -136,32 +138,14 @@ export class SongsTablePageComponent implements OnInit {
     });
   }
 
-  private saveBlob(blob: Blob, filename: string): void {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+  startSqliteExport(): void {
+    const label = this.currentDb?.title || this.currentDb?.db || this.dbId;
+    this.exportService.startSqliteExport(Number(this.dbId), label);
   }
 
-  downloadSqlite(): void {
-    this.api.downloadDb(this.dbId).subscribe((blob) => {
-      const safeName = (this.currentDb?.db || this.dbId)
-        .replace(/\s+/g, '_')
-        .replace('.sqlite', '');
-      this.saveBlob(blob, `${safeName}.sqlite`);
-    });
-  }
-
-  downloadJson(): void {
-    this.api.exportBook(this.dbId).subscribe((res) => {
-      const content = JSON.stringify(res, null, 2);
-      const blob = new Blob([content], {
-        type: 'application/json;charset=utf-8',
-      });
-      this.saveBlob(blob, `${res.header.bookKey}.songs.json`);
-    });
+  startJsonExport(): void {
+    const label = this.currentDb?.title || this.currentDb?.db || this.dbId;
+    this.exportService.startJsonExport(Number(this.dbId), label);
   }
 
   loadSongs(page: number, pageSize: number, query?: string): void {

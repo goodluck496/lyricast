@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { AuthOverlayComponent } from './auth/auth-overlay.component';
 import { Toast } from 'primeng/toast';
+import { ExportNotificationsComponent } from './export/export-notifications.component';
 import { IconsService } from '@lyri-cast/svg-icons';
 import { lyriBible } from '@lyri-cast/svg-icons/lyri-icons/lyri-bible.icon';
 import { lyriControl } from '@lyri-cast/svg-icons/lyri-icons/lyri-control.icon';
@@ -12,7 +13,7 @@ import { lyriGrid } from '@lyri-cast/svg-icons/lyri-icons/lyri-grid.icon';
 import { lyriBulletList } from '@lyri-cast/svg-icons/lyri-icons/lyri-bullet-list.icon';
 
 @Component({
-  imports: [RouterModule, AuthOverlayComponent, Toast],
+  imports: [RouterModule, AuthOverlayComponent, Toast, ExportNotificationsComponent],
   selector: 'lyri-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',

@@ -31,6 +31,7 @@ import {
 export type SongDictionaryCardDto = {
   fileKey: string;
   title: string;
+  songBookId?: number;
   language?: string;
   coverImage?: string;
   sizeBytes?: number;
@@ -147,27 +148,67 @@ export class SongsService {
     return rawToken || undefined;
   }
 
-  private normalizeDownloadUrl(url: string): string {
+  private normalizeDownloadUrl(url: string, basePath: string): string {
     const trimmed = url.trim();
     if (!trimmed) {
       throw new Error('downloadUrl is empty');
     }
 
-    // Some backends can return relative URLs like "/api.php?...".
-    // Axios in Node requires an absolute URL.
+    // Если backend вернул абсолютный URL — используем как есть.
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+
+    // Для относительных ссылок вроде "/api/..." приклеиваем path-префикс basePath,
+    // чтобы не потерять сегмент типа "/lyricast".
+    if (trimmed.startsWith('/')) {
+      const normalizedBase = basePath.endsWith('/')
+        ? basePath.slice(0, -1)
+        : basePath;
+      return `${normalizedBase}${trimmed}`;
+    }
+
+    // Иначе пробуем собрать через URL, учитывая basePath.
+    const base = basePath.endsWith('/') ? basePath : `${basePath}/`;
     try {
-      return new URL(trimmed, 'https://kantelers.ru/lyricast/api/').toString();
+      return new URL(trimmed, base).toString();
     } catch {
-      // Fallback for minor formatting issues
-      return new URL(trimmed.replace(/\s+/g, ''), 'https://kantelers.ru/lyricast/api/').toString();
+      return new URL(trimmed.replace(/\s+/g, ''), base).toString();
     }
   }
 
+  private buildRemoteBaseAndHeaders(authHeader?: string): {
+    basePath: string;
+    headers: Record<string, string>;
+  } {
+    const rawToken = this.normalizeRawToken(authHeader);
+
+    const envBase = process.env?.['DICTIONARY_API_URL']?.trim();
+    const fallbackBase =
+      process.env?.['NODE_ENV'] === 'production'
+        ? 'https://lyricast-dictionary-api.onrender.com'
+        : 'http://localhost:3000';
+
+    const normalizedBase = (envBase || fallbackBase).replace(/\/+$/, '');
+    const basePath = normalizedBase.endsWith('/api')
+      ? normalizedBase.slice(0, -4) || '/'
+      : normalizedBase || '/';
+
+    const headers: Record<string, string> = {};
+    if (rawToken) {
+      headers['Authorization'] = `Bearer ${rawToken}`;
+      headers['X-Auth-Token'] = rawToken;
+    }
+
+    return { basePath, headers };
+  }
+
   private createRemoteApi(authHeader?: string): RemoteSongsApi {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
     const rawToken = this.normalizeRawToken(authHeader);
 
     const cfg = new Configuration({
-      basePath: 'https://kantelers.ru/lyricast/api',
+      basePath,
       accessToken: rawToken ?? '',
       httpClient: this.http,
     });
@@ -181,6 +222,92 @@ export class SongsService {
     }
 
     return api;
+  }
+
+  async createJsonExportJob(
+    songBookId: number,
+    authHeader?: string
+  ): Promise<{ jobId: string }> {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
+    const url = `${basePath}/api/songs/song-books/${songBookId}/export-json`;
+    const res = await lastValueFrom(
+      this.http.post<{ jobId: string }>(url, {}, { headers })
+    );
+    return res.data;
+  }
+
+  async createSqliteExportJob(
+    songBookId: number,
+    authHeader?: string
+  ): Promise<{ jobId: string }> {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
+    const url = `${basePath}/api/songs/song-books/${songBookId}/export-sqlite`;
+    const res = await lastValueFrom(
+      this.http.post<{ jobId: string }>(url, {}, { headers })
+    );
+    return res.data;
+  }
+
+  async getExportJob(
+    jobId: string,
+    authHeader?: string
+  ): Promise<{
+    jobId: string;
+    format: string;
+    status: string;
+    progress: number;
+    error: string | null;
+    downloadUrl: string | null;
+  }> {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
+    const url = `${basePath}/api/songs/export-jobs/${jobId}`;
+    const res = await lastValueFrom(
+      this.http.get(url, { headers })
+    );
+    return res.data;
+  }
+
+  async cancelExportJob(jobId: string, authHeader?: string): Promise<{
+    ok: boolean;
+    status?: string;
+  }> {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
+    const url = `${basePath}/api/songs/export-jobs/${jobId}/cancel`;
+    const res = await lastValueFrom(
+      this.http.post(url, {}, { headers })
+    );
+    return res.data;
+  }
+
+  async downloadExportFile(
+    jobId: string,
+    authHeader?: string
+  ): Promise<{ buffer: Buffer; headers: Record<string, string> }> {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
+    const url = `${basePath}/api/songs/export-jobs/${jobId}/file`;
+    const res = await lastValueFrom(
+      this.http.get<ArrayBuffer>(url, {
+        headers,
+        responseType: 'arraybuffer' as const,
+      })
+    );
+
+    // HttpService returns AxiosResponse; headers may be string | string[]
+    const normalizedHeaders: Record<string, string> = {};
+    Object.entries(res.headers ?? {}).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        normalizedHeaders[key] = value.join(', ');
+      } else if (typeof value === 'string') {
+        normalizedHeaders[key] = value;
+      } else if (value != null) {
+        normalizedHeaders[key] = String(value);
+      }
+    });
+
+    return {
+      buffer: Buffer.from(res.data),
+      headers: normalizedHeaders,
+    };
   }
 
   private async fetchRegistryList(
@@ -205,7 +332,7 @@ export class SongsService {
 
     const data = res.data;
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env['NODE_ENV'] !== 'production') {
       const updatesArr = Array.isArray(data?.updates) ? data.updates : [];
       const withUrl = updatesArr.filter((u) => typeof u?.downloadUrl === 'string' && u.downloadUrl.trim()).length;
       console.log('[songs] versions.check returned updates', {
@@ -303,12 +430,14 @@ export class SongsService {
         songCount?: number;
       }
     >;
+    remoteIdByKey: Map<string, number>;
   }): SongDictionaryCardDto[] {
     const {
       allKeys,
       localBooksByKey,
       remoteVersionByKey,
       remoteMetaByKey,
+      remoteIdByKey,
     } = params;
 
     const cards: SongDictionaryCardDto[] = [];
@@ -357,6 +486,7 @@ export class SongsService {
         fileKey,
         title:
           remoteMeta?.title || local?.meta?.title || local?.header?.title || fileKey,
+        songBookId: remoteIdByKey.get(fileKey),
         language: remoteMeta?.language || local?.meta?.language,
         coverImage: remoteMeta?.coverImage || local?.meta?.coverImage,
         sizeBytes: remoteMeta?.sizeBytes ?? localSizeBytes,
@@ -463,6 +593,14 @@ export class SongsService {
     // versions.check возвращает список обновлений/версий на сервере
     const allUpdates = await this.fetchUpdatesForBooks([], authHeader);
     const serverVersionByKey = new Map<string, number>();
+    const remoteIdByKey = new Map<string, number>();
+
+    for (const item of Array.isArray(registry.items) ? registry.items : []) {
+      if (typeof item?.fileKey === 'string' && typeof item?.id === 'number') {
+        remoteIdByKey.set(item.fileKey, item.id);
+      }
+    }
+
     for (const upd of Array.isArray(allUpdates.updates) ? allUpdates.updates : []) {
       serverVersionByKey.set(upd.fileKey, Number(upd.version) || 0);
     }
@@ -485,6 +623,7 @@ export class SongsService {
       localBooksByKey,
       remoteVersionByKey: serverVersionByKey,
       remoteMetaByKey,
+      remoteIdByKey,
     });
 
     return cards.sort((a, b) => a.title.localeCompare(b.title));
@@ -498,6 +637,8 @@ export class SongsService {
     if (!fileKey) {
       throw new Error('fileKey is required');
     }
+
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
 
     let url = downloadUrl;
     if (!url) {
@@ -524,7 +665,9 @@ export class SongsService {
           ? allUpdates.updates.find((b) => b?.fileKey === fileKey)
           : undefined;
         const rawUrlFromBooks: unknown = (book as VersionsCheckResponseItemDto | undefined)?.downloadUrl;
-        url = typeof rawUrlFromBooks === 'string' && rawUrlFromBooks.trim() ? rawUrlFromBooks : undefined;
+        if (rawUrlFromBooks) {
+          url = typeof rawUrlFromBooks === 'string' && rawUrlFromBooks.trim() ? rawUrlFromBooks : undefined;
+        }
       }
     }
 
@@ -538,7 +681,7 @@ export class SongsService {
 
     fs.mkdirSync(this.externalAssetsPath, { recursive: true });
 
-    const normalizedUrl = this.normalizeDownloadUrl(url);
+    const normalizedUrl = this.normalizeDownloadUrl(url, basePath);
 
     let text: string;
     try {
@@ -550,7 +693,7 @@ export class SongsService {
               Authorization: `Bearer ${rawToken}`,
               'X-Auth-Token': rawToken,
             }
-          : undefined,
+          : headers,
       });
       text = res.data;
     } catch (e) {

@@ -12,6 +12,7 @@ import { BASE_API_TOKEN } from '@lyri-cast/common';
 export type SongDictionaryCardDto = {
   fileKey: string;
   title: string;
+  songBookId?: number;
   language?: string;
   coverImage?: string;
   sizeBytes?: number;
@@ -94,6 +95,7 @@ export class SongsApiService {
 
   installSongDictionary(payload: {
     fileKey: string;
+    downloadUrl?: string;
   }): Observable<{ ok: boolean }> {
     return this.http.post<{ ok: boolean }>(
       this.buildUrl('dictionaries/install'),

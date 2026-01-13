@@ -1,0 +1,81 @@
+.export-stack {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(360px, 90vw);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.export-card {
+  background: var(--surface-card, #fff);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  pointer-events: auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  &__title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    display: flex;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-color-secondary, #666);
+    margin-bottom: 8px;
+  }
+
+  &__progress {
+    margin-bottom: 8px;
+
+    &--cancelled {
+      --p-progressbar-background: var(--red-500, #d32f2f);
+      --p-progressbar-value-background: var(--red-500, #d32f2f);
+    }
+
+    &--failed {
+      --p-progressbar-background: var(--red-600, #c62828);
+      --p-progressbar-value-background: var(--red-600, #c62828);
+    }
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__error {
+    color: var(--red-600, #c62828);
+    font-size: 12px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+  }
+}

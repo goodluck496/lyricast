@@ -22,6 +22,7 @@ import { AuthOverlayService } from './auth/auth-overlay.service';
 import { MessageService } from 'primeng/api';
 import { apiErrorToastInterceptor } from './interceptors/api-error-toast.interceptor';
 import { environment } from '../../environments/environment';
+import { DICTIONARIES_API_BASE } from '@lyri-cast/shared-browser/data-access/dictionaries';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -44,6 +45,11 @@ export const appConfig: ApplicationConfig = {
     }),
 
     provideApi(environment.API_URL),
+
+    {
+      provide: DICTIONARIES_API_BASE,
+      useValue: `${environment.API_URL}/api/songs`,
+    },
 
     MessageService,
 

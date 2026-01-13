@@ -17,7 +17,7 @@ import { DialogModule } from 'primeng/dialog';
 
 import { SongEditorSidebarComponent } from './components/song-editor-sidebar/song-editor-sidebar.component';
 import { MetaDialogComponent } from './components/meta-dialog/meta-dialog.component';
-import { ExportService } from '../../export/export.service';
+import { ExportJobsService } from '@lyri-cast/shared-browser/data-access/dictionaries';
 
 @Component({
   standalone: true,
@@ -44,7 +44,7 @@ export class SongsTablePageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(SongsDictionaryApiService);
   private destroy$ = new Subject<void>();
-  private exportService = inject(ExportService);
+  private exportService = inject(ExportJobsService);
 
   dbId!: string;
   songs: ISong[] = [];

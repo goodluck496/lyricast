@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { AuthOverlayComponent } from './auth/auth-overlay.component';
 import { Toast } from 'primeng/toast';
-import { ExportNotificationsComponent } from './export/export-notifications.component';
+import { ExportNotificationsComponent } from '@lyri-cast/ui-lib';
 import { IconsService } from '@lyri-cast/svg-icons';
 import { lyriBible } from '@lyri-cast/svg-icons/lyri-icons/lyri-bible.icon';
 import { lyriControl } from '@lyri-cast/svg-icons/lyri-icons/lyri-control.icon';

@@ -52,11 +52,11 @@
           </p-float-label>
           <div class="size-row">
             <label class="slider-label" for="fontRange">Размер шрифта</label>
-            <div class="font-slider-wrapper">
+            <div class="slider-wrapper">
               <span class="slider-end-label start">{{ vm.ui.min | number : '1.0-0' }}px</span>
               <mat-slider
+                class="range-slider font-range-slider"
                 id="fontRange"
-                class="font-range-slider"
                 [min]="fontMin"
                 [max]="fontMax"
                 [step]="2"
@@ -82,13 +82,13 @@
               <span class="slider-end-label end">{{ vm.ui.max | number : '1.0-0' }}px</span>
             </div>
           </div>
-          <div class="line-height-block">
+          <div class="line-height-block slider-wrapper">
             <label class="slider-label" for="lineHeight">
               Межстрочный интервал ({{ vm.ui.lineHeight | number : '1.2-2' }})
             </label>
             <mat-slider
+              class="range-slider line-height-slider"
               id="lineHeight"
-              class="line-height-slider"
               [min]="0.2"
               [max]="1.8"
               [step]="0.02"
@@ -107,61 +107,54 @@
 
       <p-panel header="Цвет и обводка">
         <div class="form-grid two-cols">
-          <div class="color-field">
-            <p-float-label class="p-float-label">
-              <p-colorPicker
-                appendTo="body"
-                panelStyleClass="color-overlay"
-                inputId="color"
-                format="hex"
-                [ngModel]="vm.ui.colorHex"
-                (ngModelChange)="
-                  emit({ t: 'APPLY_STYLE', patch: { colorHex: $event } })
-                "
-                (pointerdown)="stopScrollDrag($event)"
-                (pointermove)="stopScrollDrag($event)"
-                (touchstart)="stopScrollDrag($event)"
-                (touchmove)="stopScrollDrag($event)"
-                (wheel)="stopScrollWheel($event)"
-              ></p-colorPicker>
-              <label for="color">Цвет текста</label>
-            </p-float-label>
+          <div class="field">
+            <label class="field-label" for="color">Цвет текста</label>
+            <p-colorPicker
+              appendTo="body"
+              panelStyleClass="color-overlay"
+              styleClass="field-control"
+              inputId="color"
+              format="hex"
+              [ngModel]="vm.ui.colorHex"
+              (ngModelChange)="emit({ t: 'APPLY_STYLE', patch: { colorHex: $event } })"
+              (pointerdown)="stopScrollDrag($event)"
+              (pointermove)="stopScrollDrag($event)"
+              (touchstart)="stopScrollDrag($event)"
+              (touchmove)="stopScrollDrag($event)"
+              (wheel)="stopScrollWheel($event)"
+            ></p-colorPicker>
           </div>
-          <div class="color-field">
-            <p-float-label class="p-float-label">
-              <p-colorPicker
-                appendTo="body"
-                panelStyleClass="color-overlay"
-                inputId="bgColor"
-                format="hex"
-                [ngModel]="vm.ui.bgColorHex ?? '#ffffff'"
-                (ngModelChange)="onApplyTextBackground($event)"
-                (pointerdown)="stopScrollDrag($event)"
-                (pointermove)="stopScrollDrag($event)"
-                (touchstart)="stopScrollDrag($event)"
-                (touchmove)="stopScrollDrag($event)"
-                (wheel)="stopScrollWheel($event)"
-              ></p-colorPicker>
-              <label for="bgColor">Цвет фона</label>
-            </p-float-label>
+          <div class="field">
+            <label class="field-label" for="bgColor">Цвет фона</label>
+            <p-colorPicker
+              appendTo="body"
+              panelStyleClass="color-overlay"
+              styleClass="field-control"
+              inputId="bgColor"
+              format="hex"
+              [ngModel]="vm.ui.bgColorHex ?? '#ffffff'"
+              (ngModelChange)="onApplyTextBackground($event)"
+              (pointerdown)="stopScrollDrag($event)"
+              (pointermove)="stopScrollDrag($event)"
+              (touchstart)="stopScrollDrag($event)"
+              (touchmove)="stopScrollDrag($event)"
+              (wheel)="stopScrollWheel($event)"
+            ></p-colorPicker>
           </div>
-          <div>
-            <p-float-label class="p-float-label">
-              <p-inputNumber
-                inputId="stroke"
-                [min]="1"
-                [max]="60"
-                [step]="1"
-                [ngModel]="vm.ui.strokeWidth"
-                inputStyleClass="p-inputtext"
-                (ngModelChange)="
-                  emit({ t: 'APPLY_STYLE', patch: { strokeWidth: +$event } })
-                "
-                (pointerdown)="stopScrollDrag($event)"
-                (touchstart)="stopScrollDrag($event)"
-              ></p-inputNumber>
-              <label for="stroke">Обводка</label>
-            </p-float-label>
+          <div class="field">
+            <label class="field-label" for="stroke">Обводка</label>
+            <p-inputNumber
+              styleClass="field-control"
+              inputId="stroke"
+              [min]="1"
+              [max]="60"
+              [step]="1"
+              [ngModel]="vm.ui.strokeWidth"
+              inputStyleClass="p-inputtext"
+              (ngModelChange)="emit({ t: 'APPLY_STYLE', patch: { strokeWidth: +$event } })"
+              (pointerdown)="stopScrollDrag($event)"
+              (touchstart)="stopScrollDrag($event)"
+            ></p-inputNumber>
           </div>
         </div>
       </p-panel>

@@ -42,26 +42,16 @@
   margin: 4px 0;
 }
 
-.toolbar-rail button.p-button {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-}
-
-.toolbar-rail button.active {
-  box-shadow: 0 0 0 2px #c7d2fe inset;
-  background: #eef2ff;
-}
-
 .panel-hidden {
   display: none !important;
 }
 
 .field-label {
   display: block;
-  margin-bottom: 4px;
+  margin: 0;
   font-weight: 600;
   color: #0f172a;
+  line-height: 1.2;
 }
 
 .workspace {
@@ -96,14 +86,6 @@
 
 .canvas-actions .spacer {
   flex: 1;
-}
-
-.canvas-actions .p-button {
-  white-space: nowrap;
-}
-
-.canvas-actions .p-button .p-button-icon {
-  font-size: 1rem;
 }
 
 .canvas-frame {
@@ -206,55 +188,24 @@
   gap: 12px;
 }
 
-.form-grid .p-float-label {
-  width: 100%;
-}
-
 .form-grid.two-cols {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.form-grid.stacked .p-float-label {
-  width: 100%;
 }
 
 .form-grid.stacked > .p-float-label {
   margin-top: 16px;
 }
 
-.form-grid.stacked .p-select,
-.form-grid.stacked .p-inputnumber {
+.form-grid :is(.p-float-label, .p-select, .p-inputnumber) {
   width: 100%;
 }
 
-.form-grid .p-select,
-.form-grid .p-inputnumber {
-  width: 100%;
-}
-
-.form-grid .p-inputnumber input {
+.form-grid :is(.p-inputnumber-input, .p-inputnumber input) {
   width: 100%;
   box-sizing: border-box;
 }
 
-.form-grid .p-inputnumber-input {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.properties-sidenav .p-inputnumber .p-inputnumber-input {
-  width: 100%;
-  display: block;
-}
-
-.properties-sidenav .p-inputnumber .p-inputtext {
-  width: 100%;
-  display: block;
-  box-sizing: border-box;
-}
-
-// Локально пробрасываем стиль внутрь PrimeNG inputNumber
-::ng-deep .properties-sidenav .p-inputnumber .p-inputnumber-input {
+.properties-sidenav .p-inputnumber :is(.p-inputnumber-input, .p-inputtext) {
   width: 100%;
   display: block;
   box-sizing: border-box;
@@ -274,9 +225,17 @@
   color: var(--lyricast-panel-text, var(--p-text-color, #ffffff));
 }
 
-.font-slider-wrapper {
+.slider-wrapper {
   position: relative;
   margin-top: 16px;
+  width: 100%;
+}
+
+.range-slider,
+.font-range-slider,
+.line-height-slider {
+  width: 100%;
+  display: block;
 }
 
 .slider-end-label {
@@ -295,22 +254,6 @@
 
 .slider-end-label.end {
   right: 0;
-}
-
-.font-range-slider {
-  width: 100%;
-  --mdc-slider-handle-color: #22c55e;
-  --mdc-slider-focus-halo-color: rgba(34, 197, 94, 0.24);
-  --mdc-slider-active-track-color: #22c55e;
-  --mdc-slider-inactive-track-color: rgba(34, 197, 94, 0.28);
-}
-
-.line-height-slider {
-  width: 100%;
-  --mdc-slider-handle-color: #22c55e;
-  --mdc-slider-focus-halo-color: rgba(34, 197, 94, 0.24);
-  --mdc-slider-active-track-color: #22c55e;
-  --mdc-slider-inactive-track-color: rgba(34, 197, 94, 0.28);
 }
 
 .switch-row {
@@ -338,17 +281,31 @@
   margin-bottom: 6px;
 }
 
-.color-field {
+.field {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  align-items: stretch;
+}
 
-  ::ng-deep {
-    .p-floatlabel label {
-      position: absolute;
-      pointer-events: none;
-      top: 50%;
-      transform: translate(50%, -50%);
-    }
-  }
+.field :is(.p-colorpicker, .p-inputnumber) {
+  width: 100%;
+}
+
+.field :is(.p-colorpicker) {
+  display: block;
+}
+
+.field-control {
+  width: 100%;
+  display: block;
+}
+
+::ng-deep .field-control .p-colorpicker {
+  width: 100%;
+}
+
+::ng-deep .field-control .p-colorpicker-preview {
+  width: 100%;
 }

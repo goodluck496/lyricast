@@ -59,7 +59,6 @@ tools/publish-release.ps1
 
 sync_config.jsonc
 
-screenshots/*
 temp/*
 environments/*
 build/*

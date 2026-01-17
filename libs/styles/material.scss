@@ -1,5 +1,5 @@
 :root {
-    --success-primeng-color: #22c55e;
+  --success-primeng-color: #22c55e;
 
   // Матовые слайдеры в “success”-стиле (PrimeNG success: #22c55e)
   --mat-slider-handle-color: var(--success-primeng-color);
@@ -14,8 +14,5 @@
   );
   --mat-slider-label-container-color: var(--success-primeng-color);
   --mat-slider-label-text-color: #0b1f11;
-  --mat-slider-active-track-color: var(--success-primeng-color);
-
-  --mat-slider-hover-handle-color: var(--success-primeng-color);
   --mat-slider-hover-handle-color: var(--success-primeng-color);
 }

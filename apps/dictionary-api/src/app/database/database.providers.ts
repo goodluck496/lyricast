@@ -1,18 +1,13 @@
 import { Logger, Provider } from '@nestjs/common';
-import { Pool, PoolConfig } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import postgres, { type Sql } from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from '../../lib/db/schema';
 
-export const PG_POOL = Symbol('PG_POOL');
+export const POSTGRES_CLIENT = Symbol('POSTGRES_CLIENT');
 export const DRIZZLE = Symbol('DRIZZLE');
 
 const MAX_ERROR_CAUSE_DEPTH = 8; // Защита от слишком глубоких/циклических цепочек error.cause/errors
 const RECONNECT_DELAY_MS = 5000; // Пауза между попытками подключения/реконнекта, чтобы не устраивать шторм запросов
-
-async function ensurePoolConnected(pool: Pool): Promise<void> {
-  const client = await pool.connect();
-  client.release();
-}
 
 function isTransientPgError(error: unknown): boolean {
   const visit = (err: unknown, depth: number): boolean => {
@@ -67,126 +62,6 @@ function isTransientPgError(error: unknown): boolean {
   return visit(error, 0);
 }
 
-type PoolEventName = Parameters<Pool['on']>[0];
-type PoolListener = Parameters<Pool['on']>[1];
-
-class ReconnectingPool {
-  private pool: Pool;
-  private reconnecting: Promise<void> | null = null;
-  private readonly listeners = new Map<PoolEventName, Set<PoolListener>>();
-
-  constructor(
-    private readonly config: PoolConfig,
-    private readonly logger: Logger,
-  ) {
-    this.pool = this.createPool();
-  }
-
-  get current(): Pool {
-    return this.pool;
-  }
-
-  useExistingPool(pool: Pool): void {
-    this.pool = pool;
-  }
-
-  on(event: PoolEventName, listener: PoolListener): Pool {
-    const existing = this.listeners.get(event) ?? new Set<PoolListener>();
-    existing.add(listener);
-    this.listeners.set(event, existing);
-
-    this.pool.on(event, listener);
-    return this.pool;
-  }
-
-  query(...args: Parameters<Pool['query']>): Promise<unknown> {
-    return (this.pool.query as (...a: unknown[]) => Promise<unknown>)(...args).catch(
-      async (error) => {
-        if (!isTransientPgError(error)) throw error;
-        await this.reconnect(error);
-        return (this.pool.query as (...a: unknown[]) => Promise<unknown>)(...args);
-      }
-    );
-  }
-
-  connect(...args: Parameters<Pool['connect']>): Promise<unknown> {
-    return (this.pool.connect as (...a: unknown[]) => Promise<unknown>)(...args).catch(
-      async (error) => {
-        if (!isTransientPgError(error)) throw error;
-        await this.reconnect(error);
-        return (this.pool.connect as (...a: unknown[]) => Promise<unknown>)(...args);
-      }
-    );
-  }
-
-  async end(): Promise<void> {
-    await this.pool.end();
-  }
-
-  private createPool(): Pool {
-    const pool = new Pool(this.config);
-
-    // Всегда логируем ошибки пула, даже если никто не подписался
-    pool.on('error', (error) => {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Ошибка пула Postgres: ${message}`);
-
-      if (isTransientPgError(error)) {
-        void this.reconnect(error);
-      }
-    });
-
-    for (const [event, set] of this.listeners.entries()) {
-      for (const listener of set) {
-        pool.on(event, listener);
-      }
-    }
-
-    return pool;
-  }
-
-  private async reconnect(error: unknown): Promise<void> {
-    if (this.reconnecting) {
-      await this.reconnecting;
-      return;
-    }
-
-    const message = error instanceof Error ? error.message : String(error);
-    this.logger.warn(`Потеряно соединение с Postgres, пересоздаю пул: ${message}`);
-
-    this.reconnecting = (async () => {
-      const old = this.pool;
-      try {
-        await old.end();
-      } catch {
-        // ignore
-      }
-
-      for (let attempt = 1; ; attempt += 1) {
-        this.logger.warn(`Reconnect к Postgres. Попытка: ${attempt}`);
-        const next = this.createPool();
-        try {
-          await ensurePoolConnected(next);
-          this.pool = next;
-          this.logger.log(`Reconnect к Postgres успешен. Попыток: ${attempt}`);
-          return;
-        } catch (err) {
-          const errMsg = err instanceof Error ? err.message : String(err);
-          this.logger.warn(`Reconnect не удался (попытка ${attempt}): ${errMsg}`);
-          await next.end().catch(() => undefined);
-          await wait(RECONNECT_DELAY_MS);
-        }
-      }
-    })();
-
-    try {
-      await this.reconnecting;
-    } finally {
-      this.reconnecting = null;
-    }
-  }
-}
-
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -209,7 +84,29 @@ function redactConnectionString(connectionString: string): string {
   }
 }
 
-function buildPoolConfig(): PoolConfig {
+type PostgresClientConfig =
+  | {
+      url: string;
+      ssl?: { rejectUnauthorized: false };
+      max: number;
+      connect_timeout: number;
+      idle_timeout: number;
+      keep_alive: number;
+    }
+  | {
+      host: string;
+      port: number;
+      database: string;
+      username: string;
+      password: string;
+      ssl?: { rejectUnauthorized: false };
+      max: number;
+      connect_timeout: number;
+      idle_timeout: number;
+      keep_alive: number;
+    };
+
+function buildPostgresClientConfig(): PostgresClientConfig {
   const url = process.env.DICTIONARY_DB_URL ?? process.env.DATABASE_URL;
   const sslEnv = process.env.DICTIONARY_DB_SSL;
 
@@ -236,14 +133,12 @@ function buildPoolConfig(): PoolConfig {
 
   if (url && url.trim() !== '') {
     return {
-      connectionString: url,
       ssl: shouldUseSslByDefault(url) ? { rejectUnauthorized: false } : undefined,
-      keepAlive: true,
-      keepAliveInitialDelayMillis: 10_000,
-      connectionTimeoutMillis: 10_000,
-      idleTimeoutMillis: 60_000,
-      min: 1,
-      max: 10
+      url,
+      max: 10,
+      connect_timeout: 30,
+      idle_timeout: 60,
+      keep_alive: 10,
     };
   }
 
@@ -252,80 +147,84 @@ function buildPoolConfig(): PoolConfig {
     host: process.env.DICTIONARY_DB_HOST ?? 'localhost',
     port: Number(process.env.DICTIONARY_DB_PORT ?? 5432),
     database: process.env.DICTIONARY_DB_NAME ?? 'dictionary',
-    user: process.env.DICTIONARY_DB_USER ?? 'user',
+    username: process.env.DICTIONARY_DB_USER ?? 'user',
     password: process.env.DICTIONARY_DB_PASSWORD ?? 'password',
     ssl: shouldUseSslByDefault(process.env.DICTIONARY_DB_HOST) ? { rejectUnauthorized: false } : undefined,
-    keepAlive: true,
-    keepAliveInitialDelayMillis: 10_000,
-    connectionTimeoutMillis: 10_000,
-    idleTimeoutMillis: 60_000,
+    max: 10,
+    connect_timeout: 10,
+    idle_timeout: 60,
+    keep_alive: 10,
   };
 }
 
-export const pgPoolProvider: Provider = {
-  provide: PG_POOL,
-  useFactory: async (): Promise<Pool> => {
-    const logger = new Logger('PG_POOL');
-    const config = buildPoolConfig();
+async function ensurePostgresConnected(sql: Sql): Promise<void> {
+  await sql`select 1`;
+}
 
-    const hasConnString = typeof config.connectionString === 'string' && config.connectionString.trim() !== '';
-    const safeConnString = hasConnString ? redactConnectionString(config.connectionString as string) : undefined;
+export const postgresClientProvider: Provider = {
+  provide: POSTGRES_CLIENT,
+  useFactory: async (): Promise<Sql> => {
+    const logger = new Logger('POSTGRES_CLIENT');
+    const config = buildPostgresClientConfig();
+
+    const hasConnString = 'url' in config;
+    const safeConnString = hasConnString ? redactConnectionString(config.url) : undefined;
     const sslEnabled = typeof config.ssl === 'object' && config.ssl !== null;
+
     logger.log(
-      `PG config: mode=${hasConnString ? 'connectionString' : 'parts'} ssl=${sslEnabled} ` +
-        `host=${String((config as PoolConfig).host ?? '')} port=${String((config as PoolConfig).port ?? '')} ` +
-        `db=${String((config as PoolConfig).database ?? '')} user=${String((config as PoolConfig).user ?? '')} ` +
+      `Postgres-js config: mode=${hasConnString ? 'connectionString' : 'parts'} ssl=${sslEnabled} ` +
+        `host=${String(hasConnString ? '' : config.host)} port=${String(hasConnString ? '' : config.port)} ` +
+        `db=${String(hasConnString ? '' : config.database)} user=${String(hasConnString ? '' : config.username)} ` +
         `url=${safeConnString ?? ''}`,
     );
 
     for (let attempt = 1; ; attempt += 1) {
-      logger.log(`Подключение к Postgres. Попытка: ${attempt}`);
+      logger.log(`Подключение к Postgres (postgres-js). Попытка: ${attempt}`);
 
-      const pool = new Pool(config);
+      const sql =
+        'url' in config
+          ? postgres(config.url, {
+              ssl: config.ssl,
+              max: config.max,
+              connect_timeout: config.connect_timeout,
+              idle_timeout: config.idle_timeout,
+              keep_alive: config.keep_alive,
+            })
+          : postgres({
+              host: config.host,
+              port: config.port,
+              database: config.database,
+              username: config.username,
+              password: config.password,
+              ssl: config.ssl,
+              max: config.max,
+              connect_timeout: config.connect_timeout,
+              idle_timeout: config.idle_timeout,
+              keep_alive: config.keep_alive,
+            });
 
       try {
-        await ensurePoolConnected(pool);
+        await ensurePostgresConnected(sql);
         logger.log(`Подключение к Postgres успешно. Попыток: ${attempt}`);
-
-        const reconnecting = new ReconnectingPool(config, logger);
-        // Подменяем внутренний пул на тот, что уже успешно подключился
-        // (чтобы не делать лишний коннект на старте)
-        reconnecting.useExistingPool(pool);
-
-        const proxy = new Proxy({} as Pool, {
-          get: (_target, prop, _receiver) => {
-            if (prop === 'query') return reconnecting.query.bind(reconnecting);
-            if (prop === 'connect') return reconnecting.connect.bind(reconnecting);
-            if (prop === 'end') return reconnecting.end.bind(reconnecting);
-            if (prop === 'on') return reconnecting.on.bind(reconnecting);
-
-            const value = (reconnecting.current as unknown as Record<PropertyKey, unknown>)[prop];
-            if (typeof value === 'function') {
-              return (value as (...args: unknown[]) => unknown).bind(reconnecting.current);
-            }
-            return value;
-          },
-          set: (_target, prop, value) => {
-            (reconnecting.current as unknown as Record<PropertyKey, unknown>)[prop] = value;
-            return true;
-          },
-        });
-
-        return proxy;
+        return sql;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logger.warn(`Не удалось подключиться к Postgres (попытка ${attempt}): ${message}`);
-        await pool.end().catch(() => undefined);
+
+        if (!isTransientPgError(error)) {
+          await sql.end({ timeout: 1 });
+          throw error;
+        }
+
+        await sql.end({ timeout: 1 });
         await wait(RECONNECT_DELAY_MS);
       }
     }
-
-    throw new Error('Не удалось подключиться к Postgres после максимального количества попыток');
   },
 };
 
 export const drizzleProvider: Provider = {
   provide: DRIZZLE,
-  useFactory: (pool: Pool) => drizzle(pool, { schema }),
-  inject: [PG_POOL],
+  useFactory: (client: Sql) => drizzle(client, { schema }),
+  inject: [POSTGRES_CLIENT],
 };

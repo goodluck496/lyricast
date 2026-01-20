@@ -1,14 +1,14 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { DRIZZLE, PG_POOL } from './database.providers';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import { DRIZZLE, POSTGRES_CLIENT } from './database.providers';
+import { type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { type Sql } from 'postgres';
 import * as schema from '../../lib/db/schema';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   constructor(
-    @Inject(PG_POOL) private readonly pool: Pool,
-    @Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
+    @Inject(POSTGRES_CLIENT) private readonly sql: Sql,
+    @Inject(DRIZZLE) private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
   get client() {
@@ -17,10 +17,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     // Проверочный запрос, чтобы рано увидеть проблемы с подключением
-    await this.pool.query('select 1');
+    await this.sql`select 1`;
   }
 
   async onModuleDestroy() {
-    await this.pool.end();
+    await this.sql.end({ timeout: 1 });
   }
 }

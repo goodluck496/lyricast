@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { and, eq, ilike, inArray, sql } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE } from '../database/database.providers';
 import * as schema from '../../lib/db/schema';
 import { CreateSongDto, UpdateSongDto } from './dto/song.dto';
@@ -51,7 +51,7 @@ export class SongsService {
   private readonly exportJobs = new Map<string, ExportJob>();
   private readonly exportDir: string;
 
-  constructor(@Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>) {
+  constructor(@Inject(DRIZZLE) private readonly db: PostgresJsDatabase<typeof schema>) {
     const userDataPath = process.env.USER_DATA_PATH;
     this.exportDir = userDataPath ? join(userDataPath, 'temp', 'exports') : join(tmpdir(), 'lyricast-exports');
     mkdirSync(this.exportDir, { recursive: true });
@@ -984,7 +984,225 @@ export class SongsService {
     }
   }
 
-  private async loadDatasetMeta(db: NodePgDatabase<typeof schema>) {
+  private async persistLyrics(
+    trx: PostgresJsDatabase<typeof schema>,
+    songId: number,
+    lyrics: SongLyricDto[],
+  ) {
+    for (const [idx, lyric] of lyrics.entries()) {
+      const [l] = await trx
+        .insert(schema.lyrics)
+        .values({
+          songId,
+          uniqId: lyric.uniqId,
+          sectionTitle: lyric.sectionTitle,
+          type: lyric.type,
+          splitLinesCount: lyric.splitLinesCount ?? 0,
+          sortIndex: lyric.sortIndex ?? idx,
+        })
+        .returning({ id: schema.lyrics.id });
+
+      if (lyric.lyrics && lyric.lyrics.length > 0) {
+        await trx.insert(schema.lyricLines).values(
+          lyric.lyrics.map((line) => ({
+            lyricId: l.id,
+            rangeIndex: line.rangeIndex ?? null,
+            lineIndex: line.lineIndex,
+            globalSongIndex: line.globalSongIndex ?? null,
+            text: line.text,
+            repeatCount: line.repeatCount ?? 1,
+          })),
+        );
+      }
+    }
+  }
+
+  private async ensureDatasetMeta(db: PostgresJsDatabase<typeof schema>) {
+    const [meta] = await db.select().from(schema.datasetMeta).limit(1);
+    if (!meta) {
+      await db
+        .insert(schema.datasetMeta)
+        .values({ id: 1, schemaVersion: 1, version: this.randomVersion(), updatedAt: new Date() })
+        .onConflictDoNothing();
+    }
+  }
+
+  private async bumpSongBookAndCatalogVersion(
+    db: PostgresJsDatabase<typeof schema>,
+    songBookId: number,
+    updatedBy = 'system',
+  ) {
+    const [songBook] = await db
+      .select({ id: schema.songBooks.id, catalogId: schema.songBooks.catalogId })
+      .from(schema.songBooks)
+      .where(eq(schema.songBooks.id, songBookId))
+      .limit(1);
+    if (!songBook) throw new NotFoundException('Song book not found');
+
+    await db
+      .update(schema.songBooks)
+      .set({
+        version: sql<number>`${schema.songBooks.version} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.songBooks.id, songBookId));
+
+    await this.bumpSongBookMetaVersion(db, songBookId, updatedBy);
+
+    await db
+      .update(schema.catalogs)
+      .set({
+        version: sql<number>`${schema.catalogs.version} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.catalogs.id, songBook.catalogId));
+
+    await this.bumpDatasetVersion(db);
+  }
+
+  private async bumpSongBookMetaVersion(
+    db: PostgresJsDatabase<typeof schema>,
+    songBookId: number,
+    updatedBy = 'system',
+  ) {
+    const [row] = await db
+      .select({ fileKey: schema.songBooks.fileKey, version: schema.songBooks.version })
+      .from(schema.songBooks)
+      .where(eq(schema.songBooks.id, songBookId))
+      .limit(1);
+    if (!row) throw new NotFoundException('Song book not found');
+
+    const nowIso = new Date().toISOString();
+    const now = new Date();
+
+    const entries = [
+      { metaKey: 'version', metaValue: String(Number(row.version ?? 0)) },
+      { metaKey: 'updated_at', metaValue: nowIso },
+      { metaKey: 'updated_by', metaValue: updatedBy },
+    ];
+
+    for (const entry of entries) {
+      await db
+        .insert(schema.songBookMeta)
+        .values({
+          fileKey: row.fileKey,
+          metaKey: entry.metaKey,
+          metaValue: entry.metaValue,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [schema.songBookMeta.fileKey, schema.songBookMeta.metaKey],
+          set: { metaValue: entry.metaValue, updatedAt: now },
+        });
+    }
+  }
+
+  private async bumpDatasetVersion(db: PostgresJsDatabase<typeof schema>) {
+    await this.ensureDatasetMeta(db);
+    const version = this.randomVersion();
+    await db
+      .update(schema.datasetMeta)
+      .set({ version, updatedAt: new Date() })
+      .where(eq(schema.datasetMeta.id, 1));
+    return version;
+  }
+
+  private randomVersion() {
+    return randomUUID();
+  }
+
+  private async loadSongMeta(db: PostgresJsDatabase<typeof schema>, songId: number): Promise<string[]> {
+    const metaRows = await db
+      .select({ idx: schema.songMeta.idx, value: schema.songMeta.value })
+      .from(schema.songMeta)
+      .where(eq(schema.songMeta.songId, songId))
+      .orderBy(schema.songMeta.idx);
+    return metaRows.map((m) => m.value);
+  }
+
+  private async loadSongBookMeta(
+    db: PostgresJsDatabase<typeof schema>,
+    fileKey: string,
+  ): Promise<Record<string, string>> {
+    const metaRows = await db
+      .select({
+        key: schema.songBookMeta.metaKey,
+        value: schema.songBookMeta.metaValue,
+      })
+      .from(schema.songBookMeta)
+      .where(eq(schema.songBookMeta.fileKey, fileKey));
+
+    const meta: Record<string, string> = {};
+    for (const row of metaRows) {
+      meta[row.key] = row.value;
+    }
+    return meta;
+  }
+
+  private async loadLyricsWithLines(
+    db: PostgresJsDatabase<typeof schema>,
+    songId: number,
+  ): Promise<
+    Array<{
+      id: number;
+      uniqId: string;
+      sectionTitle: string;
+      type: string;
+      splitLinesCount: number;
+      sortIndex: number;
+      lines: Array<{
+        id: number;
+        rangeIndex: string | null;
+        lineIndex: number;
+        globalSongIndex: number | null;
+        text: string;
+        repeatCount: number | null;
+      }>;
+    }>
+  > {
+    const lyricsRows = await db
+      .select({
+        id: schema.lyrics.id,
+        uniqId: schema.lyrics.uniqId,
+        sectionTitle: schema.lyrics.sectionTitle,
+        type: schema.lyrics.type,
+        splitLinesCount: schema.lyrics.splitLinesCount,
+        sortIndex: schema.lyrics.sortIndex,
+      })
+      .from(schema.lyrics)
+      .where(eq(schema.lyrics.songId, songId))
+      .orderBy(schema.lyrics.sortIndex);
+
+    const lyrics = [];
+    for (const l of lyricsRows) {
+      const lines = await db
+        .select({
+          id: schema.lyricLines.id,
+          rangeIndex: schema.lyricLines.rangeIndex,
+          lineIndex: schema.lyricLines.lineIndex,
+          globalSongIndex: schema.lyricLines.globalSongIndex,
+          text: schema.lyricLines.text,
+          repeatCount: schema.lyricLines.repeatCount,
+        })
+        .from(schema.lyricLines)
+        .where(eq(schema.lyricLines.lyricId, l.id))
+        .orderBy(schema.lyricLines.lineIndex);
+
+      lyrics.push({
+        id: l.id,
+        uniqId: l.uniqId,
+        sectionTitle: l.sectionTitle,
+        type: l.type,
+        splitLinesCount: l.splitLinesCount,
+        sortIndex: l.sortIndex,
+        lines,
+      });
+    }
+
+    return lyrics;
+  }
+
+  private async loadDatasetMeta(db: PostgresJsDatabase<typeof schema>) {
     await this.ensureDatasetMeta(db);
     const [meta] = await db.select().from(schema.datasetMeta).where(eq(schema.datasetMeta.id, 1));
     return meta ?? null;
@@ -1456,249 +1674,8 @@ export class SongsService {
     return { ok: true, ...result };
   }
 
-  /**
-   * Пересоздаёт лирику и строки для песни.
-   */
-  private async persistLyrics(
-    trx: NodePgDatabase<typeof schema>,
-    songId: number,
-    lyrics: SongLyricDto[],
-  ) {
-    for (const [idx, lyric] of lyrics.entries()) {
-      const [l] = await trx
-        .insert(schema.lyrics)
-        .values({
-          songId,
-          uniqId: lyric.uniqId,
-          sectionTitle: lyric.sectionTitle,
-          type: lyric.type,
-          splitLinesCount: lyric.splitLinesCount ?? 0,
-          sortIndex: lyric.sortIndex ?? idx,
-        })
-        .returning({ id: schema.lyrics.id });
-
-      if (lyric.lyrics && lyric.lyrics.length > 0) {
-        await trx.insert(schema.lyricLines).values(
-          lyric.lyrics.map((line) => ({
-            lyricId: l.id,
-            rangeIndex: line.rangeIndex ?? null,
-            lineIndex: line.lineIndex,
-            globalSongIndex: line.globalSongIndex ?? null,
-            text: line.text,
-            repeatCount: line.repeatCount ?? 1,
-          })),
-        );
-      }
-    }
-  }
-
-  /**
-   * Обеспечивает наличие строки dataset_meta.
-   */
-  private async ensureDatasetMeta(db: NodePgDatabase<typeof schema>) {
-    const [meta] = await db.select().from(schema.datasetMeta).limit(1);
-    if (!meta) {
-      await db
-        .insert(schema.datasetMeta)
-        .values({ id: 1, schemaVersion: 1, version: this.randomVersion() });
-    }
-  }
-
-  /**
-   * Повышает версии song_book, каталога и dataset_meta.
-   */
-  private async bumpSongBookAndCatalogVersion(
-    db: NodePgDatabase<typeof schema>,
-    songBookId: number,
-    updatedBy = 'system',
-  ) {
-    const [songBook] = await db
-      .select({ id: schema.songBooks.id, catalogId: schema.songBooks.catalogId })
-      .from(schema.songBooks)
-      .where(eq(schema.songBooks.id, songBookId))
-      .limit(1);
-    if (!songBook) throw new NotFoundException('Song book not found');
-
-    await db
-      .update(schema.songBooks)
-      .set({
-        version: sql`${schema.songBooks.version} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.songBooks.id, songBookId));
-
-    await this.bumpSongBookMetaVersion(db, songBookId, updatedBy);
-
-    await db
-      .update(schema.catalogs)
-      .set({
-        version: sql`${schema.catalogs.version} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.catalogs.id, songBook.catalogId));
-
-    await this.bumpDatasetVersion(db);
-  }
-
-  private async bumpSongBookMetaVersion(
-    db: NodePgDatabase<typeof schema>,
-    songBookId: number,
-    updatedBy = 'system',
-  ) {
-    const [row] = await db
-      .select({ fileKey: schema.songBooks.fileKey, version: schema.songBooks.version })
-      .from(schema.songBooks)
-      .where(eq(schema.songBooks.id, songBookId))
-      .limit(1);
-    if (!row) throw new NotFoundException('Song book not found');
-
-    const nowIso = new Date().toISOString();
-    const now = new Date();
-
-    const entries = [
-      { metaKey: 'version', metaValue: String(Number(row.version ?? 0)) },
-      { metaKey: 'updated_at', metaValue: nowIso },
-      { metaKey: 'updated_by', metaValue: updatedBy },
-    ];
-
-    for (const entry of entries) {
-      await db
-        .insert(schema.songBookMeta)
-        .values({
-          fileKey: row.fileKey,
-          metaKey: entry.metaKey,
-          metaValue: entry.metaValue,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: [schema.songBookMeta.fileKey, schema.songBookMeta.metaKey],
-          set: {
-            metaValue: entry.metaValue,
-            updatedAt: now,
-          },
-        });
-    }
-  }
-
-  /**
-   * Повышает версию датасета.
-   */
-  private async bumpDatasetVersion(db: NodePgDatabase<typeof schema>) {
-    await this.ensureDatasetMeta(db);
-    const version = this.randomVersion();
-    await db
-      .update(schema.datasetMeta)
-      .set({ version, updatedAt: new Date() })
-      .where(eq(schema.datasetMeta.id, 1));
-    return version;
-  }
-
-  private randomVersion() {
-    return randomUUID();
-  }
-
-  /**
-   * Загружает метаданные песни в виде массива значений.
-   */
-  private async loadSongMeta(db: NodePgDatabase<typeof schema>, songId: number): Promise<string[]> {
-    const metaRows = await db
-      .select({ idx: schema.songMeta.idx, value: schema.songMeta.value })
-      .from(schema.songMeta)
-      .where(eq(schema.songMeta.songId, songId))
-      .orderBy(schema.songMeta.idx);
-    return metaRows.map((m) => m.value);
-  }
-
-  /**
-   * Загружает метаданные книги по fileKey.
-   */
-  private async loadSongBookMeta(
-    db: NodePgDatabase<typeof schema>,
-    fileKey: string,
-  ): Promise<Record<string, string>> {
-    const metaRows = await db
-      .select({
-        key: schema.songBookMeta.metaKey,
-        value: schema.songBookMeta.metaValue,
-      })
-      .from(schema.songBookMeta)
-      .where(eq(schema.songBookMeta.fileKey, fileKey));
-    const meta: Record<string, string> = {};
-    for (const row of metaRows) {
-      meta[row.key] = row.value;
-    }
-    return meta;
-  }
-
-  /**
-   * Загружает лирику песни вместе со строками (без форматирования под DTO).
-   */
-  private async loadLyricsWithLines(
-    db: NodePgDatabase<typeof schema>,
-    songId: number,
-  ): Promise<
-    Array<{
-      uniqId: string;
-      sectionTitle: string;
-      type: string;
-      splitLinesCount: number;
-      sortIndex: number;
-      lines: Array<{
-        id: number;
-        rangeIndex: string | null;
-        lineIndex: number;
-        globalSongIndex: number | null;
-        text: string;
-        repeatCount: number | null;
-      }>;
-    }>
-  > {
-    const lyricsRows = await db
-      .select({
-        id: schema.lyrics.id,
-        uniqId: schema.lyrics.uniqId,
-        sectionTitle: schema.lyrics.sectionTitle,
-        type: schema.lyrics.type,
-        splitLinesCount: schema.lyrics.splitLinesCount,
-        sortIndex: schema.lyrics.sortIndex,
-      })
-      .from(schema.lyrics)
-      .where(eq(schema.lyrics.songId, songId))
-      .orderBy(schema.lyrics.sortIndex);
-
-    const lyrics = [];
-    for (const l of lyricsRows) {
-      const lines = await db
-        .select({
-          id: schema.lyricLines.id,
-          rangeIndex: schema.lyricLines.rangeIndex,
-          lineIndex: schema.lyricLines.lineIndex,
-          globalSongIndex: schema.lyricLines.globalSongIndex,
-          text: schema.lyricLines.text,
-          repeatCount: schema.lyricLines.repeatCount,
-        })
-        .from(schema.lyricLines)
-        .where(eq(schema.lyricLines.lyricId, l.id))
-        .orderBy(schema.lyricLines.lineIndex);
-
-      lyrics.push({
-        uniqId: l.uniqId,
-        sectionTitle: l.sectionTitle,
-        type: l.type,
-        splitLinesCount: l.splitLinesCount,
-        sortIndex: l.sortIndex,
-        lines,
-      });
-    }
-
-    return lyrics;
-  }
-
-  /**
-   * Пересоздаёт лирику из SongBookExport.
-   */
   private async persistLyricsFromExport(
-    trx: NodePgDatabase<typeof schema>,
+    trx: PostgresJsDatabase<typeof schema>,
     songId: number,
     lyrics: SongBookExport['songs'][number]['lyrics'],
   ) {
@@ -1759,7 +1736,7 @@ export class SongsService {
   }
 
   private async generateUniqueSongBookFileKey(
-    trx: NodePgDatabase<typeof schema>,
+    trx: PostgresJsDatabase<typeof schema>,
     title?: string,
   ): Promise<string> {
     for (let attempt = 0; attempt < 5; attempt++) {

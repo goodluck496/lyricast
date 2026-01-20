@@ -140,7 +140,7 @@ importers:
         version: 17.2.3
       drizzle-orm:
         specifier: ^0.44.7
-        version: 0.44.7(@libsql/client@0.15.15)(@types/better-sqlite3@7.6.13)(@types/pg@8.16.0)(@types/sql.js@1.4.9)(better-sqlite3@12.4.6)(pg@8.16.3)(sql.js@1.13.0)
+        version: 0.44.7(@libsql/client@0.15.15)(@types/better-sqlite3@7.6.13)(@types/pg@8.16.0)(@types/sql.js@1.4.9)(better-sqlite3@12.4.6)(pg@8.16.3)(postgres@3.4.8)(sql.js@1.13.0)
       electron-log:
         specifier: ^5.3.0
         version: 5.4.3
@@ -177,6 +177,9 @@ importers:
       png-to-ico:
         specifier: ^3.0.1
         version: 3.0.1
+      postgres:
+        specifier: ^3.4.8
+        version: 3.4.8
       primeicons:
         specifier: ^7.0.0
         version: 7.0.0
@@ -9760,6 +9763,10 @@ packages:
   postgres-interval@1.2.0:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
+
+  postgres@3.4.8:
+    resolution: {integrity: sha512-d+JFcLM17njZaOLkv6SCev7uoLaBtfK86vMUXhW1Z4glPWh4jozno9APvW/XKFJ3CCxVoC7OL38BqRydtu5nGg==}
+    engines: {node: '>=12'}
 
   postject@1.0.0-alpha.6:
     resolution: {integrity: sha512-b9Eb8h2eVqNE8edvKdwqkrY6O7kAwmI8kcnBv1NScolYJbo59XUF0noFq+lxbC1yN20bmC0WBEbDC5H/7ASb0A==}
@@ -19534,7 +19541,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.44.7(@libsql/client@0.15.15)(@types/better-sqlite3@7.6.13)(@types/pg@8.16.0)(@types/sql.js@1.4.9)(better-sqlite3@12.4.6)(pg@8.16.3)(sql.js@1.13.0):
+  drizzle-orm@0.44.7(@libsql/client@0.15.15)(@types/better-sqlite3@7.6.13)(@types/pg@8.16.0)(@types/sql.js@1.4.9)(better-sqlite3@12.4.6)(pg@8.16.3)(postgres@3.4.8)(sql.js@1.13.0):
     optionalDependencies:
       '@libsql/client': 0.15.15
       '@types/better-sqlite3': 7.6.13
@@ -19542,6 +19549,7 @@ snapshots:
       '@types/sql.js': 1.4.9
       better-sqlite3: 12.4.6
       pg: 8.16.3
+      postgres: 3.4.8
       sql.js: 1.13.0
 
   dunder-proto@1.0.1:
@@ -23871,6 +23879,8 @@ snapshots:
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
+
+  postgres@3.4.8: {}
 
   postject@1.0.0-alpha.6:
     dependencies:

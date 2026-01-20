@@ -1,7 +1,7 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Pool } from 'pg';
 import { DRIZZLE, PG_POOL } from './database.providers';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 import * as schema from '../../lib/db/schema';
 
 @Injectable()
@@ -17,7 +17,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     // Проверочный запрос, чтобы рано увидеть проблемы с подключением
-    await this.pool.query('SELECT 1');
+    await this.pool.query('select 1');
   }
 
   async onModuleDestroy() {

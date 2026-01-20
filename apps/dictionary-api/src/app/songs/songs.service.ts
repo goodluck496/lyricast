@@ -1543,7 +1543,7 @@ export class SongsService {
   private async bumpSongBookMetaVersion(
     db: NodePgDatabase<typeof schema>,
     songBookId: number,
-    updatedBy: string = 'system',
+    updatedBy = 'system',
   ) {
     const [row] = await db
       .select({ fileKey: schema.songBooks.fileKey, version: schema.songBooks.version })

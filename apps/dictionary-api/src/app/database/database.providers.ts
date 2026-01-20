@@ -212,7 +212,7 @@ function buildPoolConfig(): PoolConfig {
       connectionTimeoutMillis: 10_000,
       idleTimeoutMillis: 60_000,
       min: 1,
-      max: 10,
+      max: 10
     };
   }
 

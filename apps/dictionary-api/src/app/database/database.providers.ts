@@ -193,14 +193,45 @@ function wait(ms: number): Promise<void> {
   });
 }
 
+function redactConnectionString(connectionString: string): string {
+  try {
+    const url = new URL(connectionString);
+    const hadUsername = url.username.trim() !== '';
+    const hadPassword = url.password.trim() !== '';
+
+    if (hadUsername) url.username = '***';
+    if (hadPassword) url.password = '***';
+
+    if (!hadUsername && !hadPassword) return url.toString();
+    return url.toString();
+  } catch {
+    return connectionString;
+  }
+}
+
 function buildPoolConfig(): PoolConfig {
-  const url = process.env.DICTIONARY_DB_URL;
+  const url = process.env.DICTIONARY_DB_URL ?? process.env.DATABASE_URL;
   const sslEnv = process.env.DICTIONARY_DB_SSL;
 
+  const parseSslEnv = (): boolean | undefined => {
+    if (!sslEnv) return undefined;
+    const normalized = sslEnv.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1' || normalized === 'require' || normalized === 'required') {
+      return true;
+    }
+    if (normalized === 'false' || normalized === '0' || normalized === 'disable' || normalized === 'disabled') {
+      return false;
+    }
+    return undefined;
+  };
+
   const shouldUseSslByDefault = (connection: string | undefined): boolean => {
-    if (sslEnv === 'true') return true;
-    if (sslEnv === 'false') return false;
-    return typeof connection === 'string' && connection.includes('supabase.com');
+    const fromEnv = parseSslEnv();
+    if (fromEnv !== undefined) return fromEnv;
+
+    if (typeof connection !== 'string') return false;
+    const lower = connection.toLowerCase();
+    return lower.includes('supabase.com') || lower.includes('supabase.co') || lower.includes('render.com');
   };
 
   if (url && url.trim() !== '') {
@@ -236,6 +267,16 @@ export const pgPoolProvider: Provider = {
   useFactory: async (): Promise<Pool> => {
     const logger = new Logger('PG_POOL');
     const config = buildPoolConfig();
+
+    const hasConnString = typeof config.connectionString === 'string' && config.connectionString.trim() !== '';
+    const safeConnString = hasConnString ? redactConnectionString(config.connectionString as string) : undefined;
+    const sslEnabled = typeof config.ssl === 'object' && config.ssl !== null;
+    logger.log(
+      `PG config: mode=${hasConnString ? 'connectionString' : 'parts'} ssl=${sslEnabled} ` +
+        `host=${String((config as PoolConfig).host ?? '')} port=${String((config as PoolConfig).port ?? '')} ` +
+        `db=${String((config as PoolConfig).database ?? '')} user=${String((config as PoolConfig).user ?? '')} ` +
+        `url=${safeConnString ?? ''}`,
+    );
 
     for (let attempt = 1; ; attempt += 1) {
       logger.log(`Подключение к Postgres. Попытка: ${attempt}`);

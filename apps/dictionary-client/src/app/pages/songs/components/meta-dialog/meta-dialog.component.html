@@ -39,14 +39,14 @@
       <p-fileupload
         mode="basic"
         name="cover"
-        accept="image/*"
+        accept="image/png,image/jpeg,image/webp,image/avif"
         chooseLabel="Выбрать файл"
         [auto]="true"
         [customUpload]="true"
         (uploadHandler)="onCoverUpload($event)"
       ></p-fileupload>
       @if (metaForm.coverImage) {
-        <small class="hint">Изображение будет сжато на сервере до 512x512</small>
+        <small class="hint">Поддерживаются png/jpeg/webp/avif. Будет сжато на сервере до 512x512 (после обработки ≤ 300KB)</small>
       }
     </div>
   </div>

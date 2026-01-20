@@ -144,7 +144,7 @@
         <p-fileupload
           mode="basic"
           name="coverFile"
-          accept="image/*"
+          accept="image/png,image/jpeg,image/webp,image/avif"
           [auto]="true"
           [customUpload]="true"
           [disabled]="submitting"
@@ -155,7 +155,7 @@
           @if (coverFile) {
             {{ formatBytes(coverFile.size) || 'Размер неизвестен' }}
           } @else {
-            Будет пережата на сервере до 512x512
+            Поддерживаются png/jpeg/webp/avif. Будет пережата на сервере до 512x512 (после обработки ≤ 300KB)
           }
         </small>
       </div>

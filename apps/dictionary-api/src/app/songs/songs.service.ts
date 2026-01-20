@@ -1,4 +1,10 @@
-import { Inject, Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { and, eq, ilike, inArray, sql } from 'drizzle-orm';
 import { type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -155,7 +161,7 @@ export class SongsService {
       if (coverImage?.trim()) metaInput.coverImage = coverImage.trim();
 
       if (Object.keys(metaInput).length > 0) {
-        const normalizedMeta = await this.normalizeBookMeta(metaInput);
+        const normalizedMeta = await this.normalizeBookMetaStrict(metaInput);
         const entries = Object.entries(normalizedMeta);
         if (entries.length > 0) {
           await trx.insert(schema.songBookMeta).values(
@@ -210,8 +216,7 @@ export class SongsService {
 
       // Нормализуем coverImage (сжатие/формат) только если она передана и не null
       if (typeof patch.coverImage === 'string') {
-        const normalized = await this.normalizeBookMeta({ coverImage: patch.coverImage });
-        patch.coverImage = normalized.coverImage ?? null;
+        patch.coverImage = await this.normalizeCoverImageStrict(patch.coverImage);
       }
 
       const now = new Date();
@@ -1517,14 +1522,14 @@ export class SongsService {
         songBookId = created.id;
       }
 
-      // Обновляем мета книги
-      await trx.delete(schema.songBookMeta).where(eq(schema.songBookMeta.fileKey, fileKey));
-
       const metaStartedAt = Date.now();
-      const normalizedMeta = await this.normalizeBookMeta(data.meta ?? {});
+      const normalizedMeta = await this.normalizeBookMetaStrict(data.meta ?? {});
       this.logger.log(
         `[importSongBook] meta normalized in ${Date.now() - metaStartedAt}ms (keys=${Object.keys(normalizedMeta).length})`,
       );
+
+      // Обновляем мета книги (после успешной нормализации, чтобы не потерять existing meta при ошибке)
+      await trx.delete(schema.songBookMeta).where(eq(schema.songBookMeta.fileKey, fileKey));
 
       const bookMetaEntries = Object.entries(normalizedMeta);
       if (bookMetaEntries.length > 0) {
@@ -1770,6 +1775,29 @@ export class SongsService {
       if (key === 'coverImage') {
         const sanitized = await this.normalizeCoverImage(value);
         if (sanitized) normalized[key] = sanitized;
+      } else {
+        normalized[key] = value;
+      }
+    }
+    return normalized;
+  }
+
+  private async normalizeCoverImageStrict(raw: string): Promise<string> {
+    const sanitized = await this.normalizeCoverImage(raw);
+    if (!sanitized) {
+      throw new BadRequestException(
+        'coverImage: неподдерживаемый формат или некорректные данные. Поддерживаются png/jpeg/webp/avif, размер после обработки ≤ 300KB.',
+      );
+    }
+    return sanitized;
+  }
+
+  private async normalizeBookMetaStrict(meta: Record<string, string>): Promise<Record<string, string>> {
+    const normalized: Record<string, string> = {};
+    for (const [key, value] of Object.entries(meta)) {
+      if (typeof value !== 'string') continue;
+      if (key === 'coverImage') {
+        normalized[key] = await this.normalizeCoverImageStrict(value);
       } else {
         normalized[key] = value;
       }

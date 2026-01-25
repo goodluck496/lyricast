@@ -1,0 +1,53 @@
+<p-confirmpopup appendTo=".export-stack"></p-confirmpopup>
+@if (jobs$ | async; as jobs) {
+  <div class="export-stack">
+    @for (job of jobs; track job.jobId) {
+      <div class="export-card">
+        <div class="export-card__header">
+          <span class="export-card__title">{{ formatLabel(job) }}</span>
+          <p-tag [severity]="statusSeverity(job)" [value]="statusLabel(job)" />
+        </div>
+
+        <div class="export-card__meta">
+          <span>ID: {{ job.jobId }}</span>
+          @if (job.songBookId) {
+            <span>SongBook: {{ job.songBookId }}</span>
+          }
+        </div>
+
+        <p-progressBar
+          [value]="job.progress"
+          [showValue]="true"
+          style="height: 20px"
+          [class]="progressClass(job)"
+        ></p-progressBar>
+
+        <div class="export-card__footer">
+          @if (job.error) {
+            <div class="export-card__error">{{ job.error }}</div>
+          }
+          <div class="export-card__actions">
+            @if (job.status === 'done' && job.downloadUrl) {
+              <p-button
+                size="small"
+                (onClick)="onDownload(job)"
+                [text]="true"
+                [rounded]="true"
+                icon="pi pi-download"
+                label="Скачать"
+              ></p-button>
+            }
+            <p-button
+              size="small"
+              (onClick)="onClose($event, job)"
+              [text]="true"
+              [rounded]="true"
+              icon="pi pi-times"
+              label="Закрыть"
+            ></p-button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

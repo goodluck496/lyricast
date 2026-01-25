@@ -87,17 +87,22 @@ export class ListBoxComponent<T>
   loading = input(false);
 
   showItems = computed(() => {
-    return this.items().filter((item) => {
-      return (
-        item.title
-          .trim()
-          .toLowerCase()
-          .includes(this.searchStringSig().toLowerCase()) ||
-        item.searchKey
-          .toLowerCase()
-          .includes(this.searchStringSig().toLowerCase() || '')
-      );
-    });
+    return this.items()
+      .filter((item) => {
+        return (
+          item.title
+            .trim()
+            .toLowerCase()
+            .includes(this.searchStringSig().toLowerCase()) ||
+          item.searchKey
+            .toLowerCase()
+            .includes(this.searchStringSig().toLowerCase() || '')
+        );
+      })
+      .map((item, index) => ({
+        ...item,
+        index,
+      }));
   });
   searchStringSig = signal<string>('');
 

@@ -1,0 +1,43 @@
+# Dictionary API — прогресс
+
+- [x] Определить общую схему PostgreSQL (catalogs, catalog_meta, dataset_meta, users/devices/sessions, song_books/songs/song_meta/lyrics/lyric_lines/song_book_meta) на Drizzle.
+- [x] Удалить локально-специфичную таблицу song_usage (оставить на стороне клиентов).
+- [x] Добавить drizzle config для PostgreSQL (`drizzle.config.dictionary.ts`).
+- [x] Настроить скрипты package.json (serve/build/migrate для dictionary-api).
+- [x] Поднять каркас NestJS: Config + Drizzle (pg) + Swagger (/swagger,/swagger-json) + Ping.
+- [ ] Реализовать Auth (email + device binding, JWT), с возможностью внешнего OAuth в будущем.
+  - [x] Login по email + device hash, хранение sessions, expiresIn.
+  - [x] JWT/guard + проверка токена в маршрутах (bearer по session token).
+  - [ ] Опциональная интеграция с внешним OAuth (переключатель).
+- [x] Catalogs CRUD + meta + версионирование (dataset_meta).
+- [x] Songs CRUD + lyrics + meta, bump версий song_book/catalog.
+- [x] Export JSON (SongBookExport) из PostgreSQL.
+- [ ] Export SQLite snapshot из PostgreSQL.
+- [x] Import JSON в PostgreSQL (с coverImage base64), bump версий.
+- [ ] Сжатие/хранение обложек (data URL) при импорте/сохранении мета.
+- [x] Versions check endpoint (аналог book.versions.check).
+- [x] Registry endpoint (аналог registry.list).
+- [ ] Совместимость для клиентов: выдача JSON/SQLite для оффлайн (dictionary-client, другие микросервисы).
+- [x] Починить сборку `dictionary-client` под новый OpenAPI контракт.
+  - [x] Заменить legacy-импорты `DefaultService`/php-style типов на `AuthService`/`SongsService` и DTO.
+  - [x] Добавить недостающие реэкспорты моделей в `libs/openapi/client/songs-dictionary/model/models.ts`.
+  - [x] Типизировать результат сохранения песни (минимальный контракт с `id`), чтобы сборка проходила.
+- [ ] Починить/синхронизировать сборку и контракты бэкенд-артефактов OpenAPI.
+  - [ ] Проверить и обновить `libs/openapi/backend` под актуальный swagger-json dictionary-api (убрать несоответствия/legacy артефакты).
+  - [x] Обновить consumer домена песен (`libs/domains/songs-domain`) под новый `@lyri-cast/openapi-backend-songs-domain` (воркер собирается).
+- [ ] Починить/синхронизировать Electron-клиент под новый контракт dictionary-api.
+  - [ ] `apps/browser`: обновить места использования dictionary API (если ещё остались legacy эндпоинты/типы).
+  - [ ] `libs/features/song-feature`: обновить места использования dictionary API (если ещё остались legacy эндпоинты/типы).
+- [ ] (после полного перехода на новый Swagger) Очистить `libs/openapi/client` от остатков старой генерации из `migrate-projects/dicts/swagger.yaml`.
+  - [ ] `libs/openapi/client/songs-dictionary/api/default.service.ts`
+  - [ ] `libs/openapi/client/songs-dictionary/api/default.serviceInterface.ts`
+  - [ ] `libs/openapi/client/songs-dictionary/model/apiPhpAction*.ts` (php-style модели/ответы)
+  - [ ] `libs/openapi/client/songs-dictionary/model/authResponse.ts`
+  - [ ] `libs/openapi/client/songs-dictionary/model/bookMetaSaveRequest.ts`
+  - [ ] `libs/openapi/client/songs-dictionary/model/bookMetaSaveResponse.ts`
+  - [ ] `libs/openapi/client/songs-dictionary/model/bookVersionsCheckRequest.ts`
+  - [ ] `libs/openapi/client/songs-dictionary/model/songBookExport.ts`
+  - [ ] `libs/openapi/client/songs-dictionary/model/songSaveRequest.ts`
+  - [ ] `libs/openapi/client/songs-dictionary/model/songSearchResponse.ts` (если больше нигде не используется вне legacy API)
+- [ ] Добавить тестовые/health маршруты и базовые E2E сценарии (при необходимости).
+- [ ] Нейминг package.json: оставить "LyriCast" (предупреждение npm игнорируем осознанно).

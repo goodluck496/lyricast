@@ -163,13 +163,15 @@ export class FreeSlideService {
       this.slides$.next(slides);
     }
 
-    const presentation = this.currentPresentation$.value;
+    const presentationId = this.currentPresentation$.value.id;
+    if (!presentationId) {
+      return;
+    }
 
+    // Обновляем только список слайдов, чтобы не перетирались изменения заголовка презентации,
+    // сделанные из главной страницы (редактор слайдов кэширует старое название).
     this.api
-      .update(presentation.id, {
-        ...presentation,
-        slides,
-      })
+      .update(presentationId, { slides })
       .pipe(first())
       .subscribe();
   }

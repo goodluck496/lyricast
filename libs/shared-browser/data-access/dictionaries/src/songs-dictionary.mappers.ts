@@ -1,54 +1,86 @@
-import { ISong, ISongBookName, Lyric, LyricLine, LyricTypeEnum } from '@lyri-cast/entities';
-import { SongDatabaseInfoDto, SongSearchResultDto } from '@lyri-cast/entities';
-import { RegistryItem, RegistryItemMeta } from '@lyri-cast/openapi-songs-dictionary';
-import { SongBase, SongFull, SongSearchResponse, Lyric as ApiLyric, LyricLine as ApiLyricLine } from '@lyri-cast/openapi-songs-dictionary';
+import {
+  ISong,
+  ISongBookName,
+  Lyric,
+  LyricLine,
+  LyricTypeEnum,
+  SongDatabaseInfoDto,
+} from '@lyri-cast/entities';
+import {
+  RegistryItemDto,
+  RegistryItemMetaDto,
+  SongLyricDto,
+  SongLyricLineDto,
+} from '@lyri-cast/openapi-songs-dictionary';
 
-export function mapRegistryItemToSongDatabaseInfoDto(item: RegistryItem): SongDatabaseInfoDto {
-  const meta = (item.meta || {}) as RegistryItemMeta;
+export function mapRegistryItemToSongDatabaseInfoDto(
+  item: RegistryItemDto
+): SongDatabaseInfoDto {
+  const meta: RegistryItemMetaDto = {
+    version: typeof item.meta?.version === 'number' ? item.meta.version : 0,
+    songCount:
+      typeof item.meta?.songCount === 'number' ? item.meta.songCount : 0,
+    fileKey: item.meta?.fileKey,
+    language: item.meta?.language,
+    title: item.meta?.title,
+    description: item.meta?.description,
+    coverImage: item.meta?.coverImage,
+    updatedBy: item.meta?.updatedBy,
+    updatedAt: item.meta?.updatedAt,
+  };
 
   return {
-    db: item.db,
+    db: String(item.id),
     fileKey: typeof meta.fileKey === 'string' ? meta.fileKey : undefined,
     title: typeof meta.title === 'string' ? meta.title : undefined,
-    description: typeof meta.description === 'string' ? meta.description : undefined,
+    description:
+      typeof meta.description === 'string' ? meta.description : undefined,
     language: typeof meta.language === 'string' ? meta.language : undefined,
-    sizeBytes: typeof item.size === 'number' ? item.size : typeof meta.size === 'number' ? meta.size : undefined,
     songCount: typeof meta.songCount === 'number' ? meta.songCount : undefined,
-    coverImage: typeof meta.coverImage === 'string' ? meta.coverImage : undefined,
+    coverImage:
+      typeof meta.coverImage === 'string' ? meta.coverImage : undefined,
     version: typeof meta.version === 'number' ? meta.version : undefined,
     updatedBy: typeof meta.updatedBy === 'string' ? meta.updatedBy : undefined,
     updatedAt: typeof meta.updatedAt === 'string' ? meta.updatedAt : undefined,
   };
 }
 
-export function mapSongSearchResponseToDto(res: SongSearchResponse): SongSearchResultDto {
-  return {
-    items: res.items.map(mapSongUnionToISong),
-    totalCount: res.totalCount ?? res.total ?? 0,
-    page: res.page,
-    pageSize: res.pageSize,
-  };
-}
+export function mapSongUnionToISong(song: unknown): ISong {
+  if (!song || typeof song !== 'object') {
+    throw new Error('[songs-dictionary.mappers] Invalid song payload');
+  }
 
-export function mapSongUnionToISong(song: SongBase | SongFull): ISong {
-  const base: SongBase = song as SongBase;
-  const full = (song as SongFull).lyrics ? (song as SongFull) : undefined;
+  const base = song as {
+    id?: number;
+    number?: number;
+    title?: string;
+    songKey?: string;
+    keySignature?: string;
+    author?: string;
+    ref?: string | null;
+    category?: string | null;
+    songBookId?: number;
+    lyrics?: SongLyricDto[];
+    meta?: string[];
+  };
 
   const bookName: ISongBookName = {
-    fileKey: base.bookFileKey,
-    humanName: base.bookFileKey,
+    fileKey: String(base.songBookId ?? ''),
+    humanName: String(base.songBookId ?? ''),
   };
 
-  const lyrics: Lyric[] = full ? full.lyrics.map(mapApiLyricToLyric) : [];
+  const lyrics: Lyric[] = Array.isArray(base.lyrics)
+    ? base.lyrics.map(mapApiLyricToLyric)
+    : [];
 
   return {
-    id: (song as any).id,
-    number: base.number,
-    title: base.title,
-    key: base.songKey,
-    keySignature: base.keySignature,
-    author: base.author,
-    meta: [],
+    id: base.id,
+    number: base.number ?? 0,
+    title: base.title ?? '',
+    key: base.songKey ?? '',
+    keySignature: base.keySignature ?? '',
+    author: base.author ?? '',
+    meta: Array.isArray(base.meta) ? base.meta : [],
     lyrics,
     ref: base.ref ?? undefined,
     category: base.category ?? undefined,
@@ -56,24 +88,27 @@ export function mapSongUnionToISong(song: SongBase | SongFull): ISong {
   };
 }
 
-export function mapApiLyricToLyric(api: ApiLyric): Lyric {
+export function mapApiLyricToLyric(api: SongLyricDto): Lyric {
   return {
-    id: api.id,
-    songId: String(api.songId ?? ''),
-    numericSongId: api.songId ?? null,
+    id: 0,
+    songId: '',
+    numericSongId: null,
     uniqId: api.uniqId,
     sectionTitle: api.sectionTitle,
     type: mapApiLyricType(api.type),
     splitLinesCount: api.splitLinesCount ?? 1,
-    lines: (api.lines || []).map(
-      (line: ApiLyricLine): LyricLine => ({
-        id: line.id,
-        rangeIndex: String(line.rangeIndex ?? ''),
-        index: line.lineIndex ?? 0,
-        globalSongIndex: line.globalSongIndex ?? 0,
-        text: String(line.text ?? ''),
-      })
-    ),
+    lines: (api.lyrics || []).map(mapApiLyricLineToLyricLine),
+  };
+}
+
+function mapApiLyricLineToLyricLine(line: SongLyricLineDto): LyricLine {
+  return {
+    id: 0,
+    rangeIndex: String(line.rangeIndex ?? ''),
+    index: typeof line.lineIndex === 'number' ? line.lineIndex : 0,
+    globalSongIndex:
+      typeof line.globalSongIndex === 'number' ? line.globalSongIndex : 0,
+    text: String(line.text ?? ''),
   };
 }
 

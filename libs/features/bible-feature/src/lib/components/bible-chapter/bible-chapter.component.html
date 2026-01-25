@@ -8,20 +8,41 @@
       }
       <div class="list-item__wrapper bible-chapter-section__content">
         @for (verse of section.content; track verse.number) {
-          <div #verseItem class="bible-chapter-section__verse list-item"
-               [class.bible-chapter-section__verse--selected]="selectedVerse()?.number === verse.number"
-               [class.bible-chapter-section__verse--in-range]="isInRange(verse.number)"
-               (dblclick)="onSelectVerse(verse, $event, true)"
-               (click)="onSelectVerse(verse, $event)">
-            <div class="bible-chapter-section__verse-number">
-              <div class="list-item__number">{{ verse.number }}</div>
-            </div>
-            <div class="list-item__title bible-chapter-section__verse-content" [innerHTML]="sanitizeHtml(verse.text)"></div>
+          @if (verse.number === 1) {
+            <div
+              tourAnchor="bible:verse"
+              #verseItem class="bible-chapter-section__verse list-item"
+              [class.bible-chapter-section__verse--selected]="selectedVerse()?.number === verse.number"
+              [class.bible-chapter-section__verse--in-range]="isInRange(verse.number)"
+              (dblclick)="onSelectVerse(verse, $event, true)"
+              (click)="onSelectVerse(verse, $event)">
+              <div class="bible-chapter-section__verse-number">
+                <div class="list-item__number">{{ verse.number }}</div>
+              </div>
+              <div class="list-item__title bible-chapter-section__verse-content"
+                   [innerHTML]="sanitizeHtml(verse.text)"></div>
 
-            <div class="bible-chapter-section__shift-badge">
-              + shift
+              <div class="bible-chapter-section__shift-badge" tourAnchor="bible:shift">
+                + shift
+              </div>
             </div>
-          </div>
+          } @else {
+            <div #verseItem class="bible-chapter-section__verse list-item"
+                 [class.bible-chapter-section__verse--selected]="selectedVerse()?.number === verse.number"
+                 [class.bible-chapter-section__verse--in-range]="isInRange(verse.number)"
+                 (dblclick)="onSelectVerse(verse, $event, true)"
+                 (click)="onSelectVerse(verse, $event)">
+              <div class="bible-chapter-section__verse-number">
+                <div class="list-item__number">{{ verse.number }}</div>
+              </div>
+              <div class="list-item__title bible-chapter-section__verse-content"
+                   [innerHTML]="sanitizeHtml(verse.text)"></div>
+
+              <div class="bible-chapter-section__shift-badge">
+                + shift
+              </div>
+            </div>
+          }
         }
       </div>
     </div>

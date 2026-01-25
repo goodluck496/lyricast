@@ -1,14 +1,16 @@
 import { inject, Injectable } from '@angular/core';
-import { Application, Assets, Point } from 'pixi.js';
+import { Application, Assets, Container, Point } from 'pixi.js';
 import { AssetStorageService } from './asset-storage.service';
 import { EditorStore } from './editor-store.service';
 import {
   BrushNode,
+  GroupNode,
   IframeNode,
   ImageNode,
   ShapeNode,
   TextNode,
-  VideoNode,NodeBase
+  VideoNode,
+  NodeBase,
 } from '../nodes';
 import {
   SerializedBrushNode,
@@ -20,9 +22,17 @@ import {
   SerializedState,
   SerializedTextNode,
   SerializedVideoNode,
+  SerializedGroupNode,
 } from '@lyri-cast/entities';
 import { CommandBusService } from './command-bus.service';
 import { SceneViewportService } from './scene-viewport.service';
+import { EditorUtilsService } from './editor-utils.service';
+import { DragResizeService } from './drag-resize.service';
+import { GuideLayer } from '../guides';
+import { EditorConfig } from '../types';
+import { OverlayService } from './overlay.service';
+import { HistoryService } from './history.service';
+import { Subject } from 'rxjs';
 
 @Injectable()
 export class EditorSerializerService {
@@ -30,15 +40,22 @@ export class EditorSerializerService {
   private readonly assetStorage = inject(AssetStorageService);
   private readonly bus = inject(CommandBusService);
   private readonly sceneViewport = inject(SceneViewportService);
+  private readonly utils = inject(EditorUtilsService);
+  private readonly drag = inject(DragResizeService);
+  private readonly history = inject(HistoryService);
+  private readonly overlay = inject(OverlayService);
 
   // These will be provided by the editor component during serialization/deserialization
   // to avoid circular dependencies or passing the entire component.
   public app!: Application;
+  public world!: Container & { app: Application };
   public sceneWidth!: number;
   public sceneHeight!: number;
   public baseSceneWidth!: number;
   public baseSceneHeight!: number;
   public aspectRatio!: '16:9' | '4:3' | 'none';
+  public guides!: GuideLayer;
+  public cfg!: EditorConfig;
 
   /**
    * Сериализует текущее состояние редактора в JSON-объект.
@@ -46,16 +63,15 @@ export class EditorSerializerService {
   serializeState(): SerializedState {
     const state = this.store.snapshot((s) => s);
 
-
-
     const serializableNodes = Object.values(state.nodes)
       .map((nodeState) => {
         const node = nodeState.ref as NodeBase;
+        const worldPos = node.getGlobalPosition();
         const baseData: SerializedNodeBase = {
           id: node.id,
           type: nodeState.type as SerializedNode['type'],
-          x: node.x, // Serialize position relative to the world container
-          y: node.y,
+          x: worldPos.x, // Serialize position in world space to restore grouping correctly
+          y: worldPos.y,
           width: node.w,
           height: node.h,
           rotation: node.rotation,
@@ -123,6 +139,13 @@ export class EditorSerializerService {
             path: node.path?.map((p: Point) => ({ x: p.x, y: p.y })),
             bgAssetId: node.bgAssetId, // Store asset ID
           } as SerializedBrushNode;
+        }
+        if (node instanceof GroupNode) {
+          return {
+            ...baseData,
+            type: 'group',
+            childrenIds: node.childrenIds,
+          } as SerializedGroupNode;
         }
         return null;
       })
@@ -207,7 +230,14 @@ export class EditorSerializerService {
     const scaleY = savedH > 0 ? this.sceneViewport.baseSceneHeight / savedH : 1;
     const scaleFont = Math.min(scaleX, scaleY);
 
+    const groupNodes: SerializedGroupNode[] = [];
+
     data.nodes.forEach((nodeData) => {
+      if (nodeData.type === 'group') {
+        groupNodes.push(nodeData as SerializedGroupNode);
+        return;
+      }
+
       const options = {
         width: nodeData.width * scaleX,
         height: nodeData.height * scaleY,
@@ -300,5 +330,61 @@ export class EditorSerializerService {
           break;
       }
     });
+
+    if (groupNodes.length) {
+      // Восстанавливаем группировку на основе сохранённых childrenIds
+      this.restoreGroups(groupNodes);
+    }
+  }
+
+  private restoreGroups(groups: SerializedGroupNode[]) {
+    if (!this.world || !this.guides || !this.cfg) return;
+
+    const nodesById = this.store.snapshot((s) => s.nodes);
+    for (const groupData of groups) {
+      const group = new GroupNode();
+      group.id = groupData.id;
+      group.x = groupData.x;
+      group.y = groupData.y;
+      group.applyBoxSize(groupData.width, groupData.height);
+
+      const destroy$ = new Subject<void>();
+      this.world.addChild(group);
+      this.store.addNode({ id: group.id, type: 'group', ref: group, destroy$ });
+
+      const childrenIds = groupData.childrenIds ?? [];
+      for (const childId of childrenIds) {
+        const childRef = nodesById[childId]?.ref as NodeBase | undefined;
+        if (!childRef) continue;
+        try {
+          childRef.parent?.removeChild(childRef);
+        } catch {
+          /* ignore */
+        }
+        childRef.x = childRef.x - group.x;
+        childRef.y = childRef.y - group.y;
+        group.addChild(childRef);
+        childRef.eventMode = 'none';
+      }
+
+      this.drag.bind(group, destroy$, {
+        cfg: this.cfg,
+        store: this.store,
+        guides: this.guides,
+        world: this.world,
+        app: this.app,
+        bus: this.bus,
+        utils: this.utils,
+        overlay: this.overlay,
+        history: this.history,
+        getSceneBounds: () =>
+          this.sceneViewport.getSceneBounds?.() ?? {
+            x: 0,
+            y: 0,
+            width: this.sceneViewport.baseSceneWidth,
+            height: this.sceneViewport.baseSceneHeight,
+          },
+      });
+    }
   }
 }

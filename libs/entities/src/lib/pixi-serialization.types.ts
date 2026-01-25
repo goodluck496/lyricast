@@ -60,7 +60,8 @@ export type SerializedBrushNode = SerializedNodeBase & {
 
 export type SerializedGroupNode = SerializedNodeBase & {
   type: 'group';
-  url: string;
+  /** Дочерние узлы группы по их ID */
+  childrenIds?: string[];
 };
 
 export type SerializedNode =

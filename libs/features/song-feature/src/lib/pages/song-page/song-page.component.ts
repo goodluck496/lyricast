@@ -59,11 +59,17 @@ import {
 } from '@lyri-cast/form';
 import { CheckboxModule } from 'primeng/checkbox';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { PAGE_CONTAINER_TEMPLATES, Pages } from '@lyri-cast/common-browser';
+import {
+  OnboardingHelpService,
+  PAGE_CONTAINER_TEMPLATES,
+  Pages,
+} from '@lyri-cast/common-browser';
 import { SongsApiService } from '@lyri-cast/data-access-songs';
 import { Actions, ofType } from '@ngrx/effects';
 import { SongSidebarComponent } from '../../components/song-sidebar/song-sidebar.component';
 import { Router } from '@angular/router';
+import { TourAnchorPrimeNgDirective, TourPrimeNgModule } from 'ngx-ui-tour-primeng';
+import { SongOnboardingService } from '../../services/song-onboarding.service';
 
 export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
   [SPLIT_PARTS_COUNT.NONE]: 'Нет',
@@ -89,6 +95,8 @@ export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
     PageContainerComponent,
     CheckboxModule,
     SongSidebarComponent,
+    TourAnchorPrimeNgDirective,
+    TourPrimeNgModule,
   ],
   templateUrl: './song-page.component.html',
   styleUrl: './song-page.component.scss',
@@ -104,6 +112,8 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly store = inject(Store);
   private readonly actions$ = inject(Actions);
+  private readonly onboardingHelpService = inject(OnboardingHelpService);
+  private readonly songOnboarding = inject(SongOnboardingService);
 
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
   // chorusAfterCouplet = signal(true);
@@ -225,6 +235,45 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   );
 
   ngOnInit() {
+    this.onboardingHelpService.helpRequested$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((context) => {
+        if (context !== 'songs') {
+          return;
+        }
+
+        if (!this.isActivePage()) {
+          return;
+        }
+
+        this.songOnboarding.start();
+      });
+
+    this.selectedBook.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
+      .subscribe(() => {
+        if (!this.isActivePage()) {
+          return;
+        }
+
+        this.songOnboarding.tryNext('songs:dict');
+      });
+
+    this.selectedSong$
+      .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
+      .subscribe(() => {
+        if (!this.isActivePage()) {
+          return;
+        }
+
+        queueMicrotask(() => {
+          this.songOnboarding.goToOrRestart({
+            fromAnchorId: 'songs:song',
+            toAnchorId: 'songs:lyric-index-0',
+          });
+        });
+      });
+
     fromEvent<KeyboardEvent>(window /*this.elRef.nativeElement*/, 'keydown')
       .pipe(
         debounceTime(100),
@@ -389,6 +438,10 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       this.onStartCasting(true);
     } else if (!paused) {
       this.onNavigateSlide('next', line.globalSongIndex);
+    }
+
+    if (this.isActivePage()) {
+      this.songOnboarding.tryNext('songs:lyric');
     }
   }
 

@@ -57,7 +57,7 @@ export function authInterceptor(
   next: HttpHandlerFn
 ): Observable<HttpEvent<unknown>> {
   // Не трогаем запросы авторизации (auth.login), чтобы не зациклиться
-  if (req.url.includes('action=auth.login')) {
+  if (req.url.includes('action=auth.login') || req.url.includes('/api/auth/login')) {
     return next(req);
   }
 

@@ -9,7 +9,7 @@
 <!--      <p-checkbox id="chorusAfterCouplet" inputId="chorusAfterCouplet" [binary]="true"-->
 <!--                  [(ngModel)]="chorusAfterCouplet"></p-checkbox>-->
       <label for="lyric-count">Разделить <br>на блоки:</label>
-      <p-select id="lyric-count" inputId="lyric-count" [(ngModel)]="splitCount"
+      <p-select id="lyric-count" inputId="lyric-count" tourAnchor="songs:lyric-count" [(ngModel)]="splitCount"
                   (onChange)="onSelectSplitValue($event.value)"
                   [options]="SplitPartsCountOptions"></p-select>
     </div>
@@ -24,19 +24,29 @@
           appendTo="body"
           optionLabel="title"
           styleClass="list-search-dropdown"
+          tourAnchor="songs:dict"
         >
           <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
         </p-select>
 
         <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl" [tabIndex]="0"
                        [loading]="isLoading()">
-          <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
-            <div class="list-item__wrapper">
-              <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
-              <div class="list-item__title">
-                <span class="list-item__title-content" [innerHTML]="data.title | highliter: search"></span>
+          <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search" let-elementIndex="elementIndex">
+            @if (elementIndex === 0) {
+              <div class="list-item__wrapper" >
+                <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
+                <div class="list-item__title" tourAnchor="songs:song">
+                  <span class="list-item__title-content" [innerHTML]="data.title | highliter: search"></span>
+                </div>
               </div>
-            </div>
+            } @else {
+              <div class="list-item__wrapper">
+                <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
+                <div class="list-item__title">
+                  <span class="list-item__title-content" [innerHTML]="data.title | highliter: search"></span>
+                </div>
+              </div>
+            }
           </ng-template>
         </lyri-list-box>
       </div>

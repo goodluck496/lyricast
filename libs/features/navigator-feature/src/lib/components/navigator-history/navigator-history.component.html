@@ -3,7 +3,7 @@
     @if (groupItems.length) {
       <div class="history__groups">
         <p-accordion [multiple]="true" [value]="openedGroupKeys$ | async">
-          @for (group of groupItems; track group.payload.key) {
+          @for (group of groupItems; track group.payload.key; let groupIdx = $index) {
             <p-accordion-panel [value]="group.payload.key">
               <p-accordion-header>
                 <div class="history__group-header">
@@ -24,7 +24,7 @@
               <p-accordion-content>
                 <div class="history__item-wrapper">
                   @if (group.children?.length) {
-                    @for (item of group.children; track item.payload.key) {
+                    @for (item of group.children; track item.payload.key; let idx = $index) {
                       <div class="history__item"
                            [class.history__item--selected]="(selectedHistoryKey$ | async) === item.payload.key"
                            (click)="onSelectHistoryItem(item)">

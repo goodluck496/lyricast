@@ -73,7 +73,7 @@ import { NgScrollbarModule } from 'ngx-scrollbar';
   templateUrl: './quiz.component.html',
   styleUrls: ['./quiz.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [MessageService, ConfirmationService, QuizSidebarService, QuizStateService, QuizGameService],
+  providers: [MessageService, QuizSidebarService, QuizStateService, QuizGameService],
 })
 export class QuizComponent implements OnInit {
   isLoading = true;

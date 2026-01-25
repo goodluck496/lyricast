@@ -45,8 +45,8 @@
           severity="secondary"
           [rounded]="true"
           [text]="true"
-          (onClick)="downloadSqlite()"
-          pTooltip="Скачать sqlite"
+          (onClick)="startSqliteExport()"
+          pTooltip="Экспортировать в SQLite (фоново)"
           tooltipPosition="bottom"
         >
           <i class="pi pi-database" pButtonIcon></i>
@@ -56,8 +56,8 @@
           severity="secondary"
           [rounded]="true"
           [text]="true"
-          (onClick)="downloadJson()"
-          pTooltip="Скачать json"
+          (onClick)="startJsonExport()"
+          pTooltip="Экспортировать в JSON (фоново)"
           tooltipPosition="bottom"
         >
           <i class="pi pi-file" pButtonIcon></i>

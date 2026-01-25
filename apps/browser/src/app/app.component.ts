@@ -9,10 +9,22 @@ import {
 import {
   ActivatedRoute,
   NavigationEnd,
+  NavigationStart,
   Router,
   RouterModule,
 } from '@angular/router';
 import { MenuItem } from 'primeng/api';
+import { Toast } from 'primeng/toast';
+import { ExportNotificationsComponent } from '@lyri-cast/ui-lib';
+import { IconsService } from '@lyri-cast/svg-icons';
+import { lyriBible } from '@lyri-cast/svg-icons/lyri-icons/lyri-bible.icon';
+import { lyriControl } from '@lyri-cast/svg-icons/lyri-icons/lyri-control.icon';
+import { lyriStoryboard } from '@lyri-cast/svg-icons/lyri-icons/lyri-storyboard.icon';
+import { lyriSongLyrics } from '@lyri-cast/svg-icons/lyri-icons/lyri-song-lyrics.icon';
+import { lyriOpenedBook } from '@lyri-cast/svg-icons/lyri-icons/lyri-opened-book.icon';
+import { lyriGrid } from '@lyri-cast/svg-icons/lyri-icons/lyri-grid.icon';
+import { lyriBulletList } from '@lyri-cast/svg-icons/lyri-icons/lyri-bullet-list.icon';
+import { ConfirmationService } from 'primeng/api';
 
 import { filter, map, take } from 'rxjs';
 import { Store } from '@ngrx/store';
@@ -30,13 +42,22 @@ import { SnowfallManager } from '../services/common/snowfall.service';
 import { SplashScreenComponent } from './components/splash-screen/splash-screen.component';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthOverlayComponent } from './auth/auth-overlay.component';
+import { TourPrimeNgModule } from 'ngx-ui-tour-primeng';
 
 @Component({
   standalone: true,
-  imports: [RouterModule, SplashScreenComponent, AuthOverlayComponent],
+  imports: [
+    RouterModule,
+    SplashScreenComponent,
+    AuthOverlayComponent,
+    Toast,
+    ExportNotificationsComponent,
+    TourPrimeNgModule,
+  ],
   selector: 'lyri-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
+  providers: [ConfirmationService],
 })
 export class AppComponent implements OnInit {
   //не удалять
@@ -50,6 +71,9 @@ export class AppComponent implements OnInit {
   cdr = inject(ChangeDetectorRef);
   route = inject(ActivatedRoute);
   router = inject(Router);
+
+  private readonly icons = inject(IconsService);
+  private readonly confirmation = inject(ConfirmationService);
 
   isLoading = signal(true);
 
@@ -81,13 +105,28 @@ export class AppComponent implements OnInit {
   $isNotCastingPage = toSignal(this.isNotCastingPage$);
 
   constructor() {
-    effect(
-      () => {
-        if (!this.loadingStatusService.isInitialLoading()) {
-          this.isLoading.set(false);
-        }
-      },
-    );
+    effect(() => {
+      if (!this.loadingStatusService.isInitialLoading()) {
+        this.isLoading.set(false);
+      }
+    });
+
+    this.icons.registerIcons([
+      lyriBible,
+      lyriControl,
+      lyriStoryboard,
+      lyriSongLyrics,
+      lyriOpenedBook,
+      lyriGrid,
+      lyriBulletList,
+    ]);
+
+    // Закрываем любые висящие ConfirmPopup при смене маршрута
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationStart => event instanceof NavigationStart)
+      )
+      .subscribe(() => this.confirmation.close());
   }
 
   ngOnInit() {

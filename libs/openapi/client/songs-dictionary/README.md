@@ -1,6 +1,6 @@
 # @
 
-API для работы со справочниками песен/Библии на основе SQLite
+API for dictionaries (songs, bibles, programs)
 
 The version of the OpenAPI document: 1.0.0
 

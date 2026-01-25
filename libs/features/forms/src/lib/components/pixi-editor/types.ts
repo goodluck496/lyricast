@@ -36,6 +36,12 @@ export interface UiTextStyles {
   /** Цвет в HEX-формате для HTML input[type=color] (например, '#ffffff') */
   colorHex: string;
 
+  /** Цвет фона текста в формате Pixi.js (например, 0xffffff) */
+  bgColor?: number;
+
+  /** Цвет фона в HEX-формате для UI */
+  bgColorHex?: string;
+
   /** Горизонтальное выравнивание текста */
   align: TextAlign;
 

@@ -1,56 +1,334 @@
-
 :host {
-  display: flex;
-  flex-direction: column;
+  display: block;
   position: relative;
   height: 100%;
-  min-height: 560px;
-  font: 14px system-ui;
+  min-height: 640px;
+  font: 14px 'Inter', system-ui, sans-serif;
+  color: #0f172a;
+
+  ::ng-deep {
+    --p-panel-content-padding: 16px;
+  }
 }
+
+.editor-shell {
+  height: 100%;
+  padding: 0;
+  background: radial-gradient(circle at 20% 20%, #f8fafc, #eef2ff);
+}
+
+.mat-drawer-container {
+  background: transparent;
+  overflow: hidden;
+}
+
+.mat-drawer-content {
+  height: 100%;
+  overflow: hidden;
+}
+
+.toolbar-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 10px;
+  background: #ffffffd9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.toolbar-rail p-divider {
+  margin: 4px 0;
+}
+
+.panel-hidden {
+  display: none !important;
+}
+
+.field-label {
+  display: block;
+  margin: 0;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  padding: 12px;
+  height: 100%;
+}
+
+.canvas-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.07);
+  overflow: hidden;
+}
+
+.canvas-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.canvas-actions .spacer {
+  flex: 1;
+}
+
+.canvas-frame {
+  position: relative;
+  flex: 1;
+  min-height: 520px;
+  background: #0b1220;
+  border-top: 1px solid #e2e8f0;
+}
+
 .host {
   position: absolute;
-  top: 170px;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  overflow: hidden; /* предотвращает выход канваса за пределы контейнера */
+  inset: 0;
+  overflow: hidden;
 }
-.toolbar {
-  color: black;
-  position: relative;
-  left: 12px;
-  top: 8px;
-  right: 12px;
+
+.zoom-overlay {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  transform: translateX(-50%);
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 6px 10px;
-  z-index: 2;
-}
-.sep {
-  width: 1px;
-  height: 22px;
-  background: #e5e7eb;
-  display: inline-block;
-}
-button {
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  border-radius: 8px;
-  padding: 4px 10px;
-  cursor: pointer;
-  color: black;
-}
-button.active {
-  background: #eef2ff;
-  border-color: #a5b4fc;
-}
-label {
-  display: inline-flex;
-  align-items: center;
+  flex-direction: column;
   gap: 6px;
+  min-width: 320px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  pointer-events: auto;
+}
+
+.zoom-overlay .p-slider {
+  width: 100%;
+}
+
+.zoom-overlay .slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.properties-sidenav {
+  width: 340px;
+  box-shadow: -10px 0 30px rgba(15, 23, 42, 0.06);
+  border-left: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.properties-sidenav.mat-drawer {
+  overflow: hidden;
+}
+
+.properties-sidenav .mat-drawer-inner-container {
+  overflow: hidden;
+}
+
+.properties-scroll {
+  height: 100%;
+  display: block;
+}
+
+.properties-scroll .ng-scrollbar {
+  height: 100%;
+}
+
+.properties-scroll .ng-scrollbar-viewport {
+  padding: 12px;
+}
+
+.properties-scroll .ng-scrollbar-wrapper,
+.properties-scroll .ng-scrollbar-viewport {
+  box-sizing: border-box;
+}
+
+:host.color-picker-open .properties-scroll,
+:host.color-picker-open .properties-scroll * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.form-grid > * {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.properties-sidenav .p-panel {
+  box-shadow: none;
+  margin-bottom: 8px;
+}
+
+.properties-sidenav .p-panel .p-panel-content {
+  padding-top: var(--p-panel-content-padding, 16px);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.form-grid.two-cols {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-grid.two-cols.color-stroke-grid {
+  row-gap: 18px;
+}
+
+.form-grid.stacked > .p-float-label {
+  margin-top: 16px;
+}
+
+.form-grid :is(.p-float-label, .p-select, .p-inputnumber) {
+  width: 100%;
+}
+
+.form-grid :is(.p-inputnumber-input, .p-inputnumber input) {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.properties-sidenav .p-inputnumber :is(.p-inputnumber-input, .p-inputtext) {
+  width: 100%;
+  display: block;
+  box-sizing: border-box;
+}
+
+.size-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.slider-values {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  color: var(--lyricast-panel-text, var(--p-text-color, #ffffff));
+}
+
+.slider-wrapper {
+  position: relative;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.range-slider,
+.font-range-slider,
+.line-height-slider {
+  width: 100%;
+  display: block;
+}
+
+.slider-end-label {
+  position: absolute;
+  top: 0;
+  transform: translateY(-100%);
+  font-weight: 600;
+  color: var(--lyricast-panel-text, var(--p-text-color, #ffffff));
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.slider-end-label.start {
+  left: 0;
+}
+
+.slider-end-label.end {
+  right: 0;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.switch-label {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.slider-label {
+  font-weight: 600;
+  color: var(--lyricast-panel-text, var(--p-text-color, #ffffff));
+}
+
+.line-height-block .slider-label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.field :is(.p-colorpicker, .p-inputnumber) {
+  width: 100%;
+}
+
+.field :is(.p-colorpicker) {
+  display: block;
+}
+
+.field-control {
+  width: 100%;
+  display: block;
+}
+
+::ng-deep .field-control .p-colorpicker {
+  width: 100%;
+}
+
+::ng-deep .field-control .p-colorpicker-preview {
+  width: 100%;
+}
+
+::ng-deep .color-overlay,
+::ng-deep .color-overlay * {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+::ng-deep body.color-picker-open {
+  user-select: none;
+  -webkit-user-select: none;
 }

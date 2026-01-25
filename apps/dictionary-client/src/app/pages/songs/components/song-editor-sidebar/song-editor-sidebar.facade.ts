@@ -3,6 +3,7 @@ import { debounceTime, finalize, Observable, tap } from 'rxjs';
 
 import { ISong, Lyric, LyricLine, LyricTypeEnum } from '@lyri-cast/entities';
 import { SongsDictionaryApiService } from '@lyri-cast/data-access-dictionaries';
+import { SongSaveResult } from '@lyri-cast/shared-browser/data-access/dictionaries';
 
 @Injectable()
 export class SongEditorSidebarFacade {
@@ -71,7 +72,7 @@ export class SongEditorSidebarFacade {
     });
   }
 
-  save(): Observable<unknown> {
+  save(): Observable<SongSaveResult> {
     if (!this.song || !this.dbId) {
       throw new Error('SongEditorSidebarFacade.save: song or dbId is missing');
     }
@@ -84,8 +85,11 @@ export class SongEditorSidebarFacade {
     }
 
     this.isSaving = true;
-    return this.api.saveSong(this.dbId, this.song).pipe(
-      tap((res) => {
+    const fromSong = typeof this.song.id === 'number' ? this.song.id : null;
+    const fromState = this.songId ? Number(this.songId) : null;
+    const existingId = Number.isFinite(fromSong) ? fromSong : Number.isFinite(fromState) ? fromState : null;
+    return this.api.saveSong(this.dbId, this.song, existingId).pipe(
+      tap((res: SongSaveResult) => {
         if (res?.id) {
           this.songId = String(res.id);
           if (this.song) {

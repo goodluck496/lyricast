@@ -196,11 +196,20 @@ export class BaseHttpWorkerManager extends EventEmitter {
 
     console.log(`[SPAWNING WORKER] Path: ${entryAbsPath}, CWD: ${workerCwd}`);
 
+    const nodeEnv = app.isPackaged ? 'production' : 'development';
+    const dictionaryApiBase =
+      process.env.DICTIONARY_API_URL ??
+      (app.isPackaged
+        ? 'https://lyricast-dictionary-api.onrender.com'
+        : 'http://localhost:3000');
+
     const w = new Worker(entryAbsPath, {
       cwd: workerCwd,
       env: {
         ...process.env,
-        IS_PACKAGED: process.env.IS_PACKAGED,
+        NODE_ENV: nodeEnv,
+        DICTIONARY_API_URL: dictionaryApiBase,
+        IS_PACKAGED: String(app.isPackaged),
         SOURCE_DATA_PATH: process.env.SOURCE_DATA_PATH,
         USER_DATA_PATH: process.env.USER_DATA_PATH,
         USER_ASSETS_PATH: process.env.USER_ASSETS_PATH,

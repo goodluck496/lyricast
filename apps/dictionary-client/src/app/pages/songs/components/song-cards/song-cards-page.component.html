@@ -1,9 +1,47 @@
 <div class="db-cards">
-  @for (db of dbs; track db.db) {
-    <lyri-song-dictionary-card
-      [db]="db"
-      [clickable]="true"
-      (cardClick)="openDb(db)"
-    ></lyri-song-dictionary-card>
+  <button class="db-card db-card--md db-card--action" type="button" (click)="openImportDialog()">
+    <span class="db-card--action__icon">+</span>
+    <span class="db-card--action__label">
+      <span>Добавить</span>
+    </span>
+  </button>
+
+  @if (isLoading) {
+    <div class="db-card db-card--md db-card--skeleton">
+      <p-skeleton width="100%" height="100%" borderRadius="24px"></p-skeleton>
+    </div>
+    <div class="db-card db-card--md db-card--skeleton">
+      <p-skeleton width="100%" height="100%" borderRadius="24px"></p-skeleton>
+    </div>
+  } @else {
+    @for (db of dbs; track db.db) {
+      <lyri-song-dictionary-card
+        [db]="db"
+        [clickable]="true"
+        (cardClick)="openDb(db)"
+      ></lyri-song-dictionary-card>
+    }
   }
 </div>
+
+<p-dialog
+  header="Импорт сборника"
+  [(visible)]="importDialogVisible"
+  [modal]="true"
+  [style]="{ width: '900px', maxWidth: '95vw' }"
+  [contentStyle]="{
+    overflow: 'hidden',
+    display: 'flex',
+    'flex-direction': 'column',
+    'max-height': '80vh'
+  }"
+  [draggable]="false"
+  [dismissableMask]="false"
+  [closeOnEscape]="false"
+  (onHide)="closeImportDialog()"
+>
+  <lyri-import-book-dialog
+    (completed)="handleImportCompleted()"
+    (cancelled)="closeImportDialog()"
+  />
+</p-dialog>

@@ -5,14 +5,27 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  HostBinding,
   inject,
   NgZone,
   OnDestroy,
   OnInit,
   ViewChild,
 } from '@angular/core';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, DecimalPipe, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { FloatLabelModule } from 'primeng/floatlabel';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { SelectModule } from 'primeng/select';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { SliderModule } from 'primeng/slider';
+import { ColorPickerModule } from 'primeng/colorpicker';
+import { DividerModule } from 'primeng/divider';
+import { PanelModule } from 'primeng/panel';
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSliderModule } from '@angular/material/slider';
+import { NG_SCROLLBAR_OPTIONS, NgScrollbarModule } from 'ngx-scrollbar';
 import {
   Application,
   Container,
@@ -33,6 +46,7 @@ import { DialogService } from './services/dialog.service';
 import { DragResizeService } from './services/drag-resize.service';
 import { OverlayService } from './services/overlay.service';
 import { HistoryService } from './services/history.service';
+import { UiTextStyles } from './types';
 import {
   BatchCommand,
   DuplicateNodesCommand,
@@ -56,21 +70,55 @@ import {
 import { PIXI_EDITOR_PROVIDERS } from './pixi-editor.providers';
 import { NodeFactoryService } from './services/node-factory.service';
 import { SceneViewportService } from './services/scene-viewport.service';
+import { NgScrollbarExt } from 'ngx-scrollbar';
 
 type WorldContainer = Container & { app: Application };
 
 @Component({
   selector: 'lyri-pixi-slide-editor-v2',
   standalone: true,
-  imports: [FormsModule, AsyncPipe],
+  imports: [
+    FormsModule,
+    AsyncPipe,
+    DecimalPipe,
+    ButtonModule,
+    FloatLabelModule,
+    InputNumberModule,
+    SelectModule,
+    ToggleSwitchModule,
+    SliderModule,
+    ColorPickerModule,
+    DividerModule,
+    PanelModule,
+    NgScrollbarModule,
+    MatSidenavModule,
+    MatSliderModule,
+  ],
   templateUrl: 'pixi-editor.component.html',
   styleUrl: 'pixi-editor.component.scss',
-  providers: [...PIXI_EDITOR_PROVIDERS()],
+  providers: [
+    ...PIXI_EDITOR_PROVIDERS(),
+    {
+      provide: NG_SCROLLBAR_OPTIONS,
+      useValue: {
+        dragScroll: false,
+        wheelPropagation: false,
+        touchmovePropagation: false,
+      },
+    },
+  ],
 })
 export class PixiSlideEditorV2Component
   implements OnInit, AfterViewInit, OnDestroy
 {
-  @ViewChild('host', { static: true }) hostRef!: ElementRef<HTMLDivElement>;
+  @HostBinding('class.color-picker-open')
+  protected get isColorPickerOpenClass(): boolean {
+    return this.colorPickerOpen;
+  }
+
+  @ViewChild('host', { static: false }) hostRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('propertiesScrollbar', { static: false })
+  private propertiesScrollbarRef?: NgScrollbarExt;
   selectedKind?:
     | 'text'
     | 'image'
@@ -81,6 +129,7 @@ export class PixiSlideEditorV2Component
     | 'brush';
   brushActive = false;
   canSetBg = false;
+  propertiesOpen = true;
   aspectRatio: '16:9' | '4:3' | 'none' = '16:9';
 
   readonly cfg = inject(EDITOR_CONFIG);
@@ -91,6 +140,7 @@ export class PixiSlideEditorV2Component
   readonly history = inject(HistoryService);
   private readonly zone = inject(NgZone);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly document = inject(DOCUMENT);
   public readonly serializer = inject(EditorSerializerService);
   private readonly nodeFactory = inject(NodeFactoryService);
   public readonly sceneViewport = inject(SceneViewportService);
@@ -116,6 +166,40 @@ export class PixiSlideEditorV2Component
   canRedo$ = this.history.canRedo$;
 
   private destroy$ = new Subject<void>();
+  private hideTextPanelTimer?: number;
+  textPanelVisible = false;
+  private textPanelDelayMs = 60;
+  fontMin = 16;
+  fontMax = 150;
+  private colorPickerOpen = false;
+
+  private removeScrollbarLock?: () => void;
+  private removeColorPickerKeyGuard?: () => void;
+
+  aspectOptions: { label: string; value: '16:9' | '4:3' | 'none' }[] = [
+    { label: '16:9', value: '16:9' },
+    { label: '4:3', value: '4:3' },
+    { label: 'Нет', value: 'none' },
+  ];
+  fontOptions = [
+    { label: 'Inter, system-ui, sans-serif', value: 'Inter, system-ui, sans-serif' },
+    { label: 'Arial, Helvetica, sans-serif', value: 'Arial, Helvetica, sans-serif' },
+    { label: 'Georgia, serif', value: 'Georgia, serif' },
+    { label: "'Times New Roman', Times, serif", value: "'Times New Roman', Times, serif" },
+    { label: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", value: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" },
+  ];
+  weightOptions = [
+    { label: '400', value: '400' },
+    { label: '500', value: '500' },
+    { label: '600', value: '600' },
+    { label: '700', value: '700' },
+    { label: '800', value: '800' },
+  ];
+  alignOptions = [
+    { label: 'Слева', value: 'left' },
+    { label: 'По центру', value: 'center' },
+    { label: 'Справа', value: 'right' },
+  ];
   /**
    * Generic "content changed" stream for external consumers (e.g., free-slide preview/live-sync).
    * Emits on commands that mutate visual slide content but may not go through HistoryService.
@@ -163,8 +247,14 @@ export class PixiSlideEditorV2Component
 
   applyPixiParams() {
     this.serializer.app = this.app;
+    this.serializer.world = this.world;
     this.serializer.sceneWidth = this.sceneViewport.sceneWidth;
     this.serializer.sceneHeight = this.sceneViewport.sceneHeight;
+    this.serializer.baseSceneWidth = this.sceneViewport.baseSceneWidth;
+    this.serializer.baseSceneHeight = this.sceneViewport.baseSceneHeight;
+    this.serializer.aspectRatio = this.sceneViewport.aspectRatio;
+    this.serializer.guides = this.guides;
+    this.serializer.cfg = this.cfg;
     // Initialize node factory with component's PixiJS context
     this.nodeFactory.app = this.app;
 
@@ -175,6 +265,11 @@ export class PixiSlideEditorV2Component
   }
 
   ngOnDestroy(): void {
+    if (this.hideTextPanelTimer) {
+      clearTimeout(this.hideTextPanelTimer);
+    }
+    this.removeScrollbarLock?.();
+    this.removeColorPickerKeyGuard?.();
     this.destroy$.next();
     this.destroy$.complete();
     this.ctxMenu?.close();
@@ -428,6 +523,8 @@ export class PixiSlideEditorV2Component
           };
           const textNode = pickTextFrom(nodeRef);
           if (textNode) {
+            const safeMin = this.clampFontSize(textNode.style.min);
+            const safeMax = this.clampFontSize(textNode.style.max);
             this.store.setUI({
               font: textNode.style.font,
               weight: textNode.style.weight,
@@ -435,8 +532,8 @@ export class PixiSlideEditorV2Component
               colorHex: textNode.style.colorHex,
               align: textNode.style.align,
               lineHeight: textNode.style.lineHeight,
-              min: textNode.style.min,
-              max: textNode.style.max,
+              min: safeMin,
+              max: safeMax,
               // list: textNode.style.list,
             });
           } else if (nodeRef instanceof BrushNode) {
@@ -447,10 +544,12 @@ export class PixiSlideEditorV2Component
             });
           } else if (nodeRef instanceof ShapeNode) {
             const shapeNode = nodeRef as ShapeNode;
+            const uiStroke = this.store.snapshot((state) => state.ui).strokeWidth;
+            const nodeStroke =
+              'strokeWidth' in shapeNode ? (shapeNode as ShapeNode & { strokeWidth?: number }).strokeWidth : undefined;
+            // для линий используем последнее введённое значение из UI (или текущее у ноды), не сбрасываем на 1
             const strokeWidth =
-              shapeNode.shape === 'line'
-                ? 1
-                : this.store.snapshot((state) => state.ui).strokeWidth || 4;
+              uiStroke ?? nodeStroke ?? (shapeNode.shape === 'line' ? 1 : 4);
             this.store.setUI({
               color: shapeNode.stroke,
               colorHex: this.utils.numberToHex(shapeNode.stroke),
@@ -459,6 +558,7 @@ export class PixiSlideEditorV2Component
           }
         };
         updateUIFromSelection();
+        this.scheduleTextPanelVisibility(this.selectedKind);
 
         // For iframe/video nodes: attach but keep non-interactive for drag/resize
         // Double-click or right-click inside will enable interaction
@@ -788,6 +888,42 @@ export class PixiSlideEditorV2Component
     this.bus.emit(cmd);
   }
 
+  private scheduleTextPanelVisibility(kind?: typeof this.selectedKind) {
+    if (this.hideTextPanelTimer) {
+      clearTimeout(this.hideTextPanelTimer);
+    }
+    if (kind === 'text') {
+      this.textPanelVisible = true;
+      this.cdr.markForCheck();
+      return;
+    }
+    // небольшая задержка: если текст снова выбран после перерисовки, не скрываем панель
+    this.hideTextPanelTimer = window.setTimeout(() => {
+      const ids = this.store.snapshot((s) => s.selectedIds);
+      const nodeMap = this.store.snapshot((s) => s.nodes);
+      const firstId = ids[0];
+      const nodeRef = firstId ? (nodeMap[firstId]?.ref as NodeBase | undefined) : undefined;
+      const nextKind =
+        nodeRef instanceof TextNode
+          ? 'text'
+          : nodeRef instanceof ImageNode
+            ? 'image'
+            : nodeRef instanceof VideoNode
+              ? 'video'
+              : nodeRef instanceof IframeNode
+                ? 'iframe'
+                : nodeRef instanceof ShapeNode
+                  ? 'shape'
+                  : nodeRef instanceof GroupNode
+                    ? 'group'
+                    : nodeRef instanceof BrushNode
+                      ? 'brush'
+                      : undefined;
+      this.textPanelVisible = nextKind === 'text';
+      this.cdr.markForCheck();
+    }, this.textPanelDelayMs);
+  }
+
   /**
    * Triggers layout() for all TextNode instances currently present on the scene.
    * Useful after bulk deserialization to ensure auto-fitting to scene size.
@@ -868,9 +1004,11 @@ export class PixiSlideEditorV2Component
   onClearBackground() {
     this.emit({ t: 'CLEAR_TEXT_BACKGROUND' });
   }
-  onApplyBgFill() {
-    const color = this.store.snapshot((s) => s.ui).color || 0x000000;
+  onApplyTextBackground(hex: string) {
+    if (!hex) return;
+    const color = Number.parseInt(hex.replace('#', '0x'), 16);
     this.emit({ t: 'SET_TEXT_BG_COLOR', color });
+    this.emit({ t: 'APPLY_STYLE', patch: { bgColorHex: hex, bgColor: color } });
   }
 
   async onSetShapeBackground() {
@@ -906,6 +1044,41 @@ export class PixiSlideEditorV2Component
       this.overlay.attachIframe(ref);
       this.overlay.setIframeInteractive(true);
     }
+  }
+
+  formatFontSize = (value: number | null): string => {
+    if (value === null || value === undefined) return '';
+    return `${Math.round(value)}px`;
+  };
+
+  onFontSizeMinChange(value: number | null) {
+    const nextMin = this.clampFontSize(value);
+    const currentMax = this.clampFontSize(this.store.snapshot((s) => s.ui).max);
+    const patch: Partial<UiTextStyles> = { min: nextMin };
+    if (nextMin > currentMax) {
+      patch.max = nextMin;
+    }
+    this.emit({ t: 'APPLY_STYLE', patch });
+  }
+
+  onFontSizeMaxChange(value: number | null) {
+    const nextMax = this.clampFontSize(value);
+    const currentMin = this.clampFontSize(this.store.snapshot((s) => s.ui).min);
+    const patch: Partial<UiTextStyles> = { max: nextMax };
+    if (nextMax < currentMin) {
+      patch.min = nextMax;
+    }
+    this.emit({ t: 'APPLY_STYLE', patch });
+  }
+
+  private clampFontSize(value: number | null | undefined): number {
+    const minLimit = 16;
+    const maxLimit = 150;
+    const numeric = Number(value);
+    const base = Number.isFinite(numeric) ? numeric : minLimit;
+    const clamped = Math.min(maxLimit, Math.max(minLimit, base));
+    const snapped = Math.round(clamped / 2) * 2; // шаг 2
+    return Math.min(maxLimit, Math.max(minLimit, snapped));
   }
 
   public async generateSnapshot(options?: {
@@ -1028,6 +1201,169 @@ export class PixiSlideEditorV2Component
     this.resetViewport();
     this.history.clear();
     this.overlay.detachIframe();
+  }
+
+  stopScrollDrag(event: Event) {
+    const isMoveEvent = event.type.includes('move');
+    if (event.cancelable && !isMoveEvent) {
+      event.preventDefault();
+    }
+    event.stopPropagation();
+  }
+
+  stopScrollWheel(event: WheelEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  stopSidebarPointer(event: Event): void {
+    // Не даём событиям из сайдбара дойти до Pixi stage/canvas.
+    // Важно: не используем preventDefault, чтобы не ломать PrimeNG (drag внутри overlay).
+    event.stopPropagation();
+  }
+
+  onColorPickerPreOpen(): void {
+    // Важно: это срабатывает раньше, чем PrimeNG поднимет overlay и раньше,
+    // чем ngx-scrollbar может попытаться проскроллить viewport из-за смены фокуса.
+    // Никаких preventDefault/stopPropagation тут быть не должно, иначе можно сломать PrimeNG.
+    this.lockPropertiesScrollbar();
+  }
+
+  onColorPickerOpen(): void {
+    this.colorPickerOpen = true;
+    this.document.body.classList.add('color-picker-open');
+
+    this.lockPropertiesScrollbar();
+  }
+
+  onColorPickerClose(): void {
+    this.colorPickerOpen = false;
+    this.document.body.classList.remove('color-picker-open');
+    this.unlockPropertiesScrollbar();
+    this.removeColorPickerKeyGuard?.();
+    this.removeColorPickerKeyGuard = undefined;
+  }
+
+  private installColorPickerKeyGuard(): void {
+    if (this.removeColorPickerKeyGuard) return;
+
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+
+      const inColorPicker = !!target.closest(
+        '.p-colorpicker, .p-colorpicker-panel, .p-colorpicker-overlay'
+      );
+      if (!inColorPicker) return;
+
+      const key = event.key;
+      const isScrollKey =
+        key === 'ArrowUp' ||
+        key === 'ArrowDown' ||
+        key === 'PageUp' ||
+        key === 'PageDown' ||
+        key === 'Home' ||
+        key === 'End' ||
+        key === ' ';
+
+      if (!isScrollKey) return;
+
+      // Главное: не даём событию дойти до ngx-scrollbar/страницы.
+      event.stopPropagation();
+
+      // Для PageUp/PageDown/Home/End/Space дополнительно гасим дефолт,
+      // чтобы не происходил нативный scroll.
+      if (
+        key === 'PageUp' ||
+        key === 'PageDown' ||
+        key === 'Home' ||
+        key === 'End' ||
+        key === ' '
+      ) {
+        event.preventDefault();
+      }
+    };
+
+    this.document.addEventListener('keydown', handler, { capture: true });
+    this.removeColorPickerKeyGuard = () => {
+      this.document.removeEventListener('keydown', handler, { capture: true } as AddEventListenerOptions);
+    };
+  }
+
+  private tryFocusColorPickerInput(): void {
+    // Без агрессивных фокусов: один раз после открытия пытаемся перевести фокус
+    // внутрь overlay, чтобы клавиатура сразу управляла пикером, а не сайдбаром.
+    queueMicrotask(() => {
+      const panel = this.document.querySelector<HTMLElement>(
+        '.p-colorpicker-panel, .p-colorpicker-overlay'
+      );
+      const input = panel?.querySelector<HTMLInputElement>('input');
+      input?.focus();
+    });
+  }
+
+  private findScrollableElement(root: HTMLElement): HTMLElement | undefined {
+    const viewportBySelector = root.querySelector<HTMLElement>(
+      '.ng-scroll-viewport, .ng-scrollbar-viewport'
+    );
+    if (viewportBySelector) return viewportBySelector;
+
+    const candidates: HTMLElement[] = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
+    return candidates.find((el) => {
+      const style = getComputedStyle(el);
+      // В ngx-scrollbar реальный скроллируемый элемент иногда имеет overflow: hidden,
+      // поэтому ориентируемся в первую очередь на геометрию, а не только на overflow.
+      const overflowY = style.overflowY;
+      const isPotentialScroller = overflowY !== 'visible';
+      return isPotentialScroller && el.scrollHeight > el.clientHeight;
+    });
+  }
+
+  private lockPropertiesScrollbar(): void {
+    if (this.removeScrollbarLock) return;
+    const root = this.propertiesScrollbarRef?.nativeElement;
+    const viewport = root ? this.findScrollableElement(root) : undefined;
+    if (!viewport) return;
+
+    const lockedScrollTop = viewport.scrollTop;
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const onSelectStart = (event: Event) => {
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const onScroll = () => {
+      if (viewport.scrollTop !== lockedScrollTop) {
+        // viewport.scrollTop = lockedScrollTop;
+      }
+    };
+
+    viewport.addEventListener('wheel', onWheel, { passive: false });
+    viewport.addEventListener('touchmove', onTouchMove, { passive: false });
+    viewport.addEventListener('selectstart', onSelectStart, { passive: false });
+    viewport.addEventListener('scroll', onScroll, { passive: true });
+
+    this.removeScrollbarLock = () => {
+      viewport.removeEventListener('wheel', onWheel);
+      viewport.removeEventListener('touchmove', onTouchMove);
+      viewport.removeEventListener('selectstart', onSelectStart);
+      viewport.removeEventListener('scroll', onScroll);
+    };
+  }
+
+  private unlockPropertiesScrollbar(): void {
+    this.removeScrollbarLock?.();
+    this.removeScrollbarLock = undefined;
   }
 }
 

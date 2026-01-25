@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  input,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ListboxModule } from 'primeng/listbox';
 import { HistoryItem, HistoryType } from '../../services/history.types';
@@ -16,6 +21,7 @@ import { NgScrollbar } from 'ngx-scrollbar';
 import { EmptyStateComponent } from '@lyri-cast/ui-lib';
 import { Store } from '@ngrx/store';
 import { selectSelectedHistoryKey } from '../../store';
+import { TourPrimeNgModule } from 'ngx-ui-tour-primeng';
 
 @Component({
   selector: 'lyri-navigator-history',
@@ -28,6 +34,7 @@ import { selectSelectedHistoryKey } from '../../store';
     SvgIconComponent,
     NgScrollbar,
     EmptyStateComponent,
+    TourPrimeNgModule,
   ],
   templateUrl: './navigator-history.component.html',
   styleUrl: './navigator-history.component.scss',
@@ -42,6 +49,8 @@ export class NavigatorHistoryComponent {
 
   groupedItems$: Observable<GroupedHistoryItem[]>;
   openedGroupKeys$: Observable<string[]>;
+
+  feature = input.required()
 
   constructor(iconService: IconsService, public sanitizer: DomSanitizer) {
     iconService.registerIcons([lyriSong, lyriOpenedBook]);

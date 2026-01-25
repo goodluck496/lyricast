@@ -34,13 +34,20 @@
       </div>
     </p-accordion-header>
     <p-accordion-content>
-      @if (songDictionariesLoading) {
-        <div class="song-dicts__loading">
-          <p-progressSpinner></p-progressSpinner>
+      @if (songDictionariesLoading && !songDictionaries.length) {
+        <div class="song-dicts__grid song-dicts__grid--skeleton">
+          @for (item of skeletonItems; track item) {
+            <div class="song-dicts__card">
+              <p-skeleton height="150px" width="150px" class="song-dicts__skeleton-card"></p-skeleton>
+            </div>
+          }
         </div>
-      } @else {
+      }
+
+      @if (songDictionaries.length) {
         <div class="song-dicts__grid">
           @for (card of songDictionaries; track card.fileKey) {
+            @let job = getJobForCard(card);
             <div
               class="song-dicts__card"
               [class.song-dicts__card--missing]="!card.isInstalled"
@@ -52,6 +59,7 @@
                       pButton
                       class="song-dicts__badge"
                       severity="warn"
+                      [disabled]="!!job"
                       (click)="onInstallOrUpdateDictionary($event, card)"
                     >
                       <span pButtonIcon class="pi pi-refresh"></span>
@@ -63,6 +71,7 @@
                       pButton
                       class="song-dicts__badge"
                       severity="danger"
+                      [disabled]="!!job"
                       (click)="onDeleteDictionary($event, card)"
                     >
                       <span pButtonIcon class="pi pi-trash"></span>
@@ -73,6 +82,7 @@
                     <button
                       pButton
                       severity="primary"
+                      [disabled]="!!job"
                       (click)="onInstallOrUpdateDictionary($event, card)"
                     >
                       <span pButtonIcon class="pi pi-plus"></span>
@@ -81,7 +91,38 @@
                 </div>
               </lyri-song-dictionary-card>
 
-              @if (songDictionaryBusyByKey[card.fileKey]) {
+              @if (job) {
+                <div class="song-dicts__overlay song-dicts__overlay--progress">
+                  <div class="song-dicts__progress">
+                    <div class="song-dicts__progress-header">
+                      <span class="song-dicts__progress-title">
+                        {{ job.label || card.title || card.fileKey }}
+                      </span>
+                      <span class="song-dicts__progress-status">
+                        @if (job.status === 'pending' || job.status === 'running') {
+                          <i class="pi pi-spinner pi-spin" aria-label="loading"></i>
+                        } @else if (job.status === 'done') {
+                          <i class="pi pi-check song-dicts__status-done" aria-label="done"></i>
+                        } @else {
+                          {{ job.status }}
+                        }
+                      </span>
+                    </div>
+                    <p-progressBar
+                      [value]="job.progress"
+                      [showValue]="false"
+                    ></p-progressBar>
+                    <div class="song-dicts__progress-meta">
+                      <span>{{ job.progress }}%</span>
+                      @if (job.error) {
+                        <span class="song-dicts__progress-error">
+                          {{ job.error }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              } @else if (songDictionaryBusyByKey[card.fileKey]) {
                 <div class="song-dicts__overlay">
                   <p-progressSpinner></p-progressSpinner>
                 </div>

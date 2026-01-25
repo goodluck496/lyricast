@@ -1,0 +1,216 @@
+<form class="import-dialog" [formGroup]="form" (ngSubmit)="onSubmit()">
+  <div class="import-dialog__mode-row">
+    <div class="import-dialog__mode">
+      <label class="import-dialog__mode-label">Режим</label>
+      <p-selectButton
+        [options]="modeOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="mode"
+        [ngModelOptions]="{ standalone: true }"
+        [disabled]="submitting"
+        (onChange)="handleModeChange($event.value)"
+      ></p-selectButton>
+      <small class="import-dialog__mode-hint">
+        @if (isImportMode) {
+          Загрузите JSON SongBookExport, чтобы пересоздать сборник.
+        } @else {
+          Создайте пустой сборник и заполните его позже.
+        }
+      </small>
+    </div>
+    <p-float-label class="import-dialog__field import-dialog__field--catalog">
+      <p-select
+        inputId="catalogId"
+        [options]="catalogOptions"
+        optionLabel="label"
+        optionValue="value"
+        formControlName="catalogId"
+        [showClear]="false"
+        [loading]="catalogsLoading"
+        [disabled]="submitting || catalogsLoading"
+        placeholder="Выберите каталог"
+      ></p-select>
+      <label for="catalogId">Каталог</label>
+    </p-float-label>
+
+  </div>
+
+  <div class="import-dialog__body">
+    <div class="import-dialog__form">
+      @if (form.value.catalogId === newCatalogValue) {
+        <p-float-label class="import-dialog__field import-dialog__field--catalog">
+          <input
+            id="newCatalogTitle"
+            type="text"
+            pInputText
+            formControlName="newCatalogTitle"
+            [disabled]="submitting"
+            maxlength="120"
+          />
+          <label for="newCatalogTitle">Название нового каталога</label>
+        </p-float-label>
+      }
+      <p-float-label class="import-dialog__field">
+        <input
+          id="bookTitle"
+          type="text"
+          pInputText
+          formControlName="bookTitle"
+          [disabled]="submitting"
+        />
+        <label for="bookTitle">Название (meta.title)</label>
+      </p-float-label>
+
+      <p-float-label class="import-dialog__field">
+        <input
+          id="bookSource"
+          type="text"
+          pInputText
+          formControlName="bookSource"
+          [disabled]="submitting"
+        />
+        <label for="bookSource">Источник (meta.source)</label>
+      </p-float-label>
+
+      <p-float-label class="import-dialog__field">
+        <input
+          id="bookLanguage"
+          type="text"
+          pInputText
+          formControlName="bookLanguage"
+          [disabled]="submitting"
+        />
+        <label for="bookLanguage">Язык (meta.language)</label>
+      </p-float-label>
+
+      <p-float-label class="import-dialog__field">
+        <textarea
+          id="bookDescription"
+          rows="5"
+          pTextarea
+          formControlName="bookDescription"
+          [autoResize]="false"
+          class="import-dialog__textarea"
+          [disabled]="submitting"
+        ></textarea>
+        <label for="bookDescription">Описание (meta.description)</label>
+      </p-float-label>
+
+      @if (!isImportMode) {
+        <p-float-label class="import-dialog__field">
+          <input
+            id="fileKey"
+            type="text"
+            pInputText
+            formControlName="fileKey"
+            [disabled]="submitting"
+            maxlength="190"
+          />
+          <label for="fileKey">fileKey (опционально)</label>
+        </p-float-label>
+      }
+
+      @if (isImportMode) {
+        <div class="import-dialog__upload">
+          <label>SongBookExport JSON</label>
+          <p-fileupload
+            mode="basic"
+            name="jsonFile"
+            accept=".json,application/json"
+            [auto]="true"
+            [customUpload]="true"
+            [disabled]="submitting"
+            [chooseLabel]="jsonFile?.name || 'Загрузить JSON'"
+            (uploadHandler)="onJsonFileUpload($event)"
+          ></p-fileupload>
+          <small class="import-dialog__hint">
+            @if (jsonFile) {
+              {{ formatBytes(jsonFile.size) || 'Размер неизвестен' }}
+            } @else {
+              Добавьте экспорт SongBookExport (.json)
+            }
+          </small>
+        </div>
+      } @else {
+        <div class="import-dialog__upload import-dialog__upload--info">
+          <label>SongBookExport JSON</label>
+          <small class="import-dialog__hint">В этом режиме JSON не требуется.</small>
+        </div>
+      }
+
+      <div class="import-dialog__upload">
+        <label>Обложка (image/*)</label>
+        <p-fileupload
+          mode="basic"
+          name="coverFile"
+          accept="image/png,image/jpeg,image/webp,image/avif"
+          [auto]="true"
+          [customUpload]="true"
+          [disabled]="submitting"
+          [chooseLabel]="coverFile?.name || 'Загрузить обложку'"
+          (uploadHandler)="onCoverFileUpload($event)"
+        ></p-fileupload>
+        <small class="import-dialog__hint">
+          @if (coverFile) {
+            {{ formatBytes(coverFile.size) || 'Размер неизвестен' }}
+          } @else {
+            Поддерживаются png/jpeg/webp/avif. Будет пережата на сервере до 512x512 (после обработки ≤ 300KB)
+          }
+        </small>
+      </div>
+
+      @if (importError) {
+        <div class="import-dialog__error">
+          {{ importError }}
+        </div>
+      }
+    </div>
+
+    <div class="import-dialog__preview">
+      <div class="import-dialog__preview-title">Предпросмотр карточки</div>
+      <div class="import-dialog__preview-card">
+        <lyri-song-dictionary-card
+          [db]="previewDb"
+          [clickable]="false"
+          size="md"
+        ></lyri-song-dictionary-card>
+      </div>
+
+      <div class="import-dialog__preview-meta">
+        <div class="import-dialog__preview-meta-line">
+          <span class="label">Файл:</span>
+          <span>{{ previewDb.db }}</span>
+        </div>
+        @if (previewDb.sizeBytes) {
+          <div class="import-dialog__preview-meta-line">
+            <span class="label">Размер:</span>
+            <span>{{ formatBytes(previewDb.sizeBytes) }}</span>
+          </div>
+        }
+        @if (previewDb.language) {
+          <div class="import-dialog__preview-meta-line">
+            <span class="label">Язык:</span>
+            <span>{{ previewDb.language }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="import-dialog__footer">
+    <p-button
+      type="submit"
+      [label]="isImportMode ? 'Импортировать' : 'Создать новый'"
+      [disabled]="submitting"
+      [loading]="submitting"
+    ></p-button>
+    <p-button
+      label="Отмена"
+      severity="secondary"
+      [text]="true"
+      (onClick)="onCancel()"
+      [disabled]="submitting"
+    ></p-button>
+  </div>
+</form>

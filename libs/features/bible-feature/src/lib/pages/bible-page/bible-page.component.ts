@@ -40,8 +40,10 @@ import {
   tap,
   withLatestFrom,
 } from 'rxjs';
+import { skip } from 'rxjs/operators';
 import { filterEmpty } from '@lyri-cast/common';
 import { Store } from '@ngrx/store';
+import { selectSelectedHistoryKey } from '@lyri-cast/navigator-feature';
 
 import {
   BibleActions,
@@ -80,6 +82,9 @@ import { ButtonDirective } from 'primeng/button';
 import { LoadingStatusService } from '@lyri-cast/common-browser';
 import { SelectModule } from 'primeng/select';
 import { PopoverModule } from 'primeng/popover';
+import { TourPrimeNgModule } from 'ngx-ui-tour-primeng';
+import { OnboardingHelpService } from '@lyri-cast/common-browser';
+import { BibleOnboardingService } from '../../services/bible-onboarding.service';
 
 @Component({
   selector: 'lyri-bible-page',
@@ -100,6 +105,7 @@ import { PopoverModule } from 'primeng/popover';
     ToggleButtonModule,
     SvgIconComponent,
     ButtonDirective,
+    TourPrimeNgModule,
   ],
   templateUrl: './bible-page.component.html',
   styleUrl: './bible-page.component.scss',
@@ -115,6 +121,8 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   private readonly sidebarService =
     inject<SidebarService<BibleSidebarData>>(SidebarService);
   private readonly loadingStatusService = inject(LoadingStatusService);
+  private readonly onboardingHelpService = inject(OnboardingHelpService);
+  private readonly bibleOnboarding = inject(BibleOnboardingService);
 
   bibleFormGroup = new FormGroup({
     translate: new FormControl<IUiLyriListItem<BibleTranslateShort> | null>(
@@ -175,11 +183,12 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
           return [];
         }
         return data.chapters.map(
-          (el: BibleChapterShort) =>
+          (el: BibleChapterShort, index) =>
             ({
               title: el.title,
               searchKey: String(el.number),
               baseEntity: el,
+              index,
             } satisfies IUiLyriItemInList<BibleChapterShort>)
         );
       })
@@ -202,7 +211,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
           this.loadingStatusService.finishInitialLoading();
         }
       }),
-      map((payload) => {
+      map((payload, index) => {
         const firstBook = payload.data[0];
         if (firstBook && !this.firstLoad) {
           this.firstLoad = true;
@@ -210,6 +219,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
             searchKey: firstBook.number.toString(),
             title: firstBook.title.full,
             baseEntity: firstBook,
+            index,
           });
         }
       })
@@ -312,6 +322,50 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.onboardingHelpService.helpRequested$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((context) => {
+        if (context !== 'bible') {
+          return;
+        }
+
+        if (!this.isActivePage()) {
+          return;
+        }
+
+        this.bibleOnboarding.start();
+      });
+
+    this.bibleFormGroup.controls.translate.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty(), skip(1))
+      .subscribe(() => {
+        this.bibleOnboarding.tryNext('bible:translate');
+      });
+
+    this.store
+      .select(selectSelectedHistoryKey)
+      .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty(), skip(1))
+      .subscribe(() => {
+        if (!this.isActivePage()) {
+          return;
+        }
+
+        this.bibleOnboarding.tryNext('bible:history');
+      });
+
+    fromEvent<KeyboardEvent>(window, 'keydown', {
+      capture: true,
+    } as AddEventListenerOptions)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        filter((e) => e.key === 'Shift'),
+        filter(() => this.isActivePage())
+      )
+      .subscribe((e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      });
+
     combineLatest([
       fromEvent<KeyboardEvent>(
         window /*this.elRef.nativeElement*/,

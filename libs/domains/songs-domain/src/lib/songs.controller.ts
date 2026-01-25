@@ -40,7 +40,7 @@ export class SongsController {
 
   @Post('dictionaries/install')
   async installDictionary(
-    @Body() body: { fileKey: string },
+    @Body() body: { fileKey: string; downloadUrl?: string },
     @Headers('authorization') authorization?: string,
     @Headers('x-auth-token') xAuthToken?: string,
     @Query('authToken') authToken?: string
@@ -55,7 +55,8 @@ export class SongsController {
 
     await this.songsService.installDictionary(
       body.fileKey,
-      auth
+      auth,
+      body.downloadUrl
     ).catch((e) => {
       const msg = String((e as any)?.message ?? e);
       if (msg.includes('401') || msg.includes('403')) {

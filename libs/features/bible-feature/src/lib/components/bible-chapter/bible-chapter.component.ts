@@ -26,11 +26,13 @@ import { debounceTime } from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
 import { DomHandler } from 'primeng/dom';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { TourPrimeNgModule } from 'ngx-ui-tour-primeng';
+import { BibleOnboardingService } from '../../services/bible-onboarding.service';
 
 @Component({
   selector: 'lyri-bible-chapter',
   standalone: true,
-  imports: [NgScrollbar],
+  imports: [NgScrollbar, TourPrimeNgModule],
   templateUrl: './bible-chapter.component.html',
   styleUrl: './bible-chapter.component.scss',
 })
@@ -39,6 +41,7 @@ export class BibleChapterComponent implements OnInit {
   destroyRef = inject(DestroyRef);
   elRef = inject(ElementRef);
   sanitizer = inject(DomSanitizer);
+  private readonly bibleOnboarding = inject(BibleOnboardingService);
   listItems = viewChildren<ElementRef<HTMLElement>>('verseItem');
 
   sections = input<BibleChapterSection[]>([]);
@@ -200,6 +203,10 @@ export class BibleChapterComponent implements OnInit {
     }
 
     this.store.dispatch(BibleActions.selectBibleVerse(verse));
+
+    if (shiftPressed) {
+      this.bibleOnboarding.tryNext('bible:shift');
+    }
 
     if (casting) {
       this.startCasting.emit();

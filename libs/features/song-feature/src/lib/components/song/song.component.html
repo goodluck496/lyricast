@@ -1,11 +1,12 @@
 <ng-scrollbar>
-  <div class="song-container">
-    @for (lyric of lyrics(); track lyric.uniqId) {
+  <div class="song-container" tourAnchor="songs:lyric">
+    @for (lyric of lyrics(); track lyric.uniqId; let index = $index) {
       <div class="lyric-item">
         <div class="lyric-item__header">{{ lyric.sectionTitle }}</div>
         <div class="lyric-item__content">
-          @for (line of lyric.lines; track line.rangeIndex) {
+          @for (line of lyric.lines; track line.rangeIndex;) {
             <div class="lyric-item__line"
+                 [tourAnchor]="'songs:lyric-index-' + index"
                  #lyricItem
                  [class.lyric-item__line--selected]="selectedLyricLine()?.rangeIndex === line.rangeIndex
                  && lyric.uniqId === selectedLyric()?.uniqId"

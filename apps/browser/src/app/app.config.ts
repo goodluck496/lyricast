@@ -47,8 +47,10 @@ import {
   browserScopedAuthInterceptor,
 } from '@lyri-cast/shared-browser/data-access/dictionaries';
 import { AuthOverlayService } from './auth/auth-overlay.service';
+import { DICTIONARIES_API_BASE } from '@lyri-cast/shared-browser/data-access/dictionaries';
 import { registerLocaleData } from '@angular/common';
 import localeRu from '@angular/common/locales/ru';
+import { MessageService } from 'primeng/api';
 
 registerLocaleData(localeRu);
 
@@ -70,6 +72,7 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([browserScopedAuthInterceptor])
     ),
     { provide: BASE_API_TOKEN, useValue: 'svc://' },
+    { provide: DICTIONARIES_API_BASE, useValue: 'svc://songs/dictionaries' },
     //для оптимизации, чтобы вспылтие события не взызывало двойного обнаржуния изменений
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes),
@@ -86,7 +89,9 @@ export const appConfig: ApplicationConfig = {
       },
     }),
 
-    provideApi('https://kantelers.ru/lyricast/api'),
+    MessageService,
+
+    provideApi('https://lyricast-dictionary-api.onrender.com'),
 
     {
       provide: AUTH_OVERLAY_PORT,

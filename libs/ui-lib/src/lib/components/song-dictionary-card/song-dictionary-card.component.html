@@ -1,6 +1,6 @@
 <p-card
   (click)="onClick()"
-  styleClass="db-card"
+  class="db-card"
   [class.db-card--clickable]="clickable"
   [class.db-card--sm]="size === 'sm'"
   [class.db-card--md]="size === 'md'"
@@ -58,15 +58,15 @@
 
     <div class="db-card__meta">
       @if (size === 'md') {
-        @if (db.sizeBytes != null) {
+        @if (db.sizeBytes !== null && db.sizeBytes !== undefined) {
           <span> {{ (db.sizeBytes / 1024 / 1024).toFixed(1) }} MB </span>
         }
 
-        @if (db.songCount != null) {
+        @if (db.songCount !== null) {
           <span>· {{ db.songCount }} песен</span>
         }
       } @else {
-        @if (db.songCount != null) {
+        @if (db.songCount !== null) {
           <span>{{ db.songCount }} песен</span>
         } @else {
           <span>—</span>
@@ -96,15 +96,15 @@
         <div class="version-tooltip-line">Язык: {{ db.language }}</div>
       }
       <div class="version-tooltip-line">Файл: {{ db.db }}</div>
-      @if (db.sizeBytes != null) {
+      @if (db.sizeBytes !== null && db.sizeBytes !== undefined) {
         <div class="version-tooltip-line">
           Размер: {{ (db.sizeBytes / 1024 / 1024).toFixed(1) }} MB
         </div>
       }
-      @if (db.version != null) {
+      @if (db.version !== null) {
         <div class="version-tooltip-line">Версия: v{{ db.version }}</div>
       }
-      @if (db.songCount != null) {
+      @if (db.songCount !== null) {
         <div class="version-tooltip-line">Песен: {{ db.songCount }}</div>
       }
       @if (db.updatedAt) {

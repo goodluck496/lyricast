@@ -20,6 +20,10 @@ import { selectOpenedWindow, SidebarService } from '@lyri-cast/common-browser';
 import { map } from 'rxjs';
 import { SongSidebarData } from '../../types';
 import { SvgIconComponent } from '@lyri-cast/svg-icons';
+import {
+  TourAnchorPrimeNgDirective,
+  TourPrimeNgModule,
+} from 'ngx-ui-tour-primeng';
 
 @Component({
   selector: 'lyri-song-sidebar',
@@ -30,6 +34,8 @@ import { SvgIconComponent } from '@lyri-cast/svg-icons';
     SongCastingPreviewComponent,
     NavigatorFeatureComponent,
     SvgIconComponent,
+    TourAnchorPrimeNgDirective,
+    TourPrimeNgModule,
   ],
   templateUrl: './song-sidebar.component.html',
   styleUrl: './song-sidebar.component.scss',

@@ -2,13 +2,14 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   inject,
   OnDestroy,
   OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouteReuseStrategy } from '@angular/router';
+import { NavigationStart, RouteReuseStrategy, Router } from '@angular/router';
 import {
   SettingsService,
   UserSettingsService,
@@ -16,13 +17,15 @@ import {
 } from '@lyri-cast/common-browser';
 import { AppDisplay } from '@lyri-cast/common-electron';
 import { ButtonDirective } from 'primeng/button';
-import { Observable } from 'rxjs';
+import { ConfirmationService } from 'primeng/api';
+import { Observable, filter } from 'rxjs';
 import { DividerModule } from 'primeng/divider';
 import { AssetManagementComponent } from '@lyri-cast/asset-management';
 import { TabsModule } from 'primeng/tabs';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { SelectModule } from 'primeng/select';
 import { FloatLabelModule } from 'primeng/floatlabel';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SnowfallManager } from '../../../services/common/snowfall.service';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { Card } from 'primeng/card';
@@ -51,11 +54,14 @@ import { SongDictionariesManagerComponent } from '../../components/song-dictiona
 })
 export class SettingsComponent implements OnInit, OnDestroy {
   cdr = inject(ChangeDetectorRef);
+  destroyRef = inject(DestroyRef);
   settingsSrv = inject(SettingsService);
   windowSrv = inject(WindowService);
   userSettings = inject(UserSettingsService);
   snowfall = inject(SnowfallManager);
   routeReuse = inject(RouteReuseStrategy);
+  router = inject(Router);
+  confirmSrv = inject(ConfirmationService);
 
   activeTab = 0;
 
@@ -90,6 +96,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
   snowEnabled = false;
 
   async ngOnInit() {
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationStart => e instanceof NavigationStart),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.confirmSrv.close();
+      });
+
     const srv = await this.settingsSrv.init();
     this.displays = [...srv.displays];
 

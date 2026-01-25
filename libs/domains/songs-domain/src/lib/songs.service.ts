@@ -7,15 +7,15 @@ import { lastValueFrom } from 'rxjs';
 
 import {
   Configuration,
-  DefaultService,
+  SongsService as RemoteSongsApi,
 } from '@lyri-cast/openapi-backend-songs-domain';
 import type {
-  AllBooksResponse,
-  ApiPhpActionBookVersionsCheckPost200Response,
-  ApiPhpActionRegistryListGet200Response,
-  BookVersionItem,
-  BookVersionsCheckResponse,
-  RegistryItem,
+  BookVersionItemDto,
+  RegistryItemDto,
+  RegistryResponseDto,
+  VersionsCheckRequestDto,
+  VersionsCheckResponseDto,
+  VersionsCheckResponseItemDto,
 } from '@lyri-cast/openapi-backend-songs-domain';
 import {
   IShortSong,
@@ -31,6 +31,7 @@ import {
 export type SongDictionaryCardDto = {
   fileKey: string;
   title: string;
+  songBookId?: number;
   language?: string;
   coverImage?: string;
   sizeBytes?: number;
@@ -52,7 +53,6 @@ export class SongsService {
   bookCache: Record<string, ISongBook> = {};
   songCache: Record<string, ISong> = {};
 
-  isReady = false;
   constructor(private readonly http: HttpService) {
     this.assetsPath = path.resolve(
       process.env?.['assetsPath'] ?? '',
@@ -148,33 +148,72 @@ export class SongsService {
     return rawToken || undefined;
   }
 
-  private normalizeDownloadUrl(url: string): string {
+  private normalizeDownloadUrl(url: string, basePath: string): string {
     const trimmed = url.trim();
     if (!trimmed) {
       throw new Error('downloadUrl is empty');
     }
 
-    // Some backends can return relative URLs like "/api.php?...".
-    // Axios in Node requires an absolute URL.
+    // Если backend вернул абсолютный URL — используем как есть.
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+
+    // Для относительных ссылок вроде "/api/..." приклеиваем path-префикс basePath,
+    // чтобы не потерять сегмент типа "/lyricast".
+    if (trimmed.startsWith('/')) {
+      const normalizedBase = basePath.endsWith('/')
+        ? basePath.slice(0, -1)
+        : basePath;
+      return `${normalizedBase}${trimmed}`;
+    }
+
+    // Иначе пробуем собрать через URL, учитывая basePath.
+    const base = basePath.endsWith('/') ? basePath : `${basePath}/`;
     try {
-      return new URL(trimmed, 'https://kantelers.ru/lyricast/api/').toString();
+      return new URL(trimmed, base).toString();
     } catch {
-      // Fallback for minor formatting issues
-      return new URL(trimmed.replace(/\s+/g, ''), 'https://kantelers.ru/lyricast/api/').toString();
+      return new URL(trimmed.replace(/\s+/g, ''), base).toString();
     }
   }
 
-  private createRemoteApi(authHeader?: string): DefaultService {
+  private buildRemoteBaseAndHeaders(authHeader?: string): {
+    basePath: string;
+    headers: Record<string, string>;
+  } {
+    const rawToken = this.normalizeRawToken(authHeader);
+
+    const envBase = process.env?.['DICTIONARY_API_URL']?.trim();
+    const fallbackBase =
+      process.env?.['NODE_ENV'] === 'production'
+        ? 'https://lyricast-dictionary-api.onrender.com'
+        : 'http://localhost:3000';
+
+    const normalizedBase = (envBase || fallbackBase).replace(/\/+$/, '');
+    const basePath = normalizedBase.endsWith('/api')
+      ? normalizedBase.slice(0, -4) || '/'
+      : normalizedBase || '/';
+
+    const headers: Record<string, string> = {};
+    if (rawToken) {
+      headers['Authorization'] = `Bearer ${rawToken}`;
+      headers['X-Auth-Token'] = rawToken;
+    }
+
+    return { basePath, headers };
+  }
+
+  private createRemoteApi(authHeader?: string): RemoteSongsApi {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
     const rawToken = this.normalizeRawToken(authHeader);
 
     const cfg = new Configuration({
-      basePath: 'https://kantelers.ru/lyricast/api',
+      basePath,
       accessToken: rawToken ?? '',
       httpClient: this.http,
     });
 
-    const api = new DefaultService(this.http, cfg);
-
+    const api = new RemoteSongsApi(this.http, cfg);
     if (rawToken) {
       api.defaultHeaders = {
         ...(api.defaultHeaders ?? {}),
@@ -185,97 +224,127 @@ export class SongsService {
     return api;
   }
 
-  private async fetchRegistryList(
+  async createJsonExportJob(
+    songBookId: number,
     authHeader?: string
-  ): Promise<ApiPhpActionRegistryListGet200Response> {
-    const api = this.createRemoteApi(authHeader);
-    const res = await lastValueFrom(api.apiPhpactionregistryListGet());
-    return (res as any)?.data ?? res;
+  ): Promise<{ jobId: string }> {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
+    const url = `${basePath}/api/songs/song-books/${songBookId}/export-json`;
+    const res = await lastValueFrom(
+      this.http.post<{ jobId: string }>(url, {}, { headers })
+    );
+    return res.data;
   }
 
-  private async fetchAllServerBooks(
+  async createSqliteExportJob(
+    songBookId: number,
     authHeader?: string
-  ): Promise<AllBooksResponse> {
-    const api = this.createRemoteApi(authHeader);
+  ): Promise<{ jobId: string }> {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
+    const url = `${basePath}/api/songs/song-books/${songBookId}/export-sqlite`;
     const res = await lastValueFrom(
-      api.apiPhpactionbookVersionsCheckPost({
-        BookVersionsCheckRequest: { books: [] },
+      this.http.post<{ jobId: string }>(url, {}, { headers })
+    );
+    return res.data;
+  }
+
+  async getExportJob(
+    jobId: string,
+    authHeader?: string
+  ): Promise<{
+    jobId: string;
+    format: string;
+    status: string;
+    progress: number;
+    error: string | null;
+    downloadUrl: string | null;
+  }> {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
+    const url = `${basePath}/api/songs/export-jobs/${jobId}`;
+    const res = await lastValueFrom(
+      this.http.get(url, { headers })
+    );
+    return res.data;
+  }
+
+  async cancelExportJob(jobId: string, authHeader?: string): Promise<{
+    ok: boolean;
+    status?: string;
+  }> {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
+    const url = `${basePath}/api/songs/export-jobs/${jobId}/cancel`;
+    const res = await lastValueFrom(
+      this.http.post(url, {}, { headers })
+    );
+    return res.data;
+  }
+
+  async downloadExportFile(
+    jobId: string,
+    authHeader?: string
+  ): Promise<{ buffer: Buffer; headers: Record<string, string> }> {
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
+    const url = `${basePath}/api/songs/export-jobs/${jobId}/file`;
+    const res = await lastValueFrom(
+      this.http.get<ArrayBuffer>(url, {
+        headers,
+        responseType: 'arraybuffer' as const,
       })
     );
 
-    const data = ((res as any)?.data ?? res) as ApiPhpActionBookVersionsCheckPost200Response;
+    // HttpService returns AxiosResponse; headers may be string | string[]
+    const normalizedHeaders: Record<string, string> = {};
+    Object.entries(res.headers ?? {}).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        normalizedHeaders[key] = value.join(', ');
+      } else if (typeof value === 'string') {
+        normalizedHeaders[key] = value;
+      } else if (value != null) {
+        normalizedHeaders[key] = String(value);
+      }
+    });
 
-    if (data && typeof data === 'object' && 'books' in data) {
-      return data as AllBooksResponse;
-    }
-    throw new Error('Unexpected response for book.versions.check (expected books)');
+    return {
+      buffer: Buffer.from(res.data),
+      headers: normalizedHeaders,
+    };
+  }
+
+  private async fetchRegistryList(
+    authHeader?: string
+  ): Promise<RegistryResponseDto> {
+    const api = this.createRemoteApi(authHeader);
+
+    const res = await lastValueFrom(api.songsControllerRegistry());
+    return res.data;
   }
 
   private async fetchUpdatesForBooks(
-    books: BookVersionItem[],
+    books: BookVersionItemDto[],
     authHeader?: string
-  ): Promise<BookVersionsCheckResponse> {
+  ): Promise<VersionsCheckResponseDto> {
     const api = this.createRemoteApi(authHeader);
+
+    const payload: VersionsCheckRequestDto = { books };
     const res = await lastValueFrom(
-      api.apiPhpactionbookVersionsCheckPost({
-        BookVersionsCheckRequest: { books },
-      })
+      api.songsControllerCheckVersions({ VersionsCheckRequestDto: payload })
     );
 
-    const data = ((res as any)?.data ?? res) as ApiPhpActionBookVersionsCheckPost200Response;
+    const data = res.data;
 
-    if (data && typeof data === 'object' && 'updates' in data) {
-      if (process.env.NODE_ENV !== 'production') {
-        const updatesArr = Array.isArray((data as any).updates) ? (data as any).updates : [];
-        const withUrl = updatesArr.filter((u: any) => typeof u?.downloadUrl === 'string' && u.downloadUrl.trim()).length;
-        console.log('[songs] book.versions.check returned updates', {
-          count: updatesArr.length,
-          withDownloadUrl: withUrl,
-        });
-      }
-      return data as BookVersionsCheckResponse;
+    if (process.env['NODE_ENV'] !== 'production') {
+      const updatesArr = Array.isArray(data?.updates) ? data.updates : [];
+      const withUrl = updatesArr.filter((u) => typeof u?.downloadUrl === 'string' && u.downloadUrl.trim()).length;
+      console.log('[songs] versions.check returned updates', {
+        count: updatesArr.length,
+        withDownloadUrl: withUrl,
+      });
     }
-    // если апдейтов нет, сервер иногда может вернуть AllBooksResponse. Конвертим в пустые updates.
-    if (data && typeof data === 'object' && 'books' in data) {
-      const allBooks = data as unknown as AllBooksResponse;
-      const mappedUpdates = (Array.isArray(allBooks.books) ? allBooks.books : [])
-        .map((b: any) => {
-          const rawUrl: unknown = b?.downloadUrl;
-          const downloadUrl =
-            typeof rawUrl === 'string' && rawUrl.trim() ? String(rawUrl) : undefined;
-          return {
-            fileKey: String(b?.fileKey ?? ''),
-            version: Number(b?.version) || 0,
-            ...(downloadUrl ? { downloadUrl } : {}),
-          };
-        })
-        .filter((u: any) => typeof u.fileKey === 'string' && u.fileKey);
 
-      if (process.env.NODE_ENV !== 'production') {
-        const withUrl = mappedUpdates.filter(
-          (u: any) => typeof u?.downloadUrl === 'string' && u.downloadUrl.trim()
-        ).length;
-        console.log('[songs] book.versions.check returned books (mapped to updates)', {
-          booksCount: Array.isArray((allBooks as any).books) ? (allBooks as any).books.length : 0,
-          mappedUpdatesCount: mappedUpdates.length,
-          withDownloadUrl: withUrl,
-        });
-      }
-
-      return {
-        ok: (allBooks as any).ok ?? true,
-        db: (allBooks as any).db ?? '',
-        updates: mappedUpdates as any,
-        totalCount:
-          typeof (allBooks as any).totalCount === 'number'
-            ? (allBooks as any).totalCount
-            : mappedUpdates.length,
-      };
-    }
-    throw new Error('Unexpected response for book.versions.check (expected updates)');
+    return data;
   }
 
-  private buildRemoteMetaByKey(items: RegistryItem[]) {
+  private buildRemoteMetaByKey(items: RegistryItemDto[]) {
     const remoteMetaByKey = new Map<
       string,
       {
@@ -284,36 +353,24 @@ export class SongsService {
         coverImage?: string;
         updatedBy?: string;
         updatedAt?: string;
-        sizeBytes?: number;
         songCount?: number;
       }
     >();
 
     for (const item of items) {
-      const key = item?.meta?.fileKey ?? null;
+      const key = item?.fileKey ?? null;
       if (!key) continue;
       remoteMetaByKey.set(key, {
-        title: typeof item.meta?.title === 'string' ? item.meta?.title : undefined,
-        language:
-          typeof item.meta?.language === 'string' ? item.meta?.language : undefined,
+        title: typeof item.meta?.title === 'string' ? item.meta.title : undefined,
+        language: typeof item.meta?.language === 'string' ? item.meta.language : undefined,
         coverImage:
-          typeof item.meta?.coverImage === 'string'
-            ? item.meta?.coverImage
-            : undefined,
+          typeof item.meta?.coverImage === 'string' ? item.meta.coverImage : undefined,
         updatedBy:
-          typeof item.meta?.updatedBy === 'string' ? item.meta?.updatedBy : undefined,
+          typeof item.meta?.updatedBy === 'string' ? item.meta.updatedBy : undefined,
         updatedAt:
-          typeof item.meta?.updatedAt === 'string' ? item.meta?.updatedAt : undefined,
-        sizeBytes:
-          typeof (item as any)?.size === 'number'
-            ? Number((item as any).size)
-            : typeof (item as any)?.meta?.size === 'number'
-              ? Number((item as any).meta.size)
-              : undefined,
+          typeof item.meta?.updatedAt === 'string' ? item.meta.updatedAt : undefined,
         songCount:
-          typeof (item as any)?.meta?.songCount === 'number'
-            ? Number((item as any).meta.songCount)
-            : undefined,
+          typeof item.meta?.songCount === 'number' ? Number(item.meta.songCount) : undefined,
       });
     }
 
@@ -344,7 +401,10 @@ export class SongsService {
     return { localBooksByKey, localFileKeys };
   }
 
-  private toLocalVersionItem(fileKey: string, localBooksByKey: Map<string, ISongBook>): BookVersionItem {
+  private toLocalVersionItem(
+    fileKey: string,
+    localBooksByKey: Map<string, ISongBook>
+  ): BookVersionItemDto {
     const local = localBooksByKey.get(fileKey);
     const raw = local?.meta?.version;
     const version = raw != null ? Number(raw) : 0;
@@ -370,12 +430,14 @@ export class SongsService {
         songCount?: number;
       }
     >;
+    remoteIdByKey: Map<string, number>;
   }): SongDictionaryCardDto[] {
     const {
       allKeys,
       localBooksByKey,
       remoteVersionByKey,
       remoteMetaByKey,
+      remoteIdByKey,
     } = params;
 
     const cards: SongDictionaryCardDto[] = [];
@@ -424,6 +486,7 @@ export class SongsService {
         fileKey,
         title:
           remoteMeta?.title || local?.meta?.title || local?.header?.title || fileKey,
+        songBookId: remoteIdByKey.get(fileKey),
         language: remoteMeta?.language || local?.meta?.language,
         coverImage: remoteMeta?.coverImage || local?.meta?.coverImage,
         sizeBytes: remoteMeta?.sizeBytes ?? localSizeBytes,
@@ -527,10 +590,19 @@ export class SongsService {
     const registry = await this.fetchRegistryList(authHeader);
     const remoteMetaByKey = this.buildRemoteMetaByKey(registry.items ?? []);
 
-    const allBooks = await this.fetchAllServerBooks(authHeader);
+    // versions.check возвращает список обновлений/версий на сервере
+    const allUpdates = await this.fetchUpdatesForBooks([], authHeader);
     const serverVersionByKey = new Map<string, number>();
-    for (const b of Array.isArray(allBooks.books) ? allBooks.books : []) {
-      serverVersionByKey.set(b.fileKey, Number(b.version) || 0);
+    const remoteIdByKey = new Map<string, number>();
+
+    for (const item of Array.isArray(registry.items) ? registry.items : []) {
+      if (typeof item?.fileKey === 'string' && typeof item?.id === 'number') {
+        remoteIdByKey.set(item.fileKey, item.id);
+      }
+    }
+
+    for (const upd of Array.isArray(allUpdates.updates) ? allUpdates.updates : []) {
+      serverVersionByKey.set(upd.fileKey, Number(upd.version) || 0);
     }
 
     const { localBooksByKey, localFileKeys } = this.scanLocalBooks();
@@ -551,6 +623,7 @@ export class SongsService {
       localBooksByKey,
       remoteVersionByKey: serverVersionByKey,
       remoteMetaByKey,
+      remoteIdByKey,
     });
 
     return cards.sort((a, b) => a.title.localeCompare(b.title));
@@ -565,6 +638,8 @@ export class SongsService {
       throw new Error('fileKey is required');
     }
 
+    const { basePath, headers } = this.buildRemoteBaseAndHeaders(authHeader);
+
     let url = downloadUrl;
     if (!url) {
       const local = this.readBook(fileKey);
@@ -572,7 +647,7 @@ export class SongsService {
       const localVersion = localVersionRaw != null ? Number(localVersionRaw) : 0;
       //
 
-      const item: BookVersionItem = {
+      const item: BookVersionItemDto = {
         fileKey,
         version: Number.isFinite(localVersion) ? localVersion : 0,
       };
@@ -585,15 +660,14 @@ export class SongsService {
       url = typeof rawUrl === 'string' && rawUrl.trim() ? rawUrl : undefined;
 
       if (!url) {
-        const allBooks = await this.fetchAllServerBooks(authHeader);
-        const book = Array.isArray(allBooks.books)
-          ? allBooks.books.find((b: any) => b?.fileKey === fileKey)
+        const allUpdates = await this.fetchUpdatesForBooks([], authHeader);
+        const book = Array.isArray(allUpdates.updates)
+          ? allUpdates.updates.find((b) => b?.fileKey === fileKey)
           : undefined;
-        const rawUrlFromBooks: unknown = (book as any)?.downloadUrl;
-        url =
-          typeof rawUrlFromBooks === 'string' && rawUrlFromBooks.trim()
-            ? rawUrlFromBooks
-            : undefined;
+        const rawUrlFromBooks: unknown = (book as VersionsCheckResponseItemDto | undefined)?.downloadUrl;
+        if (rawUrlFromBooks) {
+          url = typeof rawUrlFromBooks === 'string' && rawUrlFromBooks.trim() ? rawUrlFromBooks : undefined;
+        }
       }
     }
 
@@ -607,7 +681,7 @@ export class SongsService {
 
     fs.mkdirSync(this.externalAssetsPath, { recursive: true });
 
-    const normalizedUrl = this.normalizeDownloadUrl(url);
+    const normalizedUrl = this.normalizeDownloadUrl(url, basePath);
 
     let text: string;
     try {
@@ -619,7 +693,7 @@ export class SongsService {
               Authorization: `Bearer ${rawToken}`,
               'X-Auth-Token': rawToken,
             }
-          : undefined,
+          : headers,
       });
       text = res.data;
     } catch (e) {

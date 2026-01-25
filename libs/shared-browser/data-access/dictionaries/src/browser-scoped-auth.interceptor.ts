@@ -29,6 +29,11 @@ export function browserScopedAuthInterceptor(
       '/songs/dictionaries/install',
       '/songs/dictionaries/delete',
       '/songs/dictionaries/clear',
+      // Export jobs (svc://.../export-json|export-jobs)
+      '/songs/song-books',
+      '/songs/export-jobs',
+      '/songs/dictionaries/song-books',
+      '/songs/dictionaries/export-jobs',
     ];
 
     const normalizedPath = (() => {
@@ -75,8 +80,8 @@ export function browserScopedAuthInterceptor(
           [401, 403].includes(err.status)
         ) {
           tokenStore.clear();
-          return authFlow.getOrRequestToken().pipe((nextToken) =>
-            sendWithToken(String(nextToken), true)
+          return authFlow.getOrRequestToken().pipe(
+            switchMap((nextToken) => sendWithToken(String(nextToken), true))
           );
         }
 

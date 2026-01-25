@@ -4,27 +4,28 @@
   <div class="control-sidebar__actions">
 
     @if (castingIsPaused$ | async) {
-      <button pButton class="flex flex-w-center flex-h-center" (click)="onStartCasting(true)" severity="success">
+      <button tourAnchor="songs:cast-start" pButton class="flex flex-w-center flex-h-center" (click)="onStartCasting(true)" severity="success">
         <lyri-icon name="play" style="width: 14px; height: 14px"></lyri-icon>
         Транслировать
       </button>
+
     } @else {
-      <button pButton class="flex flex-w-center flex-h-center" (click)="onPauseCasting()" severity="danger">
+      <button tourAnchor="songs:cast-stop" pButton class="flex flex-w-center flex-h-center" (click)="onPauseCasting()"
+              severity="danger">
         <lyri-icon name="stop" style="width: 14px; height: 14px"></lyri-icon>
         Остановить
       </button>
+
     }
     <div class="flex">
       <button pButton severity="danger" [disabled]="(openedCastingWindow$ | async) === false"
               (click)="onCloseCasting()">Закрыть
       </button>
-      <button pButton severity="help" (click)="onNavigateSlide('prev')" icon="pi pi-arrow-up">Назад</button>
-      <button pButton severity="help" (click)="onNavigateSlide('next')" icon="pi pi-arrow-down">Вперед</button>
     </div>
 
   </div>
 
-  <lyri-navigator-feature class="control-sidebar__navigator" />
+  <lyri-navigator-feature class="control-sidebar__navigator" feature="songs" />
 
 </div>
 

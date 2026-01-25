@@ -1,248 +1,259 @@
 @if (vm$ | async; as vm) {
-<mat-sidenav-container class="editor-shell">
-  <mat-sidenav
-    #propertiesNav
-    class="properties-sidenav"
-    [mode]="'side'"
-    [opened]="propertiesOpen"
-    position="end"
-    [autoFocus]="false"
-  >
-    <ng-scrollbar class="properties-scroll" visibility="hover">
-      <p-panel header="Шрифт" [class.panel-hidden]="!textPanelVisible">
-        <div class="form-grid stacked">
-          <p-float-label class="p-float-label">
-            <p-select
-              inputId="font"
-              [options]="fontOptions"
-              optionLabel="label"
-              optionValue="value"
-              [ngModel]="vm.ui.font"
-              (ngModelChange)="
+  <mat-sidenav-container class="editor-shell">
+    <mat-sidenav
+      #propertiesNav
+      class="properties-sidenav"
+      [mode]="'side'"
+      [opened]="propertiesOpen"
+      position="end"
+      [autoFocus]="false"
+    >
+      <!--<ng-scrollbar
+        #propertiesScrollbar
+        class="properties-scroll"
+        visibility="hover"
+
+        (pointerdown)="stopSidebarPointer($event)"
+        (mousedown)="stopSidebarPointer($event)"
+        (touchstart)="stopSidebarPointer($event)"
+      >-->
+        <p-panel header="Шрифт" [class.panel-hidden]="!textPanelVisible">
+          <div class="form-grid stacked">
+            <p-float-label class="p-float-label">
+              <p-select
+                inputId="font"
+                [options]="fontOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="vm.ui.font"
+                (ngModelChange)="
                 emit({ t: 'APPLY_STYLE', patch: { font: $event } })
               "
-            ></p-select>
-            <label for="font">Гарнитура</label>
-          </p-float-label>
-          <p-float-label class="p-float-label">
-            <p-select
-              inputId="weight"
-              [options]="weightOptions"
-              optionLabel="label"
-              optionValue="value"
-              [ngModel]="vm.ui.weight"
-              (ngModelChange)="
+              ></p-select>
+              <label for="font">Гарнитура</label>
+            </p-float-label>
+            <p-float-label class="p-float-label">
+              <p-select
+                inputId="weight"
+                [options]="weightOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="vm.ui.weight"
+                (ngModelChange)="
                 emit({ t: 'APPLY_STYLE', patch: { weight: $event } })
               "
-            ></p-select>
-            <label for="weight">Начертание</label>
-          </p-float-label>
-          <p-float-label class="p-float-label">
-            <p-select
-              inputId="align"
-              [options]="alignOptions"
-              optionLabel="label"
-              optionValue="value"
-              [ngModel]="vm.ui.align"
-              (ngModelChange)="
+              ></p-select>
+              <label for="weight">Начертание</label>
+            </p-float-label>
+            <p-float-label class="p-float-label">
+              <p-select
+                inputId="align"
+                [options]="alignOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="vm.ui.align"
+                (ngModelChange)="
                 emit({ t: 'APPLY_STYLE', patch: { align: $event } })
               "
-            ></p-select>
-            <label for="align">Выравнивание</label>
-          </p-float-label>
-          <div class="size-row">
-            <label class="slider-label" for="fontRange">Размер шрифта</label>
-            <div class="slider-wrapper">
-              <span class="slider-end-label start">{{ vm.ui.min | number : '1.0-0' }}px</span>
+              ></p-select>
+              <label for="align">Выравнивание</label>
+            </p-float-label>
+            <div class="size-row">
+              <label class="slider-label" for="fontRange">Размер шрифта</label>
+              <div class="slider-wrapper">
+                <span class="slider-end-label start">{{ vm.ui.min | number : '1.0-0' }}px</span>
+                <mat-slider
+                  class="range-slider font-range-slider"
+                  id="fontRange"
+                  [min]="fontMin"
+                  [max]="fontMax"
+                  [step]="2"
+                  [displayWith]="formatFontSize"
+                >
+                  <input
+                    matSliderStartThumb
+                    name="fontMin"
+                    [(ngModel)]="vm.ui.min"
+                    [step]="2"
+                    [ngModelOptions]="{ standalone: true }"
+                    (ngModelChange)="onFontSizeMinChange($event)"
+                  />
+                  <input
+                    matSliderEndThumb
+                    name="fontMax"
+                    [(ngModel)]="vm.ui.max"
+                    [step]="2"
+                    [ngModelOptions]="{ standalone: true }"
+                    (ngModelChange)="onFontSizeMaxChange($event)"
+                  />
+                </mat-slider>
+                <span class="slider-end-label end">{{ vm.ui.max | number : '1.0-0' }}px</span>
+              </div>
+            </div>
+            <div class="line-height-block slider-wrapper">
+              <label class="slider-label" for="lineHeight">
+                Межстрочный интервал ({{ vm.ui.lineHeight | number : '1.2-2' }})
+              </label>
               <mat-slider
-                class="range-slider font-range-slider"
-                id="fontRange"
-                [min]="fontMin"
-                [max]="fontMax"
-                [step]="2"
-                [displayWith]="formatFontSize"
+                class="range-slider line-height-slider"
+                id="lineHeight"
+                [min]="0.2"
+                [max]="1.8"
+                [step]="0.02"
               >
                 <input
-                  matSliderStartThumb
-                  name="fontMin"
-                  [(ngModel)]="vm.ui.min"
-                  [step]="2"
+                  matSliderThumb
+                  name="lineHeight"
+                  [(ngModel)]="vm.ui.lineHeight"
                   [ngModelOptions]="{ standalone: true }"
-                  (ngModelChange)="onFontSizeMinChange($event)"
-                />
-                <input
-                  matSliderEndThumb
-                  name="fontMax"
-                  [(ngModel)]="vm.ui.max"
-                  [step]="2"
-                  [ngModelOptions]="{ standalone: true }"
-                  (ngModelChange)="onFontSizeMaxChange($event)"
+                  (ngModelChange)="emit({ t: 'APPLY_STYLE', patch: { lineHeight: +$event } })"
                 />
               </mat-slider>
-              <span class="slider-end-label end">{{ vm.ui.max | number : '1.0-0' }}px</span>
             </div>
           </div>
-          <div class="line-height-block slider-wrapper">
-            <label class="slider-label" for="lineHeight">
-              Межстрочный интервал ({{ vm.ui.lineHeight | number : '1.2-2' }})
-            </label>
-            <mat-slider
-              class="range-slider line-height-slider"
-              id="lineHeight"
-              [min]="0.2"
-              [max]="1.8"
-              [step]="0.02"
-            >
-              <input
-                matSliderThumb
-                name="lineHeight"
-                [(ngModel)]="vm.ui.lineHeight"
-                [ngModelOptions]="{ standalone: true }"
-                (ngModelChange)="emit({ t: 'APPLY_STYLE', patch: { lineHeight: +$event } })"
-              />
-            </mat-slider>
-          </div>
-        </div>
-      </p-panel>
+        </p-panel>
+@@
+        <p-panel header="Цвет и обводка">
+          <div class="form-grid two-cols color-stroke-grid">
+            <div class="field">
+              <p-float-label class="p-float-label">
+                <p-colorPicker
+                  appendTo="body"
+                  panelStyleClass="color-overlay"
+                  styleClass="field-control"
+                  inputId="color"
+                  format="hex"
+                  [ngModel]="vm.ui.colorHex"
+                  (mousedown)="onColorPickerPreOpen()"
+                  (onShow)="onColorPickerOpen()"
+                  (onHide)="onColorPickerClose()"
+                  (ngModelChange)="emit({ t: 'APPLY_STYLE', patch: { colorHex: $event } })"
+                ></p-colorPicker>
+                <label for="color">Цвет текста</label>
+              </p-float-label>
+            </div>
+            <div class="field">
+              <p-float-label class="p-float-label">
+                <p-colorPicker
+                  appendTo="body"
+                  panelStyleClass="color-overlay"
+                  styleClass="field-control"
+                  inputId="bgColor"
+                  format="hex"
+                  [ngModel]="vm.ui.bgColorHex ?? '#ffffff'"
+                  (mousedown)="onColorPickerPreOpen()"
+                  (onShow)="onColorPickerOpen()"
+                  (onHide)="onColorPickerClose()"
+                  (ngModelChange)="onApplyTextBackground($event)"
+                ></p-colorPicker>
+                <label for="bgColor">Цвет фона</label>
+              </p-float-label>
+            </div>
+            <div class="field">
+              <p-float-label class="p-float-label">
+                <p-inputNumber
+                  styleClass="field-control"
+                  inputId="stroke"
+                  [min]="1"
+                  [max]="60"
+                  [step]="1"
+                  [ngModel]="vm.ui.strokeWidth"
+                  inputStyleClass="p-inputtext"
+                  (ngModelChange)="emit({ t: 'APPLY_STYLE', patch: { strokeWidth: +$event } })"
+                  (pointerdown)="stopScrollDrag($event)"
+                  (touchstart)="stopScrollDrag($event)"
+                ></p-inputNumber>
+                <label for="stroke">Обводка</label>
+              </p-float-label>
 
-      <p-panel header="Цвет и обводка">
-        <div class="form-grid two-cols">
-          <div class="field">
-            <label class="field-label" for="color">Цвет текста</label>
-            <p-colorPicker
-              appendTo="body"
-              panelStyleClass="color-overlay"
-              styleClass="field-control"
-              inputId="color"
-              format="hex"
-              [ngModel]="vm.ui.colorHex"
-              (ngModelChange)="emit({ t: 'APPLY_STYLE', patch: { colorHex: $event } })"
-              (pointerdown)="stopScrollDrag($event)"
-              (pointermove)="stopScrollDrag($event)"
-              (touchstart)="stopScrollDrag($event)"
-              (touchmove)="stopScrollDrag($event)"
-              (wheel)="stopScrollWheel($event)"
-            ></p-colorPicker>
+            </div>
           </div>
-          <div class="field">
-            <label class="field-label" for="bgColor">Цвет фона</label>
-            <p-colorPicker
-              appendTo="body"
-              panelStyleClass="color-overlay"
-              styleClass="field-control"
-              inputId="bgColor"
-              format="hex"
-              [ngModel]="vm.ui.bgColorHex ?? '#ffffff'"
-              (ngModelChange)="onApplyTextBackground($event)"
-              (pointerdown)="stopScrollDrag($event)"
-              (pointermove)="stopScrollDrag($event)"
-              (touchstart)="stopScrollDrag($event)"
-              (touchmove)="stopScrollDrag($event)"
-              (wheel)="stopScrollWheel($event)"
-            ></p-colorPicker>
-          </div>
-          <div class="field">
-            <label class="field-label" for="stroke">Обводка</label>
-            <p-inputNumber
-              styleClass="field-control"
-              inputId="stroke"
-              [min]="1"
-              [max]="60"
-              [step]="1"
-              [ngModel]="vm.ui.strokeWidth"
-              inputStyleClass="p-inputtext"
-              (ngModelChange)="emit({ t: 'APPLY_STYLE', patch: { strokeWidth: +$event } })"
-              (pointerdown)="stopScrollDrag($event)"
-              (touchstart)="stopScrollDrag($event)"
-            ></p-inputNumber>
-          </div>
-        </div>
-      </p-panel>
+        </p-panel>
 
-      <p-panel header="Вид">
-        <div class="form-grid">
-          <p-float-label class="p-float-label">
-            <p-select
-              inputId="aspect"
-              [options]="aspectOptions"
-              optionLabel="label"
-              optionValue="value"
-              [ngModel]="aspectRatio"
-              (ngModelChange)="onAspectRatioChange($event)"
-            ></p-select>
-            <label for="aspect">Соотношение</label>
-          </p-float-label>
-          <div class="switch-row">
-            <label class="switch-label">Привязка</label>
-            <p-toggleSwitch
-              [ngModel]="vm.snapEnabled"
-              (ngModelChange)="emit({ t: 'SNAP', on: $event })"
-            ></p-toggleSwitch>
+        <p-panel header="Вид">
+          <div class="form-grid">
+            <p-float-label class="p-float-label">
+              <p-select
+                inputId="aspect"
+                [options]="aspectOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="aspectRatio"
+                (ngModelChange)="onAspectRatioChange($event)"
+              ></p-select>
+              <label for="aspect">Соотношение</label>
+            </p-float-label>
+            <div class="switch-row">
+              <label class="switch-label">Привязка</label>
+              <p-toggleSwitch
+                [ngModel]="vm.snapEnabled"
+                (ngModelChange)="emit({ t: 'SNAP', on: $event })"
+              ></p-toggleSwitch>
+            </div>
+            <div class="switch-row">
+              <label class="switch-label">Направляющие</label>
+              <p-toggleSwitch
+                [ngModel]="vm.guidesEnabled"
+                (ngModelChange)="emit({ t: 'GUIDES', on: $event })"
+              ></p-toggleSwitch>
+            </div>
           </div>
-          <div class="switch-row">
-            <label class="switch-label">Направляющие</label>
-            <p-toggleSwitch
-              [ngModel]="vm.guidesEnabled"
-              (ngModelChange)="emit({ t: 'GUIDES', on: $event })"
-            ></p-toggleSwitch>
-          </div>
-        </div>
-      </p-panel>
-    </ng-scrollbar>
-  </mat-sidenav>
+        </p-panel>
+<!--      </ng-scrollbar>-->
+    </mat-sidenav>
 
-  <mat-sidenav-content>
-    <div class="workspace">
-      <aside class="toolbar-rail">
-        <button
-          pButton
-          type="button"
-          label="Т"
-          [class.active]="selectedKind === 'text'"
-          (click)="emit({ t: 'ADD_TEXT', x: 100, y: 80 })"
-          title="Текст"
-        ></button>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-image"
-          (click)="onImageUrl()"
-          title="Картинка"
-        ></button>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-video"
-          (click)="onVideoUrl()"
-          title="Видео"
-        ></button>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-globe"
-          (click)="onIframeUrl()"
-          title="Iframe"
-        ></button>
-        <p-divider></p-divider>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-stop"
-          (click)="emit({ t: 'ADD_SHAPE', shape: 'rect', x: 120, y: 120 })"
-          title="Прямоугольник"
-        ></button>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-circle"
-          (click)="emit({ t: 'ADD_SHAPE', shape: 'ellipse', x: 140, y: 140 })"
-          title="Эллипс"
-        ></button>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-minus"
-          (click)="
+    <mat-sidenav-content>
+      <div class="workspace">
+        <aside class="toolbar-rail">
+          <button
+            pButton
+            type="button"
+            label="Т"
+            [class.active]="selectedKind === 'text'"
+            (click)="emit({ t: 'ADD_TEXT', x: 100, y: 80 })"
+            title="Текст"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-image"
+            (click)="onImageUrl()"
+            title="Картинка"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-video"
+            (click)="onVideoUrl()"
+            title="Видео"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-globe"
+            (click)="onIframeUrl()"
+            title="Iframe"
+          ></button>
+          <p-divider></p-divider>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-stop"
+            (click)="emit({ t: 'ADD_SHAPE', shape: 'rect', x: 120, y: 120 })"
+            title="Прямоугольник"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-circle"
+            (click)="emit({ t: 'ADD_SHAPE', shape: 'ellipse', x: 140, y: 140 })"
+            title="Эллипс"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-minus"
+            (click)="
               emit({
                 t: 'ADD_SHAPE',
                 shape: 'line',
@@ -251,136 +262,136 @@
                 options: { width: 220, height: 1 },
               })
             "
-          title="Линия"
-        ></button>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-pencil"
-          [class.active]="brushActive"
-          (click)="emit({ t: 'START_BRUSH' })"
-          title="Кисть"
-        ></button>
-        <p-divider></p-divider>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-play"
-          (click)="onToggleIframeInteractive()"
-          [disabled]="!(selectedKind === 'iframe' || selectedKind === 'video')"
-          title="Интерактив видео/iframe"
-        ></button>
-        <p-divider></p-divider>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-arrow-left"
-          [disabled]="!(canUndo$ | async)"
-          (click)="onUndo()"
-          title="Отменить"
-        ></button>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-arrow-right"
-          [disabled]="!(canRedo$ | async)"
-          (click)="onRedo()"
-          title="Повторить"
-        ></button>
-      </aside>
+            title="Линия"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-pencil"
+            [class.active]="brushActive"
+            (click)="emit({ t: 'START_BRUSH' })"
+            title="Кисть"
+          ></button>
+          <p-divider></p-divider>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-play"
+            (click)="onToggleIframeInteractive()"
+            [disabled]="!(selectedKind === 'iframe' || selectedKind === 'video')"
+            title="Интерактив видео/iframe"
+          ></button>
+          <p-divider></p-divider>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-arrow-left"
+            [disabled]="!(canUndo$ | async)"
+            (click)="onUndo()"
+            title="Отменить"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-arrow-right"
+            [disabled]="!(canRedo$ | async)"
+            (click)="onRedo()"
+            title="Повторить"
+          ></button>
+        </aside>
 
-      <div class="canvas-area">
-        <div class="canvas-actions">
-          <button
-            pButton
-            type="button"
-            [icon]="propertiesOpen ? 'pi pi-angle-right' : 'pi pi-angle-left'"
-            (click)="propertiesOpen = !propertiesOpen"
-            class="toggle-properties"
-            title="Показать/скрыть панель свойств"
-          ></button>
-          <button
-            pButton
-            type="button"
-            label="Группа"
-            icon="pi pi-object-group"
-            [disabled]="(vm.selectedIds.length || 0) < 2"
-            (click)="emit({ t: 'GROUP', ids: vm.selectedIds })"
-          ></button>
-          <button
-            pButton
-            type="button"
-            label="Разгруппировать"
-            icon="pi pi-object-ungroup"
-            [disabled]="selectedKind !== 'group'"
-            (click)="onUngroup()"
-          ></button>
-          <button
-            pButton
-            type="button"
-            label="Дублировать"
-            icon="pi pi-copy"
-            [disabled]="!vm.selectedIds.length"
-            (click)="emit({ t: 'DUPLICATE' })"
-          ></button>
-          <button
-            pButton
-            type="button"
-            label="Удалить"
-            icon="pi pi-trash"
-            [disabled]="!vm.selectedIds.length"
-            (click)="emit({ t: 'DELETE' })"
-          ></button>
-          <span class="spacer"></span>
-          <button
-            pButton
-            type="button"
-            label="Фон"
-            icon="pi pi-image"
-            [disabled]="!canSetBg"
-            (click)="onSetBackground()"
-          ></button>
-          <button
-            pButton
-            type="button"
-            label="Очистить фон"
-            icon="pi pi-times"
-            [disabled]="!canSetBg"
-            (click)="onClearBackground()"
-          ></button>
-        </div>
-        <div class="canvas-frame">
-          <div
-            class="host"
-            tabindex="0"
-            #host
-            (contextmenu)="onContextMenu($event)"
-          ></div>
-          <div class="zoom-overlay">
+        <div class="canvas-area">
+          <div class="canvas-actions">
+            <button
+              pButton
+              type="button"
+              [icon]="propertiesOpen ? 'pi pi-angle-right' : 'pi pi-angle-left'"
+              (click)="propertiesOpen = !propertiesOpen"
+              class="toggle-properties"
+              title="Показать/скрыть панель свойств"
+            ></button>
+            <button
+              pButton
+              type="button"
+              label="Группа"
+              icon="pi pi-object-group"
+              [disabled]="(vm.selectedIds.length || 0) < 2"
+              (click)="emit({ t: 'GROUP', ids: vm.selectedIds })"
+            ></button>
+            <button
+              pButton
+              type="button"
+              label="Разгруппировать"
+              icon="pi pi-object-ungroup"
+              [disabled]="selectedKind !== 'group'"
+              (click)="onUngroup()"
+            ></button>
+            <button
+              pButton
+              type="button"
+              label="Дублировать"
+              icon="pi pi-copy"
+              [disabled]="!vm.selectedIds.length"
+              (click)="emit({ t: 'DUPLICATE' })"
+            ></button>
+            <button
+              pButton
+              type="button"
+              label="Удалить"
+              icon="pi pi-trash"
+              [disabled]="!vm.selectedIds.length"
+              (click)="emit({ t: 'DELETE' })"
+            ></button>
+            <span class="spacer"></span>
+            <button
+              pButton
+              type="button"
+              label="Фон"
+              icon="pi pi-image"
+              [disabled]="!canSetBg"
+              (click)="onSetBackground()"
+            ></button>
+            <button
+              pButton
+              type="button"
+              label="Очистить фон"
+              icon="pi pi-times"
+              [disabled]="!canSetBg"
+              (click)="onClearBackground()"
+            ></button>
+          </div>
+          <div class="canvas-frame">
+            <div
+              class="host"
+              tabindex="0"
+              #host
+              (contextmenu)="onContextMenu($event)"
+            ></div>
+            <div class="zoom-overlay">
             <span class="slider-header">
               <span>Масштаб</span>
               <span class="slider-value"
-                >{{ vm.zoom | number : '1.2-2' }}x</span
+              >{{ vm.zoom | number : '1.2-2' }}x</span
               >
             </span>
-            <p-slider
-              inputId="zoom"
-              [min]="0.2"
-              [max]="3"
-              [step]="0.05"
-              [ngModel]="vm.zoom"
-              (ngModelChange)="emit({ t: 'ZOOM', z: $event })"
-              (pointerdown)="stopScrollDrag($event)"
-              (pointermove)="stopScrollDrag($event)"
-              (touchstart)="stopScrollDrag($event)"
-              (touchmove)="stopScrollDrag($event)"
-              (wheel)="stopScrollWheel($event)"
-              tabindex="-1"
-            ></p-slider>
+              <p-slider
+                inputId="zoom"
+                [min]="0.2"
+                [max]="3"
+                [step]="0.05"
+                [ngModel]="vm.zoom"
+                (ngModelChange)="emit({ t: 'ZOOM', z: $event })"
+                (pointerdown)="stopScrollDrag($event)"
+                (pointermove)="stopScrollDrag($event)"
+                (touchstart)="stopScrollDrag($event)"
+                (touchmove)="stopScrollDrag($event)"
+                (wheel)="stopScrollWheel($event)"
+                tabindex="-1"
+              ></p-slider>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
 }

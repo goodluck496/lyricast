@@ -48,7 +48,6 @@ import {
     ProgressBarModule,
     SongDictionaryCardComponent,
   ],
-  providers: [ConfirmationService],
   templateUrl: './song-dictionaries-manager.component.html',
   styleUrl: './song-dictionaries-manager.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -97,6 +96,7 @@ export class SongDictionariesManagerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.confirmationService.close();
     this.destroy$.next();
     this.destroy$.complete();
   }

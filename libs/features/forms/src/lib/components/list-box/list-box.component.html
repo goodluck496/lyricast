@@ -22,7 +22,7 @@
     <cdk-virtual-scroll-viewport [appendOnly]="false" orientation="vertical" [itemSize]="ITEM_SIZE"
                                  class="list-box__viewport" minBufferPx="100" maxBufferPx="200">
       <div cdkListbox>
-        <div *cdkVirtualFor="let item of showItems(); let index; templateCacheSize: 10"
+        <div *cdkVirtualFor="let item of showItems(); templateCacheSize: 10"
              [cdkOption]="item"
              class="list-box__item"
              [class.list-box__item--selected]="selectedItems.has(item.searchKey)"
@@ -30,7 +30,7 @@
         >
           @if (listBoxTemplates[ListBoxTemplates.ITEM]; as template) {
             <ng-container [ngTemplateOutlet]="$any(template)"
-                          [ngTemplateOutletContext]="{$implicit: item, search: searchStringSig()}"
+                          [ngTemplateOutletContext]="{$implicit: item, search: searchStringSig(), elementIndex: item.index}"
             ></ng-container>
           } @else {
             {{ item.title | highliter: searchStringSig() }}

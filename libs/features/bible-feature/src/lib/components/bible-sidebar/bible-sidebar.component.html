@@ -4,12 +4,12 @@
   <div class="control-sidebar__actions">
 
     @if ((castingIsPaused$ | async)) {
-      <button pButton class="flex flex-w-center flex-h-center" (click)="onStartCasting()" severity="success">
+      <button pButton class="flex flex-w-center flex-h-center" (click)="onStartCasting()" severity="success" tourAnchor="bible:cast-start">
         <lyri-icon name="play" style="width: 14px; height: 14px"></lyri-icon>
         Транслировать
       </button>
     } @else {
-      <button pButton class="flex flex-w-center flex-h-center" (click)="onPauseCasting()" severity="danger">
+      <button pButton class="flex flex-w-center flex-h-center" (click)="onPauseCasting()" severity="danger" tourAnchor="bible:cast-stop">
         <lyri-icon name="stop" style="width: 14px; height: 14px"></lyri-icon>
         Остановить
       </button>
@@ -27,7 +27,7 @@
     </div>
   </div>
 
-  <lyri-navigator-feature class="control-sidebar__navigator" />
+  <lyri-navigator-feature class="control-sidebar__navigator" feature="bible" />
 </div>
 
 

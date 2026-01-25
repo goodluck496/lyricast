@@ -50,6 +50,7 @@ import { AuthOverlayService } from './auth/auth-overlay.service';
 import { DICTIONARIES_API_BASE } from '@lyri-cast/shared-browser/data-access/dictionaries';
 import { registerLocaleData } from '@angular/common';
 import localeRu from '@angular/common/locales/ru';
+import { MessageService } from 'primeng/api';
 
 registerLocaleData(localeRu);
 
@@ -87,6 +88,8 @@ export const appConfig: ApplicationConfig = {
         },
       },
     }),
+
+    MessageService,
 
     provideApi('https://lyricast-dictionary-api.onrender.com'),
 

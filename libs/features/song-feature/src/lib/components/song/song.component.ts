@@ -18,6 +18,7 @@ import { DomHandler } from 'primeng/dom';
 import { EditorModule } from 'primeng/editor';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
+import { TourAnchorPrimeNgDirective } from 'ngx-ui-tour-primeng';
 
 @Component({
   selector: 'lyri-song',
@@ -26,8 +27,9 @@ import { DomSanitizer } from '@angular/platform-browser';
     NgScrollbar,
     DblClickDirective,
     EditorModule,
-    FormsModule
-],
+    FormsModule,
+    TourAnchorPrimeNgDirective,
+  ],
   templateUrl: './song.component.html',
   styleUrl: './song.component.scss',
 })
@@ -50,29 +52,25 @@ export class SongComponent {
   selectLyricLine = output<[LyricForCasting, LyricLine, boolean]>();
 
   constructor() {
-    effect(
-      () => {
-        const selectedLyricLine = this.songPageSelectSrv.selectedLyricLine();
-        if (selectedLyricLine) {
-          this.selectedLyricLine.set(selectedLyricLine);
-        }
-        const selectedLyric = this.songPageSelectSrv.selectedLyric();
-        if (selectedLyric) {
-          this.selectedLyric.set(selectedLyric);
-        }
-        this.scrollToSelected();
-        this.elRef.nativeElement.focus();
-      },
-    );
+    effect(() => {
+      const selectedLyricLine = this.songPageSelectSrv.selectedLyricLine();
+      if (selectedLyricLine) {
+        this.selectedLyricLine.set(selectedLyricLine);
+      }
+      const selectedLyric = this.songPageSelectSrv.selectedLyric();
+      if (selectedLyric) {
+        this.selectedLyric.set(selectedLyric);
+      }
+      this.scrollToSelected();
+      this.elRef.nativeElement.focus();
+    });
 
-    effect(
-      () => {
-        //todo выбор первого куплетьа пока отключил, возможно не понадобится
-        // const lyrics = this.lyrics();
-        // const lines = lyrics[0];
-        // this.onLineClick(lines, lines.lines[0], false);
-      },
-    );
+    effect(() => {
+      //todo выбор первого куплетьа пока отключил, возможно не понадобится
+      // const lyrics = this.lyrics();
+      // const lines = lyrics[0];
+      // this.onLineClick(lines, lines.lines[0], false);
+    });
   }
 
   onLineClick(

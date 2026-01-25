@@ -42,6 +42,7 @@ import { SnowfallManager } from '../services/common/snowfall.service';
 import { SplashScreenComponent } from './components/splash-screen/splash-screen.component';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthOverlayComponent } from './auth/auth-overlay.component';
+import { TourPrimeNgModule } from 'ngx-ui-tour-primeng';
 
 @Component({
   standalone: true,
@@ -51,6 +52,7 @@ import { AuthOverlayComponent } from './auth/auth-overlay.component';
     AuthOverlayComponent,
     Toast,
     ExportNotificationsComponent,
+    TourPrimeNgModule,
   ],
   selector: 'lyri-root',
   templateUrl: './app.component.html',

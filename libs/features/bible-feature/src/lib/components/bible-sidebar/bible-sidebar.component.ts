@@ -23,6 +23,9 @@ import { AppActions, selectOpenedWindow, SidebarService } from '@lyri-cast/commo
 import { BibleSidebarData } from '../../types';
 import { SvgIconComponent } from '@lyri-cast/svg-icons';
 import { AppWindowTypes } from '@lyri-cast/common-electron';
+import { TourPrimeNgModule } from 'ngx-ui-tour-primeng';
+import { BibleOnboardingService } from '../../services/bible-onboarding.service';
+import { TourService } from 'ngx-ui-tour-primeng';
 
 @Component({
   selector: 'lyri-bible-sidebar',
@@ -33,6 +36,7 @@ import { AppWindowTypes } from '@lyri-cast/common-electron';
     ButtonDirective,
     NavigatorFeatureComponent,
     SvgIconComponent,
+    TourPrimeNgModule,
   ],
   templateUrl: './bible-sidebar.component.html',
   styleUrl: './bible-sidebar.component.scss',
@@ -42,6 +46,12 @@ export class BibleSidebarComponent {
   private readonly store = inject<Store<BibleState>>(Store<BibleState>);
   private readonly sidebarService =
     inject<SidebarService<BibleSidebarData>>(SidebarService);
+  private readonly bibleOnboarding = inject(BibleOnboardingService);
+  private readonly tourService = inject(TourService);
+
+  private canTourNext(tourService: unknown): tourService is { next: () => void } {
+    return typeof (tourService as { next: () => void }).next === 'function';
+  }
 
   openedCastingWindow$ = this.store.select(selectOpenedWindow).pipe(map((e) => !!e));
   castingIsPaused$ = this.store.select(selectCastingPaused);
@@ -93,6 +103,10 @@ export class BibleSidebarComponent {
   }
 
   onPauseCasting() {
+    if (this.canTourNext(this.tourService)) {
+      this.tourService.next();
+    }
+
     this.store.dispatch(BibleActions.pauseCasting());
   }
 

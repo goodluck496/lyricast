@@ -3,6 +3,7 @@ export interface IUiLyriListItem<Entity = object> {
   searchKey: string;
 
   baseEntity: Entity;
+  index?: number;
 }
 
 export interface IUiLyriItemInList<Entity = object> {
@@ -10,6 +11,7 @@ export interface IUiLyriItemInList<Entity = object> {
   searchKey: string;
 
   baseEntity: Entity;
+  index?: number;
 }
 
 export enum ListBoxTemplates {

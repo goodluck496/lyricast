@@ -5,13 +5,14 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  HostBinding,
   inject,
   NgZone,
   OnDestroy,
   OnInit,
   ViewChild,
 } from '@angular/core';
-import { AsyncPipe, DecimalPipe } from '@angular/common';
+import { AsyncPipe, DecimalPipe, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { FloatLabelModule } from 'primeng/floatlabel';
@@ -69,6 +70,7 @@ import {
 import { PIXI_EDITOR_PROVIDERS } from './pixi-editor.providers';
 import { NodeFactoryService } from './services/node-factory.service';
 import { SceneViewportService } from './services/scene-viewport.service';
+import { NgScrollbarExt } from 'ngx-scrollbar';
 
 type WorldContainer = Container & { app: Application };
 
@@ -96,13 +98,27 @@ type WorldContainer = Container & { app: Application };
   styleUrl: 'pixi-editor.component.scss',
   providers: [
     ...PIXI_EDITOR_PROVIDERS(),
-    { provide: NG_SCROLLBAR_OPTIONS, useValue: { dragScroll: false } },
+    {
+      provide: NG_SCROLLBAR_OPTIONS,
+      useValue: {
+        dragScroll: false,
+        wheelPropagation: false,
+        touchmovePropagation: false,
+      },
+    },
   ],
 })
 export class PixiSlideEditorV2Component
   implements OnInit, AfterViewInit, OnDestroy
 {
+  @HostBinding('class.color-picker-open')
+  protected get isColorPickerOpenClass(): boolean {
+    return this.colorPickerOpen;
+  }
+
   @ViewChild('host', { static: false }) hostRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('propertiesScrollbar', { static: false })
+  private propertiesScrollbarRef?: NgScrollbarExt;
   selectedKind?:
     | 'text'
     | 'image'
@@ -124,6 +140,7 @@ export class PixiSlideEditorV2Component
   readonly history = inject(HistoryService);
   private readonly zone = inject(NgZone);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly document = inject(DOCUMENT);
   public readonly serializer = inject(EditorSerializerService);
   private readonly nodeFactory = inject(NodeFactoryService);
   public readonly sceneViewport = inject(SceneViewportService);
@@ -154,6 +171,10 @@ export class PixiSlideEditorV2Component
   private textPanelDelayMs = 60;
   fontMin = 16;
   fontMax = 150;
+  private colorPickerOpen = false;
+
+  private removeScrollbarLock?: () => void;
+  private removeColorPickerKeyGuard?: () => void;
 
   aspectOptions: { label: string; value: '16:9' | '4:3' | 'none' }[] = [
     { label: '16:9', value: '16:9' },
@@ -247,6 +268,8 @@ export class PixiSlideEditorV2Component
     if (this.hideTextPanelTimer) {
       clearTimeout(this.hideTextPanelTimer);
     }
+    this.removeScrollbarLock?.();
+    this.removeColorPickerKeyGuard?.();
     this.destroy$.next();
     this.destroy$.complete();
     this.ctxMenu?.close();
@@ -1181,12 +1204,166 @@ export class PixiSlideEditorV2Component
   }
 
   stopScrollDrag(event: Event) {
+    const isMoveEvent = event.type.includes('move');
+    if (event.cancelable && !isMoveEvent) {
+      event.preventDefault();
+    }
     event.stopPropagation();
   }
 
   stopScrollWheel(event: WheelEvent) {
     event.preventDefault();
     event.stopPropagation();
+  }
+
+  stopSidebarPointer(event: Event): void {
+    // Не даём событиям из сайдбара дойти до Pixi stage/canvas.
+    // Важно: не используем preventDefault, чтобы не ломать PrimeNG (drag внутри overlay).
+    event.stopPropagation();
+  }
+
+  onColorPickerPreOpen(): void {
+    // Важно: это срабатывает раньше, чем PrimeNG поднимет overlay и раньше,
+    // чем ngx-scrollbar может попытаться проскроллить viewport из-за смены фокуса.
+    // Никаких preventDefault/stopPropagation тут быть не должно, иначе можно сломать PrimeNG.
+    this.lockPropertiesScrollbar();
+  }
+
+  onColorPickerOpen(): void {
+    this.colorPickerOpen = true;
+    this.document.body.classList.add('color-picker-open');
+
+    this.lockPropertiesScrollbar();
+  }
+
+  onColorPickerClose(): void {
+    this.colorPickerOpen = false;
+    this.document.body.classList.remove('color-picker-open');
+    this.unlockPropertiesScrollbar();
+    this.removeColorPickerKeyGuard?.();
+    this.removeColorPickerKeyGuard = undefined;
+  }
+
+  private installColorPickerKeyGuard(): void {
+    if (this.removeColorPickerKeyGuard) return;
+
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+
+      const inColorPicker = !!target.closest(
+        '.p-colorpicker, .p-colorpicker-panel, .p-colorpicker-overlay'
+      );
+      if (!inColorPicker) return;
+
+      const key = event.key;
+      const isScrollKey =
+        key === 'ArrowUp' ||
+        key === 'ArrowDown' ||
+        key === 'PageUp' ||
+        key === 'PageDown' ||
+        key === 'Home' ||
+        key === 'End' ||
+        key === ' ';
+
+      if (!isScrollKey) return;
+
+      // Главное: не даём событию дойти до ngx-scrollbar/страницы.
+      event.stopPropagation();
+
+      // Для PageUp/PageDown/Home/End/Space дополнительно гасим дефолт,
+      // чтобы не происходил нативный scroll.
+      if (
+        key === 'PageUp' ||
+        key === 'PageDown' ||
+        key === 'Home' ||
+        key === 'End' ||
+        key === ' '
+      ) {
+        event.preventDefault();
+      }
+    };
+
+    this.document.addEventListener('keydown', handler, { capture: true });
+    this.removeColorPickerKeyGuard = () => {
+      this.document.removeEventListener('keydown', handler, { capture: true } as AddEventListenerOptions);
+    };
+  }
+
+  private tryFocusColorPickerInput(): void {
+    // Без агрессивных фокусов: один раз после открытия пытаемся перевести фокус
+    // внутрь overlay, чтобы клавиатура сразу управляла пикером, а не сайдбаром.
+    queueMicrotask(() => {
+      const panel = this.document.querySelector<HTMLElement>(
+        '.p-colorpicker-panel, .p-colorpicker-overlay'
+      );
+      const input = panel?.querySelector<HTMLInputElement>('input');
+      input?.focus();
+    });
+  }
+
+  private findScrollableElement(root: HTMLElement): HTMLElement | undefined {
+    const viewportBySelector = root.querySelector<HTMLElement>(
+      '.ng-scroll-viewport, .ng-scrollbar-viewport'
+    );
+    if (viewportBySelector) return viewportBySelector;
+
+    const candidates: HTMLElement[] = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
+    return candidates.find((el) => {
+      const style = getComputedStyle(el);
+      // В ngx-scrollbar реальный скроллируемый элемент иногда имеет overflow: hidden,
+      // поэтому ориентируемся в первую очередь на геометрию, а не только на overflow.
+      const overflowY = style.overflowY;
+      const isPotentialScroller = overflowY !== 'visible';
+      return isPotentialScroller && el.scrollHeight > el.clientHeight;
+    });
+  }
+
+  private lockPropertiesScrollbar(): void {
+    if (this.removeScrollbarLock) return;
+    const root = this.propertiesScrollbarRef?.nativeElement;
+    const viewport = root ? this.findScrollableElement(root) : undefined;
+    if (!viewport) return;
+
+    const lockedScrollTop = viewport.scrollTop;
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const onSelectStart = (event: Event) => {
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const onScroll = () => {
+      if (viewport.scrollTop !== lockedScrollTop) {
+        // viewport.scrollTop = lockedScrollTop;
+      }
+    };
+
+    viewport.addEventListener('wheel', onWheel, { passive: false });
+    viewport.addEventListener('touchmove', onTouchMove, { passive: false });
+    viewport.addEventListener('selectstart', onSelectStart, { passive: false });
+    viewport.addEventListener('scroll', onScroll, { passive: true });
+
+    this.removeScrollbarLock = () => {
+      viewport.removeEventListener('wheel', onWheel);
+      viewport.removeEventListener('touchmove', onTouchMove);
+      viewport.removeEventListener('selectstart', onSelectStart);
+      viewport.removeEventListener('scroll', onScroll);
+    };
+  }
+
+  private unlockPropertiesScrollbar(): void {
+    this.removeScrollbarLock?.();
+    this.removeScrollbarLock = undefined;
   }
 }
 

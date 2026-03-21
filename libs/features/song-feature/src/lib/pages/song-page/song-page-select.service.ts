@@ -116,30 +116,41 @@ export class SongPageSelectService {
     this.selectedLyric.set(null);
   }
 
-  private decideParts(lyric: Lyric, globalParts: SplitPartsCount, arrLen: number): number {
-    // Global setting takes precedence if it's not NONE
-    if (globalParts !== SPLIT_PARTS_COUNT.NONE) {
-      if (globalParts > arrLen) {
-        return 1;
-      }
-      const p = Number(globalParts || 1);
-      return Math.max(1, Math.min(p, arrLen));
-    }
+  private getFlattenedLines(lyric: Lyric): string[] {
+    return lyric.lines
+      .map(l => l.text.split(/<br\s*\/?>/i))
+      .flat()
+      .filter(t => t.trim().length > 0);
+  }
 
-    // Otherwise, use local setting
-    if (lyric.splitLinesCount === 0) {
+  private decideParts(lyric: Lyric, globalParts: SplitPartsCount, arrLen: number): number {
+    // Если пользователь выбрал "Не делить", строго возвращаем 1 блок для любой секции
+    if (globalParts === SPLIT_PARTS_COUNT.NONE) {
       return 1;
     }
-    if (typeof lyric.splitLinesCount === 'number' && lyric.splitLinesCount > 0) {
-      return Math.min(lyric.splitLinesCount, arrLen);
-    }
 
-    return 1;
+    const p = Number(globalParts || 1);
+    const isExplicitlyUndivided = lyric.splitLinesCount === 0;
+    
+    // If it's a CHORUS or explicitly undivided section, and the requested parts 
+    // isn't significantly overriding a huge block, we keep it as 1 to match expectations
+    // that choruses shouldn't blindly split just because couplets do.
+    if (isExplicitlyUndivided && (lyric.type === 'CHORUS' || lyric.type === 'END')) {
+       // Only force divide a chorus if it's REALLY long (e.g. > 4 lines)
+       if (arrLen <= 4) {
+         return 1; 
+       }
+    }
+    
+    return Math.max(1, Math.min(p, arrLen));
   }
 
   public buildLyricsForCasting(song: ISong): LyricForCasting[] {
     const globalParts = this.splitPartsCount();
-    const counts = song.lyrics.map(l => this.decideParts(l, globalParts, l.lines.length));
+    const counts = song.lyrics.map(l => {
+      const linesArr = this.getFlattenedLines(l);
+      return this.decideParts(l, globalParts, linesArr.length);
+    });
 
     // префиксные суммы стартовых оффсетов
     const offsets: number[] = [];
@@ -151,10 +162,16 @@ export class SongPageSelectService {
 
     return song.lyrics.map((lyric, i) => {
       const lines = this.splitArrayIntoParts(lyric, i, offsets[i], globalParts);
-      return { ...lyric, lines } as LyricForCasting;
+      // Create a fresh unique ID based on the payload so Angular's @for track detects deep changes 
+      // when we change split configuration for the same lyric chunk.
+      // Append `_split_${lines.length}` to ensure trackBy picks up the structural change.
+      return { 
+        ...lyric, 
+        uniqId: `${lyric.uniqId}_split_${lines.length}`,
+        lines 
+      } as LyricForCasting;
     });
   }
-
 
   public splitArrayIntoParts(
     lyric: Lyric,
@@ -162,16 +179,16 @@ export class SongPageSelectService {
     startOffset = 0,
     globalParts: SplitPartsCount
   ): LyricLine[] {
-    const arr = lyric.lines.map((l) => l.text);
+    const arr = this.getFlattenedLines(lyric);
     const parts = this.decideParts(lyric, globalParts, arr.length);
 
     // один блок — весь текст подряд
-    if (parts === 1) {
+    if (parts === 1 || arr.length === 0) {
       return [{
         rangeIndex: `0-${Math.max(0, arr.length - 1)}`,
         index: 0,                               // индекс части внутри этого lyric
         globalSongIndex: startOffset + 0,       // кумулятивный уровень
-        text: arr.join('<br />'),
+        text: arr.length > 0 ? arr.join('<br />') : lyric.lines.map(l => l.text).join('<br />'),
       }];
     }
 
@@ -190,7 +207,7 @@ export class SongPageSelectService {
     }
 
     // склеиваем часть → LyricLine
-    return buckets.map((lines, partIdx) => {
+    return buckets.filter(b => b.length > 0).map((lines, partIdx) => {
       const minIdx = Math.min(...lines.map(l => l.i));
       const maxIdx = Math.max(...lines.map(l => l.i));
       return {

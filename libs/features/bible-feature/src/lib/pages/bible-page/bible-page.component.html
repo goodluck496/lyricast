@@ -25,8 +25,8 @@
 
 
 
-        @if (booksLikeList) {
-          <div tourAnchor="bible:book">
+        <div tourAnchor="bible:book" style="flex: 1; height: 100%; min-height: 0; display: flex; flex-direction: column;">
+          @if (booksLikeList) {
             <lyri-list-box [items]="(bookList$ | async) || []"
                            [formControl]="bibleFormGroup.controls.book"
                            [tabIndex]="0"
@@ -55,9 +55,7 @@
                 </div>
               </ng-template>
             </lyri-list-box>
-          </div>
-        } @else {
-          <div tourAnchor="bible:book">
+          } @else {
             <lyri-dash-box [items]="(bookList$ | async) || []"
                            [formControl]="bibleFormGroup.controls.book"
                            [tabIndex]="0"
@@ -92,38 +90,29 @@
                 </div>
               </ng-template>
             </lyri-dash-box>
-          </div>
-        }
+          }
+        </div>
 
       </div>
     </div>
 
     @if (bibleFormGroup.controls.book.valueChanges | async) {
       <div class="list-search-wrapper list-search-wrapper__chapters">
-        <div class="list-search-block">
+        <div class="list-search-block" tourAnchor="bible:chapter">
           <div class="list-search-block__header">
             Главы
           </div>
 
           <lyri-list-box  [items]="(chapterList$ | async) || []" [formControl]="bibleFormGroup.controls.chapter"
                          [withSearch]="false" [tabIndex]="1">
-            <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search" let-elementIndex="elementIndex">
-              @if(elementIndex === 0) {
-                <div class="list-item__wrapper" tourAnchor="bible:chapter">
-                  <div class="list-item__title" [innerHTML]="data.title | highliter: search"></div>
-                </div>
-              } @else {
-                <div class="list-item__wrapper">
-                  <div class="list-item__title" [innerHTML]="data.title | highliter: search"></div>
-                </div>
-              }
-
+            <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
+              <div class="list-item__wrapper">
+                <div class="list-item__title" [innerHTML]="data.title | highliter: search"></div>
+              </div>
             </ng-template>
           </lyri-list-box>
-          </div>
         </div>
-
-
+      </div>
 
       @if ((sectionList$ | async); as sections) {
         <lyri-bible-chapter [sections]="sections" [tabIndex]="2" (startCasting)="onStartCasting()"></lyri-bible-chapter>

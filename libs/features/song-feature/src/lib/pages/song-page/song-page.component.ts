@@ -297,18 +297,19 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         }
       });
 
-    this._selectedSong$
+      this._selectedSong$
       .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
       .subscribe((newSong) => {
+        const splitCount =
+          newSong.lyrics[0]?.splitLinesCount || SPLIT_PARTS_COUNT.NONE;
+        
+        this.splitCount.set(splitCount);
+        this.songPageSelectSrv.setSplitCountValue(splitCount);
+
         ///////// todo сделать отдельной функцией
         this.songPageSelectSrv.selectSong(newSong);
 
         this.store.dispatch(SongActions[SongActionsEnum.pauseCasting]());
-
-        const splitCount =
-          newSong.lyrics[0]?.splitLinesCount || SPLIT_PARTS_COUNT.NONE;
-        this.splitCount.set(splitCount);
-        this.songPageSelectSrv.setSplitCountValue(splitCount);
 
         this.selectedSong$.next(newSong);
 

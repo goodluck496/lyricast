@@ -9,7 +9,7 @@
 <!--      <p-checkbox id="chorusAfterCouplet" inputId="chorusAfterCouplet" [binary]="true"-->
 <!--                  [(ngModel)]="chorusAfterCouplet"></p-checkbox>-->
       <label for="lyric-count">Разделить <br>на блоки:</label>
-      <p-select id="lyric-count" inputId="lyric-count" tourAnchor="songs:lyric-count" [(ngModel)]="splitCount"
+      <p-select id="lyric-count" inputId="lyric-count" tourAnchor="songs:lyric-count" [ngModel]="splitCount()"
                   (onChange)="onSelectSplitValue($event.value)"
                   [options]="SplitPartsCountOptions"></p-select>
     </div>

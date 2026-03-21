@@ -788,6 +788,7 @@ export class PixiSlideEditorV2Component
           if (neighbor instanceof NodeBase) moveToWorldIndex(node, targetIndex);
         }
       }
+      this.change$.next();
     };
 
     this.bus.commands$

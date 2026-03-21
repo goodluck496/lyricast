@@ -63,15 +63,26 @@ export class EditorSerializerService {
   serializeState(): SerializedState {
     const state = this.store.snapshot((s) => s);
 
-    const serializableNodes = Object.values(state.nodes)
+    const worldNodes = Array.from(this.world.children).filter(
+      (c): c is NodeBase => c instanceof NodeBase
+    );
+    const nodesArray = Object.values(state.nodes);
+    nodesArray.sort((a, b) => {
+      const idxA = worldNodes.indexOf(a.ref as NodeBase);
+      const idxB = worldNodes.indexOf(b.ref as NodeBase);
+      return idxA - idxB;
+    });
+
+    const serializableNodes = nodesArray
       .map((nodeState) => {
         const node = nodeState.ref as NodeBase;
-        const worldPos = node.getGlobalPosition();
+        const screenPos = node.getGlobalPosition();
+        const slidePos = this.world.toLocal(screenPos);
         const baseData: SerializedNodeBase = {
           id: node.id,
           type: nodeState.type as SerializedNode['type'],
-          x: worldPos.x, // Serialize position in world space to restore grouping correctly
-          y: worldPos.y,
+          x: slidePos.x, // Serialize position in world space to restore grouping correctly
+          y: slidePos.y,
           width: node.w,
           height: node.h,
           rotation: node.rotation,
@@ -80,14 +91,8 @@ export class EditorSerializerService {
 
         if (node instanceof TextNode) {
           return {
-            id: node.id,
+            ...baseData,
             type: 'text',
-            x: node.x,
-            y: node.y,
-            alpha: node.alpha,
-            width: node.w,
-            height: node.h,
-            rotation: node.rotation,
             textHtml: node.textHtml,
             style: node.style,
             padding: node.padding,

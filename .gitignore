@@ -62,3 +62,5 @@ sync_config.jsonc
 temp/*
 environments/*
 build/*
+
+screenshots/*

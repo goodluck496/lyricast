@@ -13,7 +13,7 @@ import { selectCastingPaused, SongActions, SongActionsEnum } from '@lyri-cast/so
 import { SongPageSelectService } from '../../pages/song-page/song-page-select.service';
 import { AppActions, selectOpenedWindow, SidebarService, WindowService, SettingsService, BridgeService, Pages, DEFAULT_CASTING_PAGE_CONFIG } from '@lyri-cast/common-browser';
 import { AppWindowTypes, APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
-import { map, Observable, firstValueFrom } from 'rxjs';
+import { map, Observable, firstValueFrom, BehaviorSubject, combineLatest, take } from 'rxjs';
 import { skip, filter } from 'rxjs/operators';
 import { SongsApiService } from '@lyri-cast/data-access-songs';
 import { CastingService } from '../../services/casting.service';
@@ -61,19 +61,24 @@ export class SongSidebarComponent {
   private readonly settingsSrv = inject(SettingsService);
   private readonly bridge = inject(BridgeService);
 
-  closeMenuItems$: Observable<MenuItem[]> = this.openedCastingWindow$.pipe(
-    map((isOpen) => [
+  isOpeningWindow = new BehaviorSubject<boolean>(false);
+
+  closeMenuItems$: Observable<MenuItem[]> = combineLatest([
+    this.openedCastingWindow$,
+    this.isOpeningWindow,
+  ]).pipe(
+    map(([isOpen, isOpening]) => [
       {
-        label: 'Открыть окно',
-        icon: 'pi pi-external-link',
+        label: isOpening ? 'Открываем...' : 'Открыть окно',
+        icon: isOpening ? 'pi pi-spin pi-spinner' : 'pi pi-external-link',
         command: () => this.onOpenEmptyWindow(),
-        disabled: isOpen,
+        disabled: isOpen || isOpening,
       },
       {
         label: 'Закрыть',
         icon: 'pi pi-times',
         command: () => this.onCloseCasting(),
-        disabled: !isOpen,
+        disabled: !isOpen || isOpening,
       },
     ])
   );
@@ -85,7 +90,13 @@ export class SongSidebarComponent {
       return;
     }
 
-    this.castingSrv.openCastingPageHandler(payload);
+    this.openedCastingWindow$.pipe(take(1)).subscribe((isOpen) => {
+      if (!isOpen) {
+        this.isOpeningWindow.next(true);
+        setTimeout(() => this.isOpeningWindow.next(false), 1200);
+      }
+      this.castingSrv.openCastingPageHandler(payload);
+    });
   }
 
   onPauseCasting(): void {
@@ -97,13 +108,15 @@ export class SongSidebarComponent {
   }
 
   async onOpenEmptyWindow(): Promise<void> {
-    if (!this.windowSrv.hasElectron) return;
+    if (!this.windowSrv.hasElectron || this.isOpeningWindow.value) return;
 
-    await this.settingsSrv.init();
-    const display = await firstValueFrom(this.settingsSrv.getDisplayForCasting());
-    if (!display) return;
+    this.isOpeningWindow.next(true);
+    try {
+      await this.settingsSrv.init();
+      const display = await firstValueFrom(this.settingsSrv.getDisplayForCasting());
+      if (!display) return;
 
-    this.store.dispatch(SongActions[SongActionsEnum.stopCasting]());
+      this.store.dispatch(SongActions[SongActionsEnum.stopCasting]());
 
     const procId = await this.windowSrv.electronContext.openWindow({
       ...DEFAULT_CASTING_PAGE_CONFIG,
@@ -121,10 +134,13 @@ export class SongSidebarComponent {
       )
     );
 
-    await this.windowSrv.electronContext.send({
-      event: APP_COMMON_ACTIONS.openPage,
-      payload: { path: [Pages.SONGS_FEATURE, Pages.CASTING] } as any,
-    });
+      await this.windowSrv.electronContext.send({
+        event: APP_COMMON_ACTIONS.openPage,
+        payload: { path: [Pages.SONGS_FEATURE, Pages.CASTING] } as any,
+      });
+    } finally {
+      this.isOpeningWindow.next(false);
+    }
   }
 
   onNavigateSlide(dir: 'prev' | 'next') {

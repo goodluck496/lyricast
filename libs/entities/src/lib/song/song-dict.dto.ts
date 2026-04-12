@@ -23,6 +23,8 @@ export interface SongDatabaseInfoDto {
   updatedBy?: string;
   /** Дата последнего обновления справочника (ISO) */
   updatedAt?: string;
+  /** Локальная версия справочника */
+  localVersion?: number;
 }
 
 /**

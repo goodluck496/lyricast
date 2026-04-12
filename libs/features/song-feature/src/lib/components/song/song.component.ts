@@ -85,8 +85,14 @@ export class SongComponent {
     this.selectLyricLine.emit([lyric, line, startPresentation]);
   }
 
+  private scrollTimeout: any;
+
   scrollToSelected() {
-    setTimeout(() => {
+    if (this.scrollTimeout) {
+      clearTimeout(this.scrollTimeout);
+    }
+    
+    this.scrollTimeout = setTimeout(() => {
       this.lyricItems().forEach((item) => {
         if (
           DomHandler.hasClass(item.nativeElement, 'lyric-item__line--selected')
@@ -101,7 +107,7 @@ export class SongComponent {
           });
         }
       });
-    }, 1000);
+    }, 300);
   }
 
   onTextChange(event: any) {

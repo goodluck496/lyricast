@@ -126,6 +126,8 @@ export class BibleChapterComponent implements OnInit {
     });
   }
 
+  private scrollTimeout: any;
+
   scrollToSelected() {
     if (this.isScrolled) {
       return;
@@ -163,12 +165,16 @@ export class BibleChapterComponent implements OnInit {
       }
     };
 
-    // Ждем рендер и применение класса selected
-    requestAnimationFrame(() => {
+    if (this.scrollTimeout) {
+      clearTimeout(this.scrollTimeout);
+    }
+
+    // Ждем рендер и применение класса selected. Даем задержку 300мс чтобы дать время на даблклик
+    this.scrollTimeout = setTimeout(() => {
       requestAnimationFrame(() => {
         tryScroll();
       });
-    });
+    }, 300);
   }
 
   isInRange(verseNumber: number): boolean {

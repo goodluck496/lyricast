@@ -20,16 +20,12 @@
 
   @if (db.version) {
     <div class="db-card__version-badge">
-      <p-badge
-        [value]="'v' + db.version"
-        severity="info"
-        size="small"
-        [pTooltip]="versionTooltipTmpl"
-        tooltipPosition="top"
-      ></p-badge>
-
       <ng-template #versionTooltipTmpl>
         <div class="version-tooltip-content version-tooltip-content--nowrap">
+          @if (db.localVersion && db.localVersion !== db.version) {
+            <div class="version-tooltip-line">Установлена: v{{ db.localVersion }}</div>
+            <div class="version-tooltip-line">Доступна: v{{ db.version }}</div>
+          }
           @if (db.updatedAt) {
             <div class="version-tooltip-line">
               Обновлено: {{ formatDate(db.updatedAt) }}
@@ -40,6 +36,14 @@
           }
         </div>
       </ng-template>
+
+      <p-badge
+        [value]="(db.localVersion && db.localVersion !== db.version) ? ('v' + db.localVersion + ' ➔ v' + db.version) : ('v' + db.version)"
+        [severity]="(db.localVersion && db.localVersion !== db.version) ? 'warn' : 'info'"
+        size="small"
+        [pTooltip]="versionTooltipTmpl"
+        tooltipPosition="top"
+      ></p-badge>
     </div>
   }
 
@@ -101,7 +105,10 @@
           Размер: {{ (db.sizeBytes / 1024 / 1024).toFixed(1) }} MB
         </div>
       }
-      @if (db.version !== null) {
+      @if (db.localVersion && db.localVersion !== db.version) {
+        <div class="version-tooltip-line">Установлена: v{{ db.localVersion }}</div>
+        <div class="version-tooltip-line">Доступна: v{{ db.version }}</div>
+      } @else if (db.version !== null && db.version !== undefined) {
         <div class="version-tooltip-line">Версия: v{{ db.version }}</div>
       }
       @if (db.songCount !== null) {

@@ -110,6 +110,7 @@ export class SongDictionariesManagerComponent implements OnInit, OnDestroy {
       sizeBytes: card.sizeBytes,
       songCount: card.songCount,
       version: card.remoteVersion ?? card.localVersion,
+      localVersion: card.localVersion,
       updatedAt: card.updatedAt,
       updatedBy: card.updatedBy,
     };

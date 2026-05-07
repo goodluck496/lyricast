@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { and, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { and, eq, ilike, inArray, sql, or } from 'drizzle-orm';
 import { type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE } from '../database/database.providers';
 import * as schema from '../../lib/db/schema';
@@ -280,8 +280,18 @@ export class SongsService {
 
     const filters = [eq(schema.songs.songBookId, songBookId)];
     if (q) {
-      const like = `%${q}%`;
-      filters.push(ilike(schema.songs.title, like));
+      const parsedNum = parseInt(q, 10);
+      const isNum = !isNaN(parsedNum) && parsedNum.toString() === q.trim();
+
+      const parts = q.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+      const like = parts.length > 0 ? `%${parts.join('%')}%` : `%${q}%`;
+
+      const searchConditions = [ilike(schema.songs.title, like)];
+      if (isNum) {
+        searchConditions.push(eq(schema.songs.number, parsedNum));
+      }
+
+      filters.push(or(...searchConditions));
     }
 
     const items = await this.db

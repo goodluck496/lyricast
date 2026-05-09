@@ -44,24 +44,13 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
+import {
+  PptxProgressDialogComponent,
+  PptxProgressState,
+  PptxProgressStep
+} from '../../components/pptx-progress-dialog/pptx-progress-dialog.component';
 
-type ImportStepStatus = 'pending' | 'active' | 'done' | 'error';
 
-type ImportProgressStep = {
-  label: string;
-  status: ImportStepStatus;
-  details?: string;
-};
-
-type ImportProgressState = {
-  busy: boolean;
-  fileName: string;
-  percent: number;
-  totalSlides: number;
-  processedSlides: number;
-  message: string;
-  steps: ImportProgressStep[];
-};
 
 @Component({
   selector: 'lyri-free-slide-main',
@@ -80,7 +69,9 @@ type ImportProgressState = {
     SplitButtonModule,
     DialogModule,
     ProgressBarModule,
+    ProgressBarModule,
     ConfirmPopupModule,
+    PptxProgressDialogComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './free-slide-main.component.html',
@@ -105,7 +96,7 @@ export class FreeSlideMainComponent implements OnInit {
   presentations$ = new BehaviorSubject<PresentationWithPreview[]>([]);
 
   showCreateFromSong = signal(false);
-  importProgress = signal<ImportProgressState | null>(null);
+  importProgress = signal<PptxProgressState | null>(null);
 
   newPresentationOptions = [
     {
@@ -277,7 +268,7 @@ export class FreeSlideMainComponent implements OnInit {
     return totalSlides > 0 ? Math.round(20 + (doneSlides / totalSlides) * 65) : 20;
   }
 
-  private updateImportStep(index: number, patch: Partial<ImportProgressStep>): void {
+  private updateImportStep(index: number, patch: Partial<PptxProgressStep>): void {
     const current = this.importProgress();
     if (!current) {
       return;
@@ -290,7 +281,7 @@ export class FreeSlideMainComponent implements OnInit {
     });
   }
 
-  private setImportProgress(patch: Partial<ImportProgressState>): void {
+  private setImportProgress(patch: Partial<PptxProgressState>): void {
     const current = this.importProgress();
     this.importProgress.set({
       busy: patch.busy ?? current?.busy ?? false,
@@ -327,31 +318,7 @@ export class FreeSlideMainComponent implements OnInit {
   }
 
   private async savePptxPreviewAsset(blob: Blob): Promise<string> {
-    const buffer = await blob.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    const chunkSize = 0x8000;
-    const chunks: string[] = [];
-
-    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-      const chunk = bytes.subarray(offset, offset + chunkSize);
-      let binary = '';
-
-      for (const byte of chunk) {
-        binary += String.fromCharCode(byte);
-      }
-
-      chunks.push(binary);
-    }
-
-    const asset = await new Promise<{ id: string }>((resolve, reject) => {
-      this.assetsApi.uploadAssetBase64({
-        originalName: `pptx-preview-${Date.now()}.jpg`,
-        mimeType: 'image/jpeg',
-        dataBase64: btoa(chunks.join('')),
-      }).subscribe({ next: resolve, error: reject });
-    });
-
-    return asset.id;
+    return this.assetStorage.saveAsset(blob, 'image/jpeg');
   }
 
   private async persistImportedImageAssets(state: SerializedState): Promise<SerializedState> {

@@ -398,7 +398,11 @@ export class FreeSlideComponent implements AfterViewInit {
         if (oldAssetId && oldAssetId !== newAssetId) {
           const isReused = this.isAssetUsedByPreviewOrContent(oldAssetId, targetSlideId);
           if (!isReused) {
-            await this.assetStorage.deleteAsset(oldAssetId);
+            try {
+              await this.assetStorage.deleteAsset(oldAssetId);
+            } catch (err) {
+              console.warn('[FreeSlide] Failed to delete old preview asset', err);
+            }
           }
         }
 
@@ -523,7 +527,11 @@ export class FreeSlideComponent implements AfterViewInit {
 
       if (!isAssetReused) {
         // Only delete if it's not reused
-        await this.assetStorage.deleteAsset(slideToDelete.previewAssetId);
+        try {
+          await this.assetStorage.deleteAsset(slideToDelete.previewAssetId);
+        } catch (err) {
+          console.warn('[FreeSlide] Failed to delete preview asset on slide deletion', err);
+        }
       }
     }
 

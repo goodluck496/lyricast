@@ -13,21 +13,6 @@ export class PptxFacadeService {
   }
 
   exportPptx(presentationName: string, states: SerializedState[]) {
-    this.apiService.exportPptx(presentationName, states).subscribe({
-      next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${presentationName}.pptx`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        // Electron/Chromium can still be reading the object URL after click.
-        setTimeout(() => window.URL.revokeObjectURL(url), 5000);
-      },
-      error: (err) => {
-        console.error('Failed to export PPTX', err);
-      }
-    });
+    return this.apiService.exportPptx(presentationName, states);
   }
 }

@@ -1,8 +1,10 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   DestroyRef,
   inject,
+  signal,
   viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -50,6 +52,7 @@ import { TabsModule } from 'primeng/tabs';
 import { SlideTransitionEditorComponent } from '../slide-transition-editor/slide-transition-editor.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PptxFacadeService } from '../../services/pptx-facade.service';
+import { PptxProgressDialogComponent, PptxProgressState } from '../../components/pptx-progress-dialog/pptx-progress-dialog.component';
 
 @Component({
   selector: 'lyri-free-slide-sidebar',
@@ -64,6 +67,7 @@ import { PptxFacadeService } from '../../services/pptx-facade.service';
     FormsModule,
     TabsModule,
     SlideTransitionEditorComponent,
+    PptxProgressDialogComponent,
   ],
   templateUrl: './free-slide-sidebar.component.html',
   styleUrl: './free-slide-sidebar.component.scss',
@@ -78,6 +82,8 @@ export class FreeSlideSidebarComponent {
   private applyingLoadedSettings = false;
 
   slideTransitionEditor = viewChild(SlideTransitionEditorComponent);
+  exportProgress = signal<PptxProgressState | null>(null);
+  private cdr = inject(ChangeDetectorRef);
 
   openedCastingWindow$ = this.store.select(selectOpenedWindow).pipe(
     map((e) => {
@@ -161,22 +167,102 @@ export class FreeSlideSidebarComponent {
       if (pres && pres.title) presentationName = pres.title;
     });
 
-    const saveCompleted = firstValueFrom(
-      this.slideService.saveCompleted$.pipe(
-        take(1),
-        timeout(3000),
-        catchError(() => of(undefined))
-      )
-    );
-    this.slideService.requestSaveCurrentSlide$.next();
-    await saveCompleted;
+    this.exportProgress.set({
+      busy: true,
+      fileName: presentationName,
+      percent: 10,
+      message: 'Подготовка к экспорту...',
+      steps: [
+        { label: 'Чтение данных', status: 'active' },
+        { label: 'Подготовка слайдов', status: 'pending' },
+        { label: 'Экспорт PPTX', status: 'pending' },
+      ],
+    });
+    this.cdr.markForCheck();
 
-    const slides = Array.from(this.slideService.slidesMap.values());
-    const states = slides
-      .sort((a, b) => a.index - b.index)
-      .map(slide => JSON.parse(slide.content));
+    try {
+      const saveCompleted = firstValueFrom(
+        this.slideService.saveCompleted$.pipe(
+          take(1),
+          timeout(3000),
+          catchError(() => of(undefined))
+        )
+      );
+      this.slideService.requestSaveCurrentSlide$.next();
+      await saveCompleted;
 
-    this.pptxFacade.exportPptx(presentationName, states);
+      this.exportProgress.update(prev => prev ? {
+        ...prev,
+        percent: 30,
+        message: 'Обработка слайдов...',
+        steps: [
+          { label: 'Чтение данных', status: 'done' },
+          { label: 'Подготовка слайдов', status: 'active' },
+          { label: 'Экспорт PPTX', status: 'pending' },
+        ]
+      } : prev);
+
+      const slides = Array.from(this.slideService.slidesMap.values());
+      const states = slides
+        .sort((a, b) => a.index - b.index)
+        .map(slide => JSON.parse(slide.content));
+
+      this.exportProgress.update(prev => prev ? {
+        ...prev,
+        percent: 60,
+        message: 'Генерация файла презентации (это может занять некоторое время)...',
+        steps: [
+          { label: 'Чтение данных', status: 'done' },
+          { label: 'Подготовка слайдов', status: 'done' },
+          { label: 'Экспорт PPTX', status: 'active' },
+        ]
+      } : prev);
+
+      const blob = await firstValueFrom(this.pptxFacade.exportPptx(presentationName, states));
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${presentationName}.pptx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+
+      this.exportProgress.update(prev => prev ? {
+        ...prev,
+        busy: false,
+        percent: 100,
+        message: 'Экспорт завершён',
+        steps: [
+          { label: 'Чтение данных', status: 'done' },
+          { label: 'Подготовка слайдов', status: 'done' },
+          { label: 'Экспорт PPTX', status: 'done' },
+        ]
+      } : prev);
+
+      setTimeout(() => {
+        this.closeExportProgress();
+      }, 700);
+
+    } catch (err) {
+      console.error('Failed to export PPTX', err);
+      this.exportProgress.update(prev => prev ? {
+        ...prev,
+        busy: false,
+        percent: 100,
+        message: 'Экспорт завершился с ошибкой',
+        steps: prev.steps.map(s => s.status === 'active' ? { ...s, status: 'error' } : s)
+      } : prev);
+    }
+  }
+
+  closeExportProgress() {
+    const current = this.exportProgress();
+    if (current && !current.busy) {
+      this.exportProgress.set(null);
+      this.cdr.markForCheck();
+    }
   }
 
   ngOnInit(): void {

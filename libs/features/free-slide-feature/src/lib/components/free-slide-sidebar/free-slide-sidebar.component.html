@@ -69,6 +69,14 @@
   </p-tabs>
 </div>
 
+@if (exportProgress(); as progress) {
+  <lyri-pptx-progress-dialog
+    header="Экспорт PPTX"
+    [progress]="progress"
+    (close)="closeExportProgress()"
+  ></lyri-pptx-progress-dialog>
+}
+
 
 
 

@@ -20,7 +20,11 @@ async function bootstrap() {
     const app = await NestFactory.create(AssetDomainModule, adapter, {
       logger: ['error', 'warn', 'log'],
       cors: false, // ходим через main-прокси
+      bodyParser: false,
     });
+
+    app.use(express.json({ limit: '50mb' }));
+    app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
     app.useGlobalPipes(
       new ValidationPipe({ transform: true, whitelist: true })

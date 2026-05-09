@@ -53,9 +53,27 @@ export class AssetStorageService {
       }
       fileToUpload = new File([blobOrFile], filename, { type: mimeType });
     }
-    console.log('files ot upload ', fileToUpload);
-    const asset$ = this.assetsApiService.uploadAsset(fileToUpload).pipe(map((dto) => dto.id));
+    const asset$ = this.assetsApiService
+      .uploadAssetBase64({
+        originalName: fileToUpload.name,
+        mimeType: fileToUpload.type || mimeType || 'application/octet-stream',
+        dataBase64: await this.blobToBase64(fileToUpload),
+      })
+      .pipe(map((dto) => dto.id));
     return firstValueFrom(asset$);
+  }
+
+  private async blobToBase64(blob: Blob): Promise<string> {
+    const buffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = '';
+
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+
+    return btoa(binary);
   }
 
   /**

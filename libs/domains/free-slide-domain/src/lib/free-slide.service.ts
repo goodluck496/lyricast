@@ -65,6 +65,7 @@ export class FreeSlideService {
           name: slideDto.name,
           content: slideDto.content,
           index: slideDto.index ?? index,
+          previewAssetId: slideDto.previewAssetId ?? '',
           presentationId: presentationId,
         }));
         tx.insert(slides).values(newSlides).run();

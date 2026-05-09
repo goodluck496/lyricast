@@ -47,6 +47,7 @@ import { FormsModule } from '@angular/forms';
 import { TabsModule } from 'primeng/tabs';
 import { SlideTransitionEditorComponent } from '../slide-transition-editor/slide-transition-editor.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { PptxFacadeService } from '../../services/pptx-facade.service';
 
 @Component({
   selector: 'lyri-free-slide-sidebar',
@@ -148,6 +149,16 @@ export class FreeSlideSidebarComponent {
   onFreezeToggle(event: any) {
     const frozen = !!event.checked;
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.setFreezeCasting]({ frozen }));
+  }
+
+  private readonly pptxFacade = inject(PptxFacadeService);
+
+  onExportPptx() {
+    let presentationName = 'Presentation';
+    this.slideService.currentPresentation$.pipe(take(1)).subscribe((pres: any) => {
+      if (pres && pres.title) presentationName = pres.title;
+    });
+    this.pptxFacade.exportPptx(presentationName);
   }
 
   ngOnInit(): void {

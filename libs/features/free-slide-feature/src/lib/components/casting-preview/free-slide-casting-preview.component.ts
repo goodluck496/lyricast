@@ -9,9 +9,9 @@ import { BehaviorSubject, combineLatest, Subscription } from 'rxjs';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { selectFreeSlideNavigateState, selectFreeSlideSelected } from '@lyri-cast/free-slide-store';
-import { filterEmpty } from '@lyri-cast/common';
 import { AssetStorageService } from '@lyri-cast/form';
 import { FreeSlideService } from '../../pages/free-slide-page/free-slide.service';
+import { TextSlidePreviewHelper } from '../../utils/text-slide-preview.helper';
 
 @Component({
   selector: 'lyri-free-slide-casting-preview',
@@ -44,7 +44,7 @@ export class FreeSlideCastingPreviewComponent implements OnDestroy {
     this.sub.add(
       this.slideService.slides$.subscribe((slides) => {
         for (const s of slides) {
-          const assetId = (s as any)?.previewAssetId as string | undefined;
+          const assetId = s.previewAssetId;
           if (!assetId) continue;
           void this.prefetch(assetId);
         }
@@ -54,7 +54,7 @@ export class FreeSlideCastingPreviewComponent implements OnDestroy {
     this.sub.add(
       combineLatest([live$, navigate$, selected$]).subscribe(
         async ([liveUrl, nav, sel]) => {
-          const slide = (nav?.slide ?? sel) as any;
+          const slide = nav?.slide ?? sel;
           if (!slide) {
             this.previewUrl$.next(null);
             return;
@@ -67,7 +67,17 @@ export class FreeSlideCastingPreviewComponent implements OnDestroy {
             return;
           }
 
-          const assetId = slide.previewAssetId as string | undefined;
+          const contentPreviewUrl = TextSlidePreviewHelper.dataUrlFromContent(
+            slide.content
+          );
+          if (contentPreviewUrl) {
+            this.previewUrl$.next(
+              this.sanitizer.bypassSecurityTrustUrl(contentPreviewUrl)
+            );
+            return;
+          }
+
+          const assetId = slide.previewAssetId;
           if (!assetId) {
             this.previewUrl$.next(null);
             return;
@@ -86,9 +96,9 @@ export class FreeSlideCastingPreviewComponent implements OnDestroy {
 
           // Ensure the same slide is still selected and we are not showing live preview.
           const currentLive = this.slideService.livePreviewObjectUrl$.value;
-          const currentSel = (nav?.slide ?? sel) as any;
+          const currentSel = nav?.slide ?? sel;
           if (currentLive) return;
-          if ((currentSel as any)?.previewAssetId !== assetId) return;
+          if (currentSel?.previewAssetId !== assetId) return;
 
           if (url) {
             const safe = this.sanitizer.bypassSecurityTrustUrl(url);

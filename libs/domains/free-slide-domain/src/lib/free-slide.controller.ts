@@ -9,13 +9,26 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  Res,
+  BadRequestException,
 } from '@nestjs/common';
-import { PresentationDto } from '@lyri-cast/entities';
+import { PresentationDto, SerializedState } from '@lyri-cast/entities';
 import { FreeSlideService, PresentationWithSlides } from './free-slide.service';
+import { PptxService } from './pptx/pptx.service';
+import type { Response } from 'express';
+
+type PptxImportPayload = {
+  fileName: string;
+  mimeType: string;
+  dataBase64: string;
+};
 
 @Controller('free-slide')
 export class FreeSlideController {
-  constructor(private readonly freeSlideService: FreeSlideService) {}
+  constructor(
+    private readonly freeSlideService: FreeSlideService,
+    private readonly pptxService: PptxService
+  ) {}
 
   @Get()
   async getAll(): Promise<PresentationWithSlides[]> {
@@ -64,6 +77,45 @@ export class FreeSlideController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(@Param('id') id: string): Promise<void> {
     await this.freeSlideService.delete(id);
+  }
+
+  @Post('pptx/import')
+  async importPptx(@Body() body: PptxImportPayload): Promise<SerializedState[]> {
+    if (!body?.dataBase64) {
+      throw new BadRequestException('PPTX file payload is missing');
+    }
+
+    const buffer = Buffer.from(body.dataBase64, 'base64');
+    if (buffer.length < 4 || buffer[0] !== 0x50 || buffer[1] !== 0x4b) {
+      throw new BadRequestException('PPTX payload is not a ZIP package');
+    }
+
+    return this.pptxService.importPptx(buffer);
+  }
+
+  @Post('pptx/export')
+  async exportPptx(
+    @Body() body: { presentationName: string; slides: SerializedState[] },
+    @Res() res: Response
+  ): Promise<void> {
+    const { presentationName, slides } = body;
+    const buffer = await this.pptxService.exportPptx(presentationName, slides);
+    if (buffer.length < 4 || buffer[0] !== 0x50 || buffer[1] !== 0x4b) {
+      throw new BadRequestException('PPTX export did not produce a ZIP package');
+    }
+
+    const encodedName = encodeURIComponent(presentationName).replace(/'/g, '%27');
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    );
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename*=UTF-8''${encodedName}.pptx`
+    );
+    res.end(buffer);
   }
 }
 

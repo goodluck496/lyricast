@@ -39,7 +39,21 @@ export class AssetDomainService {
 
   async create(file: UploadedMulterFile): Promise<Asset> {
     console.log('file?,',file);
-    const hash = createHash('sha256').update(file.buffer as any).digest('hex');
+    return this.createFromBuffer({
+      buffer: file.buffer as Buffer,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    });
+  }
+
+  async createFromBuffer(input: {
+    buffer: Buffer;
+    originalName: string;
+    mimeType: string;
+    size: number;
+  }): Promise<Asset> {
+    const hash = createHash('sha256').update(input.buffer).digest('hex');
 
     const existingAsset = await this.findOne(hash);
     if (existingAsset) {
@@ -47,14 +61,14 @@ export class AssetDomainService {
     }
 
     const filePath = path.join(this.assetsPath, hash);
-    await fs.writeFile(filePath, file.buffer as any);
+    await fs.writeFile(filePath, input.buffer);
 
     const newAsset: NewAsset = {
       id: hash,
-      originalName: file.originalname,
+      originalName: input.originalName,
       filePath: filePath,
-      mimeType: file.mimetype,
-      size: file.size,
+      mimeType: input.mimeType,
+      size: input.size,
       createdAt: new Date(),
     };
 

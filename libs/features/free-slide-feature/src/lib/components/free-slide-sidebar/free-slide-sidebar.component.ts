@@ -15,9 +15,11 @@ import {
   debounceTime,
   filter,
   first,
+  firstValueFrom,
   map,
   of,
   take,
+  timeout,
   withLatestFrom,
 } from 'rxjs';
 import {
@@ -153,12 +155,28 @@ export class FreeSlideSidebarComponent {
 
   private readonly pptxFacade = inject(PptxFacadeService);
 
-  onExportPptx() {
+  async onExportPptx() {
     let presentationName = 'Presentation';
     this.slideService.currentPresentation$.pipe(take(1)).subscribe((pres: any) => {
       if (pres && pres.title) presentationName = pres.title;
     });
-    this.pptxFacade.exportPptx(presentationName);
+
+    const saveCompleted = firstValueFrom(
+      this.slideService.saveCompleted$.pipe(
+        take(1),
+        timeout(3000),
+        catchError(() => of(undefined))
+      )
+    );
+    this.slideService.requestSaveCurrentSlide$.next();
+    await saveCompleted;
+
+    const slides = Array.from(this.slideService.slidesMap.values());
+    const states = slides
+      .sort((a, b) => a.index - b.index)
+      .map(slide => JSON.parse(slide.content));
+
+    this.pptxFacade.exportPptx(presentationName, states);
   }
 
   ngOnInit(): void {

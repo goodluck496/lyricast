@@ -110,20 +110,8 @@ export class PptxExportAdapterService implements IPptxExporter {
       }
     }
 
-    const result = await pptx.write({ outputType: 'arraybuffer' });
-    if (result instanceof ArrayBuffer) {
-      return Buffer.from(result);
-    }
-
-    if (result instanceof Uint8Array) {
-      return Buffer.from(result.buffer, result.byteOffset, result.byteLength);
-    }
-
-    if (result instanceof Blob) {
-      return Buffer.from(await result.arrayBuffer());
-    }
-
-    return Buffer.from(result);
+    const result = await pptx.write({ outputType: 'nodebuffer' });
+    return result as Buffer;
   }
 
   private ensurePositiveSize(value: number): number {

@@ -6,9 +6,9 @@
   <ng-container page-content>
     <div class="flex flex-column" style="height: 100%; width: 100%;">
       <div class="flex flex-h-center">
-        <button pButton pRipple (click)="onCreateNew()" severity="success">Новая презентация</button>
-        <button pButton pRipple (click)="onOpenCreateFromSong()">Создать из песни</button>
-        <button pButton pRipple disabled>Создать из Книги</button>
+        <p-splitButton label="Новая презентация" (onClick)="onCreateNew()" [model]="newPresentationOptions" severity="success"></p-splitButton>
+        <button pButton pRipple disabled class="ml-2">Создать из Книги</button>
+        <input type="file" id="pptx-import-input" style="display: none" accept=".pptx" (change)="onImportPptxFile($event)">
       </div>
       @if (showCreateFromSong()) {
         <lyri-create-from-song-dialog
@@ -69,10 +69,18 @@
 
       </ng-scrollbar>
     </div>
+    @if (importProgress(); as progress) {
+      <lyri-pptx-progress-dialog
+        header="Импорт PPTX"
+        [progress]="progress"
+        (close)="closeImportProgress()"
+      ></lyri-pptx-progress-dialog>
+    }
   </ng-container>
   <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR">
     PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR
   </ng-template>
 
 
+  <p-confirmpopup></p-confirmpopup>
 </lyri-page-container>

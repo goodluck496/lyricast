@@ -4,27 +4,29 @@
   <div class="control-sidebar__actions">
 
     @if ((castingIsPaused$ | async)) {
-      <button pButton class="flex flex-w-center flex-h-center" (click)="onStartCasting()" severity="success" tourAnchor="bible:cast-start">
-        <lyri-icon name="play" style="width: 14px; height: 14px"></lyri-icon>
-        Транслировать
-      </button>
+      <p-splitButton
+        label="Транслировать"
+        icon="pi pi-play"
+        (onClick)="onStartCasting()"
+        [disabled]="isOpeningWindow | async"
+        [model]="(closeMenuItems$ | async) || []"
+        severity="success"
+        tourAnchor="bible:cast-start"
+        styleClass="w-full"
+      ></p-splitButton>
     } @else {
-      <button pButton class="flex flex-w-center flex-h-center" (click)="onPauseCasting()" severity="danger" tourAnchor="bible:cast-stop">
-        <lyri-icon name="stop" style="width: 14px; height: 14px"></lyri-icon>
-        Остановить
-      </button>
+      <p-splitButton
+        label="Остановить"
+        icon="pi pi-stop"
+        (onClick)="onPauseCasting()"
+        [disabled]="isOpeningWindow | async"
+        [model]="(closeMenuItems$ | async) || []"
+        severity="danger"
+        tourAnchor="bible:cast-stop"
+        styleClass="w-full"
+      ></p-splitButton>
     }
 
-    <div class="flex">
-      <button
-        pButton
-        severity="danger"
-        [disabled]="(openedCastingWindow$ | async) === false"
-        (click)="onCloseCasting()"
-      >
-        Закрыть
-      </button>
-    </div>
   </div>
 
   <lyri-navigator-feature class="control-sidebar__navigator" feature="bible" />

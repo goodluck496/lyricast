@@ -11,6 +11,7 @@ import { Slide } from '@lyri-cast/entities';
 import { AssetStorageService } from '@lyri-cast/form';
 import { BehaviorSubject } from 'rxjs';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import { TextSlidePreviewHelper } from '../../utils/text-slide-preview.helper';
 
 @Component({
   selector: 'lyri-preview-slide',
@@ -31,6 +32,17 @@ export class PreviewSlideComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['slide']) {
+      const contentPreviewUrl = TextSlidePreviewHelper.dataUrlFromContent(
+        this.slide().content,
+        { normalizeLargeSceneFont: true }
+      );
+      if (contentPreviewUrl) {
+        this.previewUrl$.next(
+          this.sanitizer.bypassSecurityTrustUrl(contentPreviewUrl)
+        );
+        return;
+      }
+
       const assetId = this.slide().previewAssetId;
       if (assetId) {
         this.assetStorage.getAssetObjectURL(assetId).then((url) => {

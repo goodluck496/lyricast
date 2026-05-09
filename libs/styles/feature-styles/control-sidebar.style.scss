@@ -20,8 +20,23 @@
     max-height: 15%;
     min-height: 15%;
     width: 100%;
+    display: flex;
+    flex-direction: column;
 
-    .p-button {
+    p-splitbutton, p-splitButton, .p-splitbutton {
+      width: 100%;
+      display: flex;
+
+      .p-button {
+        width: auto;
+      }
+
+      .p-button:first-of-type {
+        flex: 1;
+      }
+    }
+
+    > .p-button {
       width: 100%;
     }
   }

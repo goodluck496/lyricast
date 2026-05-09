@@ -152,7 +152,7 @@ export default class App {
 
     const openedWindow = App.openedWindows[windowType];
     openedWindow.loadURL(urlObject.href).then(() => {
-      if (windowType === AppWindowTypes.MAIN && !environment.production) {
+      if (windowType === AppWindowTypes.MAIN && !App.application.isPackaged) {
         App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
       }
     });
@@ -184,7 +184,7 @@ export default class App {
           // App.openedWindows.MAIN.show();
           App.openedWindows.MAIN.focus();
 
-          if (!environment.production) {
+          if (!App.application.isPackaged) {
             // открываем devTools для отладки//
             App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();
           }

@@ -2,6 +2,7 @@ import {
   CallHandler,
   Controller,
   Delete,
+  Body,
   ExecutionContext,
   Get,
   HttpCode,
@@ -33,6 +34,12 @@ type UploadedMulterFile = Express.Multer.File;
 type ParsedMultipart = {
   file: Express.Multer.File;
   fields: Record<string, string>;
+};
+
+type UploadAssetBase64Payload = {
+  originalName: string;
+  mimeType: string;
+  dataBase64: string;
 };
 
 function parseMultipartToMulterFile(
@@ -143,6 +150,17 @@ export class AssetDomainController {
     // бай-пасс если multer  не заработает с Express 5+
     // const { file, fields } = await parseMultipartToMulterFile(req);
     return this.assetDomainService.create(file);
+  }
+
+  @Post('upload-base64')
+  async uploadBase64(@Body() body: UploadAssetBase64Payload): Promise<Asset> {
+    const buffer = Buffer.from(body.dataBase64, 'base64');
+    return this.assetDomainService.createFromBuffer({
+      buffer,
+      originalName: body.originalName,
+      mimeType: body.mimeType,
+      size: buffer.length,
+    });
   }
 
   @Get()

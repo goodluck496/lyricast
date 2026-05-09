@@ -48,7 +48,7 @@ export function browserScopedAuthInterceptor(
       }
     })();
 
-    return allowedPaths.some((p) => normalizedPath.startsWith(p));
+    return allowedPaths.some((p) => normalizedPath.includes(p));
   })();
 
   if (!isDictionarySyncRequest) {

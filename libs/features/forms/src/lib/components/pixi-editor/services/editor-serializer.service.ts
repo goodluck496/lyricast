@@ -107,6 +107,7 @@ export class EditorSerializerService {
             type: 'image',
             assetId: node.assetId, // Store asset ID
             url: node.url, // Store external URL
+            imageFit: node.imageFit,
           } as SerializedImageNode;
         }
         if (node instanceof VideoNode) {
@@ -282,7 +283,10 @@ export class EditorSerializerService {
             url: nodeData.url, // Pass external URL
             x: absoluteX,
             y: absoluteY,
-            options: options,
+            options: {
+              ...options,
+              imageFit: nodeData.imageFit,
+            },
           });
           break;
         case 'video':

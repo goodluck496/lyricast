@@ -120,8 +120,10 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       fontSize: size,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
-        '.pixi-html-text, .pixi-html-text * { margin: 0; white-space: normal !important; word-break: normal !important; overflow-wrap: break-word !important; }',
-        ' ul, ol { margin: 0; padding-left: 0; list-style-position: inside; }',
+        '* { margin: 0; padding: 0; }',
+        'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
+        'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
+        'li { margin: 0; padding: 0; }',
       ],
     });
 
@@ -202,8 +204,10 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       lineHeight: this.lastCalculatedFontSize * this.style.lineHeight,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
-        '.pixi-html-text, .pixi-html-text p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
-        '.pixi-html-text ul, .pixi-html-text ol { margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
+        '* { margin: 0; padding: 0; }',
+        'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
+        'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
+        'li { margin: 0; padding: 0; }',
       ],
     });
 
@@ -291,8 +295,10 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       fontSize: size,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
-        '.pixi-html-text, .pixi-html-text p { margin: 0; white-space: normal; word-break: normal; overflow-wrap: break-word; }',
-        '.pixi-html-text ul, .pixi-html-text ol { margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
+        '* { margin: 0; padding: 0; }',
+        'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
+        'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
+        'li { margin: 0; padding: 0; }',
       ],
     });
 

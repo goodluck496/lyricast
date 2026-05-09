@@ -6,6 +6,7 @@ export class ImageNode extends NodeBase {
   public sprite: Sprite;
   public assetId?: string; // For locally stored assets
   public url?: string; // For external URLs
+  public imageFit: 'contain' | 'stretch' = 'contain';
 
   get imageUrl(): string | undefined {
     // For serialization, we prioritize assetId, otherwise use url
@@ -64,9 +65,14 @@ export class ImageNode extends NodeBase {
     this.drawHandles();
     if (this.sprite.texture && this.sprite.texture.width > 0 && this.sprite.texture.height > 0) {
       const { width, height } = this.sprite.texture;
-      const scale = Math.min(this.w / width, this.h / height);
       this.sprite.position.set(this.w / 2, this.h / 2);
-      this.sprite.scale.set(scale);
+      if (this.imageFit === 'stretch') {
+        this.sprite.width = this.w;
+        this.sprite.height = this.h;
+      } else {
+        const scale = Math.min(this.w / width, this.h / height);
+        this.sprite.scale.set(scale);
+      }
     } else {
       // Если текстура еще не загружена или имеет нулевые размеры, используем дефолтные
       this.sprite.position.set(this.w / 2, this.h / 2);

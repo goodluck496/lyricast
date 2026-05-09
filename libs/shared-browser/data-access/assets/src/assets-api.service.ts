@@ -3,6 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { AssetDto } from '@lyri-cast/entities';
 import { Observable } from 'rxjs';
 
+export type UploadAssetBase64Payload = {
+  originalName: string;
+  mimeType: string;
+  dataBase64: string;
+};
+
 @Injectable({ providedIn: 'root' })
 export class AssetsApiService {
   private readonly http = inject(HttpClient);
@@ -22,6 +28,10 @@ export class AssetsApiService {
     formData.append('file', file);
     // The full URL will be svc://asset-service/assets/upload
     return this.http.post<AssetDto>(`${this.baseUrl}/upload`, formData);
+  }
+
+  uploadAssetBase64(payload: UploadAssetBase64Payload): Observable<AssetDto> {
+    return this.http.post<AssetDto>(`${this.baseUrl}/upload-base64`, payload);
   }
 
   deleteAsset(id: string): Observable<void> {

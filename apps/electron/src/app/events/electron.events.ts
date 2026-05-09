@@ -54,10 +54,23 @@ ipcMain.handle(
         fullscreenable: true,
         fullscreen: true,
         alwaysOnTop: true,
-        // focusable: false,
         ...args,
+        backgroundColor: '#000000',
+        show: true,
+        frame: false, // Нужно для правильной работы opacity на Windows
+        opacity: 0,   // Открываем окно полностью прозрачным
       });
       App.loadWindow(args.type);
+
+      App.openedWindows[args.type].once(ElectronAppEvents.READY_TO_SHOW, () => {
+        setTimeout(() => {
+          if (App.openedWindows[args.type]) {
+            // Делаем окно видимым (отменяем прозрачность) только когда оно 100% готово
+            App.openedWindows[args.type].setOpacity(1);
+          }
+        }, 1000); // Дадим чуть больше времени на отрисовку Angular
+      });
+
       // App.openedWindows[args.type].menuBarVisible = true;
       App.openedWindows[args.type].menuBarVisible = false;
 

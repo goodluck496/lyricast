@@ -1,0 +1,16 @@
+.pptx-import-progress {
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  &__message {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+  }
+  &__meta {
+    margin-top: 0.5rem;
+    color: var(--text-color-secondary);
+  }
+}

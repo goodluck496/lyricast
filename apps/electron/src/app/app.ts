@@ -370,11 +370,30 @@ export default class App {
     App.openedWindows[
       windowType
     ].webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      const isAppResponse = (() => {
+        try {
+          const url = new URL(details.url);
+          const allowedPorts = [
+            rendererAppPort.toString(),
+            App.fileServerPort?.toString(),
+          ].filter((port): port is string => Boolean(port));
+
+          return url.hostname === 'localhost' && allowedPorts.includes(url.port);
+        } catch {
+          return false;
+        }
+      })();
+
+      if (!isAppResponse) {
+        callback({ responseHeaders: details.responseHeaders });
+        return;
+      }
+
       callback({
         responseHeaders: {
           ...details.responseHeaders,
           'Content-Security-Policy': [
-            "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.youtube-nocookie.com https://player.vimeo.com; frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com;",
+            "script-src 'self' 'unsafe-eval' 'unsafe-inline'; worker-src 'self' blob:; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com;",
           ],
         },
       });

@@ -14,12 +14,17 @@ import {
   PAGE_CONTAINER_TEMPLATES,
   Pages,
 } from '@lyri-cast/common-browser';
-import { PrimeTemplate } from 'primeng/api';
+import { ConfirmationService, PrimeTemplate } from 'primeng/api';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { FreeSlideApiService } from '@lyri-cast/shared-browser/data-access/free-slide';
 import { BehaviorSubject, first, firstValueFrom } from 'rxjs';
-import { Presentation, SerializedState } from '@lyri-cast/entities';
+import {
+  Presentation,
+  PresentationDto,
+  SerializedState,
+  SlideDto,
+} from '@lyri-cast/entities';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { NgScrollbarModule } from 'ngx-scrollbar';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -29,28 +34,22 @@ import { AssetsApiService } from '@lyri-cast/shared-browser/data-access/assets';
 import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { CreateFromSongDialogComponent } from '../../components/create-from-song-dialog/create-from-song-dialog.component';
-import { PresentationDto, SlideDto } from '@lyri-cast/entities';
-
-export type PresentationWithPreview = Presentation & {
-  inEdit: boolean;
-  previewUrl?: string;
-};
-
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { PptxFacadeService } from '../../services/pptx-facade.service';
 import { TextSlidePreviewHelper } from '../../utils/text-slide-preview.helper';
 import { DialogModule } from 'primeng/dialog';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { ConfirmationService } from 'primeng/api';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import {
   PptxProgressDialogComponent,
   PptxProgressState,
-  PptxProgressStep
+  PptxProgressStep,
 } from '../../components/pptx-progress-dialog/pptx-progress-dialog.component';
 
-
+export type PresentationWithPreview = Presentation & {
+  inEdit: boolean;
+  previewUrl?: string;
+};
 
 @Component({
   selector: 'lyri-free-slide-main',
@@ -102,17 +101,19 @@ export class FreeSlideMainComponent implements OnInit {
     {
       label: 'Создать из песни',
       icon: 'pi pi-music',
-      command: () => this.onOpenCreateFromSong()
+      command: () => this.onOpenCreateFromSong(),
     },
     {
       label: 'Импорт PPTX',
       icon: 'pi pi-file-import',
       command: () => {
         // Find the hidden input and click it
-        const input = document.getElementById('pptx-import-input') as HTMLInputElement;
+        const input = document.getElementById(
+          'pptx-import-input'
+        ) as HTMLInputElement;
         if (input) input.click();
-      }
-    }
+      },
+    },
   ];
 
   onImportPptxFile(event: Event) {
@@ -123,37 +124,6 @@ export class FreeSlideMainComponent implements OnInit {
       void this.importPptxFile(file, filename);
       input.value = '';
       return;
-
-      this.pptxFacade.importPptx(file).subscribe({
-        next: async (states) => {
-          const preparedStates = await Promise.all(
-            states.map((state) => this.persistImportedImageAssets(state))
-          );
-          const newSlides: SlideDto[] = await Promise.all(preparedStates.map(async (state, index) => ({
-            name: `Слайд ${index + 1}`,
-            content: JSON.stringify(state),
-            index,
-            id: '',
-            createdAt: 0,
-            previewAssetId: await this.generatePptxImportPreview(state) ?? '',
-            groupId: 0
-          })));
-
-          this.api.create({
-            title: filename,
-            slides: newSlides
-          }).subscribe((data) => {
-            this.router.navigate(['..', FreeSlidePages.SLIDE, data.id], {
-              relativeTo: this.route,
-            });
-          });
-        },
-        error: (err) => {
-          console.error('Failed to import PPTX', err);
-        }
-      });
-      // Reset input
-      input.value = '';
     }
   }
 
@@ -207,7 +177,7 @@ export class FreeSlideMainComponent implements OnInit {
           index,
           id: '',
           createdAt: 0,
-          previewAssetId: await this.generatePptxImportPreview(state) ?? '',
+          previewAssetId: (await this.generatePptxImportPreview(state)) ?? '',
           groupId: 0,
         });
 
@@ -227,10 +197,12 @@ export class FreeSlideMainComponent implements OnInit {
         ],
       });
 
-      const data = await firstValueFrom(this.api.create({
-        title: filename,
-        slides: newSlides,
-      }));
+      const data = await firstValueFrom(
+        this.api.create({
+          title: filename,
+          slides: newSlides,
+        })
+      );
 
       this.setImportProgress({
         busy: false,
@@ -250,7 +222,6 @@ export class FreeSlideMainComponent implements OnInit {
           relativeTo: this.route,
         });
       }, 700);
-
     } catch (err) {
       console.error('Failed to import PPTX', err);
       this.setImportProgress({
@@ -265,10 +236,15 @@ export class FreeSlideMainComponent implements OnInit {
   }
 
   private slideImportPercent(doneSlides: number, totalSlides: number): number {
-    return totalSlides > 0 ? Math.round(20 + (doneSlides / totalSlides) * 65) : 20;
+    return totalSlides > 0
+      ? Math.round(20 + (doneSlides / totalSlides) * 65)
+      : 20;
   }
 
-  private updateImportStep(index: number, patch: Partial<PptxProgressStep>): void {
+  private updateImportStep(
+    index: number,
+    patch: Partial<PptxProgressStep>
+  ): void {
     const current = this.importProgress();
     if (!current) {
       return;
@@ -295,7 +271,9 @@ export class FreeSlideMainComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  private async generatePptxImportPreview(state: SerializedState): Promise<string | undefined> {
+  private async generatePptxImportPreview(
+    state: SerializedState
+  ): Promise<string | undefined> {
     const previewOptions = {
       width: state.sceneBounds?.width,
       height: state.sceneBounds?.height,
@@ -321,29 +299,9 @@ export class FreeSlideMainComponent implements OnInit {
     return this.assetStorage.saveAsset(blob, 'image/jpeg');
   }
 
-  private async persistImportedImageAssets(state: SerializedState): Promise<SerializedState> {
-    const nodes = await Promise.all(
-      state.nodes.map(async (node) => {
-        if (node.type !== 'image' || !node.url?.startsWith('data:image/')) {
-          return node;
-        }
-
-        const assetId = await this.assetStorage.importAssetFromUrl(node.url);
-        return {
-          ...node,
-          assetId,
-          url: undefined,
-        };
-      })
-    );
-
-    return {
-      ...state,
-      nodes,
-    };
-  }
-
-  private async persistImportedImageAssets(state: SerializedState): Promise<SerializedState> {
+  private async persistImportedImageAssets(
+    state: SerializedState
+  ): Promise<SerializedState> {
     const nodes = await Promise.all(
       state.nodes.map(async (node) => {
         if (node.type !== 'image' || !node.url?.startsWith('data:image/')) {
@@ -457,7 +415,7 @@ export class FreeSlideMainComponent implements OnInit {
         this.api.delete(presentation.id).subscribe(() => {
           this.loadPresentations();
         });
-      }
+      },
     });
   }
 
@@ -475,9 +433,11 @@ export class FreeSlideMainComponent implements OnInit {
     presentation.inEdit = false;
     this.cdr.markForCheck();
 
-    this.api.update(presentation.id, {
-      title: presentation.title,
-    }).subscribe();
+    this.api
+      .update(presentation.id, {
+        title: presentation.title,
+      })
+      .subscribe();
   }
 
   protected readonly event = event;

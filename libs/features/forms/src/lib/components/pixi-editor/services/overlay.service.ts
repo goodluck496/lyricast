@@ -234,7 +234,7 @@ export class OverlayService {
     const el = document.createElement('iframe');
     el.src = node.url;
     el.allow =
-      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
     el.setAttribute('allowfullscreen', 'true');
     const m = 10;
     const left = b.x + m,

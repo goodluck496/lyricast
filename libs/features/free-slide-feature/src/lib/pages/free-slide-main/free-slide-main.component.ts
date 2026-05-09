@@ -343,6 +343,28 @@ export class FreeSlideMainComponent implements OnInit {
     };
   }
 
+  private async persistImportedImageAssets(state: SerializedState): Promise<SerializedState> {
+    const nodes = await Promise.all(
+      state.nodes.map(async (node) => {
+        if (node.type !== 'image' || !node.url?.startsWith('data:image/')) {
+          return node;
+        }
+
+        const assetId = await this.assetStorage.importAssetFromUrl(node.url);
+        return {
+          ...node,
+          assetId,
+          url: undefined,
+        };
+      })
+    );
+
+    return {
+      ...state,
+      nodes,
+    };
+  }
+
   ngOnInit() {
     this.loadPresentations();
 

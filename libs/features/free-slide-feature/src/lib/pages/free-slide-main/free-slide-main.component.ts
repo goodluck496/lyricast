@@ -18,7 +18,7 @@ import { PrimeTemplate } from 'primeng/api';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { FreeSlideApiService } from '@lyri-cast/shared-browser/data-access/free-slide';
-import { BehaviorSubject, first } from 'rxjs';
+import { BehaviorSubject, first, firstValueFrom } from 'rxjs';
 import { Presentation, SerializedState } from '@lyri-cast/entities';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { NgScrollbarModule } from 'ngx-scrollbar';
@@ -39,6 +39,29 @@ export type PresentationWithPreview = Presentation & {
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { PptxFacadeService } from '../../services/pptx-facade.service';
 import { TextSlidePreviewHelper } from '../../utils/text-slide-preview.helper';
+import { DialogModule } from 'primeng/dialog';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService } from 'primeng/api';
+import { ConfirmPopupModule } from 'primeng/confirmpopup';
+
+type ImportStepStatus = 'pending' | 'active' | 'done' | 'error';
+
+type ImportProgressStep = {
+  label: string;
+  status: ImportStepStatus;
+  details?: string;
+};
+
+type ImportProgressState = {
+  busy: boolean;
+  fileName: string;
+  percent: number;
+  totalSlides: number;
+  processedSlides: number;
+  message: string;
+  steps: ImportProgressStep[];
+};
 
 @Component({
   selector: 'lyri-free-slide-main',
@@ -55,7 +78,11 @@ import { TextSlidePreviewHelper } from '../../utils/text-slide-preview.helper';
     NgScrollbarModule,
     CreateFromSongDialogComponent,
     SplitButtonModule,
+    DialogModule,
+    ProgressBarModule,
+    ConfirmPopupModule,
   ],
+  providers: [ConfirmationService],
   templateUrl: './free-slide-main.component.html',
   styleUrl: './free-slide-main.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -73,10 +100,12 @@ export class FreeSlideMainComponent implements OnInit {
   private readonly assetStorage = inject(AssetStorageService);
   private readonly assetsApi = inject(AssetsApiService);
   private readonly pptxFacade = inject(PptxFacadeService);
+  private readonly confirmationService = inject(ConfirmationService);
 
   presentations$ = new BehaviorSubject<PresentationWithPreview[]>([]);
 
   showCreateFromSong = signal(false);
+  importProgress = signal<ImportProgressState | null>(null);
 
   newPresentationOptions = [
     {
@@ -100,7 +129,10 @@ export class FreeSlideMainComponent implements OnInit {
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
       const filename = file.name.replace(/\.pptx$/, '');
-      
+      void this.importPptxFile(file, filename);
+      input.value = '';
+      return;
+
       this.pptxFacade.importPptx(file).subscribe({
         next: async (states) => {
           const preparedStates = await Promise.all(
@@ -132,6 +164,144 @@ export class FreeSlideMainComponent implements OnInit {
       // Reset input
       input.value = '';
     }
+  }
+
+  closeImportProgress(): void {
+    const current = this.importProgress();
+    if (current && !current.busy) {
+      this.importProgress.set(null);
+    }
+  }
+
+  private async importPptxFile(file: File, filename: string): Promise<void> {
+    this.setImportProgress({
+      busy: true,
+      fileName: file.name,
+      percent: 5,
+      totalSlides: 0,
+      processedSlides: 0,
+      message: 'Отправка PPTX в импорт...',
+      steps: [
+        { label: 'Чтение PPTX', status: 'active' },
+        { label: 'Обработка слайдов', status: 'pending' },
+        { label: 'Создание презентации', status: 'pending' },
+      ],
+    });
+
+    try {
+      const states = await firstValueFrom(this.pptxFacade.importPptx(file));
+      this.setImportProgress({
+        percent: 20,
+        totalSlides: states.length,
+        message: `PPTX прочитан, найдено слайдов: ${states.length}`,
+        steps: [
+          { label: 'Чтение PPTX', status: 'done' },
+          { label: 'Обработка слайдов', status: 'active' },
+          { label: 'Создание презентации', status: 'pending' },
+        ],
+      });
+
+      const newSlides: SlideDto[] = [];
+      for (let index = 0; index < states.length; index += 1) {
+        this.setImportProgress({
+          processedSlides: index,
+          percent: this.slideImportPercent(index, states.length),
+          message: `Импорт слайда ${index + 1} из ${states.length}`,
+        });
+
+        const state = await this.persistImportedImageAssets(states[index]);
+        newSlides.push({
+          name: `Слайд ${index + 1}`,
+          content: JSON.stringify(state),
+          index,
+          id: '',
+          createdAt: 0,
+          previewAssetId: await this.generatePptxImportPreview(state) ?? '',
+          groupId: 0,
+        });
+
+        this.setImportProgress({
+          processedSlides: index + 1,
+          percent: this.slideImportPercent(index + 1, states.length),
+        });
+      }
+
+      this.setImportProgress({
+        percent: 92,
+        message: 'Создание презентации...',
+        steps: [
+          { label: 'Чтение PPTX', status: 'done' },
+          { label: 'Обработка слайдов', status: 'done' },
+          { label: 'Создание презентации', status: 'active' },
+        ],
+      });
+
+      const data = await firstValueFrom(this.api.create({
+        title: filename,
+        slides: newSlides,
+      }));
+
+      this.setImportProgress({
+        busy: false,
+        percent: 100,
+        message: 'Импорт завершён',
+        steps: [
+          { label: 'Чтение PPTX', status: 'done' },
+          { label: 'Обработка слайдов', status: 'done' },
+          { label: 'Создание презентации', status: 'done' },
+        ],
+      });
+
+      // Give UI some time to show 100% and then close the dialog & navigate
+      setTimeout(() => {
+        this.closeImportProgress();
+        this.router.navigate(['..', FreeSlidePages.SLIDE, data.id], {
+          relativeTo: this.route,
+        });
+      }, 700);
+
+    } catch (err) {
+      console.error('Failed to import PPTX', err);
+      this.setImportProgress({
+        busy: false,
+        percent: 100,
+        message: 'Импорт завершился с ошибкой',
+        steps: (this.importProgress()?.steps ?? []).map((step) =>
+          step.status === 'active' ? { ...step, status: 'error' } : step
+        ),
+      });
+    }
+  }
+
+  private slideImportPercent(doneSlides: number, totalSlides: number): number {
+    return totalSlides > 0 ? Math.round(20 + (doneSlides / totalSlides) * 65) : 20;
+  }
+
+  private updateImportStep(index: number, patch: Partial<ImportProgressStep>): void {
+    const current = this.importProgress();
+    if (!current) {
+      return;
+    }
+
+    this.setImportProgress({
+      steps: current.steps.map((step, stepIndex) =>
+        stepIndex === index ? { ...step, ...patch } : step
+      ),
+    });
+  }
+
+  private setImportProgress(patch: Partial<ImportProgressState>): void {
+    const current = this.importProgress();
+    this.importProgress.set({
+      busy: patch.busy ?? current?.busy ?? false,
+      fileName: patch.fileName ?? current?.fileName ?? '',
+      percent: patch.percent ?? current?.percent ?? 0,
+      totalSlides: patch.totalSlides ?? current?.totalSlides ?? 0,
+      processedSlides: patch.processedSlides ?? current?.processedSlides ?? 0,
+      message: patch.message ?? current?.message ?? '',
+      steps: patch.steps ?? current?.steps ?? [],
+    });
+    this.cdr.markForCheck();
   }
 
   private async generatePptxImportPreview(state: SerializedState): Promise<string | undefined> {
@@ -283,9 +453,22 @@ export class FreeSlideMainComponent implements OnInit {
   }
 
   onDelete(event: MouseEvent, presentation: Presentation) {
+    console.log('delete?');
     event.stopPropagation();
-    this.api.delete(presentation.id).subscribe(() => {
-      this.loadPresentations();
+
+    this.confirmationService.confirm({
+      target: (event.currentTarget || event.target) as EventTarget,
+      message: 'Вы уверены, что хотите удалить эту презентацию?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Да',
+      rejectLabel: 'Нет',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-text p-button-sm',
+      accept: () => {
+        this.api.delete(presentation.id).subscribe(() => {
+          this.loadPresentations();
+        });
+      }
     });
   }
 

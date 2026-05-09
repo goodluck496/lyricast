@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { IPptxImporter } from './pptx-interfaces';
-import { SerializedState, SerializedTextNode } from '@lyri-cast/entities';
+import { SerializedImageNode, SerializedState, SerializedTextNode } from '@lyri-cast/entities';
 import JSZip from 'jszip';
 import * as xml2js from 'xml2js';
 import { randomUUID } from 'node:crypto';
+import * as path from 'node:path';
 
 type XmlRecord = Record<string, unknown>;
 
@@ -21,6 +22,12 @@ type ImportedTextBox = {
 type TextColor = {
   color: number;
   colorHex: string;
+};
+
+type SlideRelationship = {
+  id: string;
+  target: string;
+  type: string;
 };
 
 @Injectable()
@@ -54,6 +61,14 @@ export class PptxImportAdapterService implements IPptxImporter {
             explicitArray: false,
             attrkey: '$',
           });
+          const relationships = await this.extractSlideRelationships(zip, slidePath);
+          const imageNodes = await this.extractImageNodes(
+            zip,
+            parsedSlide,
+            relationships,
+            sceneWidth,
+            sceneHeight
+          );
           const textBoxes = this.extractTextBoxes(parsedSlide, sceneWidth, sceneHeight);
           const slideTextHtml = this.extractSlideTextHtmlFromXml(slideXml);
           if (slideTextHtml) {
@@ -72,9 +87,14 @@ export class PptxImportAdapterService implements IPptxImporter {
               });
             }
           }
-          const textNode = this.createFullSlideTextNode(textBoxes, sceneWidth, sceneHeight);
+          const textNode = this.createFullSlideTextNode(
+            textBoxes,
+            sceneWidth,
+            sceneHeight,
+            imageNodes.length === 0 ? 0x000000 : null
+          );
 
-          state.nodes = textNode ? [textNode] : [];
+          state.nodes = textNode ? [...imageNodes, textNode] : imageNodes;
 
           return state;
         })
@@ -90,7 +110,8 @@ export class PptxImportAdapterService implements IPptxImporter {
   private createFullSlideTextNode(
     textBoxes: ImportedTextBox[],
     sceneWidth: number,
-    sceneHeight: number
+    sceneHeight: number,
+    bgFillColor: number | null
   ): SerializedTextNode | null {
     const nonEmptyBoxes = textBoxes.filter((box) => box.textHtml.trim().length > 0);
     if (nonEmptyBoxes.length === 0) {
@@ -127,7 +148,149 @@ export class PptxImportAdapterService implements IPptxImporter {
         colorHex: colorSource.colorHex,
       },
       padding: 40,
-      bgFillColor: 0x000000,
+      bgFillColor,
+    };
+  }
+
+  private async extractSlideRelationships(
+    zip: JSZip,
+    slidePath: string
+  ): Promise<Map<string, SlideRelationship>> {
+    const slideFileName = slidePath.split('/').pop();
+    if (!slideFileName) {
+      return new Map();
+    }
+
+    const relsPath = `ppt/slides/_rels/${slideFileName}.rels`;
+    const relsXml = await zip.file(relsPath)?.async('text');
+    if (!relsXml) {
+      return new Map();
+    }
+
+    const parsedRels: unknown = await xml2js.parseStringPromise(relsXml, {
+      explicitArray: false,
+      attrkey: '$',
+    });
+    const relationshipRecords = this.findRecordsByLocalName(parsedRels, 'Relationship');
+    const relationships = new Map<string, SlideRelationship>();
+    const slideDir = path.posix.dirname(slidePath);
+
+    for (const relationship of relationshipRecords) {
+      const id = this.readAttrString(relationship, 'Id');
+      const type = this.readAttrString(relationship, 'Type');
+      const target = this.readAttrString(relationship, 'Target');
+      if (!id || !type || !target || target.startsWith('http')) {
+        continue;
+      }
+
+      const normalizedTarget = target.startsWith('/')
+        ? path.posix.normalize(target.slice(1))
+        : path.posix.normalize(path.posix.join(slideDir, target));
+
+      relationships.set(id, {
+        id,
+        type,
+        target: normalizedTarget,
+      });
+    }
+
+    return relationships;
+  }
+
+  private async extractImageNodes(
+    zip: JSZip,
+    parsedSlide: unknown,
+    relationships: Map<string, SlideRelationship>,
+    sceneWidth: number,
+    sceneHeight: number
+  ): Promise<SerializedImageNode[]> {
+    const picRecords = this.findRecordsByLocalName(parsedSlide, 'pic');
+    const nodes: SerializedImageNode[] = [];
+
+    for (const pic of picRecords) {
+      const blip = this.findFirstRecordByLocalName(pic, 'blip');
+      const relationshipId = this.readAttrStringByLocalName(blip, 'embed');
+      if (!relationshipId) {
+        continue;
+      }
+
+      const relationship = relationships.get(relationshipId);
+      if (!relationship || !relationship.type.endsWith('/image')) {
+        continue;
+      }
+
+      const mediaFile = zip.file(relationship.target);
+      const mediaBuffer = await mediaFile?.async('nodebuffer');
+      if (!mediaBuffer) {
+        continue;
+      }
+
+      const mimeType = this.resolveImageMimeType(relationship.target, mediaBuffer);
+      if (!mimeType) {
+        continue;
+      }
+
+      const transform = this.findFirstRecordByLocalName(pic, 'xfrm');
+      const off = transform ? this.findFirstRecordByLocalName(transform, 'off') : null;
+      const ext = transform ? this.findFirstRecordByLocalName(transform, 'ext') : null;
+      const emuSlideWidth = 9144000;
+      const emuSlideHeight = 5143500;
+      const x = this.emuToPx(this.readAttrNumber(off, 'x'), emuSlideWidth, sceneWidth);
+      const y = this.emuToPx(this.readAttrNumber(off, 'y'), emuSlideHeight, sceneHeight);
+      const width = this.emuToPx(this.readAttrNumber(ext, 'cx'), emuSlideWidth, sceneWidth);
+      const height = this.emuToPx(this.readAttrNumber(ext, 'cy'), emuSlideHeight, sceneHeight);
+      const bounds = this.normalizeImageBounds(
+        {
+          x: Number.isFinite(x) ? x : 0,
+          y: Number.isFinite(y) ? y : 0,
+          width: width > 0 ? width : sceneWidth,
+          height: height > 0 ? height : sceneHeight,
+        },
+        sceneWidth,
+        sceneHeight
+      );
+
+      nodes.push({
+        id: randomUUID(),
+        type: 'image',
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        rotation: 0,
+        alpha: 1,
+        imageFit: 'stretch',
+        url: `data:${mimeType};base64,${mediaBuffer.toString('base64')}`,
+      });
+    }
+
+    return nodes;
+  }
+
+  private normalizeImageBounds(
+    bounds: { x: number; y: number; width: number; height: number },
+    sceneWidth: number,
+    sceneHeight: number
+  ): { x: number; y: number; width: number; height: number } {
+    const left = bounds.x;
+    const top = bounds.y;
+    const right = bounds.x + bounds.width;
+    const bottom = bounds.y + bounds.height;
+    const coversScene =
+      left <= sceneWidth * 0.05 &&
+      top <= sceneHeight * 0.05 &&
+      right >= sceneWidth * 0.95 &&
+      bottom >= sceneHeight * 0.95;
+
+    if (!coversScene) {
+      return bounds;
+    }
+
+    return {
+      x: 0,
+      y: 0,
+      width: sceneWidth,
+      height: sceneHeight,
     };
   }
 
@@ -402,13 +565,13 @@ export class PptxImportAdapterService implements IPptxImporter {
         return;
       }
 
-      if (this.isRecord(child)) {
-        found.push(child);
+      if (Array.isArray(child)) {
+        found.push(...child.filter((item): item is XmlRecord => this.isRecord(item)));
         return;
       }
 
-      if (Array.isArray(child)) {
-        found.push(...child.filter((item): item is XmlRecord => this.isRecord(item)));
+      if (this.isRecord(child)) {
+        found.push(child);
       }
     });
     return found;
@@ -477,6 +640,51 @@ export class PptxImportAdapterService implements IPptxImporter {
 
     const value = attrs[key];
     return typeof value === 'string' ? value : null;
+  }
+
+  private readAttrStringByLocalName(record: XmlRecord | null, localName: string): string | null {
+    if (!record) {
+      return null;
+    }
+
+    const attrs = record['$'];
+    if (!this.isRecord(attrs)) {
+      return null;
+    }
+
+    for (const [key, value] of Object.entries(attrs)) {
+      if (this.localName(key) === localName && typeof value === 'string') {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  private resolveImageMimeType(filePath: string, data: Buffer): string | null {
+    if (data[0] === 0xff && data[1] === 0xd8) {
+      return 'image/jpeg';
+    }
+
+    if (
+      data[0] === 0x89 &&
+      data[1] === 0x50 &&
+      data[2] === 0x4e &&
+      data[3] === 0x47
+    ) {
+      return 'image/png';
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.jpg' || ext === '.jpeg') {
+      return 'image/jpeg';
+    }
+
+    if (ext === '.png') {
+      return 'image/png';
+    }
+
+    return null;
   }
 
   private emuToPx(value: number, emuMax: number, pxMax: number): number {

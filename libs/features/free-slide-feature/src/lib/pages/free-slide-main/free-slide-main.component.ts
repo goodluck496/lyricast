@@ -103,7 +103,10 @@ export class FreeSlideMainComponent implements OnInit {
       
       this.pptxFacade.importPptx(file).subscribe({
         next: async (states) => {
-          const newSlides: SlideDto[] = await Promise.all(states.map(async (state, index) => ({
+          const preparedStates = await Promise.all(
+            states.map((state) => this.persistImportedImageAssets(state))
+          );
+          const newSlides: SlideDto[] = await Promise.all(preparedStates.map(async (state, index) => ({
             name: `Слайд ${index + 1}`,
             content: JSON.stringify(state),
             index,
@@ -132,10 +135,17 @@ export class FreeSlideMainComponent implements OnInit {
   }
 
   private async generatePptxImportPreview(state: SerializedState): Promise<string | undefined> {
-    const canvas = TextSlidePreviewHelper.createCanvas(state, {
+    const previewOptions = {
       width: state.sceneBounds?.width,
       height: state.sceneBounds?.height,
-    });
+    };
+    const canvas = state.nodes.some((node) => node.type === 'image')
+      ? await TextSlidePreviewHelper.createCanvasWithAssets(
+          state,
+          (assetId) => this.assetStorage.getAssetBlob(assetId),
+          previewOptions
+        )
+      : TextSlidePreviewHelper.createCanvas(state, previewOptions);
     if (!canvas) {
       return undefined;
     }
@@ -172,6 +182,28 @@ export class FreeSlideMainComponent implements OnInit {
     });
 
     return asset.id;
+  }
+
+  private async persistImportedImageAssets(state: SerializedState): Promise<SerializedState> {
+    const nodes = await Promise.all(
+      state.nodes.map(async (node) => {
+        if (node.type !== 'image' || !node.url?.startsWith('data:image/')) {
+          return node;
+        }
+
+        const assetId = await this.assetStorage.importAssetFromUrl(node.url);
+        return {
+          ...node,
+          assetId,
+          url: undefined,
+        };
+      })
+    );
+
+    return {
+      ...state,
+      nodes,
+    };
   }
 
   ngOnInit() {

@@ -1,4 +1,8 @@
-import { SerializedState, SerializedTextNode } from '@lyri-cast/entities';
+import {
+  SerializedImageNode,
+  SerializedState,
+  SerializedTextNode,
+} from '@lyri-cast/entities';
 
 type PreviewCanvasOptions = {
   width?: number;
@@ -7,8 +11,10 @@ type PreviewCanvasOptions = {
   normalizeLargeSceneFont?: boolean;
 };
 
+type PreviewAssetLoader = (assetId: string) => Promise<Blob | undefined>;
+
 /**
- * Shared canvas renderer for text-only free-slide previews.
+ * Shared canvas renderer for free-slide previews.
  *
  * It is used where Pixi is not available yet or should not be involved:
  * slide thumbnails, the right casting preview fallback, and PPTX import previews.
@@ -59,6 +65,59 @@ export class TextSlidePreviewHelper {
       return undefined;
     }
 
+    const previewContext = this.createPreviewContext(state, options);
+    if (!previewContext) {
+      return undefined;
+    }
+
+    this.fillCanvas(previewContext.ctx, previewContext.canvas, textNode.bgFillColor ?? 0x000000);
+    this.renderTextNode(previewContext, textNode);
+
+    return previewContext.canvas;
+  }
+
+  static async createCanvasWithAssets(
+    state: SerializedState,
+    loadAsset: PreviewAssetLoader,
+    options: PreviewCanvasOptions = {}
+  ): Promise<HTMLCanvasElement | undefined> {
+    const previewContext = this.createPreviewContext(state, options);
+    if (!previewContext) {
+      return undefined;
+    }
+
+    this.fillCanvas(previewContext.ctx, previewContext.canvas, 0x000000);
+
+    for (const node of state.nodes) {
+      if (node.type === 'image') {
+        await this.renderImageNode(previewContext, node, loadAsset);
+      } else if (node.type === 'text') {
+        this.renderTextNode(previewContext, node);
+      }
+    }
+
+    return previewContext.canvas;
+  }
+
+  private static isSerializedState(value: unknown): value is SerializedState {
+    return this.isRecord(value) && Array.isArray(value['nodes']);
+  }
+
+  private static isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+  }
+
+  private static createPreviewContext(
+    state: SerializedState,
+    options: PreviewCanvasOptions
+  ): {
+    canvas: HTMLCanvasElement;
+    ctx: CanvasRenderingContext2D;
+    sceneWidth: number;
+    scaleX: number;
+    scaleY: number;
+    fontScale: number;
+  } | undefined {
     const sceneWidth = state.sceneBounds?.width ?? this.normalizedSceneWidth;
     const sceneHeight = state.sceneBounds?.height ?? 432;
     const canvas = document.createElement('canvas');
@@ -77,14 +136,45 @@ export class TextSlidePreviewHelper {
       options.normalizeLargeSceneFont && sceneWidth > 1000
         ? canvas.width / this.normalizedSceneWidth
         : scale;
+
+    return {
+      canvas,
+      ctx,
+      sceneWidth,
+      scaleX,
+      scaleY,
+      fontScale,
+    };
+  }
+
+  private static fillCanvas(
+    ctx: CanvasRenderingContext2D,
+    canvas: HTMLCanvasElement,
+    color: number
+  ): void {
+    ctx.fillStyle = this.toCanvasColor(color);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  private static renderTextNode(
+    previewContext: {
+      ctx: CanvasRenderingContext2D;
+      scaleX: number;
+      scaleY: number;
+      fontScale: number;
+    },
+    textNode: SerializedTextNode
+  ): void {
+    const ctx = previewContext.ctx;
+    const scale = Math.min(previewContext.scaleX, previewContext.scaleY);
     const padding = (textNode.padding ?? 40) * scale;
-    const x = textNode.x * scaleX;
-    const y = textNode.y * scaleY;
-    const width = textNode.width * scaleX;
-    const height = textNode.height * scaleY;
+    const x = textNode.x * previewContext.scaleX;
+    const y = textNode.y * previewContext.scaleY;
+    const width = textNode.width * previewContext.scaleX;
+    const height = textNode.height * previewContext.scaleY;
     const fontSize =
       (textNode.actualFontSize ?? this.readStyleNumber(textNode, 'max') ?? 68) *
-      fontScale;
+      previewContext.fontScale;
     const lineHeight =
       fontSize * (this.readStyleNumber(textNode, 'lineHeight') ?? 1.15);
     const lines = this.wrapText(
@@ -95,8 +185,11 @@ export class TextSlidePreviewHelper {
       this.readStyleString(textNode, 'font')
     );
 
-    ctx.fillStyle = this.toCanvasColor(textNode.bgFillColor ?? 0x000000);
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (typeof textNode.bgFillColor === 'number') {
+      ctx.fillStyle = this.toCanvasColor(textNode.bgFillColor);
+      ctx.fillRect(x, y, width, height);
+    }
+
     ctx.font = this.toCanvasFont(fontSize, this.readStyleString(textNode, 'font'));
     ctx.fillStyle = this.toCanvasColor(
       this.readStyleNumber(textNode, 'color') ?? 0xffffff
@@ -122,16 +215,38 @@ export class TextSlidePreviewHelper {
       ctx.fillText(line, textX, Math.round(textY));
       textY += lineHeight;
     }
-
-    return canvas;
   }
 
-  private static isSerializedState(value: unknown): value is SerializedState {
-    return this.isRecord(value) && Array.isArray(value['nodes']);
-  }
+  private static async renderImageNode(
+    previewContext: {
+      ctx: CanvasRenderingContext2D;
+      scaleX: number;
+      scaleY: number;
+    },
+    imageNode: SerializedImageNode,
+    loadAsset: PreviewAssetLoader
+  ): Promise<void> {
+    if (!imageNode.assetId) {
+      return;
+    }
 
-  private static isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null;
+    const blob = await loadAsset(imageNode.assetId);
+    if (!blob) {
+      return;
+    }
+
+    const bitmap = await createImageBitmap(blob);
+    try {
+      previewContext.ctx.drawImage(
+        bitmap,
+        imageNode.x * previewContext.scaleX,
+        imageNode.y * previewContext.scaleY,
+        imageNode.width * previewContext.scaleX,
+        imageNode.height * previewContext.scaleY
+      );
+    } finally {
+      bitmap.close();
+    }
   }
 
   private static readStyleNumber(

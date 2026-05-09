@@ -91,6 +91,7 @@ export class NodeFactoryService {
         const imageNode = new ImageNode(undefined, isCastingMode);
         imageNode.assetId = nodeData.assetId;
         imageNode.url = nodeData.url;
+        imageNode.imageFit = nodeData.imageFit ?? 'contain';
         let source = nodeData.url;
         if (nodeData.assetId) {
           source = await this.assetStorage.getAssetObjectURL(nodeData.assetId);
@@ -208,6 +209,7 @@ export class NodeFactoryService {
     }
     if (src instanceof ImageNode) {
       const n = new ImageNode(undefined, isCastingMode);
+      n.imageFit = src.imageFit;
       n.applyBoxSize(src.w, src.h);
       n.sprite.texture = (src as ImageNode).sprite.texture;
       n.sprite.anchor.set(0.5);

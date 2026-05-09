@@ -28,6 +28,7 @@ export type SerializedImageNode = SerializedNodeBase & {
   type: 'image';
   url?: string; // URL внешнего изображения
   assetId?: string; // ID изображения в AssetStorageService
+  imageFit?: 'contain' | 'stretch';
 };
 
 export type SerializedVideoNode = SerializedNodeBase & {

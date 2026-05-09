@@ -140,6 +140,15 @@ export class AssetStorageService {
    */
   async importAssetFromUrl(url: string): Promise<string> {
     try {
+      if (url.startsWith('data:')) {
+        const dataAsset = this.dataUrlToBlob(url);
+        return await this.saveAsset(
+          dataAsset.blob,
+          dataAsset.mimeType,
+          this.createDataUrlFileName(dataAsset.mimeType)
+        );
+      }
+
       const response = await firstValueFrom(
         this.http.get(url, { observe: 'response', responseType: 'blob' })
       );
@@ -155,6 +164,42 @@ export class AssetStorageService {
       console.error(`[AssetStorageService] Failed to import asset from URL: ${url}`, error);
       throw error; // Re-throw to allow the caller to handle it
     }
+  }
+
+  private dataUrlToBlob(dataUrl: string): { blob: Blob; mimeType: string } {
+    const match = /^data:([^;,]+)?(;base64)?,([\s\S]*)$/i.exec(dataUrl);
+    if (!match) {
+      throw new Error('Invalid data URL');
+    }
+
+    const mimeType = match[1] || 'application/octet-stream';
+    const isBase64 = match[2] === ';base64';
+    const data = match[3] || '';
+    const binary = isBase64 ? atob(data) : decodeURIComponent(data);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+
+    return {
+      blob: new Blob([bytes], { type: mimeType }),
+      mimeType,
+    };
+  }
+
+  private createDataUrlFileName(mimeType: string): string {
+    const extensionByMimeType: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+      'image/svg+xml': 'svg',
+    };
+    const extension = extensionByMimeType[mimeType.toLowerCase()] || 'bin';
+
+    return `asset-${Date.now()}.${extension}`;
   }
 
   /**

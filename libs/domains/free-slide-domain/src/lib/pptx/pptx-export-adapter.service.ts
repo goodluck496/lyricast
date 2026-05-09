@@ -65,6 +65,11 @@ export class PptxExportAdapterService implements IPptxExporter {
           }
 
           try {
+            if (this.isImageDataUrl(imagePath)) {
+              slide.addImage({ data: imagePath, x, y, w, h });
+              continue;
+            }
+
             if (imagePath.startsWith('http')) {
               slide.addImage({ path: imagePath, x, y, w, h });
               continue;
@@ -209,6 +214,10 @@ export class PptxExportAdapterService implements IPptxExporter {
     }
 
     return '';
+  }
+
+  private isImageDataUrl(value: string): boolean {
+    return /^data:image\/[a-z0-9.+-]+;base64,/i.test(value);
   }
 
   private resolveImageMimeType(filePath: string, data: Buffer): string {

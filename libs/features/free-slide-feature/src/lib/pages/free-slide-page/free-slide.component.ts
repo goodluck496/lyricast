@@ -396,9 +396,7 @@ export class FreeSlideComponent implements AfterViewInit {
 
         // If old asset exists and differs from new one, delete it only if not reused elsewhere
         if (oldAssetId && oldAssetId !== newAssetId) {
-          const isReused = Array.from(this.slideService.slidesMap.values()).some(
-            (s) => s.id !== targetSlideId && s.previewAssetId === oldAssetId
-          );
+          const isReused = this.isAssetUsedByPreviewOrContent(oldAssetId, targetSlideId);
           if (!isReused) {
             await this.assetStorage.deleteAsset(oldAssetId);
           }
@@ -521,7 +519,7 @@ export class FreeSlideComponent implements AfterViewInit {
         (s) =>
           s.id !== slideToDelete.id &&
           s.previewAssetId === slideToDelete.previewAssetId
-      );
+      ) || this.isAssetUsedInSlideContent(slideToDelete.previewAssetId);
 
       if (!isAssetReused) {
         // Only delete if it's not reused
@@ -720,6 +718,61 @@ export class FreeSlideComponent implements AfterViewInit {
       this.currentSlideIndex = selected.index;
       this.cdr.markForCheck();
     }
+  }
+
+  private isAssetUsedByPreviewOrContent(
+    assetId: string,
+    excludePreviewSlideId?: string
+  ): boolean {
+    return Array.from(this.slideService.slidesMap.values()).some((slide) => {
+      const isUsedAsPreview =
+        slide.id !== excludePreviewSlideId && slide.previewAssetId === assetId;
+      return isUsedAsPreview || this.contentUsesAsset(slide.content, assetId);
+    });
+  }
+
+  private isAssetUsedInSlideContent(assetId: string): boolean {
+    return Array.from(this.slideService.slidesMap.values()).some((slide) =>
+      this.contentUsesAsset(slide.content, assetId)
+    );
+  }
+
+  private contentUsesAsset(content: string | undefined, assetId: string): boolean {
+    if (!content) {
+      return false;
+    }
+
+    try {
+      return this.valueUsesAsset(JSON.parse(content), assetId);
+    } catch {
+      return false;
+    }
+  }
+
+  private valueUsesAsset(value: unknown, assetId: string): boolean {
+    if (Array.isArray(value)) {
+      return value.some((item) => this.valueUsesAsset(item, assetId));
+    }
+
+    if (!this.isRecord(value)) {
+      return false;
+    }
+
+    return Object.entries(value).some(([key, child]) => {
+      if (
+        (key === 'assetId' || key === 'bgAssetId') &&
+        typeof child === 'string' &&
+        child === assetId
+      ) {
+        return true;
+      }
+
+      return this.valueUsesAsset(child, assetId);
+    });
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
   }
 
   protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;

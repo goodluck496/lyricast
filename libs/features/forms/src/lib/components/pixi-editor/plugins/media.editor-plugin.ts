@@ -47,16 +47,65 @@ export class MediaPlugin implements EditorPlugin {
       }
 
       // Now we have a local assetId, get its svc:// URL for loading.
-      const source = await this.assetStorage.getAssetObjectURL(assetId);
-      if (!source) {
+      const sourceBeforeAdd: Promise<string | undefined> | undefined =
+        this.assetStorage.getAssetObjectURL(assetId);
+      if (!sourceBeforeAdd) {
         console.error(`[MediaPlugin] Failed to get object URL for assetId: ${assetId}`);
         return;
       }
 
       const imageNode = new ImageNode(); // Создаем без initialSource
       imageNode.assetId = assetId; // Store the definitive local asset ID
+      imageNode.imageFit = addImage.options?.imageFit ?? 'contain';
 
       // Ждем загрузки текстуры и получения фактических размеров
+      const hasExplicitSize =
+        typeof addImage.options?.width === 'number' ||
+        typeof addImage.options?.height === 'number';
+      if (hasExplicitSize) {
+        const targetWidth = addImage.options?.width ?? 100;
+        const targetHeight = addImage.options?.height ?? 100;
+        imageNode.applyBoxSize(targetWidth, targetHeight);
+
+        const sceneBounds = ctx.getSceneBounds();
+        imageNode.x = addImage.x ?? (sceneBounds.x + (sceneBounds.width - imageNode.w) / 2);
+        imageNode.y = addImage.y ?? (sceneBounds.y + (sceneBounds.height - imageNode.h) / 2);
+
+        const nodeState = { id: imageNode.id, type: 'image' as const, ref: imageNode, destroy$: new Subject<void>() };
+        const command = new AddNodeCommand(nodeState, ctx.world, ctx.store);
+        ctx.history.execute(command);
+
+        this.drag.bind(imageNode, nodeState.destroy$, {
+          cfg: ctx.cfg,
+          store: ctx.store,
+          guides: ctx.guides,
+          world: ctx.world,
+          app: ctx.app,
+          bus: ctx.bus,
+          utils: ctx.utils,
+          overlay: ctx.overlay,
+          history: ctx.history,
+          getSceneBounds: ctx.getSceneBounds
+        });
+        ctx.bus.emit({ t: 'SELECT', ids: [imageNode.id] });
+
+        const source = await sourceBeforeAdd;
+        if (!source) {
+          console.error(`[MediaPlugin] Failed to get object URL for assetId: ${assetId}`);
+          return;
+        }
+
+        await imageNode.setImage(source);
+        imageNode.applyBoxSize(targetWidth, targetHeight);
+        return;
+      }
+
+      const source = await sourceBeforeAdd;
+      if (!source) {
+        console.error(`[MediaPlugin] Failed to get object URL for assetId: ${assetId}`);
+        return;
+      }
+
       await imageNode.setImage(source);
 
       const originalWidth = imageNode.sprite.texture.width;

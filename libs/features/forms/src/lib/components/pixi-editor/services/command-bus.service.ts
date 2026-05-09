@@ -35,7 +35,7 @@ export type EditorCommand =
 
   // Команды создания узлов
   | { t: 'ADD_TEXT'; x: number; y: number; text?: string; options?: { width?: number; height?: number; rotation?: number; alpha?: number; style?: UiTextStyles; bgFillColor?: number | null; bgAssetId?: string; } }
-  | { t: 'ADD_IMAGE'; url?: string; assetId?: string; x?: number; y?: number; options?: { width?: number; height?: number; rotation?: number; alpha?: number } }
+  | { t: 'ADD_IMAGE'; url?: string; assetId?: string; x?: number; y?: number; options?: { width?: number; height?: number; rotation?: number; alpha?: number; imageFit?: 'contain' | 'stretch' } }
   | { t: 'ADD_VIDEO'; url?: string; assetId?: string; x?: number; y?: number; options?: { width?: number; height?: number; rotation?: number; alpha?: number } }
   | { t: 'ADD_IFRAME'; url: string; x?: number; y?: number; options?: { width?: number; height?: number; rotation?: number; alpha?: number } }
   | { t: 'ADD_SHAPE'; shape: ShapeType; x: number; y: number; options?: { width?: number; height?: number; rotation?: number; alpha?: number; fill?: number; stroke?: number; lineWidth?: number; bgAssetId?: string; } }

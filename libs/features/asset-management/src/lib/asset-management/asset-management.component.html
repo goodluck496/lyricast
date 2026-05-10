@@ -21,15 +21,26 @@
       (click)="loadAssets()"
       class="p-button-secondary"
     ></button>
+    <button
+      pButton
+      type="button"
+      label="Delete unused"
+      icon="pi pi-trash"
+      class="p-button-danger"
+      pTooltip="Delete assets that are not linked to presentation slides"
+      tooltipPosition="top"
+      (click)="confirmDeleteUnusedAssets()"
+    ></button>
   </div>
 
   <p-table
     [value]="assets()"
     [(selection)]="selectedAssets"
     dataKey="id"
+    styleClass="asset-table"
     [selectionMode]="'multiple'"
     [scrollable]="true"
-    scrollHeight="40vh"
+    scrollHeight="flex"
     [loading]="loading()"
     >
     <ng-template pTemplate="header">
@@ -37,35 +48,184 @@
         <th style="width: 3rem">
           <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
         </th>
-        <th style="width:15%">Preview</th>
+        <th style="width: 15%">Preview</th>
         <th>Name</th>
         <th>Type</th>
         <th>Size</th>
         <th>Created</th>
+        <th style="width: 8rem">Actions</th>
       </tr>
     </ng-template>
     <ng-template pTemplate="body" let-asset let-rowIndex="rowIndex">
       <tr [pSelectableRow]="asset" [pSelectableRowIndex]="rowIndex">
-        <td>
+        <td class="asset-cell">
           <p-tableCheckbox [value]="asset"></p-tableCheckbox>
         </td>
-        <td>
-          @if (asset.mimeType.startsWith('image/')) {
-            <img [src]="getAssetUrl(asset)" class="preview-img" />
+        <td class="asset-cell">
+          @if (isImageAsset(asset)) {
+            <button
+              pButton
+              type="button"
+              aria-label="Open image"
+              class="p-button-text preview-button"
+              pTooltip="Open image"
+              tooltipPosition="top"
+              (click)="$event.stopPropagation(); openGallery(asset)"
+            >
+              <img
+                [src]="getAssetUrl(asset)"
+                [alt]="asset.originalName"
+                class="preview-img"
+              />
+            </button>
           }
         </td>
-        <td style="word-break: break-all">{{ asset.originalName }}</td>
-        <td>{{ asset.mimeType }}</td>
-        <td>{{ formatBytes(asset.size) }}</td>
-        <td>{{ asset.createdAt | date : 'dd.MM.yyyy HH:mm:ss' }}</td>
+        <td class="asset-cell asset-name">{{ asset.originalName }}</td>
+        <td class="asset-cell">{{ asset.mimeType }}</td>
+        <td class="asset-cell">{{ formatBytes(asset.size) }}</td>
+        <td class="asset-cell">
+          {{ asset.createdAt | date : 'dd.MM.yyyy HH:mm:ss' }}
+        </td>
+        <td class="asset-cell">
+          @if (isImageAsset(asset)) {
+            <button
+              pButton
+              type="button"
+              icon="pi pi-eye"
+              class="p-button-text p-button-sm"
+              pTooltip="Open gallery"
+              tooltipPosition="top"
+              (click)="$event.stopPropagation(); openGallery(asset)"
+            ></button>
+            <button
+              pButton
+              type="button"
+              icon="pi pi-copy"
+              class="p-button-text p-button-sm"
+              pTooltip="Copy image"
+              tooltipPosition="top"
+              (click)="$event.stopPropagation(); copyAssetImage(asset)"
+            ></button>
+          }
+          <button
+            pButton
+            type="button"
+            icon="pi pi-trash"
+            class="p-button-text p-button-sm p-button-danger"
+            pTooltip="Delete asset"
+            tooltipPosition="top"
+            (click)="$event.stopPropagation(); confirmDeleteAsset(asset)"
+          ></button>
+        </td>
       </tr>
     </ng-template>
     <ng-template pTemplate="emptymessage">
       <tr>
-        <td colspan="6">No assets found.</td>
+        <td colspan="7">No assets found.</td>
       </tr>
     </ng-template>
   </p-table>
+
+  <p-galleria
+    [value]="galleryItems()"
+    [visible]="galleryVisible()"
+    (visibleChange)="onGalleryVisibleChange($event)"
+    [activeIndex]="galleryActiveIndex()"
+    (activeIndexChange)="onGalleryActiveIndexChange($event)"
+    [fullScreen]="true"
+    [numVisible]="5"
+    [responsiveOptions]="galleryResponsiveOptions"
+    [showItemNavigators]="false"
+    [showThumbnailNavigators]="true"
+    [circular]="galleryItems().length > 1"
+    [containerStyle]="{ width: '100vw' }"
+    containerClass="asset-gallery"
+  >
+    <ng-template pTemplate="item">
+      @if (activeGalleryItem(); as item) {
+        <div class="gallery-stage">
+          @if (galleryItems().length > 1) {
+            <button
+              pButton
+              type="button"
+              icon="pi pi-chevron-left"
+              aria-label="Previous image"
+              class="p-button-text p-button-rounded gallery-nav gallery-nav--prev"
+              (click)="$event.stopPropagation(); showPreviousGalleryItem()"
+            ></button>
+          }
+          <img
+            [src]="item.itemImageSrc"
+            [alt]="item.alt"
+            class="gallery-image"
+          />
+          @if (galleryItems().length > 1) {
+            <button
+              pButton
+              type="button"
+              icon="pi pi-chevron-right"
+              aria-label="Next image"
+              class="p-button-text p-button-rounded gallery-nav gallery-nav--next"
+              (click)="$event.stopPropagation(); showNextGalleryItem()"
+            ></button>
+          }
+        </div>
+      }
+    </ng-template>
+    <ng-template pTemplate="thumbnail" let-item>
+      <img
+        [src]="item.thumbnailImageSrc"
+        [alt]="item.alt"
+        class="gallery-thumbnail"
+        (click)="selectGalleryItem(item)"
+      />
+    </ng-template>
+    <ng-template pTemplate="footer">
+      @if (activeGalleryItem(); as item) {
+        <div class="gallery-footer">
+          <div class="gallery-footer__meta">
+            <span>{{ galleryActiveIndex() + 1 }}/{{ galleryItems().length }}</span>
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.asset.mimeType }} - {{ formatBytes(item.asset.size) }}</span>
+          </div>
+          <div class="gallery-footer__actions">
+            @if (galleryItems().length > 1) {
+              <button
+                pButton
+                type="button"
+                icon="pi pi-chevron-left"
+                class="p-button-sm p-button-secondary"
+                (click)="showPreviousGalleryItem()"
+              ></button>
+              <button
+                pButton
+                type="button"
+                icon="pi pi-chevron-right"
+                class="p-button-sm p-button-secondary"
+                (click)="showNextGalleryItem()"
+              ></button>
+            }
+            <button
+              pButton
+              type="button"
+              icon="pi pi-copy"
+              label="Copy"
+              class="p-button-sm"
+              (click)="copyAssetImage(item.asset)"
+            ></button>
+            <button
+              pButton
+              type="button"
+              icon="pi pi-trash"
+              label="Delete"
+              class="p-button-sm p-button-danger"
+              (click)="confirmDeleteAsset(item.asset)"
+            ></button>
+          </div>
+        </div>
+      }
+    </ng-template>
+  </p-galleria>
 
   @if (selectedAssets.length > 0) {
     <p-toolbar class="context-toolbar">

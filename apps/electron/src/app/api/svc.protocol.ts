@@ -107,9 +107,14 @@ export function registerSvcProtocol(registry: WorkersRegistry) {
       // при необходимости:
       // respHeaders.set('access-control-allow-credentials', 'true');
 
-      const bodyBuffer = await upstream.arrayBuffer();
+      if ([204, 205, 304].includes(upstream.status)) {
+        return new Response(null, {
+          status: upstream.status,
+          headers: respHeaders,
+        });
+      }
 
-      return new Response(bodyBuffer, {
+      return new Response(await upstream.arrayBuffer(), {
         status: upstream.status,
         headers: respHeaders,
       });

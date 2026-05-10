@@ -173,12 +173,15 @@ export class FreeSlideService {
   }
 
   async delete(id: string): Promise<{ success: boolean }> {
-    // Thanks to `onDelete: 'cascade'`, associated slides will be deleted automatically.
-    const result = await this.db
-      .delete(presentations)
-      .where(eq(presentations.id, id))
-      .run();
-    return { success: result.changes > 0 };
+    return this.db.transaction((tx) => {
+      tx.delete(slides).where(eq(slides.presentationId, id)).run();
+      const result = tx
+        .delete(presentations)
+        .where(eq(presentations.id, id))
+        .run();
+
+      return { success: result.changes > 0 };
+    });
   }
 
   async search(query: string): Promise<PresentationWithSlides[]> {

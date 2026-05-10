@@ -1,36 +1,40 @@
 import {
   ChangeDetectionStrategy,
-  ChangeDetectorRef,
   Component,
   DestroyRef,
   inject,
-  signal,
   viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ButtonDirective } from 'primeng/button';
 import { NavigatorFeatureComponent } from '@lyri-cast/navigator-feature';
 import { Store } from '@ngrx/store';
 import { Actions, ofType } from '@ngrx/effects';
 import {
   catchError,
+  BehaviorSubject,
+  combineLatest,
   debounceTime,
   filter,
   first,
   firstValueFrom,
   map,
+  Observable,
   of,
+  skip,
   take,
-  timeout,
   withLatestFrom,
 } from 'rxjs';
 import {
   AppActions,
+  BridgeService,
+  DEFAULT_CASTING_PAGE_CONFIG,
+  Pages,
   selectOpenedWindow,
+  SettingsService,
+  WindowService,
 } from '@lyri-cast/common-browser';
-import { AppWindowTypes } from '@lyri-cast/common-electron';
+import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
 
-import { SvgIconComponent } from '@lyri-cast/svg-icons';
 import { FreeSlideCastingPreviewComponent } from '../casting-preview/free-slide-casting-preview.component';
 import {
   FreeSlideActions,
@@ -46,28 +50,26 @@ import { FreeSlideService } from '../../pages/free-slide-page/free-slide.service
 import { filterEmpty } from '@lyri-cast/common';
 import { FreeSlideApiService } from '@lyri-cast/free-slide';
 
-import { ToggleButtonModule } from 'primeng/togglebutton';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { FormsModule } from '@angular/forms';
 import { TabsModule } from 'primeng/tabs';
 import { SlideTransitionEditorComponent } from '../slide-transition-editor/slide-transition-editor.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { PptxFacadeService } from '../../services/pptx-facade.service';
-import { PptxProgressDialogComponent, PptxProgressState } from '../../components/pptx-progress-dialog/pptx-progress-dialog.component';
+import { SplitButtonModule } from 'primeng/splitbutton';
+import { MenuItem } from 'primeng/api';
 
 @Component({
   selector: 'lyri-free-slide-sidebar',
   standalone: true,
   imports: [
     CommonModule,
-    ButtonDirective,
     NavigatorFeatureComponent,
-    SvgIconComponent,
     FreeSlideCastingPreviewComponent,
-    ToggleButtonModule,
+    ToggleSwitchModule,
     FormsModule,
     TabsModule,
     SlideTransitionEditorComponent,
-    PptxProgressDialogComponent,
+    SplitButtonModule,
   ],
   templateUrl: './free-slide-sidebar.component.html',
   styleUrl: './free-slide-sidebar.component.scss',
@@ -79,11 +81,12 @@ export class FreeSlideSidebarComponent {
   private readonly store = inject<Store<FreeSlideState>>(Store<FreeSlideState>);
   private readonly actions$ = inject(Actions);
   private readonly slideService = inject(FreeSlideService);
+  private readonly windowSrv = inject(WindowService);
+  private readonly settingsSrv = inject(SettingsService);
+  private readonly bridge = inject(BridgeService);
   private applyingLoadedSettings = false;
 
   slideTransitionEditor = viewChild(SlideTransitionEditorComponent);
-  exportProgress = signal<PptxProgressState | null>(null);
-  private cdr = inject(ChangeDetectorRef);
 
   openedCastingWindow$ = this.store.select(selectOpenedWindow).pipe(
     map((e) => {
@@ -93,9 +96,29 @@ export class FreeSlideSidebarComponent {
   castingIsPaused$ = this.store.select(selectFreeSlideCastingPaused);
   castingIsFrozen$ = this.store.select(selectFreeSlideCastingFrozen);
   liveSyncEnabled$ = this.slideService.liveSyncEnabled$.asObservable();
+  isOpeningWindow = new BehaviorSubject<boolean>(false);
 
-  onLiveSyncToggle(event: any) {
-    const isEnabled = !!event.checked;
+  closeMenuItems$: Observable<MenuItem[]> = combineLatest([
+    this.openedCastingWindow$,
+    this.isOpeningWindow,
+  ]).pipe(
+    map(([isOpen, isOpening]) => [
+      {
+        label: isOpening ? 'Открываем...' : 'Открыть окно',
+        icon: isOpening ? 'pi pi-spin pi-spinner' : 'pi pi-external-link',
+        command: () => this.onOpenEmptyWindow(),
+        disabled: isOpen || isOpening,
+      },
+      {
+        label: 'Закрыть',
+        icon: 'pi pi-times',
+        command: () => this.onCloseCasting(),
+        disabled: !isOpen || isOpening,
+      },
+    ])
+  );
+
+  onLiveSyncToggle(isEnabled: boolean) {
     this.slideService.toggleLiveSync(isEnabled);
 
     if (isEnabled) {
@@ -154,114 +177,47 @@ export class FreeSlideSidebarComponent {
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.pauseCasting]());
   }
 
-  onFreezeToggle(event: any) {
-    const frozen = !!event.checked;
+  onFreezeToggle(frozen: boolean) {
     this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.setFreezeCasting]({ frozen }));
   }
 
-  private readonly pptxFacade = inject(PptxFacadeService);
+  async onOpenEmptyWindow(): Promise<void> {
+    if (!this.windowSrv.hasElectron || this.isOpeningWindow.value) {
+      return;
+    }
 
-  async onExportPptx() {
-    let presentationName = 'Presentation';
-    this.slideService.currentPresentation$.pipe(take(1)).subscribe((pres: any) => {
-      if (pres && pres.title) presentationName = pres.title;
-    });
-
-    this.exportProgress.set({
-      busy: true,
-      fileName: presentationName,
-      percent: 10,
-      message: 'Подготовка к экспорту...',
-      steps: [
-        { label: 'Чтение данных', status: 'active' },
-        { label: 'Подготовка слайдов', status: 'pending' },
-        { label: 'Экспорт PPTX', status: 'pending' },
-      ],
-    });
-    this.cdr.markForCheck();
-
+    this.isOpeningWindow.next(true);
     try {
-      const saveCompleted = firstValueFrom(
-        this.slideService.saveCompleted$.pipe(
-          take(1),
-          timeout(3000),
-          catchError(() => of(undefined))
+      await this.settingsSrv.init();
+      const display = await firstValueFrom(this.settingsSrv.getDisplayForCasting());
+      if (!display) {
+        return;
+      }
+
+      this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
+
+      const procId = await this.windowSrv.electronContext.openWindow({
+        ...DEFAULT_CASTING_PAGE_CONFIG,
+        display,
+        title: 'Casting Window',
+        type: AppWindowTypes.CASTING,
+      });
+
+      this.store.dispatch(AppActions.setProcId({ procId, pageType: AppWindowTypes.CASTING }));
+
+      await firstValueFrom(
+        this.bridge.queueEvents.pipe(
+          skip(1),
+          filter((event): event is { event: string; payload: unknown } => !!event && event.event === APP_COMMON_ACTIONS.appInit)
         )
       );
-      this.slideService.requestSaveCurrentSlide$.next();
-      await saveCompleted;
 
-      this.exportProgress.update(prev => prev ? {
-        ...prev,
-        percent: 30,
-        message: 'Обработка слайдов...',
-        steps: [
-          { label: 'Чтение данных', status: 'done' },
-          { label: 'Подготовка слайдов', status: 'active' },
-          { label: 'Экспорт PPTX', status: 'pending' },
-        ]
-      } : prev);
-
-      const slides = Array.from(this.slideService.slidesMap.values());
-      const states = slides
-        .sort((a, b) => a.index - b.index)
-        .map(slide => JSON.parse(slide.content));
-
-      this.exportProgress.update(prev => prev ? {
-        ...prev,
-        percent: 60,
-        message: 'Генерация файла презентации (это может занять некоторое время)...',
-        steps: [
-          { label: 'Чтение данных', status: 'done' },
-          { label: 'Подготовка слайдов', status: 'done' },
-          { label: 'Экспорт PPTX', status: 'active' },
-        ]
-      } : prev);
-
-      const blob = await firstValueFrom(this.pptxFacade.exportPptx(presentationName, states));
-      
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${presentationName}.pptx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => window.URL.revokeObjectURL(url), 5000);
-
-      this.exportProgress.update(prev => prev ? {
-        ...prev,
-        busy: false,
-        percent: 100,
-        message: 'Экспорт завершён',
-        steps: [
-          { label: 'Чтение данных', status: 'done' },
-          { label: 'Подготовка слайдов', status: 'done' },
-          { label: 'Экспорт PPTX', status: 'done' },
-        ]
-      } : prev);
-
-      setTimeout(() => {
-        this.closeExportProgress();
-      }, 700);
-
-    } catch (err) {
-      console.error('Failed to export PPTX', err);
-      this.exportProgress.update(prev => prev ? {
-        ...prev,
-        busy: false,
-        percent: 100,
-        message: 'Экспорт завершился с ошибкой',
-        steps: prev.steps.map(s => s.status === 'active' ? { ...s, status: 'error' } : s)
-      } : prev);
-    }
-  }
-
-  closeExportProgress() {
-    const current = this.exportProgress();
-    if (current && !current.busy) {
-      this.exportProgress.set(null);
-      this.cdr.markForCheck();
+      await this.windowSrv.electronContext.send({
+        event: APP_COMMON_ACTIONS.openPage,
+        payload: { path: [Pages.FREE_SLIDE_FEATURE, Pages.CASTING] },
+      });
+    } finally {
+      this.isOpeningWindow.next(false);
     }
   }
 

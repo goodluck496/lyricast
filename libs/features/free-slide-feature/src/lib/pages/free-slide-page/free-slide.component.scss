@@ -10,6 +10,11 @@
 }
 
 .free-slide {
+  &__page-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
 
   &__page-wrapper {
     display: flex;

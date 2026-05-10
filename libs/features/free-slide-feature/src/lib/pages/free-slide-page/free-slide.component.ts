@@ -26,13 +26,17 @@ import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import {
   combineLatest,
+  catchError,
   debounceTime,
   first,
+  firstValueFrom,
   fromEvent,
+  of,
   Subject,
   take,
   takeUntil,
   merge,
+  timeout,
   withLatestFrom,
   filter,
 } from 'rxjs';
@@ -61,6 +65,11 @@ import { CtrlDragCopyDirective } from '../../directives/ctrl-drag-copy.directive
 import { SelectModule } from 'primeng/select';
 import { PopoverModule } from 'primeng/popover';
 import { filterEmpty } from '@lyri-cast/common';
+import { PptxFacadeService } from '../../services/pptx-facade.service';
+import {
+  PptxProgressDialogComponent,
+  PptxProgressState,
+} from '../../components/pptx-progress-dialog/pptx-progress-dialog.component';
 
 @Component({
   selector: 'lyri-free-slide',
@@ -82,7 +91,8 @@ import { filterEmpty } from '@lyri-cast/common';
     DragDropModule,
     CtrlDragCopyDirective,
     PopoverModule,
-    SelectModule
+    SelectModule,
+    PptxProgressDialogComponent,
   ],
   templateUrl: './free-slide.component.html',
   styleUrl: './free-slide.component.scss',
@@ -98,6 +108,7 @@ export class FreeSlideComponent implements AfterViewInit {
   slideService = inject(FreeSlideService);
   destroyRef = inject(DestroyRef);
   assetStorage = inject(AssetStorageService);
+  private readonly pptxFacade = inject(PptxFacadeService);
 
   containerPagePath: (string | Pages)[] = [];
 
@@ -221,6 +232,7 @@ export class FreeSlideComponent implements AfterViewInit {
   slides$ = this.slideService.slides$.asObservable();
 
   presentationId = signal<string>('');
+  exportProgress = signal<PptxProgressState | null>(null);
 
   $pagePath = computed(() => [
     Pages.MAIN,
@@ -259,6 +271,123 @@ export class FreeSlideComponent implements AfterViewInit {
       }
     } catch {
       return;
+    }
+  }
+
+  async onExportPptx() {
+    let presentationName = 'Presentation';
+    this.slideService.currentPresentation$.pipe(take(1)).subscribe((presentation) => {
+      if (presentation.title) {
+        presentationName = presentation.title;
+      }
+    });
+
+    this.exportProgress.set({
+      busy: true,
+      fileName: presentationName,
+      percent: 10,
+      message: 'Подготовка к экспорту...',
+      steps: [
+        { label: 'Чтение данных', status: 'active' },
+        { label: 'Подготовка слайдов', status: 'pending' },
+        { label: 'Экспорт PPTX', status: 'pending' },
+      ],
+    });
+    this.cdr.markForCheck();
+
+    try {
+      const saveCompleted = firstValueFrom(
+        this.slideService.saveCompleted$.pipe(
+          take(1),
+          timeout(3000),
+          catchError(() => of(undefined))
+        )
+      );
+      this.slideService.requestSaveCurrentSlide$.next();
+      await saveCompleted;
+
+      this.exportProgress.update((prev) => prev ? {
+        ...prev,
+        percent: 30,
+        message: 'Обработка слайдов...',
+        steps: [
+          { label: 'Чтение данных', status: 'done' },
+          { label: 'Подготовка слайдов', status: 'active' },
+          { label: 'Экспорт PPTX', status: 'pending' },
+        ],
+      } : prev);
+
+      const states = Array.from(this.slideService.slidesMap.values())
+        .sort((a, b) => a.index - b.index)
+        .map((slide) => this.parseSerializedState(slide.content))
+        .filter((state): state is SerializedState => !!state);
+
+      this.exportProgress.update((prev) => prev ? {
+        ...prev,
+        percent: 60,
+        message: 'Генерация файла презентации (это может занять некоторое время)...',
+        steps: [
+          { label: 'Чтение данных', status: 'done' },
+          { label: 'Подготовка слайдов', status: 'done' },
+          { label: 'Экспорт PPTX', status: 'active' },
+        ],
+      } : prev);
+
+      const blob = await firstValueFrom(this.pptxFacade.exportPptx(presentationName, states));
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${presentationName}.pptx`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+
+      this.exportProgress.update((prev) => prev ? {
+        ...prev,
+        busy: false,
+        percent: 100,
+        message: 'Экспорт завершён',
+        steps: [
+          { label: 'Чтение данных', status: 'done' },
+          { label: 'Подготовка слайдов', status: 'done' },
+          { label: 'Экспорт PPTX', status: 'done' },
+        ],
+      } : prev);
+
+      setTimeout(() => {
+        this.closeExportProgress();
+      }, 700);
+    } catch (err) {
+      console.error('Failed to export PPTX', err);
+      this.exportProgress.update((prev) => prev ? {
+        ...prev,
+        busy: false,
+        percent: 100,
+        message: 'Экспорт завершился с ошибкой',
+        steps: prev.steps.map((step) => step.status === 'active' ? { ...step, status: 'error' } : step),
+      } : prev);
+    }
+  }
+
+  closeExportProgress() {
+    const current = this.exportProgress();
+    if (current && !current.busy) {
+      this.exportProgress.set(null);
+      this.cdr.markForCheck();
+    }
+  }
+
+  private parseSerializedState(content: string): SerializedState | null {
+    if (!content) {
+      return null;
+    }
+
+    try {
+      const state: SerializedState = JSON.parse(content);
+      return state;
+    } catch {
+      return null;
     }
   }
 

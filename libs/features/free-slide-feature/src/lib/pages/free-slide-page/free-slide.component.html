@@ -1,7 +1,17 @@
 <lyri-page-container [pagePath]="$pagePath()">
 
   <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
-    <button pButton pRipple (click)="window.history.back()">Назад</button>
+    <div class="free-slide__page-header">
+      <button pButton pRipple (click)="window.history.back()">Назад</button>
+      <button
+        pButton
+        pRipple
+        severity="secondary"
+        icon="pi pi-download"
+        label="Экспорт PPTX"
+        (click)="onExportPptx()"
+      ></button>
+    </div>
   </ng-template>
 
   <ng-container page-content>
@@ -78,3 +88,11 @@
   </ng-template>
 
 </lyri-page-container>
+
+@if (exportProgress(); as progress) {
+  <lyri-pptx-progress-dialog
+    header="Экспорт PPTX"
+    [progress]="progress"
+    (close)="closeExportProgress()"
+  ></lyri-pptx-progress-dialog>
+}

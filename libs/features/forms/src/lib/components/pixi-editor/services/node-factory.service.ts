@@ -60,6 +60,22 @@ export class NodeFactoryService {
 
     switch (nodeData.type) {
       case 'text': {
+        const fontFamily =
+          typeof nodeData.style?.font === 'string'
+            ? nodeData.style.font
+            : undefined;
+        const fontWeight =
+          typeof nodeData.style?.weight === 'string'
+            ? nodeData.style.weight
+            : undefined;
+        if (fontFamily) {
+          await this.textFit.ensureFontLoaded(
+            fontFamily,
+            fontWeight ?? '400',
+            Math.max(16, scaledHeight)
+          );
+        }
+
         const textNode = new TextNode(
           this.app,
           this.textFit,

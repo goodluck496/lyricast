@@ -25,11 +25,26 @@
                 [options]="fontOptions"
                 optionLabel="label"
                 optionValue="value"
+                appendTo="body"
+                styleClass="font-select"
+                panelStyleClass="font-select-panel"
+                [style]="{ width: '100%', minWidth: '0' }"
                 [ngModel]="vm.ui.font"
                 (ngModelChange)="
                 emit({ t: 'APPLY_STYLE', patch: { font: $event } })
               "
-              ></p-select>
+              >
+                <ng-template pTemplate="selectedItem" let-value>
+                  <span [style.font-family]="getFontOptionFamily(value?.value || value)">
+                    {{ value?.label || getFontOptionLabel(value) }}
+                  </span>
+                </ng-template>
+                <ng-template pTemplate="item" let-option>
+                  <span [style.font-family]="getFontOptionFamily(option.value)">
+                    {{ option.label }}
+                  </span>
+                </ng-template>
+              </p-select>
               <label for="font">Гарнитура</label>
             </p-float-label>
             <p-float-label class="p-float-label">
@@ -59,7 +74,10 @@
               <label for="align">Выравнивание</label>
             </p-float-label>
             <div class="size-row">
-              <label class="slider-label" for="fontRange">Размер шрифта</label>
+              <label class="slider-label" for="fontRange">
+                Размер шрифта
+                (факт: {{ vm.ui.actualFontSize | number : '1.0-0' }}px)
+              </label>
               <div class="slider-wrapper">
                 <span class="slider-end-label start">{{ vm.ui.min | number : '1.0-0' }}px</span>
                 <mat-slider
@@ -67,14 +85,14 @@
                   id="fontRange"
                   [min]="fontMin"
                   [max]="fontMax"
-                  [step]="2"
+                  [step]="fontSizeStep"
                   [displayWith]="formatFontSize"
                 >
                   <input
                     matSliderStartThumb
                     name="fontMin"
                     [(ngModel)]="vm.ui.min"
-                    [step]="2"
+                    [step]="fontSizeStep"
                     [ngModelOptions]="{ standalone: true }"
                     (ngModelChange)="onFontSizeMinChange($event)"
                   />
@@ -82,7 +100,7 @@
                     matSliderEndThumb
                     name="fontMax"
                     [(ngModel)]="vm.ui.max"
-                    [step]="2"
+                    [step]="fontSizeStep"
                     [ngModelOptions]="{ standalone: true }"
                     (ngModelChange)="onFontSizeMaxChange($event)"
                   />
@@ -113,8 +131,8 @@
           </div>
         </p-panel>
 
-        <p-panel header="Цвет и обводка">
-          <div class="form-grid two-cols color-stroke-grid">
+        <p-panel header="Цвет и тень">
+          <div class="form-grid color-shadow-grid">
             <div class="field">
               <p-float-label class="p-float-label">
                 <p-colorPicker
@@ -151,21 +169,66 @@
             </div>
             <div class="field">
               <p-float-label class="p-float-label">
-                <p-inputNumber
+                <p-colorPicker
+                  appendTo="body"
+                  panelStyleClass="color-overlay"
                   styleClass="field-control"
-                  inputId="stroke"
-                  [min]="1"
-                  [max]="60"
-                  [step]="1"
-                  [ngModel]="vm.ui.strokeWidth"
-                  inputStyleClass="p-inputtext"
-                  (ngModelChange)="emit({ t: 'APPLY_STYLE', patch: { strokeWidth: +$event } })"
-                  (pointerdown)="stopScrollDrag($event)"
-                  (touchstart)="stopScrollDrag($event)"
-                ></p-inputNumber>
-                <label for="stroke">Обводка</label>
+                  inputId="shadowColor"
+                  format="hex"
+                  [ngModel]="vm.ui.shadowColorHex ?? '#000000'"
+                  (mousedown)="onColorPickerPreOpen()"
+                  (onShow)="onColorPickerOpen()"
+                  (onHide)="onColorPickerClose()"
+                  (ngModelChange)="emit({ t: 'APPLY_STYLE', patch: { shadowColorHex: $event } })"
+                ></p-colorPicker>
+                <label for="shadowColor">Цвет тени</label>
               </p-float-label>
-
+            </div>
+            <div class="slider-field">
+              <label class="slider-label" for="shadowSize">
+                Смещение тени ({{ (vm.ui.shadowSize ?? 0) | number : '1.0-0' }}px)
+              </label>
+              <mat-slider
+                class="range-slider"
+                id="shadowSize"
+                [min]="0"
+                [max]="10"
+                [step]="1"
+                [displayWith]="formatPx"
+              >
+                <input
+                  matSliderThumb
+                  name="shadowSize"
+                  [ngModel]="vm.ui.shadowSize ?? 0"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="
+                    emit({ t: 'APPLY_STYLE', patch: { shadowSize: +$event } })
+                  "
+                />
+              </mat-slider>
+            </div>
+            <div class="slider-field">
+              <label class="slider-label" for="shadowBlur">
+                Размытие тени ({{ (vm.ui.shadowBlur ?? 0) | number : '1.0-0' }}px)
+              </label>
+              <mat-slider
+                class="range-slider"
+                id="shadowBlur"
+                [min]="0"
+                [max]="20"
+                [step]="1"
+                [displayWith]="formatPx"
+              >
+                <input
+                  matSliderThumb
+                  name="shadowBlur"
+                  [ngModel]="vm.ui.shadowBlur ?? 0"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="
+                    emit({ t: 'APPLY_STYLE', patch: { shadowBlur: +$event } })
+                  "
+                />
+              </mat-slider>
             </div>
           </div>
         </p-panel>

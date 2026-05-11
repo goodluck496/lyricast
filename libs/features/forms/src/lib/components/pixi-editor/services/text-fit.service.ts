@@ -1,7 +1,15 @@
-import { Inject, Injectable } from '@angular/core';
-import { Application, HTMLText } from 'pixi.js';
+import { inject, Injectable } from '@angular/core';
+import { Application, Assets, HTMLText } from 'pixi.js';
 import { Align, EDITOR_CONFIG, EditorConfig } from '../types';
 import { EditorUtilsService } from './editor-utils.service';
+import * as FontFaceObserver from 'fontfaceobserver';
+
+interface CustomFontDefinition {
+  url: string;
+  format: string;
+  mime: string;
+  dataUrl?: string;
+}
 
 /**
  * Service that computes the best font size to fit a given text inside a box.
@@ -9,10 +17,53 @@ import { EditorUtilsService } from './editor-utils.service';
  */
 @Injectable({ providedIn: 'any' })
 export class TextFitService {
-  constructor(
-    private readonly utils: EditorUtilsService,
-    @Inject(EDITOR_CONFIG) private readonly cfg: EditorConfig
-  ) {}
+  private readonly utils = inject(EditorUtilsService);
+  private readonly cfg = inject<EditorConfig>(EDITOR_CONFIG);
+
+  private readonly customFonts = new Map<string, CustomFontDefinition>([
+    [
+      'Font-1',
+      {
+        url: 'assets/fonts/Cruinn-Regular.ttf',
+        format: 'truetype',
+        mime: 'font/ttf',
+      },
+    ],
+    [
+      'Font-2',
+      {
+        url: 'assets/fonts/Schist-Regular.ttf',
+        format: 'truetype',
+        mime: 'font/ttf',
+      },
+    ],
+    [
+      'Font-3',
+      {
+        url: 'assets/fonts/Share-Tech-CYR.otf',
+        format: 'opentype',
+        mime: 'font/otf',
+      },
+    ],
+    [
+      'Font-4',
+      {
+        url: 'assets/fonts/HQYSaversText.ttf',
+        format: 'truetype',
+        mime: 'font/ttf',
+      },
+    ],
+    [
+      'Font-5',
+      {
+        url: 'assets/fonts/Entropia-Light.otf',
+        format: 'opentype',
+        mime: 'font/otf',
+      },
+    ],
+  ]);
+  private readonly fontLoadPromises = new Map<string, Promise<void>>();
+
 
   async fitBinary(options: {
     app: Application;
@@ -92,13 +143,15 @@ export class TextFitService {
         ? (nearest as NumericWeightString)
         : '400';
     };
+    const normalizedWeight = normalizeFontWeight(weight);
+    await this.ensureFontLoaded(family, normalizedWeight, max);
 
     const probe = new HTMLText({
       text,
       style: {
         fontFamily: family,
         // Pixi expects TextStyleFontWeight as specific string tokens (or keywords).
-        fontWeight: normalizeFontWeight(weight),
+        fontWeight: normalizedWeight,
         align,
         wordWrap: true,
         wordWrapWidth: innerW,
@@ -109,6 +162,7 @@ export class TextFitService {
             ? baseStyle.fill
             : this.utils.colorToNumber('#ffffee'),
         cssOverrides: [
+          ...this.getFontCssOverrides(family),
           '.pixi-html-text, .pixi-html-text * { margin: 0; white-space: normal !important; word-break: normal !important; overflow-wrap: break-word !important; }',
           '.pixi-html-text ul, .pixi-html-text ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
         ],
@@ -179,5 +233,170 @@ export class TextFitService {
 
     probe.destroy({ children: true });
     return best;
+  }
+
+  async ensureFontLoaded(
+    family: string,
+    weight: string,
+    size: number
+  ): Promise<void> {
+    const fonts = globalThis.document?.fonts;
+    if (!fonts) return;
+
+    try {
+      const cssFamily = this.toCssFontFamily(family);
+      await this.registerCustomFont(family, weight);
+      await fonts.load(
+        `${weight} ${Math.max(1, Math.round(size))}px ${cssFamily}`
+      );
+      await fonts.ready;
+    } catch {
+      // Browser/system font shorthands can be invalid for document.fonts.load().
+      // Pixi will still render with the browser fallback in that case.
+    }
+  }
+
+  getFontCssOverrides(family: string): string[] {
+    const font = this.customFonts.get(family.trim());
+    const cssFamily = this.toCssFontFamily(family);
+    const familyOverride = `.pixi-html-text, .pixi-html-text * { font-family: ${cssFamily}, sans-serif !important; }`;
+    if (!font) return [familyOverride];
+
+    const fontUrl = font.dataUrl ?? this.resolveFontUrl(font.url);
+    const fontFaces = [
+      '100',
+      '200',
+      '300',
+      '400',
+      '500',
+      '600',
+      '700',
+      '800',
+      '900',
+    ].map(
+      (weight) =>
+        `@font-face { font-family: ${cssFamily}; src: url("${fontUrl}") format("${font.format}"); font-weight: ${weight}; font-style: normal; }`
+    );
+
+    return [...fontFaces, familyOverride];
+  }
+
+  private async registerCustomFont(
+    family: string,
+    weight: string
+  ): Promise<void> {
+    const familyName = family.trim();
+    const font = this.customFonts.get(familyName);
+    const fonts = globalThis.document?.fonts;
+    const addFontFace = this.getAddFontFace(fonts);
+    const FontFaceConstructor = globalThis.FontFace;
+    if (!font || !fonts || !addFontFace || !FontFaceConstructor) return;
+
+    const cacheKey = `${familyName}:${weight}`;
+    const existing = this.fontLoadPromises.get(cacheKey);
+    if (existing) {
+      await existing;
+      return;
+    }
+
+    const loadPromise = (async () => {
+      const fontUrl = await this.ensureFontDataUrl(font);
+      await Assets.load({
+        src: fontUrl,
+        data: {
+          family: familyName,
+        },
+      });
+
+      const fontFace = await new FontFaceConstructor(
+        familyName,
+        `url("${fontUrl}")`,
+        {
+          style: 'normal',
+          weight,
+        }
+      ).load();
+
+      addFontFace(fonts, fontFace);
+      await new FontFaceObserver(familyName, { weight }).load('BESbswy', 5000);
+      await fonts.ready;
+    })()
+      .catch(() => undefined)
+      .then(() => undefined);
+
+    this.fontLoadPromises.set(cacheKey, loadPromise);
+    await loadPromise;
+  }
+
+  private async ensureFontDataUrl(font: CustomFontDefinition): Promise<string> {
+    if (font.dataUrl) return font.dataUrl;
+
+    const response = await fetch(this.resolveFontUrl(font.url));
+    const buffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+
+    for (let i = 0; i < bytes.length; i += 1) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+
+    font.dataUrl = `data:${font.mime};base64,${btoa(binary)}`;
+    return font.dataUrl;
+  }
+
+  private getAddFontFace(
+    fonts: FontFaceSet | undefined
+  ): ((target: FontFaceSet, fontFace: FontFace) => void) | undefined {
+    if (!fonts || !('add' in fonts)) {
+      return undefined;
+    }
+
+    const add = fonts.add;
+    if (typeof add !== 'function') return undefined;
+
+    return (target, fontFace) => {
+      add.call(target, fontFace);
+    };
+  }
+
+  private resolveFontUrl(url: string): string {
+    const baseUrl = globalThis.document?.baseURI ?? globalThis.location?.href;
+    if (!baseUrl) return url;
+
+    try {
+      return new URL(url, baseUrl).toString();
+    } catch {
+      return url;
+    }
+  }
+
+  private toCssFontFamily(family: string): string {
+    const trimmed = family.trim();
+    if (!trimmed || trimmed.includes(',')) return family;
+
+    const genericFamilies = new Set([
+      'serif',
+      'sans-serif',
+      'monospace',
+      'cursive',
+      'fantasy',
+      'system-ui',
+      'ui-serif',
+      'ui-sans-serif',
+      'ui-monospace',
+      'ui-rounded',
+      'emoji',
+      'math',
+      'fangsong',
+    ]);
+    if (genericFamilies.has(trimmed.toLowerCase())) return trimmed;
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      return trimmed;
+    }
+
+    return `"${trimmed.replace(/"/g, '\\"')}"`;
   }
 }

@@ -2,14 +2,14 @@
 
 @font-face {
   font-family: 'Font-1';
-  src: url('assets/fonts/Cruinn-Regular.ttf') format('opentype');
+  src: url('assets/fonts/Cruinn-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Font-2';
-  src: url('assets/fonts/Schist-Regular.ttf') format('opentype');
+  src: url('assets/fonts/Schist-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
@@ -24,7 +24,14 @@
 
 @font-face {
   font-family: 'Font-4';
-  src: url('assets/fonts/HQYSaversText.ttf') format('opentype');
+  src: url('assets/fonts/HQYSaversText.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Font-5';
+  src: url('assets/fonts/Entropia-Light.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
 }

@@ -37,6 +37,7 @@ export class TextPlugin implements EditorPlugin {
       const textNode = new TextNode(ctx.app, this.fitter, this.assetStorage);
       textNode.x = addText.x ?? 80;
       textNode.y = addText.y ?? 80;
+      textNode.style = { ...ctx.store.snapshot((state) => state.ui) };
 
       // Применяем стили и текст ДО вызова applyBoxSize и layout
       if (addText.options?.style) {
@@ -46,6 +47,9 @@ export class TextPlugin implements EditorPlugin {
         if (typeof restored === 'number' && Number.isFinite(restored)) {
           (textNode.style as any).actualFontSize = restored;
         }
+      }
+      if (!addText.options?.style) {
+        delete textNode.style.actualFontSize;
       }
       textNode.textHtml = addText.text ?? 'New text';
 
@@ -57,10 +61,18 @@ export class TextPlugin implements EditorPlugin {
       }
 
       // Теперь вызываем applyBoxSize, который использует actualFontSize, если он есть
+      const hasFixedFontSize =
+        typeof textNode.style.actualFontSize === 'number';
+      if (hasFixedFontSize) {
+        const fontSize = Math.max(1, textNode.style.actualFontSize ?? 1);
+        textNode.style.min = fontSize;
+        textNode.style.max = fontSize;
+      }
+
       textNode.applyBoxSize(addText.options?.width ?? 600, addText.options?.height ?? 240);
 
       // layout() вызываем только если узел создается с нуля, а не восстанавливается
-      if (!(addText.options?.style as any)?.actualFontSize) {
+      if (!hasFixedFontSize) {
         // Pixi text metrics/fonts can settle over a couple frames; delay initial fit.
         void (async () => {
           const waitForFrames = async (count: number) => {
@@ -118,10 +130,29 @@ export class TextPlugin implements EditorPlugin {
           if (typeof patch.max === 'number') node.style.max = patch.max;
           if (patch.align) node.style.align = patch.align as Align;
           if (typeof patch.lineHeight === 'number') node.style.lineHeight = patch.lineHeight;
+          if (typeof patch.actualFontSize === 'number') {
+            const fontSize = Math.max(1, patch.actualFontSize);
+            node.style.actualFontSize = fontSize;
+            node.style.min = fontSize;
+            node.style.max = fontSize;
+            node.applyFixedSize(fontSize);
+          }
           // if (patch.list != null) node.style.list = !!patch.list;
           if (patch.colorHex) {
             node.style.color = ctx.utils.colorToNumber(patch.colorHex);
             node.style.colorHex = patch.colorHex;
+          }
+          if (patch.shadowColorHex) {
+            node.style.shadowColor = ctx.utils.colorToNumber(
+              patch.shadowColorHex
+            );
+            node.style.shadowColorHex = patch.shadowColorHex;
+          }
+          if (typeof patch.shadowSize === 'number') {
+            node.style.shadowSize = Math.max(0, patch.shadowSize);
+          }
+          if (typeof patch.shadowBlur === 'number') {
+            node.style.shadowBlur = Math.max(0, patch.shadowBlur);
           }
           node.requestFit();
           node.drawHandles();

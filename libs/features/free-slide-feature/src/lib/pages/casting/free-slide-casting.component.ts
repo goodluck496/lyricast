@@ -72,6 +72,7 @@ export class FreeSlideCastingComponent
   private readonly renderer = inject(Renderer2);
   private readonly assetStorage = inject(AssetStorageService);
   private readonly nodeFactory = inject(NodeFactoryService);
+  private readonly textFit = inject(TextFitService);
   private readonly transitionService = inject(SlideTransitionService);
 
   @ViewChild('pixiHost', { static: true })
@@ -325,6 +326,9 @@ export class FreeSlideCastingComponent
       }
       if (isStale()) return null;
 
+      await this.preloadTextFonts(data);
+      if (isStale()) return null;
+
       const currentSlideAssetIds = new Set<string>();
       for (const node of data.nodes) {
         if ('assetId' in node && node.assetId) {
@@ -422,6 +426,30 @@ export class FreeSlideCastingComponent
     }
   }
 
+  private async preloadTextFonts(state: SerializedState): Promise<void> {
+    const uniqueFonts = new Map<string, string>();
+
+    for (const node of state.nodes) {
+      if (node.type !== 'text') continue;
+
+      const fontFamily =
+        typeof node.style?.font === 'string' ? node.style.font.trim() : '';
+      if (!fontFamily) continue;
+
+      const weight =
+        typeof node.style?.weight === 'string' ? node.style.weight : '400';
+      uniqueFonts.set(fontFamily, weight);
+    }
+
+    if (!uniqueFonts.size) return;
+
+    await Promise.all(
+      Array.from(uniqueFonts.entries()).map(([family, weight]) =>
+        this.textFit.ensureFontLoaded(family, weight, 48)
+      )
+    );
+  }
+
   private async renderSlide(slide: Slide) {
     // Версионный токен для отмены конкурирующих рендеров (live-sync может прислать несколько событий подряд)
     const currentVersion = ++this.renderVersion;
@@ -452,6 +480,9 @@ export class FreeSlideCastingComponent
       if (!data || !data.nodes) {
         return;
       }
+      if (isStale()) return;
+
+      await this.preloadTextFonts(data);
       if (isStale()) return;
 
       const currentSlideAssetIds = new Set<string>();

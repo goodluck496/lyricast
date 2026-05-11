@@ -42,6 +42,14 @@ export interface UiTextStyles {
   /** Цвет фона в HEX-формате для UI */
   bgColorHex?: string;
 
+  shadowColor?: number;
+
+  shadowColorHex?: string;
+
+  shadowSize?: number;
+
+  shadowBlur?: number;
+
   /** Горизонтальное выравнивание текста */
   align: TextAlign;
 

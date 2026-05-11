@@ -144,6 +144,7 @@
   flex-direction: column;
   padding: 0;
   overflow: hidden;
+  overflow-x: hidden;
   height: 100%;
   box-sizing: border-box;
 }
@@ -182,6 +183,7 @@
 
 .form-grid > * {
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
 }
 
@@ -204,8 +206,13 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.form-grid.two-cols.color-stroke-grid {
+.form-grid.two-cols.color-stroke-grid,
+.form-grid.color-shadow-grid {
   row-gap: 18px;
+}
+
+.form-grid.color-shadow-grid {
+  grid-template-columns: 1fr;
 }
 
 .form-grid.stacked > .p-float-label {
@@ -214,6 +221,7 @@
 
 .form-grid :is(.p-float-label, .p-select, .p-inputnumber) {
   width: 100%;
+  min-width: 0;
 }
 
 .form-grid :is(.p-inputnumber-input, .p-inputnumber input) {
@@ -297,12 +305,22 @@
   margin-bottom: 6px;
 }
 
+.slider-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-top: 16px;
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
   align-items: stretch;
 }
 
@@ -316,6 +334,8 @@
 
 .field-control {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: block;
 }
 

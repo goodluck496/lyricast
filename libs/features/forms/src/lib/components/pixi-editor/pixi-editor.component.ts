@@ -172,6 +172,7 @@ export class PixiSlideEditorV2Component
   fontMin = 16;
   fontMax = 150;
   private colorPickerOpen = false;
+  readonly fontSizeStep = 4;
 
   private removeScrollbarLock?: () => void;
   private removeColorPickerKeyGuard?: () => void;
@@ -182,11 +183,17 @@ export class PixiSlideEditorV2Component
     { label: 'Нет', value: 'none' },
   ];
   fontOptions = [
-    { label: 'Inter, system-ui, sans-serif', value: 'Inter, system-ui, sans-serif' },
-    { label: 'Arial, Helvetica, sans-serif', value: 'Arial, Helvetica, sans-serif' },
-    { label: 'Georgia, serif', value: 'Georgia, serif' },
-    { label: "'Times New Roman', Times, serif", value: "'Times New Roman', Times, serif" },
-    { label: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", value: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" },
+    { label: 'Sans Serif', value: 'sans-serif' },
+    { label: 'Font-1', value: 'Font-1' },
+    { label: 'Font-2', value: 'Font-2' },
+    { label: 'Font-3', value: 'Font-3' },
+    { label: 'Font-4', value: 'Font-4' },
+    { label: 'Font-5', value: 'Font-5' },
+    { label: 'Inter', value: 'Inter, system-ui, sans-serif' },
+    { label: 'Arial', value: 'Arial, Helvetica, sans-serif' },
+    { label: 'Georgia', value: 'Georgia, serif' },
+    { label: 'Times New Roman', value: "'Times New Roman', Times, serif" },
+    { label: 'Segoe UI', value: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" },
   ];
   weightOptions = [
     { label: '400', value: '400' },
@@ -227,6 +234,10 @@ export class PixiSlideEditorV2Component
 
   async ngAfterViewInit(): Promise<void> {
     await this.initPixi();
+    this.syncFontOptionsFromDocumentFonts();
+    void this.document.fonts?.ready.then(() => {
+      this.syncFontOptionsFromDocumentFonts();
+    });
 
     // Инициализируем границы сцены при запуске
     this.sceneViewport.updateSceneBounds();
@@ -530,6 +541,11 @@ export class PixiSlideEditorV2Component
               weight: textNode.style.weight,
               color: textNode.style.color,
               colorHex: textNode.style.colorHex,
+              shadowColor: textNode.style.shadowColor ?? 0x000000,
+              shadowColorHex: textNode.style.shadowColorHex ?? '#000000',
+              shadowSize: textNode.style.shadowSize ?? 0,
+              shadowBlur: textNode.style.shadowBlur ?? 0,
+              actualFontSize: textNode.currentFontSize,
               align: textNode.style.align,
               lineHeight: textNode.style.lineHeight,
               min: safeMin,
@@ -1052,6 +1068,27 @@ export class PixiSlideEditorV2Component
     return `${Math.round(value)}px`;
   };
 
+  formatPx = (value: number | null): string => {
+    if (value === null || value === undefined) return '';
+    return `${Math.round(value)}px`;
+  };
+
+  getFontOptionFamily(font: string | null | undefined): string {
+    const value = font || 'sans-serif';
+    return value === 'sans-serif' ? 'sans-serif' : `"${value}", sans-serif`;
+  }
+
+  getFontOptionLabel(
+    value: string | { label?: string; value?: string } | null | undefined
+  ): string {
+    if (!value) return '';
+    if (typeof value !== 'string') return value.label ?? value.value ?? '';
+
+    return (
+      this.fontOptions.find((option) => option.value === value)?.label ?? value
+    );
+  }
+
   onFontSizeMinChange(value: number | null) {
     const nextMin = this.clampFontSize(value);
     const currentMax = this.clampFontSize(this.store.snapshot((s) => s.ui).max);
@@ -1078,8 +1115,19 @@ export class PixiSlideEditorV2Component
     const numeric = Number(value);
     const base = Number.isFinite(numeric) ? numeric : minLimit;
     const clamped = Math.min(maxLimit, Math.max(minLimit, base));
-    const snapped = Math.round(clamped / 2) * 2; // шаг 2
+    const snapped = Math.round(clamped / this.fontSizeStep) * this.fontSizeStep;
     return Math.min(maxLimit, Math.max(minLimit, snapped));
+  }
+
+  private syncFontOptionsFromDocumentFonts(): void {
+    const known = new Map(this.fontOptions.map((option) => [option.value, option]));
+    this.document.fonts?.forEach((fontFace) => {
+      const family = fontFace.family.replace(/^["']|["']$/g, '');
+      if (!family || known.has(family)) return;
+      known.set(family, { label: family, value: family });
+    });
+    this.fontOptions = Array.from(known.values());
+    this.cdr.markForCheck();
   }
 
   public async generateSnapshot(options?: {

@@ -1,6 +1,12 @@
 
 import { BackgroundHostNode, NodeBackgroundManager } from '../mixins/background-manager';
-import { Application, Graphics, HTMLText, HTMLTextStyle } from 'pixi.js';
+import {
+  Application,
+  BlurFilter,
+  Graphics,
+  HTMLText,
+  HTMLTextStyle,
+} from 'pixi.js';
 import { normalizeFontWeight } from '../utils/text-utils';
 import { NodeBase } from './base.node';
 import { DEFAULT_CONFIG, UiTextStyles } from '../types';
@@ -20,6 +26,10 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
     max: DEFAULT_CONFIG.defaults.textMax,
     color: 0xffffff,
     colorHex: '#ffffff',
+    shadowColor: 0x000000,
+    shadowColorHex: '#000000',
+    shadowSize: 0,
+    shadowBlur: 0,
   };
 
   private lastCalculatedFontSize = 32;
@@ -39,6 +49,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
 
   private fitScheduled = false;
   public readonly textDisplay: HTMLText; // <-- Объявить тип без инициализации
+  private readonly shadowDisplay: HTMLText;
   private readonly bgG = new Graphics(); // Keep for solid fill drawing
   private backgroundManager: NodeBackgroundManager; // New manager instance
 
@@ -50,14 +61,16 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
   ) {
     super(isCastingMode);
     this.textDisplay = new HTMLText({ text: '' }); // <-- Удалить масштабирование
+    this.shadowDisplay = new HTMLText({ text: '' });
     this.backgroundManager = new NodeBackgroundManager(
       this,
       this.assetStorage,
-      () => this.textDisplay, // Primary graphics for z-ordering
+      () => this.shadowDisplay, // Primary graphics for z-ordering
       () => this.redrawBackground() // Callback for host to redraw its solid background
     );
     // Rendering order: background (solid/image) -> text -> handles
     this.addChild(this.bgG);
+    this.addChild(this.shadowDisplay);
     this.addChild(this.textDisplay);
     this.addChild(this.handlesContainer);
     this.drawFrame();
@@ -120,12 +133,14 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       fontSize: size,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
+        ...this.fitter.getFontCssOverrides(this.style.font),
         '* { margin: 0; padding: 0; }',
         'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
         'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
         'li { margin: 0; padding: 0; }',
       ],
     });
+    this.applyShadowDisplayStyle(size);
 
     this.updateTextPosition();
   }
@@ -204,12 +219,14 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       lineHeight: this.lastCalculatedFontSize * this.style.lineHeight,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
+        ...this.fitter.getFontCssOverrides(this.style.font),
         '* { margin: 0; padding: 0; }',
         'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
         'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
         'li { margin: 0; padding: 0; }',
       ],
     });
+    this.applyShadowDisplayStyle(this.lastCalculatedFontSize);
 
     // Give Pixi a frame to update the text's metrics
     await new Promise<void>((resolve) =>
@@ -244,6 +261,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
     const anchorY = valign === 'middle' ? 0.5 : valign === 'bottom' ? 1 : 0;
 
     this.textDisplay.anchor.set(anchorX, anchorY);
+    this.shadowDisplay.anchor.set(anchorX, anchorY);
 
     const innerW = Math.max(4, this.w - this.padding * 2);
     const innerH = Math.max(4, this.h - this.padding * 2);
@@ -252,6 +270,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
     const y = this.padding + innerH * anchorY;
 
     this.textDisplay.position.set(Math.round(x), Math.round(y));
+    this.updateShadowPosition(x, y);
   }
 
   /**
@@ -295,13 +314,55 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       fontSize: size,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
       cssOverrides: [
+        ...this.fitter.getFontCssOverrides(this.style.font),
         '* { margin: 0; padding: 0; }',
         'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
         'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
         'li { margin: 0; padding: 0; }',
       ],
     });
+    this.applyShadowDisplayStyle(size);
 
     this.updateTextPosition();
+  }
+
+  private applyShadowDisplayStyle(size: number): void {
+    const shadowSize = Math.max(0, Math.round(this.style.shadowSize ?? 0));
+    const shadowBlur = Math.max(0, Math.round(this.style.shadowBlur ?? 0));
+    this.shadowDisplay.visible = shadowSize > 0 || shadowBlur > 0;
+    this.shadowDisplay.text = this.textHtml;
+    this.shadowDisplay.filters = shadowBlur
+      ? [new BlurFilter({ strength: shadowBlur })]
+      : [];
+
+    if (!shadowSize && !shadowBlur) return;
+
+    this.shadowDisplay.style = new HTMLTextStyle({
+      fontFamily: this.style.font,
+      fontWeight: normalizeFontWeight(this.style.weight),
+      align: this.style.align,
+      wordWrap: true,
+      breakWords: false,
+      whiteSpace: 'normal',
+      fill: this.style.shadowColor ?? 0x000000,
+      lineHeight: size * this.style.lineHeight,
+      fontSize: size,
+      wordWrapWidth: Math.max(4, this.w - this.padding * 2),
+      cssOverrides: [
+        ...this.fitter.getFontCssOverrides(this.style.font),
+        '* { margin: 0; padding: 0; }',
+        'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
+        'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
+        'li { margin: 0; padding: 0; }',
+      ],
+    });
+  }
+
+  private updateShadowPosition(x: number, y: number): void {
+    const shadowSize = Math.max(0, Math.round(this.style.shadowSize ?? 0));
+    this.shadowDisplay.position.set(
+      Math.round(x + shadowSize),
+      Math.round(y + shadowSize)
+    );
   }
 }

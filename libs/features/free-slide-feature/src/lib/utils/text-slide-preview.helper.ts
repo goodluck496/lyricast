@@ -194,6 +194,13 @@ export class TextSlidePreviewHelper {
     ctx.fillStyle = this.toCanvasColor(
       this.readStyleNumber(textNode, 'color') ?? 0xffffff
     );
+    ctx.shadowColor = this.toCanvasColor(
+      this.readStyleNumber(textNode, 'shadowColor') ?? 0x000000
+    );
+    const shadowSize = (this.readStyleNumber(textNode, 'shadowSize') ?? 0) * scale;
+    ctx.shadowOffsetX = shadowSize;
+    ctx.shadowOffsetY = shadowSize;
+    ctx.shadowBlur = (this.readStyleNumber(textNode, 'shadowBlur') ?? 0) * scale;
 
     const align = this.readStyleString(textNode, 'align');
     ctx.textAlign = align === 'left' ? 'left' : align === 'right' ? 'right' : 'center';
@@ -215,6 +222,11 @@ export class TextSlidePreviewHelper {
       ctx.fillText(line, textX, Math.round(textY));
       textY += lineHeight;
     }
+
+    ctx.shadowColor = 'transparent';
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.shadowBlur = 0;
   }
 
   private static async renderImageNode(

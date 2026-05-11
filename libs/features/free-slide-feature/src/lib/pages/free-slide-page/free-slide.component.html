@@ -47,7 +47,11 @@
 
           </ng-template>
 
-          <lyri-pixi-slide-editor-v2></lyri-pixi-slide-editor-v2>
+          <lyri-pixi-slide-editor-v2
+            (applyTextStylesToAll)="onApplyTextStylesToAll($event)"
+          ></lyri-pixi-slide-editor-v2>
+
+          <p-confirmpopup></p-confirmpopup>
 
           <ng-template pTemplate="footer">
             <div class="free-slide__footer">

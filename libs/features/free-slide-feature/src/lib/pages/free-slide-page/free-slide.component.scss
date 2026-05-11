@@ -21,13 +21,12 @@
     height: 100%;
   }
 
-  &__preview-list,&__preview-list-wrapper, &__contents {
+  &__preview-list, &__preview-list-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-
-    gap: 1rem
+    gap: 1rem;
   }
 
   &__preview-list-wrapper {
@@ -52,14 +51,51 @@
     }
   }
 
-
-
-  &__selected-slide {
-
-  }
-
   &__contents {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding-left: 1rem;
 
+    form {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+    }
+
+    ::ng-deep {
+      .p-card.free-slide {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+
+        .p-card-body {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          min-height: 0;
+        }
+
+        .p-card-content {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          min-height: 0;
+          padding: 0;
+        }
+      }
+
+      lyri-pixi-slide-editor-v2 {
+        display: block;
+        flex: 1;
+        min-height: 0;
+      }
+    }
   }
 
   &__header {

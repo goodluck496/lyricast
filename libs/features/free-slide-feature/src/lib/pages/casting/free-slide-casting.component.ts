@@ -19,8 +19,8 @@ import {
   selectFreeSlideCastingProcess,
   selectFreeSlideCastingStarted,
   selectFreeSlideNavigateState,
-  selectSlideTransitions,
   selectGlobalTransition,
+  selectSlideTransitions,
 } from '@lyri-cast/free-slide-store';
 import { AppActions, BridgeService, Pages } from '@lyri-cast/common-browser';
 
@@ -30,7 +30,6 @@ import {
   SerializedIframeNode,
   SerializedState,
   Slide,
-  DEFAULT_TRANSITION,
   SlideTransition,
 } from '@lyri-cast/entities';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -87,6 +86,8 @@ export class FreeSlideCastingComponent
   private isTransitioning = false; // флаг выполняющегося перехода
   private previousSlideAssetIds: Set<string> = new Set();
   private renderVersion = 0; // инкрементируем для каждого нового рендера, чтобы отменять предыдущие
+  private pendingRender: { slide: Slide; transition: SlideTransition } | null =
+    null;
 
   hideContent = signal(false);
 
@@ -121,7 +122,7 @@ export class FreeSlideCastingComponent
           hasNavigate: !!navigate,
           navigateSlideId: navigate?.slide?.id,
           globalTransition: globalTransition,
-          slideTransitionsSize: slideTransitions.size
+          slideTransitionsSize: slideTransitions.size,
         });
 
         let slideToRender: Slide | undefined;
@@ -142,11 +143,12 @@ export class FreeSlideCastingComponent
 
         if (slideToRender) {
           // Используем индивидуальный переход слайда, если он есть, иначе глобальный
-          const transition = slideTransitions.get(slideToRender.id) || globalTransition;
+          const transition =
+            slideTransitions.get(slideToRender.id) || globalTransition;
           console.log('[Casting] Rendering slide with transition', {
             slideId: slideToRender.id,
             transitionType: transition.type,
-            hasIndividualTransition: slideTransitions.has(slideToRender.id)
+            hasIndividualTransition: slideTransitions.has(slideToRender.id),
           });
           this.renderSlideWithTransition(slideToRender, transition);
         }
@@ -236,17 +238,21 @@ export class FreeSlideCastingComponent
     this.app.stage.addChild(this.scene);
   }
 
-  private async renderSlideWithTransition(slide: Slide, transition: SlideTransition) {
+  private async renderSlideWithTransition(
+    slide: Slide,
+    transition: SlideTransition
+  ) {
     console.log('[Casting] renderSlideWithTransition called', {
       slideId: slide.id,
       currentSlideId: this.currentSlideId,
       isTransitioning: this.isTransitioning,
-      transition: transition
+      transition: transition,
     });
 
-    // Если уже выполняется переход, пропускаем новый запрос
+    // Если уже выполняется переход, пропускаем новый запрос, но запоминаем его
     if (this.isTransitioning) {
-      console.log('[Casting] Transition already in progress, skipping');
+      console.log('[Casting] Transition already in progress, queuing');
+      this.pendingRender = { slide, transition };
       return;
     }
 
@@ -264,7 +270,10 @@ export class FreeSlideCastingComponent
         return;
       }
 
-      console.log('[Casting] Scene created, previousScene exists:', !!this.previousScene);
+      console.log(
+        '[Casting] Scene created, previousScene exists:',
+        !!this.previousScene
+      );
 
       if (sameSlide) {
         // Live-update того же самого слайда: обновляем сцену без перехода
@@ -297,7 +306,6 @@ export class FreeSlideCastingComponent
       this.scene = newScene;
 
       console.log('[Casting] Slide render completed successfully');
-
     } catch (error) {
       console.error('[Casting] Error during slide transition/render:', error);
       // В случае ошибки, по возможности оставляем предыдущую сцену
@@ -307,6 +315,14 @@ export class FreeSlideCastingComponent
       }
     } finally {
       this.isTransitioning = false;
+      if (this.pendingRender) {
+        const nextRender = this.pendingRender;
+        this.pendingRender = null;
+        void this.renderSlideWithTransition(
+          nextRender.slide,
+          nextRender.transition
+        );
+      }
     }
   }
 

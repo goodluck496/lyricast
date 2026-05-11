@@ -10,6 +10,8 @@ import {
   NgZone,
   OnDestroy,
   OnInit,
+  Output,
+  EventEmitter,
   ViewChild,
 } from '@angular/core';
 import { AsyncPipe, DecimalPipe, DOCUMENT } from '@angular/common';
@@ -119,6 +121,9 @@ export class PixiSlideEditorV2Component
   @ViewChild('host', { static: false }) hostRef!: ElementRef<HTMLDivElement>;
   @ViewChild('propertiesScrollbar', { static: false })
   private propertiesScrollbarRef?: NgScrollbarExt;
+
+  @Output() applyTextStylesToAll = new EventEmitter<{ styles: UiTextStyles, event: Event }>();
+
   selectedKind?:
     | 'text'
     | 'image'
@@ -1109,6 +1114,15 @@ export class PixiSlideEditorV2Component
     this.emit({ t: 'APPLY_STYLE', patch });
   }
 
+  onApplyTextStylesToAll(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.applyTextStylesToAll.emit({
+      styles: this.store.snapshot((s) => s.ui),
+      event
+    });
+  }
+
   private clampFontSize(value: number | null | undefined): number {
     const minLimit = 16;
     const maxLimit = 150;
@@ -1123,7 +1137,7 @@ export class PixiSlideEditorV2Component
     const known = new Map(this.fontOptions.map((option) => [option.value, option]));
     this.document.fonts?.forEach((fontFace) => {
       const family = fontFace.family.replace(/^["']|["']$/g, '');
-      if (!family || known.has(family)) return;
+      if (!family || known.has(family) || family.includes('primeicons') || family.includes('Pro')) return;
       known.set(family, { label: family, value: family });
     });
     this.fontOptions = Array.from(known.values());

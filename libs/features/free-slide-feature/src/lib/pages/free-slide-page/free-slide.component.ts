@@ -12,9 +12,14 @@ import {
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
 import { Store } from '@ngrx/store';
-import { Slide, SlideDto, SerializedState } from '@lyri-cast/entities';
+import { SerializedState, Slide, SlideDto } from '@lyri-cast/entities';
 import { Actions } from '@ngrx/effects';
-import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { PageContainerComponent } from '@lyri-cast/ui-lib';
 import {
   FreeSlidePages,
@@ -25,20 +30,20 @@ import { FreeSlideService } from './free-slide.service';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import {
-  combineLatest,
   catchError,
+  combineLatest,
   debounceTime,
+  filter,
   first,
   firstValueFrom,
   fromEvent,
+  merge,
   of,
   Subject,
   take,
   takeUntil,
-  merge,
   timeout,
   withLatestFrom,
-  filter,
 } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgScrollbar } from 'ngx-scrollbar';
@@ -58,9 +63,10 @@ import {
 } from '@lyri-cast/form';
 import { ActivatedRoute } from '@angular/router';
 import { FreeSlideApiService } from '@lyri-cast/free-slide';
-import { PrimeTemplate } from 'primeng/api';
+import { ConfirmationService, PrimeTemplate } from 'primeng/api';
 import { Ripple } from 'primeng/ripple';
-import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { ConfirmPopupModule } from 'primeng/confirmpopup';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { CtrlDragCopyDirective } from '../../directives/ctrl-drag-copy.directive';
 import { SelectModule } from 'primeng/select';
 import { PopoverModule } from 'primeng/popover';
@@ -93,10 +99,11 @@ import {
     PopoverModule,
     SelectModule,
     PptxProgressDialogComponent,
+    ConfirmPopupModule,
   ],
   templateUrl: './free-slide.component.html',
   styleUrl: './free-slide.component.scss',
-  providers: [FreeSlideService],
+  providers: [FreeSlideService, ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FreeSlideComponent implements AfterViewInit {
@@ -109,6 +116,7 @@ export class FreeSlideComponent implements AfterViewInit {
   destroyRef = inject(DestroyRef);
   assetStorage = inject(AssetStorageService);
   private readonly pptxFacade = inject(PptxFacadeService);
+  private readonly confirmationService = inject(ConfirmationService);
 
   containerPagePath: (string | Pages)[] = [];
 
@@ -154,7 +162,9 @@ export class FreeSlideComponent implements AfterViewInit {
 
         if (event.key === 'Escape') {
           event.preventDefault();
-          this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.pauseCasting]());
+          this.store.dispatch(
+            FreeSlideActions[FreeSlideActionsEnum.pauseCasting]()
+          );
         }
       });
   }
@@ -209,7 +219,8 @@ export class FreeSlideComponent implements AfterViewInit {
       return;
     }
 
-    const nextIndex = dir === 'next' ? this.currentSlideIndex + 1 : this.currentSlideIndex - 1;
+    const nextIndex =
+      dir === 'next' ? this.currentSlideIndex + 1 : this.currentSlideIndex - 1;
     const slide = this.slideService.getSlideByIndex(nextIndex);
     if (slide) {
       void this.onSelectSlide(slide);
@@ -277,11 +288,13 @@ export class FreeSlideComponent implements AfterViewInit {
 
   async onExportPptx() {
     let presentationName = 'Presentation';
-    this.slideService.currentPresentation$.pipe(take(1)).subscribe((presentation) => {
-      if (presentation.title) {
-        presentationName = presentation.title;
-      }
-    });
+    this.slideService.currentPresentation$
+      .pipe(take(1))
+      .subscribe((presentation) => {
+        if (presentation.title) {
+          presentationName = presentation.title;
+        }
+      });
 
     this.exportProgress.set({
       busy: true,
@@ -307,34 +320,45 @@ export class FreeSlideComponent implements AfterViewInit {
       this.slideService.requestSaveCurrentSlide$.next();
       await saveCompleted;
 
-      this.exportProgress.update((prev) => prev ? {
-        ...prev,
-        percent: 30,
-        message: 'Обработка слайдов...',
-        steps: [
-          { label: 'Чтение данных', status: 'done' },
-          { label: 'Подготовка слайдов', status: 'active' },
-          { label: 'Экспорт PPTX', status: 'pending' },
-        ],
-      } : prev);
+      this.exportProgress.update((prev) =>
+        prev
+          ? {
+              ...prev,
+              percent: 30,
+              message: 'Обработка слайдов...',
+              steps: [
+                { label: 'Чтение данных', status: 'done' },
+                { label: 'Подготовка слайдов', status: 'active' },
+                { label: 'Экспорт PPTX', status: 'pending' },
+              ],
+            }
+          : prev
+      );
 
       const states = Array.from(this.slideService.slidesMap.values())
         .sort((a, b) => a.index - b.index)
         .map((slide) => this.parseSerializedState(slide.content))
         .filter((state): state is SerializedState => !!state);
 
-      this.exportProgress.update((prev) => prev ? {
-        ...prev,
-        percent: 60,
-        message: 'Генерация файла презентации (это может занять некоторое время)...',
-        steps: [
-          { label: 'Чтение данных', status: 'done' },
-          { label: 'Подготовка слайдов', status: 'done' },
-          { label: 'Экспорт PPTX', status: 'active' },
-        ],
-      } : prev);
+      this.exportProgress.update((prev) =>
+        prev
+          ? {
+              ...prev,
+              percent: 60,
+              message:
+                'Генерация файла презентации (это может занять некоторое время)...',
+              steps: [
+                { label: 'Чтение данных', status: 'done' },
+                { label: 'Подготовка слайдов', status: 'done' },
+                { label: 'Экспорт PPTX', status: 'active' },
+              ],
+            }
+          : prev
+      );
 
-      const blob = await firstValueFrom(this.pptxFacade.exportPptx(presentationName, states));
+      const blob = await firstValueFrom(
+        this.pptxFacade.exportPptx(presentationName, states)
+      );
       const url = window.URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
@@ -344,30 +368,40 @@ export class FreeSlideComponent implements AfterViewInit {
       anchor.remove();
       setTimeout(() => window.URL.revokeObjectURL(url), 5000);
 
-      this.exportProgress.update((prev) => prev ? {
-        ...prev,
-        busy: false,
-        percent: 100,
-        message: 'Экспорт завершён',
-        steps: [
-          { label: 'Чтение данных', status: 'done' },
-          { label: 'Подготовка слайдов', status: 'done' },
-          { label: 'Экспорт PPTX', status: 'done' },
-        ],
-      } : prev);
+      this.exportProgress.update((prev) =>
+        prev
+          ? {
+              ...prev,
+              busy: false,
+              percent: 100,
+              message: 'Экспорт завершён',
+              steps: [
+                { label: 'Чтение данных', status: 'done' },
+                { label: 'Подготовка слайдов', status: 'done' },
+                { label: 'Экспорт PPTX', status: 'done' },
+              ],
+            }
+          : prev
+      );
 
       setTimeout(() => {
         this.closeExportProgress();
       }, 700);
     } catch (err) {
       console.error('Failed to export PPTX', err);
-      this.exportProgress.update((prev) => prev ? {
-        ...prev,
-        busy: false,
-        percent: 100,
-        message: 'Экспорт завершился с ошибкой',
-        steps: prev.steps.map((step) => step.status === 'active' ? { ...step, status: 'error' } : step),
-      } : prev);
+      this.exportProgress.update((prev) =>
+        prev
+          ? {
+              ...prev,
+              busy: false,
+              percent: 100,
+              message: 'Экспорт завершился с ошибкой',
+              steps: prev.steps.map((step) =>
+                step.status === 'active' ? { ...step, status: 'error' } : step
+              ),
+            }
+          : prev
+      );
     }
   }
 
@@ -404,11 +438,13 @@ export class FreeSlideComponent implements AfterViewInit {
       this.pixiEditor &&
       this.loadedSlideId !== slide.id
     ) {
-      await this.onSaveSlide({ isNavigatingAway: true, slideId: this.loadedSlideId });
+      await this.onSaveSlide({
+        isNavigatingAway: true,
+        slideId: this.loadedSlideId,
+      });
     } else if (this.currentSlideId === slide.id) {
       return;
     }
-
 
     this.slideForm.patchValue({ name: slide.name }, { emitEvent: false });
     this.slideForm.markAsPristine();
@@ -509,7 +545,8 @@ export class FreeSlideComponent implements AfterViewInit {
       return;
     }
 
-    const targetSlideId = options.slideId || this.loadedSlideId || this.currentSlideId;
+    const targetSlideId =
+      options.slideId || this.loadedSlideId || this.currentSlideId;
     if (!targetSlideId) return;
 
     // Никогда не сохраняем состояние редактора в слайд, который не загружен в Pixi.
@@ -535,18 +572,27 @@ export class FreeSlideComponent implements AfterViewInit {
       if (this.loadedSlideId && this.loadedSlideId !== targetSlideId) return;
       if (blob) {
         // Upload new preview first; backend deduplicates by content hash
-        const newAssetId = await this.assetStorage.saveAsset(blob, 'image/jpeg');
+        const newAssetId = await this.assetStorage.saveAsset(
+          blob,
+          'image/jpeg'
+        );
         if (this.loadedSlideId && this.loadedSlideId !== targetSlideId) return;
         const oldAssetId = currentSlide?.previewAssetId;
 
         // If old asset exists and differs from new one, delete it only if not reused elsewhere
         if (oldAssetId && oldAssetId !== newAssetId) {
-          const isReused = this.isAssetUsedByPreviewOrContent(oldAssetId, targetSlideId);
+          const isReused = this.isAssetUsedByPreviewOrContent(
+            oldAssetId,
+            targetSlideId
+          );
           if (!isReused) {
             try {
               await this.assetStorage.deleteAsset(oldAssetId);
             } catch (err) {
-              console.warn('[FreeSlide] Failed to delete old preview asset', err);
+              console.warn(
+                '[FreeSlide] Failed to delete old preview asset',
+                err
+              );
             }
           }
         }
@@ -558,7 +604,6 @@ export class FreeSlideComponent implements AfterViewInit {
       assetId = currentSlide?.previewAssetId;
     }
 
-
     // const { id } = RouteParamsReducerHelper.reduceSnapshot(this.route.snapshot);
 
     const slidePayload = {
@@ -566,11 +611,11 @@ export class FreeSlideComponent implements AfterViewInit {
       name:
         targetSlideId === this.currentSlideId
           ? this.slideForm.getRawValue().name
-          : (currentSlide?.name ?? this.slideForm.getRawValue().name),
+          : currentSlide?.name ?? this.slideForm.getRawValue().name,
       index:
         targetSlideId === this.currentSlideId
           ? this.currentSlideIndex
-          : (currentSlide?.index ?? this.currentSlideIndex),
+          : currentSlide?.index ?? this.currentSlideIndex,
       content: htmlString,
       previewAssetId: assetId,
     };
@@ -624,7 +669,9 @@ export class FreeSlideComponent implements AfterViewInit {
 
   async onDuplicateSlide() {
     // 1. Ensure the current state is saved so we copy the latest version.
-    await this.onSaveSlide({ slideId: this.loadedSlideId || this.currentSlideId });
+    await this.onSaveSlide({
+      slideId: this.loadedSlideId || this.currentSlideId,
+    });
 
     const originalSlide = this.slideService.slidesMap.get(this.currentSlideId);
     if (!originalSlide) return;
@@ -664,18 +711,22 @@ export class FreeSlideComponent implements AfterViewInit {
     if (slideToDelete?.previewAssetId) {
       // Check if any other slide uses this asset
       const allSlides = Array.from(this.slideService.slidesMap.values());
-      const isAssetReused = allSlides.some(
-        (s) =>
-          s.id !== slideToDelete.id &&
-          s.previewAssetId === slideToDelete.previewAssetId
-      ) || this.isAssetUsedInSlideContent(slideToDelete.previewAssetId);
+      const isAssetReused =
+        allSlides.some(
+          (s) =>
+            s.id !== slideToDelete.id &&
+            s.previewAssetId === slideToDelete.previewAssetId
+        ) || this.isAssetUsedInSlideContent(slideToDelete.previewAssetId);
 
       if (!isAssetReused) {
         // Only delete if it's not reused
         try {
           await this.assetStorage.deleteAsset(slideToDelete.previewAssetId);
         } catch (err) {
-          console.warn('[FreeSlide] Failed to delete preview asset on slide deletion', err);
+          console.warn(
+            '[FreeSlide] Failed to delete preview asset on slide deletion',
+            err
+          );
         }
       }
     }
@@ -716,10 +767,53 @@ export class FreeSlideComponent implements AfterViewInit {
     }
   }
 
-  /**
-   * Сохраняет текущий слайд перед трансляцией.
-   * Этот метод вызывается из сайдбара перед началом кастинга.
-   */
+  onApplyTextStylesToAll(payload: { styles: any, event: Event }) {
+    this.confirmationService.confirm({
+      target: payload.event.target as EventTarget,
+      message:
+        'Вы уверены, что хотите применить эти стили текста ко всем слайдам?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Да',
+      rejectLabel: 'Отмена',
+      accept: () => {
+        const styles = payload.styles;
+        const slides = Array.from(this.slideService.slidesMap.values());
+        for (const slide of slides) {
+          if (!slide.content) continue;
+          try {
+            const data = JSON.parse(slide.content) as SerializedState;
+            let changed = false;
+            data.nodes.forEach((node: any) => {
+              if (node.type === 'text') {
+                node.style = { ...node.style, ...styles };
+                if (styles.actualFontSize !== undefined) {
+                  node.actualFontSize = styles.actualFontSize;
+                }
+                changed = true;
+              }
+            });
+            if (changed) {
+              const htmlString = JSON.stringify(data);
+              this.slideService.updateSlide({
+                id: slide.id,
+                content: htmlString,
+              });
+              if (slide.id === this.currentSlideId && this.pixiEditor) {
+                // If the current slide is updated, reload it into the editor
+                this.onSelectSlide(slide);
+              }
+            }
+          } catch (e) {
+            console.error(
+              '[FreeSlide] Failed to apply styles to slide',
+              slide.id,
+              e
+            );
+          }
+        }
+      },
+    });
+  }
   saveCurrentSlide() {
     if (this.pixiEditor && (this.loadedSlideId || this.currentSlideId)) {
       this.onSaveSlide({ slideId: this.loadedSlideId || this.currentSlideId });
@@ -776,10 +870,7 @@ export class FreeSlideComponent implements AfterViewInit {
     // При любом изменении в редакторе - запускаем триггер сохранения
     setTimeout(() => {
       if (this.pixiEditor) {
-        merge(
-          this.pixiEditor.history.commandExecuted$,
-          this.pixiEditor.change$
-        )
+        merge(this.pixiEditor.history.commandExecuted$, this.pixiEditor.change$)
           .pipe(
             takeUntil(this.changePresentation$),
             takeUntilDestroyed(this.destroyRef)
@@ -855,7 +946,15 @@ export class FreeSlideComponent implements AfterViewInit {
   }
 
   onSlidesDrop(event: CdkDragDrop<any>) {
-    const isCopy = this.ctrlCopyDir?.isCtrlPressed() ?? (event.event as MouseEvent | PointerEvent | KeyboardEvent | undefined as any)?.ctrlKey === true;
+    const isCopy =
+      this.ctrlCopyDir?.isCtrlPressed() ??
+      (
+        event.event as
+          | MouseEvent
+          | PointerEvent
+          | KeyboardEvent
+          | undefined as any
+      )?.ctrlKey === true;
     const prevIndex = event.previousIndex;
     const currIndex = event.currentIndex;
     if (prevIndex === currIndex && !isCopy) return;
@@ -890,7 +989,10 @@ export class FreeSlideComponent implements AfterViewInit {
     );
   }
 
-  private contentUsesAsset(content: string | undefined, assetId: string): boolean {
+  private contentUsesAsset(
+    content: string | undefined,
+    assetId: string
+  ): boolean {
     if (!content) {
       return false;
     }

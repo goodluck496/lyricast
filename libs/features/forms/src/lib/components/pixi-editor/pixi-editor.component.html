@@ -8,16 +8,20 @@
       position="end"
       [autoFocus]="false"
     >
-      <!--<ng-scrollbar
+      <ng-scrollbar
         #propertiesScrollbar
         class="properties-scroll"
         visibility="hover"
-
         (pointerdown)="stopSidebarPointer($event)"
         (mousedown)="stopSidebarPointer($event)"
         (touchstart)="stopSidebarPointer($event)"
-      >-->
+      >
         <p-panel header="Шрифт" [class.panel-hidden]="!textPanelVisible">
+          <ng-template pTemplate="icons">
+            <button class="p-panel-header-icon p-link" (click)="onApplyTextStylesToAll($event)" title="Применить ко всем слайдам">
+                <span class="pi pi-copy"></span>
+            </button>
+          </ng-template>
           <div class="form-grid stacked">
             <p-float-label class="p-float-label">
               <p-select
@@ -26,7 +30,6 @@
                 optionLabel="label"
                 optionValue="value"
                 appendTo="body"
-                styleClass="font-select"
                 panelStyleClass="font-select-panel"
                 [style]="{ width: '100%', minWidth: '0' }"
                 [ngModel]="vm.ui.font"
@@ -132,6 +135,11 @@
         </p-panel>
 
         <p-panel header="Цвет и тень">
+          <ng-template pTemplate="icons">
+            <button class="p-panel-header-icon p-link" (click)="onApplyTextStylesToAll($event)" title="Применить ко всем слайдам">
+                <span class="pi pi-copy"></span>
+            </button>
+          </ng-template>
           <div class="form-grid color-shadow-grid">
             <div class="field">
               <p-float-label class="p-float-label">
@@ -262,7 +270,7 @@
             </div>
           </div>
         </p-panel>
-<!--      </ng-scrollbar>-->
+      </ng-scrollbar>
     </mat-sidenav>
 
     <mat-sidenav-content>
@@ -430,28 +438,6 @@
               #host
               (contextmenu)="onContextMenu($event)"
             ></div>
-            <div class="zoom-overlay">
-            <span class="slider-header">
-              <span>Масштаб</span>
-              <span class="slider-value"
-              >{{ vm.zoom | number : '1.2-2' }}x</span
-              >
-            </span>
-              <p-slider
-                inputId="zoom"
-                [min]="0.2"
-                [max]="3"
-                [step]="0.05"
-                [ngModel]="vm.zoom"
-                (ngModelChange)="emit({ t: 'ZOOM', z: $event })"
-                (pointerdown)="stopScrollDrag($event)"
-                (pointermove)="stopScrollDrag($event)"
-                (touchstart)="stopScrollDrag($event)"
-                (touchmove)="stopScrollDrag($event)"
-                (wheel)="stopScrollWheel($event)"
-                tabindex="-1"
-              ></p-slider>
-            </div>
           </div>
         </div>
       </div>

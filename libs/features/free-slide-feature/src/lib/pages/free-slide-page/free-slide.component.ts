@@ -245,6 +245,7 @@ export class FreeSlideComponent implements AfterViewInit {
   private previewTrigger$ = new Subject<void>();
   // Track last saved content hash per slide to avoid redundant preview uploads
   private lastContentHashBySlideId = new Map<string, string>();
+  private isLoadingSlideIntoEditor = false;
 
   private loadVersion = 0;
 
@@ -262,7 +263,7 @@ export class FreeSlideComponent implements AfterViewInit {
 
   private async updateLivePreview() {
     try {
-      if (!this.pixiEditor) return;
+      if (!this.pixiEditor || this.isLoadingSlideIntoEditor) return;
       // Более высокое разрешение превью для сайдбара
       const blob = await this.pixiEditor.generateSnapshot({ resolution: 0.6 });
       if (blob) {
@@ -414,6 +415,7 @@ export class FreeSlideComponent implements AfterViewInit {
 
     this.currentSlideId = slide.id;
     this.currentSlideIndex = slide.index;
+    this.slideService.setLivePreviewObjectUrl(null);
 
     // Обновляем UI/стор сразу, чтобы клик по слайду ощущался мгновенно
     this.store.dispatch(
@@ -424,10 +426,13 @@ export class FreeSlideComponent implements AfterViewInit {
 
     // Новая версия загрузки — всё, что было запущено до этого, считается устаревшим
     const version = ++this.loadVersion;
+    this.isLoadingSlideIntoEditor = true;
 
     // Дожидаемся инициализации PixiJS перед очисткой/десериализацией
     const ready = await this.waitForEditorReady();
-    if (version !== this.loadVersion) return; // stale click/load
+    if (version !== this.loadVersion) {
+      return;
+    }
 
     if (this.pixiEditor && ready && this.pixiEditor.app) {
       this.pixiEditor.clearAllNodes();
@@ -442,15 +447,20 @@ export class FreeSlideComponent implements AfterViewInit {
 
           // Preload assets so text/metrics are ready before layout
           await this.pixiEditor.serializer.preloadAssets(slideData);
-          if (version !== this.loadVersion) return; // stale load, abort
+          if (version !== this.loadVersion) {
+            return;
+          }
 
           // Clear current nodes to avoid races when switching quickly
           this.pixiEditor.clearAllNodes();
           this.pixiEditor.serializer.deserializeState(slideData);
           this.pixiEditor.sceneViewport.updateSceneBounds();
 
-          if (version !== this.loadVersion) return;
+          if (version !== this.loadVersion) {
+            return;
+          }
           this.loadedSlideId = slide.id;
+          this.isLoadingSlideIntoEditor = false;
 
           // После десериализации прогоняем layout для всех текстовых нод,
           // но делаем это асинхронно и с защитой от гонок.
@@ -461,12 +471,18 @@ export class FreeSlideComponent implements AfterViewInit {
         } catch (e) {
           console.error('Error parsing slide data, clearing editor', e);
           this.pixiEditor.clearAllNodes();
+          this.isLoadingSlideIntoEditor = false;
         }
       } else {
         this.pixiEditor.clearAllNodes();
-        if (version !== this.loadVersion) return;
+        if (version !== this.loadVersion) {
+          return;
+        }
         this.loadedSlideId = slide.id;
+        this.isLoadingSlideIntoEditor = false;
       }
+    } else {
+      this.isLoadingSlideIntoEditor = false;
     }
 
     this.store

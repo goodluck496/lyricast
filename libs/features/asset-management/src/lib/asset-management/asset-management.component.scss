@@ -27,6 +27,37 @@
   word-break: break-all;
 }
 
+.asset-links {
+  min-width: 14rem;
+}
+
+.asset-link {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.asset-link + .asset-link {
+  margin-top: 0.25rem;
+}
+
+.asset-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-link:hover {
+  text-decoration: underline;
+}
+
+.asset-links__empty {
+  color: var(--text-color-secondary);
+}
+
 .preview-button {
   padding: 0;
 }

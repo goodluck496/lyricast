@@ -412,11 +412,81 @@ export class FreeSlideMainComponent implements OnInit {
       acceptButtonStyleClass: 'p-button-danger p-button-sm',
       rejectButtonStyleClass: 'p-button-text p-button-sm',
       accept: () => {
-        this.api.delete(presentation.id).subscribe(() => {
-          this.loadPresentations();
-        });
+        void this.deletePresentationWithAssets(presentation);
       },
     });
+  }
+
+  private async deletePresentationWithAssets(
+    presentation: Presentation
+  ): Promise<void> {
+    const presentationToDelete = await firstValueFrom(
+      this.api.getById(presentation.id)
+    );
+    const candidateAssetIds =
+      this.collectPresentationPreviewAssetIds(presentationToDelete);
+
+    await firstValueFrom(this.api.delete(presentation.id));
+
+    const remainingPresentations = await firstValueFrom(this.api.getAll());
+    const usedAssetIds = new Set<string>();
+    for (const remainingPresentation of remainingPresentations) {
+      for (const assetId of this.collectPresentationPreviewAssetIds(remainingPresentation)) {
+        usedAssetIds.add(assetId);
+      }
+    }
+
+    const assetIdsToDelete = Array.from(candidateAssetIds).filter(
+      (assetId) => !usedAssetIds.has(assetId)
+    );
+
+    await Promise.allSettled(
+      assetIdsToDelete.map((assetId) => this.assetStorage.deleteAsset(assetId))
+    );
+
+    this.loadPresentations();
+  }
+
+  private collectPresentationPreviewAssetIds(
+    presentation: Presentation
+  ): Set<string> {
+    const assetIds = new Set<string>();
+
+    for (const slide of presentation.slides) {
+      this.addAssetReferences(slide.previewAssetId, assetIds);
+    }
+
+    return assetIds;
+  }
+
+  private addAssetReferences(
+    value: string | undefined,
+    assetIds: Set<string>
+  ): void {
+    for (const assetId of this.extractAssetIds(value)) {
+      assetIds.add(assetId);
+    }
+  }
+
+  private extractAssetIds(value: string | undefined): Set<string> {
+    const assetIds = new Set<string>();
+    if (!value) {
+      return assetIds;
+    }
+
+    if (/^[a-f0-9]{64}$/i.test(value)) {
+      assetIds.add(value);
+    }
+
+    const match = value.match(
+      /(?:assets\/|svc:\/\/assets\/)([a-f0-9]{64})(?:\/file)?/i
+    );
+    const referencedId = match?.[1];
+    if (referencedId) {
+      assetIds.add(referencedId);
+    }
+
+    return assetIds;
   }
 
   onEdit(event: MouseEvent, presentation: PresentationWithPreview): void {

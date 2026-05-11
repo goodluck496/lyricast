@@ -18,8 +18,10 @@ import { GalleriaModule } from 'primeng/galleria';
 import { AssetsApiService } from '@lyri-cast/shared-browser/data-access/assets';
 import { FreeSlideApiService } from '@lyri-cast/shared-browser/data-access/free-slide';
 import { AssetDto, Presentation } from '@lyri-cast/entities';
-import { Observable, forkJoin, switchMap, tap } from 'rxjs';
+import { Observable, forkJoin, map, switchMap, tap } from 'rxjs';
 import { AssetClipboardService } from './asset-clipboard.service';
+import { RouterModule } from '@angular/router';
+import { FreeSlidePages, Pages } from '@lyri-cast/common-browser';
 
 type AssetGalleryItem = {
   asset: AssetDto;
@@ -27,6 +29,16 @@ type AssetGalleryItem = {
   itemImageSrc: string;
   thumbnailImageSrc: string;
   title: string;
+};
+
+type AssetReferenceKind = 'preview' | 'content';
+
+type AssetReference = {
+  key: string;
+  kind: AssetReferenceKind;
+  presentationTitle: string;
+  slideName: string;
+  routerLink: Array<string | Pages | FreeSlidePages>;
 };
 
 @Component({
@@ -43,6 +55,7 @@ type AssetGalleryItem = {
     ToolbarModule,
     FileUploadModule,
     GalleriaModule,
+    RouterModule,
   ],
   providers: [AssetClipboardService, ConfirmationService, MessageService],
   templateUrl: './asset-management.component.html',
@@ -58,6 +71,7 @@ export class AssetManagementComponent implements OnInit {
 
   assets = signal<AssetDto[]>([]);
   galleryItems = signal<AssetGalleryItem[]>([]);
+  assetReferences = signal<Map<string, AssetReference[]>>(new Map());
   selectedAssets: AssetDto[] = [];
   loading = signal(false);
   galleryVisible = signal(false);
@@ -84,10 +98,25 @@ export class AssetManagementComponent implements OnInit {
   loadAssets() {
     this.loading.set(true);
     this.selectedAssets = [];
-    this.assetsApiService.getAssets().subscribe((assets) => {
-      this.assets.set(assets);
-      this.galleryItems.set(this.toGalleryItems(assets));
-      this.loading.set(false);
+    forkJoin({
+      assets: this.assetsApiService.getAssets(),
+      presentations: this.freeSlideApiService.getAll(),
+    }).subscribe({
+      next: ({ assets, presentations }) => {
+        this.assets.set(assets);
+        this.galleryItems.set(this.toGalleryItems(assets));
+        this.assetReferences.set(this.collectAssetReferences(presentations));
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Load failed',
+          detail: 'Unable to load assets.',
+          life: 5000,
+        });
+      },
     });
   }
 
@@ -110,6 +139,15 @@ export class AssetManagementComponent implements OnInit {
 
     this.galleryActiveIndex.set(index);
     this.galleryVisible.set(true);
+  }
+
+  getAssetReferences(assetId: string): AssetReference[] {
+    return this.assetReferences().get(assetId) ?? [];
+  }
+
+  getAssetReferenceLabel(reference: AssetReference): string {
+    const kind = reference.kind === 'preview' ? 'preview' : 'content';
+    return `${reference.presentationTitle} / ${reference.slideName} (${kind})`;
   }
 
   activeGalleryItem(): AssetGalleryItem | undefined {
@@ -214,6 +252,7 @@ export class AssetManagementComponent implements OnInit {
       next: ({ assets, presentations }) => {
         this.assets.set(assets);
         this.galleryItems.set(this.toGalleryItems(assets));
+        this.assetReferences.set(this.collectAssetReferences(presentations));
         this.loading.set(false);
 
         const usedAssetIds = this.collectUsedAssetIds(presentations);
@@ -380,11 +419,16 @@ export class AssetManagementComponent implements OnInit {
   }
 
   private refreshAssets(): Observable<AssetDto[]> {
-    return this.assetsApiService.getAssets().pipe(
-      tap((assets) => {
+    return forkJoin({
+      assets: this.assetsApiService.getAssets(),
+      presentations: this.freeSlideApiService.getAll(),
+    }).pipe(
+      tap(({ assets, presentations }) => {
         this.assets.set(assets);
         this.galleryItems.set(this.toGalleryItems(assets));
-      })
+        this.assetReferences.set(this.collectAssetReferences(presentations));
+      }),
+      map(({ assets }) => assets)
     );
   }
 
@@ -436,6 +480,128 @@ export class AssetManagementComponent implements OnInit {
     return usedAssetIds;
   }
 
+  private collectAssetReferences(
+    presentations: Presentation[]
+  ): Map<string, AssetReference[]> {
+    const references = new Map<string, AssetReference[]>();
+    const seenReferences = new Set<string>();
+
+    for (const presentation of presentations) {
+      const presentationTitle = presentation.title || 'Untitled presentation';
+      const routerLink = [
+        '/',
+        Pages.MAIN,
+        Pages.FREE_SLIDE_FEATURE,
+        FreeSlidePages.SLIDE,
+        presentation.id,
+      ];
+
+      for (const slide of presentation.slides) {
+        const slideName = slide.name || `Slide ${slide.index + 1}`;
+        this.addAssetReferencesFromValue(
+          slide.previewAssetId,
+          {
+            kind: 'preview',
+            presentationTitle,
+            slideName,
+            routerLink,
+          },
+          references,
+          seenReferences
+        );
+
+        try {
+          this.collectAssetReferencesFromValue(
+            JSON.parse(slide.content),
+            {
+              kind: 'content',
+              presentationTitle,
+              slideName,
+              routerLink,
+            },
+            references,
+            seenReferences
+          );
+        } catch {
+          continue;
+        }
+      }
+    }
+
+    return references;
+  }
+
+  private collectAssetReferencesFromValue(
+    value: unknown,
+    meta: Omit<AssetReference, 'key'>,
+    references: Map<string, AssetReference[]>,
+    seenReferences: Set<string>
+  ): void {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        this.collectAssetReferencesFromValue(
+          item,
+          meta,
+          references,
+          seenReferences
+        );
+      }
+      return;
+    }
+
+    if (!this.isRecord(value)) {
+      return;
+    }
+
+    for (const [key, child] of Object.entries(value)) {
+      if (
+        (key === 'assetId' ||
+          key === 'bgAssetId' ||
+          key === 'backgroundImageUrl') &&
+        typeof child === 'string'
+      ) {
+        this.addAssetReferencesFromValue(
+          child,
+          meta,
+          references,
+          seenReferences
+        );
+      }
+
+      this.collectAssetReferencesFromValue(
+        child,
+        meta,
+        references,
+        seenReferences
+      );
+    }
+  }
+
+  private addAssetReferencesFromValue(
+    value: string | undefined,
+    meta: Omit<AssetReference, 'key'>,
+    references: Map<string, AssetReference[]>,
+    seenReferences: Set<string>
+  ): void {
+    for (const assetId of this.extractAssetIds(value)) {
+      const key = [
+        assetId,
+        meta.kind,
+        meta.routerLink.join('/'),
+        meta.slideName,
+      ].join('|');
+
+      if (seenReferences.has(key)) {
+        continue;
+      }
+
+      seenReferences.add(key);
+      const currentReferences = references.get(assetId) ?? [];
+      currentReferences.push({ ...meta, key });
+      references.set(assetId, currentReferences);
+    }
+  }
+
   private collectAssetIdsFromValue(
     value: unknown,
     usedAssetIds: Set<string>
@@ -469,19 +635,30 @@ export class AssetManagementComponent implements OnInit {
     value: string | undefined,
     usedAssetIds: Set<string>
   ): void {
+    for (const assetId of this.extractAssetIds(value)) {
+      usedAssetIds.add(assetId);
+    }
+  }
+
+  private extractAssetIds(value: string | undefined): Set<string> {
+    const assetIds = new Set<string>();
     if (!value) {
-      return;
+      return assetIds;
     }
 
-    usedAssetIds.add(value);
+    if (/^[a-f0-9]{64}$/i.test(value)) {
+      assetIds.add(value);
+    }
 
     const match = value.match(
       /(?:assets\/|svc:\/\/assets\/)([a-f0-9]{64})(?:\/file)?/i
     );
     const referencedId = match?.[1];
     if (referencedId) {
-      usedAssetIds.add(referencedId);
+      assetIds.add(referencedId);
     }
+
+    return assetIds;
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

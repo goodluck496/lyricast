@@ -9,15 +9,9 @@
   <div class="pptx-import-progress">
     <div class="pptx-import-progress__header">
       <strong>{{ progress().fileName }}</strong>
-      <span>{{ progress().percent }}%</span>
     </div>
     <p-progressBar [value]="progress().percent"></p-progressBar>
     <div class="pptx-import-progress__message">{{ progress().message }}</div>
-    @if (progress().totalSlides && progress().totalSlides! > 0) {
-      <div class="pptx-import-progress__meta">
-        Слайдов: {{ progress().processedSlides }} / {{ progress().totalSlides }}
-      </div>
-    }
     <div class="flex justify-content-between mt-4 mb-2">
       @for (step of progress().steps; track step.label; let i = $index) {
         <div class="flex flex-column align-items-center relative" style="flex: 1;">

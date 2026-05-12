@@ -1,6 +1,9 @@
 <div class="asset-management">
   <p-toast></p-toast>
-  <p-confirmDialog [style]="{ width: '450px' }"></p-confirmDialog>
+  <p-confirmpopup
+    key="popup"
+    [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
+  ></p-confirmpopup>
 
   <div class="storage-actions">
     <p-fileupload
@@ -29,27 +32,25 @@
       class="p-button-danger"
       pTooltip="Delete assets that are not linked to presentation slides"
       tooltipPosition="top"
-      (click)="confirmDeleteUnusedAssets()"
+      (click)="confirmDeleteUnusedAssets($event)"
     ></button>
   </div>
 
-  <p-table
-    [value]="assets()"
-    [(selection)]="selectedAssets"
-    dataKey="id"
+  <p-treetable
+    [value]="assetTree()"
+    [(selectionKeys)]="selectionKeys"
+    dataKey="key"
+    selectionMode="checkbox"
     styleClass="asset-table"
-    [selectionMode]="'multiple'"
     [scrollable]="true"
     scrollHeight="flex"
     [loading]="loading()"
+    [tableStyle]="{ 'min-width': '72rem' }"
     >
     <ng-template pTemplate="header">
       <tr>
-        <th style="width: 3rem">
-          <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
-        </th>
-        <th style="width: 15%">Preview</th>
-        <th>Name</th>
+        <th style="width: 30%">Source / Name</th>
+        <th style="width: 12%">Preview</th>
         <th>Type</th>
         <th>Size</th>
         <th>Created</th>
@@ -57,13 +58,33 @@
         <th style="width: 8rem">Actions</th>
       </tr>
     </ng-template>
-    <ng-template pTemplate="body" let-asset let-rowIndex="rowIndex">
-      <tr [pSelectableRow]="asset" [pSelectableRowIndex]="rowIndex">
-        <td class="asset-cell">
-          <p-tableCheckbox [value]="asset"></p-tableCheckbox>
+    <ng-template pTemplate="body" let-rowNode let-rowData="rowData">
+      <tr
+        [ttRow]="rowNode"
+        [ttSelectableRow]="rowNode"
+        [class.asset-source-row]="isPresentationRow(rowData)"
+      >
+        <td class="asset-cell asset-name">
+          <div class="asset-tree-name">
+            <p-treetable-toggler [rowNode]="rowNode"></p-treetable-toggler>
+            <p-treetable-checkbox [value]="rowNode"></p-treetable-checkbox>
+
+            @if (isPresentationRow(rowData)) {
+              <i class="pi pi-folder"></i>
+              <div class="asset-source-title">
+                <span>{{ rowData.name }}</span>
+                <small>
+                  {{ rowData.assetsCount }} asset(s),
+                  {{ rowData.slidesCount }} slide(s)
+                </small>
+              </div>
+            } @else if (isAssetRow(rowData)) {
+              <span>{{ rowData.asset.originalName }}</span>
+            }
+          </div>
         </td>
         <td class="asset-cell">
-          @if (isImageAsset(asset)) {
+          @if (isAssetRow(rowData) && isImageAsset(rowData.asset)) {
             <button
               pButton
               type="button"
@@ -71,26 +92,36 @@
               class="p-button-text preview-button"
               pTooltip="Open image"
               tooltipPosition="top"
-              (click)="$event.stopPropagation(); openGallery(asset)"
+              (click)="$event.stopPropagation(); openGallery(rowData.asset)"
             >
               <img
-                [src]="getAssetUrl(asset)"
-                [alt]="asset.originalName"
+                [src]="getAssetUrl(rowData.asset)"
+                [alt]="rowData.asset.originalName"
                 class="preview-img"
               />
             </button>
           }
         </td>
-        <td class="asset-cell asset-name">{{ asset.originalName }}</td>
-        <td class="asset-cell">{{ asset.mimeType }}</td>
-        <td class="asset-cell">{{ formatBytes(asset.size) }}</td>
         <td class="asset-cell">
-          {{ asset.createdAt | date : 'dd.MM.yyyy HH:mm:ss' }}
+          @if (isAssetRow(rowData)) {
+            {{ rowData.asset.mimeType }}
+          }
+        </td>
+        <td class="asset-cell">
+          @if (isAssetRow(rowData)) {
+            {{ formatBytes(rowData.asset.size) }}
+          }
+        </td>
+        <td class="asset-cell">
+          @if (isAssetRow(rowData)) {
+            {{ rowData.asset.createdAt | date : 'dd.MM.yyyy HH:mm:ss' }}
+          } @else if (isPresentationRow(rowData) && rowData.createdAt) {
+            {{ rowData.createdAt | date : 'dd.MM.yyyy HH:mm:ss' }}
+          }
         </td>
         <td class="asset-cell asset-links">
-          @let references = getAssetReferences(asset.id);
-          @if (references.length > 0) {
-            @for (reference of references; track reference.key) {
+          @if (isAssetRow(rowData) && rowData.references.length > 0) {
+            @for (reference of rowData.references; track reference.key) {
               <a
                 class="asset-link"
                 [routerLink]="reference.routerLink"
@@ -103,52 +134,72 @@
                   [class.pi-image]="reference.kind === 'preview'"
                   [class.pi-file]="reference.kind === 'content'"
                 ></i>
-                <span>{{ getAssetReferenceLabel(reference) }}</span>
+                <span>{{ getAssetReferenceShortLabel(reference) }}</span>
               </a>
             }
-          } @else {
+          } @else if (isAssetRow(rowData)) {
             <span class="asset-links__empty">Not linked</span>
           }
         </td>
         <td class="asset-cell">
-          @if (isImageAsset(asset)) {
+          @if (isAssetRow(rowData)) {
+            @if (isImageAsset(rowData.asset)) {
+              <button
+                pButton
+                type="button"
+                icon="pi pi-eye"
+                class="p-button-text p-button-sm"
+                pTooltip="Open gallery"
+                tooltipPosition="top"
+                (click)="$event.stopPropagation(); openGallery(rowData.asset)"
+              ></button>
+              <button
+                pButton
+                type="button"
+                icon="pi pi-copy"
+                class="p-button-text p-button-sm"
+                pTooltip="Copy image"
+                tooltipPosition="top"
+                (click)="
+                  $event.stopPropagation(); copyAssetImage(rowData.asset)
+                "
+              ></button>
+            }
             <button
               pButton
               type="button"
-              icon="pi pi-eye"
-              class="p-button-text p-button-sm"
-              pTooltip="Open gallery"
+              icon="pi pi-trash"
+              class="p-button-text p-button-sm p-button-danger"
+              pTooltip="Delete asset"
               tooltipPosition="top"
-              (click)="$event.stopPropagation(); openGallery(asset)"
+              (click)="
+                $event.stopPropagation();
+                confirmDeleteAsset($event, rowData.asset)
+              "
             ></button>
+          } @else if (isPresentationRow(rowData)) {
             <button
               pButton
               type="button"
-              icon="pi pi-copy"
-              class="p-button-text p-button-sm"
-              pTooltip="Copy image"
+              icon="pi pi-trash"
+              class="p-button-text p-button-sm p-button-danger"
+              pTooltip="Delete group assets"
               tooltipPosition="top"
-              (click)="$event.stopPropagation(); copyAssetImage(asset)"
+              (click)="
+                $event.stopPropagation();
+                confirmDeleteAssetGroup($event, rowData)
+              "
             ></button>
           }
-          <button
-            pButton
-            type="button"
-            icon="pi pi-trash"
-            class="p-button-text p-button-sm p-button-danger"
-            pTooltip="Delete asset"
-            tooltipPosition="top"
-            (click)="$event.stopPropagation(); confirmDeleteAsset(asset)"
-          ></button>
         </td>
       </tr>
     </ng-template>
     <ng-template pTemplate="emptymessage">
       <tr>
-        <td colspan="8">No assets found.</td>
+        <td colspan="7">No assets found.</td>
       </tr>
     </ng-template>
-  </p-table>
+  </p-treetable>
 
   <p-galleria
     [value]="galleryItems()"
@@ -243,7 +294,7 @@
               icon="pi pi-trash"
               label="Delete"
               class="p-button-sm p-button-danger"
-              (click)="confirmDeleteAsset(item.asset)"
+              (click)="confirmDeleteAsset($event, item.asset)"
             ></button>
           </div>
         </div>
@@ -251,21 +302,22 @@
     </ng-template>
   </p-galleria>
 
-  @if (selectedAssets.length > 0) {
+  @let selectedCount = selectedAssetsCount();
+  @if (selectedCount > 0) {
     <p-toolbar class="context-toolbar">
       <div class="p-toolbar-group-start">
         <button
           pButton
           type="button"
-          [label]="'Delete (' + selectedAssets.length + ')'"
+          [label]="'Delete (' + selectedCount + ')'"
           icon="pi pi-trash"
           class="p-button-danger"
-          (click)="confirmDeleteSelected()"
+          (click)="confirmDeleteSelected($event)"
         ></button>
       </div>
       <div class="p-toolbar-group-end">
         <span class="selected-count"
-          >{{ selectedAssets.length }} item(s) selected</span
+          >{{ selectedCount }} item(s) selected</span
           >
         </div>
       </p-toolbar>

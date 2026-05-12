@@ -26,13 +26,13 @@ export class ChangeBackgroundCommand implements HistoryCommand {
     private newAssetId: string
   ) {}
 
-  execute(): void {
-    void this.nodeRef.setBackground(this.newAssetId);
+  async execute(): Promise<void> {
+    await this.nodeRef.setBackground(this.newAssetId);
   }
 
-  undo(): void {
+  async undo(): Promise<void> {
     if (this.oldAssetId) {
-      void this.nodeRef.setBackground(this.oldAssetId);
+      await this.nodeRef.setBackground(this.oldAssetId);
     } else {
       this.nodeRef.clearBackground();
     }

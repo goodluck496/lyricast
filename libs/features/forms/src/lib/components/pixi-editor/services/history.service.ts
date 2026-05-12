@@ -12,10 +12,10 @@ export interface HistoryCommand {
   type: string;
   
   /** Выполнить команду */
-  execute(): void;
+  execute(): void | Promise<void>;
   
   /** Отменить команду */
-  undo(): void;
+  undo(): void | Promise<void>;
   
   /** Описание команды для отладки (опционально) */
   description?: string;
@@ -60,7 +60,7 @@ export class HistoryService {
    */
   execute(command: HistoryCommand): void {
     // Выполняем команду
-    command.execute();
+    const result = command.execute();
     
     // Удаляем все команды после текущей позиции
     this.history = this.history.slice(0, this.currentIndex + 1);
@@ -76,7 +76,11 @@ export class HistoryService {
     }
     
     this.updateState();
-    this.commandExecutedSubject.next(command);
+    if (result instanceof Promise) {
+      void result.then(() => this.commandExecutedSubject.next(command));
+    } else {
+      this.commandExecutedSubject.next(command);
+    }
   }
   
   /**

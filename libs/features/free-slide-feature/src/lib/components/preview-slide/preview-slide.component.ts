@@ -29,9 +29,11 @@ export class PreviewSlideComponent implements OnChanges {
   selected = input(false);
 
   previewUrl$ = new BehaviorSubject<SafeUrl | null>(null);
+  private renderVersion = 0;
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['slide']) {
+      const renderVersion = ++this.renderVersion;
       const contentPreviewUrl = TextSlidePreviewHelper.dataUrlFromContent(
         this.slide().content,
         { normalizeLargeSceneFont: true }
@@ -46,8 +48,14 @@ export class PreviewSlideComponent implements OnChanges {
       const assetId = this.slide().previewAssetId;
       if (assetId) {
         this.assetStorage.getAssetObjectURL(assetId).then((url) => {
+          if (renderVersion !== this.renderVersion) {
+            return;
+          }
+
           if (url) {
             this.previewUrl$.next(this.sanitizer.bypassSecurityTrustUrl(url));
+          } else {
+            this.previewUrl$.next(null);
           }
         });
       } else {

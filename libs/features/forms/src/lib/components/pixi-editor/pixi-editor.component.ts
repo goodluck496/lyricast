@@ -128,6 +128,8 @@ export class PixiSlideEditorV2Component
   @ViewChild('host', { static: false }) hostRef!: ElementRef<HTMLDivElement>;
   @ViewChild('propertiesScrollbar', { static: false })
   private propertiesScrollbarRef?: NgScrollbarExt;
+  @ViewChild('assetPicker', { static: false })
+  private assetPicker?: AssetPickerComponent;
 
   @Output() applyTextStylesToAll = new EventEmitter<{ styles: UiTextStyles, event: Event }>();
 
@@ -515,6 +517,7 @@ export class PixiSlideEditorV2Component
           const selectedIds = selectCommand.ids || [];
           // update selectedKind for toolbar highlighting
           this.selectedKind = undefined;
+          this.canSetBg = false;
           if (!selectedIds.length) return;
           const firstId = selectedIds[0];
           const nodeRef = this.store.snapshot((state) => state.nodes)[firstId]
@@ -526,13 +529,8 @@ export class PixiSlideEditorV2Component
           else if (nodeRef instanceof ShapeNode) this.selectedKind = 'shape';
           else if (nodeRef instanceof GroupNode) this.selectedKind = 'group';
           else if (nodeRef instanceof BrushNode) this.selectedKind = 'brush';
-          // enable/disable background buttons
-          this.canSetBg = !!(
-            nodeRef &&
-            ((nodeRef instanceof ShapeNode &&
-              (nodeRef as ShapeNode).shape !== 'line') ||
-              nodeRef instanceof TextNode)
-          );
+          this.canSetBg =
+            this.getSelectedBackgroundMode(selectedIds) !== undefined;
           const pickTextFrom = (node?: NodeBase): TextNode | undefined => {
             if (!node) return undefined;
             if (node instanceof TextNode) return node;
@@ -854,15 +852,12 @@ export class PixiSlideEditorV2Component
           [
             'ADD_TEXT',
             'APPLY_STYLE',
-            'SET_TEXT_BACKGROUND',
             'CLEAR_TEXT_BACKGROUND',
             'SET_TEXT_BG_COLOR',
             'ADD_SHAPE',
-            'SET_SHAPE_BACKGROUND',
             'CLEAR_SHAPE_BACKGROUND',
             'SET_SHAPE_FILL',
             'ADD_BRUSH',
-            'SET_BRUSH_BACKGROUND',
             'CLEAR_BRUSH_BACKGROUND',
           ].includes(command.t)
         ),
@@ -1010,9 +1005,7 @@ export class PixiSlideEditorV2Component
   }
 
   onImageUrl() {
-    this.assetPickerMode = 'image';
-    this.assetPickerVisible = true;
-    this.cdr.markForCheck();
+    this.openAssetPicker('image');
   }
   async onVideoUrl() {
     const url = await this.dialog.askUrl('Video URL');
@@ -1028,15 +1021,18 @@ export class PixiSlideEditorV2Component
   }
 
   onSetBackground() {
-    const id = this.store.snapshot((s) => s.selectedIds)[0];
-    if (!id) return;
-    this.assetPickerMode = 'background';
-    this.assetPickerVisible = true;
-    this.cdr.markForCheck();
+    const mode = this.getSelectedBackgroundMode();
+    if (!mode) return;
+    this.openAssetPicker(mode);
   }
 
   onClearBackground() {
-    this.emit({ t: 'CLEAR_TEXT_BACKGROUND' });
+    const mode = this.getSelectedBackgroundMode();
+    if (mode === 'background') {
+      this.emit({ t: 'CLEAR_TEXT_BACKGROUND' });
+    } else if (mode === 'shape-background') {
+      this.emit({ t: 'CLEAR_SHAPE_BACKGROUND' });
+    }
   }
   onApplyTextBackground(hex: string) {
     if (!hex) return;
@@ -1048,9 +1044,55 @@ export class PixiSlideEditorV2Component
   onSetShapeBackground() {
     const id = this.store.snapshot((s) => s.selectedIds)[0];
     if (!id) return;
-    this.assetPickerMode = 'shape-background';
+    this.openAssetPicker('shape-background');
+  }
+
+  private openAssetPicker(
+    mode: 'image' | 'background' | 'shape-background'
+  ): void {
+    this.assetPickerMode = mode;
     this.assetPickerVisible = true;
     this.cdr.markForCheck();
+    queueMicrotask(() => this.assetPicker?.loadAssets());
+  }
+
+  onAssetPickerDialogShow(): void {
+    this.assetPicker?.loadAssets();
+  }
+
+  private getSelectedBackgroundMode(
+    selectedIds = this.store.snapshot((state) => state.selectedIds)
+  ): 'background' | 'shape-background' | undefined {
+    if (selectedIds.length === 0) {
+      return undefined;
+    }
+
+    const nodes = this.store.snapshot((state) => state.nodes);
+    const firstMode = this.getBackgroundModeForNode(nodes[selectedIds[0]]?.ref);
+
+    if (!firstMode) {
+      return undefined;
+    }
+
+    const sameModeForSelection = selectedIds.every(
+      (id) => this.getBackgroundModeForNode(nodes[id]?.ref) === firstMode
+    );
+
+    return sameModeForSelection ? firstMode : undefined;
+  }
+
+  private getBackgroundModeForNode(
+    node: NodeBase | undefined
+  ): 'background' | 'shape-background' | undefined {
+    if (node instanceof TextNode) {
+      return 'background';
+    }
+
+    if (node instanceof ShapeNode && node.shape !== 'line') {
+      return 'shape-background';
+    }
+
+    return undefined;
   }
   
   onAssetPicked(event: { asset: AssetDto; url: string }) {

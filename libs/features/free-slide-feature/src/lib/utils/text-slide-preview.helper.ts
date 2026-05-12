@@ -65,6 +65,10 @@ export class TextSlidePreviewHelper {
       return undefined;
     }
 
+    if (textNode.bgAssetId) {
+      return undefined;
+    }
+
     const previewContext = this.createPreviewContext(state, options);
     if (!previewContext) {
       return undefined;

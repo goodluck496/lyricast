@@ -7,14 +7,14 @@ import {
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
-import { ConfirmationService, MessageService } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService, MessageService, TreeNode } from 'primeng/api';
+import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToolbarModule } from 'primeng/toolbar';
 import { FileUploadHandlerEvent, FileUploadModule } from 'primeng/fileupload';
 import { GalleriaModule } from 'primeng/galleria';
+import { TreeTableModule } from 'primeng/treetable';
 import { AssetsApiService } from '@lyri-cast/shared-browser/data-access/assets';
 import { FreeSlideApiService } from '@lyri-cast/shared-browser/data-access/free-slide';
 import { AssetDto, Presentation } from '@lyri-cast/entities';
@@ -36,9 +36,32 @@ type AssetReferenceKind = 'preview' | 'content';
 type AssetReference = {
   key: string;
   kind: AssetReferenceKind;
+  presentationId: string;
   presentationTitle: string;
   slideName: string;
   routerLink: Array<string | Pages | FreeSlidePages>;
+};
+
+type AssetTreePresentationRow = {
+  type: 'presentation';
+  id: string;
+  name: string;
+  assetsCount: number;
+  slidesCount: number;
+  createdAt: number;
+};
+
+type AssetTreeAssetRow = {
+  type: 'asset';
+  asset: AssetDto;
+  references: AssetReference[];
+};
+
+type AssetTreeRow = AssetTreePresentationRow | AssetTreeAssetRow;
+
+type TreeSelectionState = {
+  checked?: boolean;
+  partialChecked?: boolean;
 };
 
 @Component({
@@ -47,14 +70,14 @@ type AssetReference = {
   imports: [
     CommonModule,
     ButtonModule,
-    TableModule,
-    ConfirmDialogModule,
+    ConfirmPopupModule,
     DatePipe,
     ToastModule,
     TooltipModule,
     ToolbarModule,
     FileUploadModule,
     GalleriaModule,
+    TreeTableModule,
     RouterModule,
   ],
   providers: [AssetClipboardService, ConfirmationService, MessageService],
@@ -70,9 +93,10 @@ export class AssetManagementComponent implements OnInit {
   private readonly messageService = inject(MessageService);
 
   assets = signal<AssetDto[]>([]);
+  assetTree = signal<TreeNode<AssetTreeRow>[]>([]);
   galleryItems = signal<AssetGalleryItem[]>([]);
   assetReferences = signal<Map<string, AssetReference[]>>(new Map());
-  selectedAssets: AssetDto[] = [];
+  selectionKeys: Record<string, TreeSelectionState> = {};
   loading = signal(false);
   galleryVisible = signal(false);
   galleryActiveIndex = signal(0);
@@ -97,7 +121,7 @@ export class AssetManagementComponent implements OnInit {
 
   loadAssets() {
     this.loading.set(true);
-    this.selectedAssets = [];
+    this.selectionKeys = {};
     forkJoin({
       assets: this.assetsApiService.getAssets(),
       presentations: this.freeSlideApiService.getAll(),
@@ -106,6 +130,7 @@ export class AssetManagementComponent implements OnInit {
         this.assets.set(assets);
         this.galleryItems.set(this.toGalleryItems(assets));
         this.assetReferences.set(this.collectAssetReferences(presentations));
+        this.assetTree.set(this.buildAssetTree(assets, presentations));
         this.loading.set(false);
       },
       error: () => {
@@ -148,6 +173,33 @@ export class AssetManagementComponent implements OnInit {
   getAssetReferenceLabel(reference: AssetReference): string {
     const kind = reference.kind === 'preview' ? 'preview' : 'content';
     return `${reference.presentationTitle} / ${reference.slideName} (${kind})`;
+  }
+
+  getAssetReferenceShortLabel(reference: AssetReference): string {
+    const kind = reference.kind === 'preview' ? 'preview' : 'content';
+    return `${reference.slideName} (${kind})`;
+  }
+
+  getSelectedAssets(): AssetDto[] {
+    const selectedAssets = new Map<string, AssetDto>();
+
+    for (const node of this.assetTree()) {
+      this.collectSelectedAssets(node, selectedAssets, false);
+    }
+
+    return Array.from(selectedAssets.values());
+  }
+
+  selectedAssetsCount(): number {
+    return this.getSelectedAssets().length;
+  }
+
+  isPresentationRow(row: AssetTreeRow): row is AssetTreePresentationRow {
+    return row.type === 'presentation';
+  }
+
+  isAssetRow(row: AssetTreeRow): row is AssetTreeAssetRow {
+    return row.type === 'asset';
   }
 
   activeGalleryItem(): AssetGalleryItem | undefined {
@@ -231,18 +283,65 @@ export class AssetManagementComponent implements OnInit {
     });
   }
 
-  confirmDeleteSelected() {
+  confirmDeleteSelected(event: MouseEvent) {
+    const selectedAssets = this.getSelectedAssets();
+
     this.confirmationService.confirm({
-      message: `Are you sure you want to delete ${this.selectedAssets.length} selected assets?`,
-      header: 'Delete Confirmation',
-      icon: 'pi pi-info-circle',
+      key: 'popup',
+      target: event.currentTarget ?? undefined,
+      message: `Удалить выбранные вложения (${selectedAssets.length})? Действие нельзя отменить.`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Удалить',
+      rejectLabel: 'Отмена',
+      acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
         this.deleteSelectedAssets();
       },
     });
   }
 
-  confirmDeleteUnusedAssets(): void {
+  confirmDeleteUnusedAssets(event: MouseEvent): void {
+    this.confirmationService.confirm({
+      key: 'popup',
+      target: event.currentTarget ?? undefined,
+      message:
+        'Вы точно хотите удалить все вложения, не привязанные к объектам? Действие нельзя отменить.',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Удалить',
+      rejectLabel: 'Отмена',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.deleteUnusedAssetsAfterScan();
+      },
+    });
+  }
+
+  confirmDeleteAssetGroup(
+    event: MouseEvent,
+    group: AssetTreePresentationRow
+  ): void {
+    const groupAssets = this.getAssetsByGroupId(group.id);
+    if (groupAssets.length === 0) {
+      return;
+    }
+
+    this.confirmationService.confirm({
+      key: 'popup',
+      target: event.currentTarget ?? undefined,
+      message:
+        `Удалить ${groupAssets.length} вложений из хранилища для группы ` +
+        `"${group.name}"? Если они используются в других местах, ссылки на них перестанут работать.`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Удалить',
+      rejectLabel: 'Отмена',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.deleteAssetGroup(groupAssets);
+      },
+    });
+  }
+
+  private deleteUnusedAssetsAfterScan(): void {
     this.loading.set(true);
 
     forkJoin({
@@ -253,6 +352,7 @@ export class AssetManagementComponent implements OnInit {
         this.assets.set(assets);
         this.galleryItems.set(this.toGalleryItems(assets));
         this.assetReferences.set(this.collectAssetReferences(presentations));
+        this.assetTree.set(this.buildAssetTree(assets, presentations));
         this.loading.set(false);
 
         const usedAssetIds = this.collectUsedAssetIds(presentations);
@@ -270,14 +370,7 @@ export class AssetManagementComponent implements OnInit {
           return;
         }
 
-        this.confirmationService.confirm({
-          message: `Delete ${unusedAssets.length} assets that are not linked to any presentation slide?`,
-          header: 'Delete Unused Assets',
-          icon: 'pi pi-info-circle',
-          accept: () => {
-            this.deleteUnusedAssets(unusedAssets);
-          },
-        });
+        this.deleteUnusedAssets(unusedAssets);
       },
       error: () => {
         this.loading.set(false);
@@ -291,11 +384,15 @@ export class AssetManagementComponent implements OnInit {
     });
   }
 
-  confirmDeleteAsset(asset: AssetDto): void {
+  confirmDeleteAsset(event: MouseEvent, asset: AssetDto): void {
     this.confirmationService.confirm({
-      message: `Are you sure you want to delete "${asset.originalName}"?`,
-      header: 'Delete Confirmation',
-      icon: 'pi pi-info-circle',
+      key: 'popup',
+      target: event.currentTarget ?? undefined,
+      message: `Удалить вложение "${asset.originalName}"? Действие нельзя отменить.`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Удалить',
+      rejectLabel: 'Отмена',
+      acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
         this.deleteAsset(asset);
       },
@@ -303,7 +400,7 @@ export class AssetManagementComponent implements OnInit {
   }
 
   deleteSelectedAssets() {
-    const idsToDelete = this.selectedAssets.map((a) => a.id);
+    const idsToDelete = this.getSelectedAssets().map((a) => a.id);
     if (idsToDelete.length === 0) {
       return;
     }
@@ -325,18 +422,37 @@ export class AssetManagementComponent implements OnInit {
         })
       )
       .subscribe(() => {
-        this.selectedAssets = [];
+        this.selectionKeys = {};
       });
   }
 
   private deleteUnusedAssets(unusedAssets: AssetDto[]): void {
-    const idsToDelete = unusedAssets.map((asset) => asset.id);
+    this.deleteAssets(
+      unusedAssets,
+      `${unusedAssets.length} unused assets deleted.`,
+      'Unable to delete unused assets.'
+    );
+  }
+
+  private deleteAssetGroup(groupAssets: AssetDto[]): void {
+    this.deleteAssets(
+      groupAssets,
+      `${groupAssets.length} group assets deleted.`,
+      'Unable to delete asset group.'
+    );
+  }
+
+  private deleteAssets(
+    assets: AssetDto[],
+    successDetail: string,
+    errorDetail: string
+  ): void {
+    const idsToDelete = assets.map((asset) => asset.id);
 
     if (idsToDelete.length === 0) {
       return;
     }
 
-    const deletedIds = new Set(idsToDelete);
     const deleteObservables = idsToDelete.map((id) =>
       this.assetsApiService.deleteAsset(id)
     );
@@ -348,7 +464,7 @@ export class AssetManagementComponent implements OnInit {
           this.messageService.add({
             severity: 'success',
             summary: 'Deleted',
-            detail: `${idsToDelete.length} unused assets deleted.`,
+            detail: successDetail,
             life: 3000,
           });
           return this.refreshAssets();
@@ -356,9 +472,7 @@ export class AssetManagementComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.selectedAssets = this.selectedAssets.filter(
-            (asset) => !deletedIds.has(asset.id)
-          );
+          this.selectionKeys = {};
           this.normalizeGalleryAfterBulkDelete();
           this.loading.set(false);
         },
@@ -367,11 +481,29 @@ export class AssetManagementComponent implements OnInit {
           this.messageService.add({
             severity: 'error',
             summary: 'Delete failed',
-            detail: 'Unable to delete unused assets.',
+            detail: errorDetail,
             life: 5000,
           });
         },
       });
+  }
+
+  private getAssetsByGroupId(groupId: string): AssetDto[] {
+    const groupNode = this.assetTree().find(
+      (node) =>
+        node.data &&
+        this.isPresentationRow(node.data) &&
+        node.data.id === groupId
+    );
+    const assets = new Map<string, AssetDto>();
+
+    for (const child of groupNode?.children ?? []) {
+      if (child.data && this.isAssetRow(child.data)) {
+        assets.set(child.data.asset.id, child.data.asset);
+      }
+    }
+
+    return Array.from(assets.values());
   }
 
   formatBytes(bytes: number, decimals = 2): string {
@@ -411,9 +543,7 @@ export class AssetManagementComponent implements OnInit {
         })
       )
       .subscribe(() => {
-        this.selectedAssets = this.selectedAssets.filter(
-          (selectedAsset) => selectedAsset.id !== asset.id
-        );
+        this.removeSelectionKeysForAssets(new Set([asset.id]));
         this.normalizeGalleryAfterDelete(deletedGalleryIndex);
       });
   }
@@ -427,9 +557,117 @@ export class AssetManagementComponent implements OnInit {
         this.assets.set(assets);
         this.galleryItems.set(this.toGalleryItems(assets));
         this.assetReferences.set(this.collectAssetReferences(presentations));
+        this.assetTree.set(this.buildAssetTree(assets, presentations));
       }),
       map(({ assets }) => assets)
     );
+  }
+
+  private buildAssetTree(
+    assets: AssetDto[],
+    presentations: Presentation[]
+  ): TreeNode<AssetTreeRow>[] {
+    const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
+    const linkedAssetIds = new Set<string>();
+    const nodes: TreeNode<AssetTreeRow>[] = [];
+
+    for (const presentation of presentations) {
+      const referencesByAsset =
+        this.collectPresentationAssetReferences(presentation);
+      const children = this.buildAssetChildNodes(
+        presentation.id,
+        referencesByAsset,
+        assetsById,
+        linkedAssetIds
+      );
+
+      if (children.length === 0) {
+        continue;
+      }
+
+      nodes.push({
+        key: this.getPresentationNodeKey(presentation.id),
+        expanded: false,
+        data: {
+          type: 'presentation',
+          id: presentation.id,
+          name: presentation.title || 'Untitled presentation',
+          assetsCount: children.length,
+          slidesCount: presentation.slides.length,
+          createdAt: presentation.createdAt,
+        },
+        children,
+      });
+    }
+
+    const unlinkedAssets = assets.filter(
+      (asset) => !linkedAssetIds.has(asset.id)
+    );
+
+    if (unlinkedAssets.length > 0) {
+      nodes.push({
+        key: this.getPresentationNodeKey('unlinked'),
+        expanded: false,
+        data: {
+          type: 'presentation',
+          id: 'unlinked',
+          name: 'Not linked to presentations',
+          assetsCount: unlinkedAssets.length,
+          slidesCount: 0,
+          createdAt: 0,
+        },
+        children: unlinkedAssets.map((asset) => ({
+          key: this.getAssetNodeKey('unlinked', asset.id),
+          data: {
+            type: 'asset',
+            asset,
+            references: [],
+          },
+        })),
+      });
+    }
+
+    return nodes;
+  }
+
+  private buildAssetChildNodes(
+    presentationId: string,
+    referencesByAsset: Map<string, AssetReference[]>,
+    assetsById: Map<string, AssetDto>,
+    linkedAssetIds: Set<string>
+  ): TreeNode<AssetTreeRow>[] {
+    const nodes: TreeNode<AssetTreeRow>[] = [];
+
+    for (const [assetId, references] of referencesByAsset.entries()) {
+      const asset = assetsById.get(assetId);
+      if (!asset) {
+        continue;
+      }
+
+      linkedAssetIds.add(asset.id);
+      nodes.push({
+        key: this.getAssetNodeKey(presentationId, asset.id),
+        data: {
+          type: 'asset',
+          asset,
+          references,
+        },
+      });
+    }
+
+    return nodes.sort((left, right) => {
+      if (!left.data || !right.data) {
+        return 0;
+      }
+
+      if (!this.isAssetRow(left.data) || !this.isAssetRow(right.data)) {
+        return 0;
+      }
+
+      return left.data.asset.originalName.localeCompare(
+        right.data.asset.originalName
+      );
+    });
   }
 
   private normalizeGalleryAfterDelete(deletedGalleryIndex: number): void {
@@ -484,24 +722,55 @@ export class AssetManagementComponent implements OnInit {
     presentations: Presentation[]
   ): Map<string, AssetReference[]> {
     const references = new Map<string, AssetReference[]>();
-    const seenReferences = new Set<string>();
 
     for (const presentation of presentations) {
-      const presentationTitle = presentation.title || 'Untitled presentation';
-      const routerLink = [
-        '/',
-        Pages.MAIN,
-        Pages.FREE_SLIDE_FEATURE,
-        FreeSlidePages.SLIDE,
-        presentation.id,
-      ];
+      for (const [assetId, presentationReferences] of this
+        .collectPresentationAssetReferences(presentation)
+        .entries()) {
+        const currentReferences = references.get(assetId) ?? [];
+        currentReferences.push(...presentationReferences);
+        references.set(assetId, currentReferences);
+      }
+    }
 
-      for (const slide of presentation.slides) {
-        const slideName = slide.name || `Slide ${slide.index + 1}`;
-        this.addAssetReferencesFromValue(
-          slide.previewAssetId,
+    return references;
+  }
+
+  private collectPresentationAssetReferences(
+    presentation: Presentation
+  ): Map<string, AssetReference[]> {
+    const references = new Map<string, AssetReference[]>();
+    const seenReferences = new Set<string>();
+    const presentationTitle = presentation.title || 'Untitled presentation';
+    const routerLink = [
+      '/',
+      Pages.MAIN,
+      Pages.FREE_SLIDE_FEATURE,
+      FreeSlidePages.SLIDE,
+      presentation.id,
+    ];
+
+    for (const slide of presentation.slides) {
+      const slideName = slide.name || `Slide ${slide.index + 1}`;
+      this.addAssetReferencesFromValue(
+        slide.previewAssetId,
+        {
+          kind: 'preview',
+          presentationId: presentation.id,
+          presentationTitle,
+          slideName,
+          routerLink,
+        },
+        references,
+        seenReferences
+      );
+
+      try {
+        this.collectAssetReferencesFromValue(
+          JSON.parse(slide.content),
           {
-            kind: 'preview',
+            kind: 'content',
+            presentationId: presentation.id,
             presentationTitle,
             slideName,
             routerLink,
@@ -509,22 +778,8 @@ export class AssetManagementComponent implements OnInit {
           references,
           seenReferences
         );
-
-        try {
-          this.collectAssetReferencesFromValue(
-            JSON.parse(slide.content),
-            {
-              kind: 'content',
-              presentationTitle,
-              slideName,
-              routerLink,
-            },
-            references,
-            seenReferences
-          );
-        } catch {
-          continue;
-        }
+      } catch {
+        continue;
       }
     }
 
@@ -587,6 +842,7 @@ export class AssetManagementComponent implements OnInit {
       const key = [
         assetId,
         meta.kind,
+        meta.presentationId,
         meta.routerLink.join('/'),
         meta.slideName,
       ].join('|');
@@ -663,6 +919,61 @@ export class AssetManagementComponent implements OnInit {
 
   private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null;
+  }
+
+  private collectSelectedAssets(
+    node: TreeNode<AssetTreeRow>,
+    selectedAssets: Map<string, AssetDto>,
+    parentSelected: boolean
+  ): void {
+    const nodeSelected = this.isTreeNodeSelected(node, parentSelected);
+
+    if (node.data && this.isAssetRow(node.data) && nodeSelected) {
+      selectedAssets.set(node.data.asset.id, node.data.asset);
+    }
+
+    for (const child of node.children ?? []) {
+      this.collectSelectedAssets(child, selectedAssets, nodeSelected);
+    }
+  }
+
+  private isTreeNodeSelected(
+    node: TreeNode<AssetTreeRow>,
+    parentSelected: boolean
+  ): boolean {
+    if (parentSelected) {
+      return true;
+    }
+
+    if (!node.key) {
+      return false;
+    }
+
+    return this.selectionKeys[node.key]?.checked === true;
+  }
+
+  private removeSelectionKeysForAssets(assetIds: Set<string>): void {
+    const nextSelectionKeys: Record<string, TreeSelectionState> = {};
+
+    for (const [key, value] of Object.entries(this.selectionKeys)) {
+      const shouldRemove = Array.from(assetIds).some((assetId) =>
+        key.endsWith(`-${assetId}`)
+      );
+
+      if (!shouldRemove) {
+        nextSelectionKeys[key] = value;
+      }
+    }
+
+    this.selectionKeys = nextSelectionKeys;
+  }
+
+  private getPresentationNodeKey(presentationId: string): string {
+    return `presentation-${presentationId}`;
+  }
+
+  private getAssetNodeKey(presentationId: string, assetId: string): string {
+    return `asset-${presentationId}-${assetId}`;
   }
 
   private setGalleryActiveIndex(index: number): void {

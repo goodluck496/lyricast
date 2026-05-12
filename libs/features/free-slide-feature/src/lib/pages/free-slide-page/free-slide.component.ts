@@ -59,7 +59,10 @@ import {
 } from '@lyri-cast/free-slide-store';
 import {
   AssetStorageService,
+  BrushNode,
   PixiSlideEditorV2Component,
+  ShapeNode,
+  TextNode,
 } from '@lyri-cast/form';
 import { ActivatedRoute } from '@angular/router';
 import { FreeSlideApiService } from '@lyri-cast/free-slide';
@@ -275,8 +278,16 @@ export class FreeSlideComponent implements AfterViewInit {
   private async updateLivePreview() {
     try {
       if (!this.pixiEditor || this.isLoadingSlideIntoEditor) return;
+      const version = this.loadVersion;
+      const slideId = this.loadedSlideId || this.currentSlideId;
       // Более высокое разрешение превью для сайдбара
       const blob = await this.pixiEditor.generateSnapshot({ resolution: 0.6 });
+      if (
+        version !== this.loadVersion ||
+        slideId !== (this.loadedSlideId || this.currentSlideId)
+      ) {
+        return;
+      }
       if (blob) {
         const url = URL.createObjectURL(blob);
         this.slideService.setLivePreviewObjectUrl(url);
@@ -284,6 +295,58 @@ export class FreeSlideComponent implements AfterViewInit {
     } catch {
       return;
     }
+  }
+
+  private async waitForEditorBackgroundAssets(
+    state: SerializedState,
+    version: number,
+    timeoutMs = 2500
+  ): Promise<void> {
+    const expectedAssetIds = state.nodes
+      .map((node) => ('bgAssetId' in node ? node.bgAssetId : undefined))
+      .filter((assetId): assetId is string => !!assetId);
+
+    if (!expectedAssetIds.length || !this.pixiEditor) {
+      return;
+    }
+
+    const start = Date.now();
+
+    while (Date.now() - start < timeoutMs) {
+      if (version !== this.loadVersion || !this.pixiEditor) {
+        return;
+      }
+
+      const loadedAssetIds = new Set<string>();
+      const nodes = this.pixiEditor.store.snapshot((snapshot) => snapshot.nodes);
+
+      for (const nodeState of Object.values(nodes)) {
+        const bgAssetId = this.readNodeBackgroundAssetId(nodeState.ref);
+        if (bgAssetId) {
+          loadedAssetIds.add(bgAssetId);
+        }
+      }
+
+      if (expectedAssetIds.every((assetId) => loadedAssetIds.has(assetId))) {
+        return;
+      }
+
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve())
+      );
+    }
+  }
+
+  private readNodeBackgroundAssetId(node: unknown): string | undefined {
+    if (node instanceof TextNode) {
+      return node.backgroundImageUrl;
+    }
+
+    if (node instanceof ShapeNode || node instanceof BrushNode) {
+      return node.bgAssetId;
+    }
+
+    return undefined;
   }
 
   async onExportPptx() {
@@ -451,6 +514,7 @@ export class FreeSlideComponent implements AfterViewInit {
 
     this.currentSlideId = slide.id;
     this.currentSlideIndex = slide.index;
+    this.loadedSlideId = '';
     this.slideService.setLivePreviewObjectUrl(null);
 
     // Обновляем UI/стор сразу, чтобы клик по слайду ощущался мгновенно
@@ -491,6 +555,7 @@ export class FreeSlideComponent implements AfterViewInit {
           this.pixiEditor.clearAllNodes();
           this.pixiEditor.serializer.deserializeState(slideData);
           this.pixiEditor.sceneViewport.updateSceneBounds();
+          await this.waitForEditorBackgroundAssets(slideData, version);
 
           if (version !== this.loadVersion) {
             return;
@@ -568,7 +633,7 @@ export class FreeSlideComponent implements AfterViewInit {
     if (lastHash !== contentHash) {
       // Если за время генерации превью пользователь переключился на другой слайд — отменяем.
       if (this.loadedSlideId && this.loadedSlideId !== targetSlideId) return;
-      const blob = await this.pixiEditor.generateSnapshot();
+      const blob = await this.pixiEditor.generateSnapshot({ resolution: 0.6 });
       if (this.loadedSlideId && this.loadedSlideId !== targetSlideId) return;
       if (blob) {
         // Upload new preview first; backend deduplicates by content hash

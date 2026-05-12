@@ -451,8 +451,10 @@
     [style]="{ width: '70vw', maxWidth: '800px' }"
     [draggable]="false"
     [resizable]="false"
+    (onShow)="onAssetPickerDialogShow()"
   >
     <lyri-asset-picker
+      #assetPicker
       [gridCols]="4"
       (assetSelected)="onAssetPicked($event)"
     ></lyri-asset-picker>

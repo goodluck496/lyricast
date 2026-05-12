@@ -33,6 +33,7 @@ export class FreeSlideCastingPreviewComponent implements OnDestroy {
   private readonly cache = new Map<string, SafeUrl>();
   private readonly inflight = new Map<string, Promise<string | undefined>>();
   private destroyed = false;
+  private renderVersion = 0;
 
   constructor() {
     const live$ = this.slideService.livePreviewObjectUrl$;
@@ -54,6 +55,7 @@ export class FreeSlideCastingPreviewComponent implements OnDestroy {
     this.sub.add(
       combineLatest([live$, navigate$, selected$]).subscribe(
         async ([liveUrl, nav, sel]) => {
+          const renderVersion = ++this.renderVersion;
           const slide = nav?.slide ?? sel;
           if (!slide) {
             this.previewUrl$.next(null);
@@ -93,12 +95,11 @@ export class FreeSlideCastingPreviewComponent implements OnDestroy {
           this.previewUrl$.next(null);
           const url = await this.prefetch(assetId);
           if (this.destroyed) return;
+          if (renderVersion !== this.renderVersion) return;
 
           // Ensure the same slide is still selected and we are not showing live preview.
           const currentLive = this.slideService.livePreviewObjectUrl$.value;
-          const currentSel = nav?.slide ?? sel;
           if (currentLive) return;
-          if (currentSel?.previewAssetId !== assetId) return;
 
           if (url) {
             const safe = this.sanitizer.bypassSecurityTrustUrl(url);

@@ -1,0 +1,172 @@
+<div class="casting-appearance">
+  <section class="casting-appearance__section">
+    <h3>Шрифт</h3>
+
+    <div class="casting-appearance__field">
+      <label for="castingFont">Гарнитура</label>
+      <p-select
+        inputId="castingFont"
+        [options]="fontOptions"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        [ngModel]="appearance().fontFamily"
+        (ngModelChange)="update({ fontFamily: $event })"
+      >
+        <ng-template pTemplate="selectedItem" let-value>
+          <span [style.font-family]="getFontOptionFamily(value?.value || value)">
+            {{ value?.label || getFontOptionLabel(value) }}
+          </span>
+        </ng-template>
+        <ng-template pTemplate="item" let-option>
+          <span [style.font-family]="getFontOptionFamily(option.value)">
+            {{ option.label }}
+          </span>
+        </ng-template>
+      </p-select>
+    </div>
+
+    <div class="casting-appearance__field">
+      <label for="castingMinFont">Мин. размер fit-text</label>
+      <p-inputNumber
+        inputId="castingMinFont"
+        [ngModel]="appearance().minFontSize"
+        (ngModelChange)="update({ minFontSize: $event })"
+        [min]="8"
+        [max]="140"
+        suffix=" px"
+        [showButtons]="true"
+      ></p-inputNumber>
+    </div>
+
+    <div class="casting-appearance__field casting-appearance__field--inline">
+      <span>Жирный шрифт</span>
+      <p-toggleButton
+        [ngModel]="appearance().fontWeight === '700'"
+        (ngModelChange)="update({ fontWeight: $event ? '700' : '400' })"
+        onLabel="Да"
+        offLabel="Нет"
+      ></p-toggleButton>
+    </div>
+
+    <div class="casting-appearance__field">
+      <label for="castingTextColor">Цвет текста</label>
+      <p-colorPicker
+        inputId="castingTextColor"
+        appendTo="body"
+        format="hex"
+        [ngModel]="appearance().textColor"
+        (ngModelChange)="update({ textColor: $event })"
+      ></p-colorPicker>
+    </div>
+  </section>
+
+  <section class="casting-appearance__section">
+    <h3>Тень</h3>
+
+    <div class="casting-appearance__field">
+      <label for="castingShadowColor">Цвет тени</label>
+      <p-colorPicker
+        inputId="castingShadowColor"
+        appendTo="body"
+        format="hex"
+        [ngModel]="appearance().shadowColor"
+        (ngModelChange)="update({ shadowColor: $event })"
+      ></p-colorPicker>
+    </div>
+
+    <div class="casting-appearance__field">
+      <label for="castingShadowBlur">Размер тени</label>
+      <p-inputNumber
+        inputId="castingShadowBlur"
+        [ngModel]="appearance().shadowBlur"
+        (ngModelChange)="update({ shadowBlur: $event })"
+        [min]="0"
+        [max]="40"
+        suffix=" px"
+        [showButtons]="true"
+      ></p-inputNumber>
+    </div>
+
+    <div class="casting-appearance__field">
+      <label for="castingShadowX">Смещение X</label>
+      <p-inputNumber
+        inputId="castingShadowX"
+        [ngModel]="appearance().shadowOffsetX"
+        (ngModelChange)="update({ shadowOffsetX: $event })"
+        [min]="-40"
+        [max]="40"
+        suffix=" px"
+        [showButtons]="true"
+      ></p-inputNumber>
+    </div>
+
+    <div class="casting-appearance__field">
+      <label for="castingShadowY">Смещение Y</label>
+      <p-inputNumber
+        inputId="castingShadowY"
+        [ngModel]="appearance().shadowOffsetY"
+        (ngModelChange)="update({ shadowOffsetY: $event })"
+        [min]="-40"
+        [max]="40"
+        suffix=" px"
+        [showButtons]="true"
+      ></p-inputNumber>
+    </div>
+  </section>
+
+  <section class="casting-appearance__section">
+    <h3>Фон</h3>
+
+    <div class="casting-appearance__field">
+      <label for="castingBackgroundColor">Цвет фона</label>
+      <p-colorPicker
+        inputId="castingBackgroundColor"
+        appendTo="body"
+        format="hex"
+        [ngModel]="appearance().backgroundColor"
+        (ngModelChange)="update({ backgroundColor: $event })"
+      ></p-colorPicker>
+    </div>
+
+    <div class="casting-appearance__field">
+      <label>Картинка фона</label>
+      <div class="casting-appearance__background">
+        @if (appearance().backgroundImageUrl) {
+          <div
+            class="casting-appearance__background-preview"
+            [style.background-image]="'url(' + appearance().backgroundImageUrl + ')'"
+          ></div>
+        }
+
+        <button
+          pButton
+          type="button"
+          label="Выбрать"
+          icon="pi pi-image"
+          (click)="backgroundDialogVisible = true"
+        ></button>
+        <button
+          pButton
+          type="button"
+          label="Сбросить"
+          severity="secondary"
+          [disabled]="!appearance().backgroundImageUrl"
+          (click)="onResetBackground()"
+        ></button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<p-dialog
+  header="Фон трансляции"
+  [(visible)]="backgroundDialogVisible"
+  [modal]="true"
+  [style]="{ width: '720px', maxWidth: '95vw' }"
+>
+  <lyri-asset-picker
+    [gridCols]="4"
+    (assetSelected)="onAssetSelected($event)"
+  ></lyri-asset-picker>
+</p-dialog>

@@ -18,7 +18,7 @@ import { Store } from '@ngrx/store';
 import { map, Observable, take, withLatestFrom } from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
 import { BibleBookTitle, BibleChapterSection } from '@lyri-cast/entities';
-import { AppActions, selectOpenedWindow, SidebarService, WindowService, SettingsService, BridgeService, Pages, DEFAULT_CASTING_PAGE_CONFIG } from '@lyri-cast/common-browser';
+import { AppActions, selectOpenedWindow, SidebarService, WindowService, SettingsService, BridgeService, Pages, DEFAULT_CASTING_PAGE_CONFIG, CastingAppearanceService } from '@lyri-cast/common-browser';
 import { BibleSidebarData } from '../../types';
 import { AppWindowTypes, APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
 import { firstValueFrom, BehaviorSubject, combineLatest } from 'rxjs';
@@ -28,6 +28,7 @@ import { BibleOnboardingService } from '../../services/bible-onboarding.service'
 import { TourService } from 'ngx-ui-tour-primeng';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { MenuItem } from 'primeng/api';
+import { CastingAppearanceControlsComponent } from '@lyri-cast/asset-management';
 
 @Component({
   selector: 'lyri-bible-sidebar',
@@ -38,6 +39,7 @@ import { MenuItem } from 'primeng/api';
     NavigatorFeatureComponent,
     TourPrimeNgModule,
     SplitButtonModule,
+    CastingAppearanceControlsComponent,
   ],
   templateUrl: './bible-sidebar.component.html',
   styleUrl: './bible-sidebar.component.scss',
@@ -52,6 +54,7 @@ export class BibleSidebarComponent {
   private readonly windowSrv = inject(WindowService);
   private readonly settingsSrv = inject(SettingsService);
   private readonly bridge = inject(BridgeService);
+  private readonly appearanceService = inject(CastingAppearanceService);
 
   private canTourNext(tourService: unknown): tourService is { next: () => void } {
     return typeof (tourService as { next: () => void }).next === 'function';
@@ -119,6 +122,7 @@ export class BibleSidebarComponent {
                 chapter: chapterEntity,
                 fromIndex: fromNumber,
                 range: range ? { from: fromNumber, to: toNumber } : undefined,
+                appearance: this.appearanceService.appearance(),
                 content: sections[0].content.map((el) => {
                   return {
                     ...el,

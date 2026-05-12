@@ -104,6 +104,7 @@ export const BibleReducers = createReducer<BibleState>(
     return {
       ...state,
       castingProcess: data,
+      castingAppearance: data.appearance ?? state.castingAppearance,
       castingPaused: false,
     } satisfies BibleState;
   }),
@@ -111,6 +112,7 @@ export const BibleReducers = createReducer<BibleState>(
     return {
       ...state,
       castingProcess: data,
+      castingAppearance: data.appearance ?? state.castingAppearance,
       castingPaused: false,
     } satisfies BibleState;
   }),
@@ -132,6 +134,12 @@ export const BibleReducers = createReducer<BibleState>(
     return {
       ...state,
       castingProcessNavigate: data,
+    } satisfies BibleState;
+  }),
+  on(BibleActions.updateCastingAppearance, (state, data) => {
+    return {
+      ...state,
+      castingAppearance: data,
     } satisfies BibleState;
   }),
   on(BibleActions.changePath, (state, data) => {

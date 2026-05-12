@@ -1,5 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { ISong, ISongBookName } from '@lyri-cast/entities';
+import { CastingAppearance, DEFAULT_CASTING_APPEARANCE } from '@lyri-cast/common-browser';
 import {
   SongActions,
   SongActionsEnum,
@@ -14,6 +15,7 @@ export type SongPageState = {
   castingPaused: boolean;
   castingProcess: SongStartCastingPayload | null;
   navigateState: SongPresentationNavigatePayload | null;
+  castingAppearance: CastingAppearance;
 };
 
 export const initState: SongPageState = {
@@ -22,6 +24,7 @@ export const initState: SongPageState = {
   castingPaused: true,
   castingProcess: null,
   navigateState: null,
+  castingAppearance: DEFAULT_CASTING_APPEARANCE,
 };
 
 export const SongPageReducers = createReducer<SongPageState>(
@@ -41,11 +44,16 @@ export const SongPageReducers = createReducer<SongPageState>(
     return {
       ...state,
       castingProcess: payload,
+      castingAppearance: payload.appearance ?? state.castingAppearance,
       castingPaused: false,
     } satisfies SongPageState;
   }),
   on(SongActions[SongActionsEnum.openCasting], (state, payload) => {
-    return { ...state, castingProcess: payload } satisfies SongPageState;
+    return {
+      ...state,
+      castingProcess: payload,
+      castingAppearance: payload.appearance ?? state.castingAppearance,
+    } satisfies SongPageState;
   }),
   on(SongActions[SongActionsEnum.pauseCasting], (state) => {
     return { ...state, castingPaused: true } satisfies SongPageState;
@@ -60,5 +68,8 @@ export const SongPageReducers = createReducer<SongPageState>(
   }),
   on(SongActions[SongActionsEnum.slideNavigate], (state, payload) => {
     return { ...state, navigateState: payload } satisfies SongPageState;
+  }),
+  on(SongActions[SongActionsEnum.updateCastingAppearance], (state, payload) => {
+    return { ...state, castingAppearance: payload } satisfies SongPageState;
   })
 );

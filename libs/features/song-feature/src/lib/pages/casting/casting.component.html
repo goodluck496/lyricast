@@ -1,43 +1,51 @@
-<div class="info-block" [class.hide]="!showingContent()">
-  <div class="info-block__type" [class.hide]="!selectedSong()">{{ selectedLyric()?.sectionTitle }}</div>
-  <div class="info-block__number" [class.hide]="!selectedSong()">{{ selectedSong()?.number }}</div>
-</div>
+<div class="casting-surface" [ngStyle]="appearanceService.getBackgroundStyles(appearance())">
+  <div class="info-block" [class.hide]="!showingContent()">
+    <div class="info-block__type" [class.hide]="!selectedSong()">{{ selectedLyric()?.sectionTitle }}</div>
+    <div class="info-block__number" [class.hide]="!selectedSong()">{{ selectedSong()?.number }}</div>
+  </div>
 
-<div class="slides__container" [class.hide]="hideContent">
-  <div class="reveal">
-    <div class="slides">
-      <section class="stack">
-        <section
-          class="slides__section">
-          <div [fittext]="true"
-               [maxFontSize]="115"
-               [activateOnResize]="true">
-            <div class="slides__content"></div>
-          </div>
+  <div class="slides__container" [class.hide]="hideContent">
+    <div class="reveal">
+      <div class="slides">
+        <section class="stack">
+          <section class="slides__section">
+            <div
+              [fittext]="true"
+              [maxFontSize]="115"
+              [minFontSize]="appearance().minFontSize"
+              [activateOnResize]="true"
+            >
+              <div class="slides__content"></div>
+            </div>
 
-        </section>
-        @for (lyric of selectedLyrics(); track lyric.uniqId) {
+          </section>
+          @for (lyric of selectedLyrics(); track lyric.uniqId) {
 
-          @for (line of lyric.lines; track line.rangeIndex) {
-            @if (showingContent()) {
-              <section
-                [class.hide]="hideContent"
-                class="slides__section">
-                <div [fittext]="true"
-                     [maxFontSize]="140"
-                     [activateOnResize]="true">
+            @for (line of lyric.lines; track line.rangeIndex) {
+              @if (showingContent()) {
+                <section
+                  [class.hide]="hideContent"
+                  class="slides__section">
                   <div
-                    [innerHTML]="sanitizer.bypassSecurityTrustHtml(line.text)"
-                    [class.single-line]="lyric.lines.length === 1"
-                    class="slides__content"></div>
-                </div>
+                    [fittext]="true"
+                    [maxFontSize]="140"
+                    [minFontSize]="appearance().minFontSize"
+                    [activateOnResize]="true"
+                  >
+                    <div
+                      [innerHTML]="sanitizer.bypassSecurityTrustHtml(line.text)"
+                      [ngStyle]="appearanceService.getTextStyles(appearance())"
+                      [class.single-line]="lyric.lines.length === 1"
+                      class="slides__content"></div>
+                  </div>
 
-              </section>
+                </section>
+              }
             }
           }
-        }
-      </section>
+        </section>
 
+      </div>
     </div>
   </div>
 </div>

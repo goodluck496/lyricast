@@ -234,7 +234,13 @@ export class MainComponent implements OnInit {
       )
     )
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
+      .subscribe((event) => {
+        if (event instanceof NavigationStart) {
+          this.mainCompService.clearTemplates([
+            PAGE_CONTAINER_TEMPLATES.PAGE_HEADER,
+          ]);
+        }
+
         if (this.canTourEnd(this.tourService)) {
           this.tourService.end();
         }

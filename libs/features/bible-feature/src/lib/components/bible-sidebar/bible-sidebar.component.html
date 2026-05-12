@@ -2,8 +2,7 @@
   <lyri-bible-casting-preview class="control-sidebar__preview"></lyri-bible-casting-preview>
 
   <div class="control-sidebar__actions">
-
-    @if ((castingIsPaused$ | async)) {
+    @if (castingIsPaused$ | async) {
       <p-splitButton
         label="Транслировать"
         icon="pi pi-play"
@@ -26,12 +25,9 @@
         styleClass="w-full"
       ></p-splitButton>
     }
-
   </div>
 
-  <lyri-navigator-feature class="control-sidebar__navigator" feature="bible" />
+  <lyri-navigator-feature class="control-sidebar__navigator" feature="bible">
+    <lyri-casting-appearance-controls navigator-appearance />
+  </lyri-navigator-feature>
 </div>
-
-
-
-

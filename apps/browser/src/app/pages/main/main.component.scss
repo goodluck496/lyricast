@@ -109,6 +109,8 @@
     flex-direction: column;
     justify-content: flex-start;
     align-items: start;
+    height: 100%;
+    min-height: 0;
 
     min-width: var(--sidebar-width);
     width: var(--sidebar-width);

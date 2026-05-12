@@ -8,7 +8,7 @@ import {
   BibleVerseForCasting,
   PrevOrNextVerse,
 } from '@lyri-cast/entities';
-import { Pages } from '@lyri-cast/common-browser';
+import { CastingAppearance, Pages } from '@lyri-cast/common-browser';
 import { OpenWindowArgs } from '@lyri-cast/common-electron';
 
 export type BibleStartCastingPayload = {
@@ -17,6 +17,7 @@ export type BibleStartCastingPayload = {
   content: BibleVerseForCasting[];
   fromIndex: number;
   range?: { from: number; to: number };
+  appearance?: CastingAppearance;
 };
 
 export type BiblePresentationNavigatePayload = {
@@ -52,6 +53,7 @@ export const BibleActionsEnum = {
   stopCasting: 'stopCasting',
   pauseCasting: 'pauseCasting',
   castingProcessChange: 'castingProcessChange',
+  updateCastingAppearance: 'updateCastingAppearance',
   selectVersesRange: 'selectVersesRange',
   resetVersesRange: 'resetVersesRange',
 } as const;
@@ -91,6 +93,7 @@ export const BibleActions = createActionGroup({
     [BibleActionsEnum.pauseCasting]: emptyProps(),
     [BibleActionsEnum.castingProcessChange]:
       props<BiblePresentationNavigatePayload>(),
+    [BibleActionsEnum.updateCastingAppearance]: props<CastingAppearance>(),
     [BibleActionsEnum.openedCastingPage]: emptyProps(),
     [BibleActionsEnum.selectVersesRange]: props<{ from: number; to: number }>(),
     [BibleActionsEnum.resetVersesRange]: emptyProps(),

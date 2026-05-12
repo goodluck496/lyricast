@@ -1,34 +1,41 @@
-<div style="width: 100%; height: 40px;  top: 0; display: flex; justify-content: space-between; align-items: center; position: absolute;     z-index: 4;
-    padding: 0 12px;">
-  @if (selectedBibleVerseForCast(); as data) {
-    <div>
-      {{ data.bookTitle.full }}
-      {{ data.chapterId }}:
-      @if (selectedRange(); as range) {
-        @if (range.from === range.to) {
-          {{ range.from }}
+<div class="preview-surface" [ngStyle]="appearanceService.getBackgroundStyles(appearance())">
+  <div class="preview-header">
+    @if (selectedBibleVerseForCast(); as data) {
+      <div>
+        {{ data.bookTitle.full }}
+        {{ data.chapterId }}:
+        @if (selectedRange(); as range) {
+          @if (range.from === range.to) {
+            {{ range.from }}
+          } @else {
+            {{ range.from }}-{{ range.to }}
+          }
         } @else {
-          {{ range.from }}-{{ range.to }}
+          {{ data.number }}
         }
-      } @else {
-        {{ data.number }}
-      }
-    </div>
-  }
+      </div>
+    }
 
-</div>
-<div style="width: 100%; height: 260px; margin-top: 40px;">
-  <div class="reveal">
-    <div class="slides">
-      <section>
-        <div [fittext]="true"
-             [maxFontSize]="21"
-             [activateOnInputEvents]="true"
-             [activateOnResize]="true">
-          <div [innerHTML]="slideText" class="slide-content"></div>
-        </div>
+  </div>
+  <div class="preview-deck">
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <div
+            [fittext]="true"
+            [maxFontSize]="21"
+            [minFontSize]="8"
+            [activateOnInputEvents]="true"
+            [activateOnResize]="true"
+          >
+            <div
+              [innerHTML]="slideText"
+              [ngStyle]="appearanceService.getTextStyles(appearance())"
+              class="slide-content"></div>
+          </div>
 
-      </section>
+        </section>
+      </div>
     </div>
   </div>
 </div>

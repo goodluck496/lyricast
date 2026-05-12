@@ -13,6 +13,7 @@ export const {
   selectSongState,
   selectNavigateState,
   selectCastingPaused,
+  selectCastingAppearance,
   selectSelectedBook,
   selectSelectedSong,
 } = selectCastProcess;

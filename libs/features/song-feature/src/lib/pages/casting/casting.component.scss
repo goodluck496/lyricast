@@ -4,9 +4,24 @@
   height: 100%;
   position: relative;
 
-  background-color: var(--r-background-color);
+  background-color: var(--casting-background-color, var(--r-background-color));
 
   cursor: none;
+}
+
+.casting-surface {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background-color: var(--casting-background-color, var(--r-background-color));
+}
+
+.casting-surface .reveal,
+.casting-surface .slides,
+.casting-surface .slides section,
+.casting-surface .slides__container,
+.casting-surface .slides__section {
+  background-color: transparent !important;
 }
 
 .info-block {

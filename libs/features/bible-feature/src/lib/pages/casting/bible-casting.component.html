@@ -1,50 +1,58 @@
-<div class="info-block" [class.hide]="!showingContent()">
-  <div class="info-block__type" [class.hide]="!selectedBookTitle()">
-    {{ selectedBookTitle() }} - {{ selectedChapterId() }}:
-    @if (selectedRange(); as range) {
-      @if (range.from === range.to) {
-        {{ range.from }}
+<div class="casting-surface" [ngStyle]="appearanceService.getBackgroundStyles(appearance())">
+  <div class="info-block" [class.hide]="!showingContent()">
+    <div class="info-block__type" [class.hide]="!selectedBookTitle()">
+      {{ selectedBookTitle() }} - {{ selectedChapterId() }}:
+      @if (selectedRange(); as range) {
+        @if (range.from === range.to) {
+          {{ range.from }}
+        } @else {
+          {{ range.from }}-{{ range.to }}
+        }
       } @else {
-        {{ range.from }}-{{ range.to }}
+        {{ selectedVerseId() }}
       }
-    } @else {
-      {{ selectedVerseId() }}
-    }
+    </div>
   </div>
-</div>
 
-<div class="slides__container" [class.hide]="!showingContent()">
-  <div class="reveal">
-    <div class="slides">
-      <section class="stack">
-        <section
-          class="slides__section">
-          <div [fittext]="true"
-               [maxFontSize]="120"
-               [activateOnResize]="true">
-            <div class="slides__content"></div>
-          </div>
+  <div class="slides__container" [class.hide]="!showingContent()">
+    <div class="reveal">
+      <div class="slides">
+        <section class="stack">
+          <section class="slides__section">
+            <div
+              [fittext]="true"
+              [maxFontSize]="120"
+              [minFontSize]="appearance().minFontSize"
+              [activateOnResize]="true"
+            >
+              <div class="slides__content"></div>
+            </div>
 
-        </section>
-        @for (content of selectedContents(); track content.number) {
-          @for (line of content.text; track line) {
-            @if (showingContent()) {
-              <section
-                class="slides__section">
-                <div [fittext]="true"
-                     [maxFontSize]="120"
-                     [activateOnResize]="true">
+          </section>
+          @for (content of selectedContents(); track content.number) {
+            @for (line of content.text; track line) {
+              @if (showingContent()) {
+                <section class="slides__section">
                   <div
-                    class="slides__content" [innerHTML]="sanitizeHtml(line)">
+                    [fittext]="true"
+                    [maxFontSize]="120"
+                    [minFontSize]="appearance().minFontSize"
+                    [activateOnResize]="true"
+                  >
+                    <div
+                      class="slides__content"
+                      [ngStyle]="appearanceService.getTextStyles(appearance())"
+                      [innerHTML]="sanitizeHtml(line)">
+                    </div>
                   </div>
-                </div>
 
-              </section>
+                </section>
+              }
             }
           }
-        }
-      </section>
+        </section>
 
+      </div>
     </div>
   </div>
 </div>

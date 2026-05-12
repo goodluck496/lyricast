@@ -4,6 +4,7 @@ import { SongPageState } from './song.reducers';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { SongActions, SongActionsEnum } from './song.actions';
 import {
+  CASTING_APPEARANCE_UPDATE_EVENT,
   AppActions,
   BaseEffectsWithBridgeInterface,
   BridgeProcessForEffectsDecorator,
@@ -20,6 +21,8 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
     SongActions[SongActionsEnum.pauseCasting](),
   [SongActionsEnum.slideNavigate]: (eventData) =>
     SongActions[SongActionsEnum.slideNavigate](eventData.payload as any),
+  [CASTING_APPEARANCE_UPDATE_EVENT]: (eventData) =>
+    SongActions[SongActionsEnum.updateCastingAppearance](eventData.payload as any),
   [SongActionsEnum.stopCasting]: () =>
     SongActions[SongActionsEnum.stopCasting](),
 };

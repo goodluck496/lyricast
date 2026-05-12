@@ -1,6 +1,6 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
 import { ISong, ISongBookName, LyricForCasting } from '@lyri-cast/entities';
-import { Pages } from '@lyri-cast/common-browser';
+import { CastingAppearance, Pages } from '@lyri-cast/common-browser';
 
 export const SongActionsEnum = {
   openPage: '[SONG]openPage',
@@ -10,6 +10,7 @@ export const SongActionsEnum = {
   stopCasting: '[SONG]stopCasting',
   pauseCasting: '[SONG]pauseCasting',
   slideNavigate: '[SONG]slideNavigate',
+  updateCastingAppearance: '[SONG]updateCastingAppearance',
 
   selectBook: '[SONG]selectBook',
   selectSong: '[SONG]selectSong',
@@ -23,6 +24,7 @@ export type SongStartCastingPayload = {
   currentLyric: LyricForCasting;
   lyrics: LyricForCasting[];
   fromIndex?: number;
+  appearance?: CastingAppearance;
 };
 
 export type SongPresentationNavigatePayload = {
@@ -51,6 +53,7 @@ export const SongActions = createActionGroup({
     [SongActionsEnum.stopCasting]: emptyProps(),
     [SongActionsEnum.pauseCasting]: emptyProps(),
     [SongActionsEnum.slideNavigate]: props<SongPresentationNavigatePayload>(),
+    [SongActionsEnum.updateCastingAppearance]: props<CastingAppearance>(),
 
     [SongActionsEnum.selectBook]: props<ISongBookName>(),
     [SongActionsEnum.selectSong]: props<{ bookName: ISongBookName; song: ISong }>(),

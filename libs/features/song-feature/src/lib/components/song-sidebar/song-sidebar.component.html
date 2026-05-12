@@ -2,7 +2,6 @@
   <lyri-song-casting-preview class="control-sidebar__preview" />
 
   <div class="control-sidebar__actions relative">
-
     @if (castingIsPaused$ | async) {
       <p-splitButton
         label="Транслировать"
@@ -26,12 +25,9 @@
         styleClass="w-full"
       ></p-splitButton>
     }
-
   </div>
 
-  <lyri-navigator-feature class="control-sidebar__navigator" feature="songs" />
-
+  <lyri-navigator-feature class="control-sidebar__navigator" feature="songs">
+    <lyri-casting-appearance-controls navigator-appearance />
+  </lyri-navigator-feature>
 </div>
-
-
-

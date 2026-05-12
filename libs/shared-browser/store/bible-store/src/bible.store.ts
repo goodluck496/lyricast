@@ -10,6 +10,7 @@ import {
   BiblePresentationNavigatePayload,
   BibleStartCastingPayload,
 } from './bible.actions';
+import { CastingAppearance, DEFAULT_CASTING_APPEARANCE } from '@lyri-cast/common-browser';
 
 export type BibleState = {
   selectedLang: string;
@@ -38,6 +39,7 @@ export type BibleState = {
 
   castingProcess: BibleStartCastingPayload | null;
   castingProcessNavigate: BiblePresentationNavigatePayload | null;
+  castingAppearance: CastingAppearance;
 
   castingPaused: boolean;
 };
@@ -64,4 +66,5 @@ export const bibleInitialState: BibleState = {
 
   castingPaused: true,
   castingProcess: null,
+  castingAppearance: DEFAULT_CASTING_APPEARANCE,
 };

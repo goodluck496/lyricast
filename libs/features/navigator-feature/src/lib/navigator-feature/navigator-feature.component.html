@@ -1,18 +1,30 @@
-<p-tabs [value]="1" styleClass="navigator-tabs" class="navigator-tabs">
+<p-tabs
+  [value]="activeTab()"
+  (valueChange)="activeTab.set($event ?? 'history')"
+  styleClass="navigator-tabs"
+  class="navigator-tabs"
+>
   <p-tablist>
-    <p-tab [value]="0" [disabled]="true">Оформление</p-tab>
-    <p-tab [value]="1">История</p-tab>
-    <p-tab [value]="2" [disabled]="true">Очередь</p-tab>
+    <p-tab value="appearance">Оформление</p-tab>
+    <p-tab value="history">История</p-tab>
+    <p-tab value="queue" [disabled]="true">Очередь</p-tab>
   </p-tablist>
   <p-tabpanels>
-  <p-tabpanel [value]="0">
+  <p-tabpanel value="appearance">
+    <ng-scrollbar class="navigator-tabs__scroll" visibility="hover">
+      <div class="navigator-tabs__content">
+        <ng-content select="[navigator-appearance]"></ng-content>
+      </div>
+    </ng-scrollbar>
   </p-tabpanel>
-  <p-tabpanel [value]="1" class="navigator-tab">
-    <div class="navigator-tabs__content">
-      <lyri-navigator-history [feature]="feature()" tourAnchor="history"></lyri-navigator-history>
-    </div>
+  <p-tabpanel value="history" class="navigator-tab">
+    <ng-scrollbar class="navigator-tabs__scroll" visibility="hover">
+      <div class="navigator-tabs__content">
+        <lyri-navigator-history [feature]="feature()" tourAnchor="history"></lyri-navigator-history>
+      </div>
+    </ng-scrollbar>
   </p-tabpanel>
-  <p-tabpanel [value]="2">
+  <p-tabpanel value="queue">
   </p-tabpanel>
   </p-tabpanels>
 </p-tabs>

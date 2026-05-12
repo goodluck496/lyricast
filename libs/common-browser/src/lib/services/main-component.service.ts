@@ -9,24 +9,27 @@ export enum PAGE_CONTAINER_TEMPLATES {
 
 @Injectable({ providedIn: 'root' })
 export class MainComponentService {
-  _templates = new BehaviorSubject<Map<string, PrimeTemplate | null>>(
-    new Map()
-  );
-  templatesMap$: Observable<Map<string, PrimeTemplate | null>> = this._templates.asObservable();
+  private readonly _templates = new BehaviorSubject<
+    Map<string, PrimeTemplate | null>
+  >(new Map());
+  templatesMap$: Observable<Map<string, PrimeTemplate | null>> =
+    this._templates.asObservable();
 
   $disableSidebar = signal(false)
 
   setTemplates(type: PAGE_CONTAINER_TEMPLATES, template: PrimeTemplate): void {
-    const oldTempl = this._templates.value;
-    oldTempl.set(type, null);
-    oldTempl.set(type, template);
-    this._templates.next(oldTempl);
+    const templates = new Map(this._templates.value);
+    templates.set(type, template);
+    this._templates.next(templates);
   }
 
-  //
-  // clearTemplates(types: PAGE_CONTAINER_TEMPLATES[]): void {
-  //   types.forEach((type) => {
-  //     this.templatesMap.set(type, null)
-  //   });
-  // }
+  clearTemplates(types: PAGE_CONTAINER_TEMPLATES[]): void {
+    const templates = new Map(this._templates.value);
+
+    types.forEach((type) => {
+      templates.delete(type);
+    });
+
+    this._templates.next(templates);
+  }
 }

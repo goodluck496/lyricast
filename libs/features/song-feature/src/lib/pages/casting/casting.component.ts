@@ -10,14 +10,16 @@ import {
   signal,
   viewChildren,
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { ISong, LyricForCasting } from '@lyri-cast/entities';
 
 import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import Reveal, { Api } from 'reveal.js';
 
 import { Store } from '@ngrx/store';
-import { BridgeService, Pages, SnowfallManager } from '@lyri-cast/common-browser';
+import { BridgeService, CastingAppearanceService, Pages, SnowfallManager } from '@lyri-cast/common-browser';
 import {
+  selectCastingAppearance,
   selectCastingPaused,
   selectCastingProcess,
   selectNavigateState,
@@ -31,7 +33,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 @Component({
   selector: 'lyri-casting-page',
   standalone: true,
-  imports: [Ng2FittextModule],
+  imports: [CommonModule, Ng2FittextModule],
   templateUrl: './casting.component.html',
   styleUrl: './casting.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,7 +44,9 @@ export class CastingComponent implements OnInit, AfterViewInit {
   private readonly elRef = inject(ElementRef<HTMLElement>);
   private readonly store = inject(Store);
   private readonly snowfall = inject(SnowfallManager);
+  protected readonly appearanceService = inject(CastingAppearanceService);
   sanitizer: DomSanitizer = inject(DomSanitizer);
+  protected readonly appearance = this.appearanceService.appearance;
 
   deckRef?: Reveal.Api;
 
@@ -99,6 +103,12 @@ export class CastingComponent implements OnInit, AfterViewInit {
         this.navigateCastingHandler(data);
       }
     });
+
+    this.store.select(selectCastingAppearance).subscribe((appearance) => {
+      this.appearanceService.set(appearance);
+      this.cdr.detectChanges();
+      this.updateTextSize();
+    });
   }
 
   async ngAfterViewInit() {
@@ -112,6 +122,7 @@ export class CastingComponent implements OnInit, AfterViewInit {
 
   async startCastingHandler(payload: SongStartCastingPayload) {
     this.clearSlides();
+    this.appearanceService.set(payload.appearance ?? this.appearance());
 
     this.selectedSong.set(payload.song);
     this.selectedLyrics.set(payload.lyrics);

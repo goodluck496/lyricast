@@ -11,7 +11,7 @@ import { SongCastingPreviewComponent } from '../casting-preview/song-casting-pre
 import { NavigatorFeatureComponent } from '@lyri-cast/navigator-feature';
 import { selectCastingPaused, SongActions, SongActionsEnum } from '@lyri-cast/song-store';
 import { SongPageSelectService } from '../../pages/song-page/song-page-select.service';
-import { AppActions, selectOpenedWindow, SidebarService, WindowService, SettingsService, BridgeService, Pages, DEFAULT_CASTING_PAGE_CONFIG } from '@lyri-cast/common-browser';
+import { AppActions, selectOpenedWindow, SidebarService, WindowService, SettingsService, BridgeService, Pages, DEFAULT_CASTING_PAGE_CONFIG, CastingAppearanceService } from '@lyri-cast/common-browser';
 import { AppWindowTypes, APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
 import { map, Observable, firstValueFrom, BehaviorSubject, combineLatest, take } from 'rxjs';
 import { skip, filter } from 'rxjs/operators';
@@ -26,6 +26,7 @@ import {
 } from 'ngx-ui-tour-primeng';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { MenuItem } from 'primeng/api';
+import { CastingAppearanceControlsComponent } from '@lyri-cast/asset-management';
 
 @Component({
   selector: 'lyri-song-sidebar',
@@ -37,6 +38,7 @@ import { MenuItem } from 'primeng/api';
     TourAnchorPrimeNgDirective,
     TourPrimeNgModule,
     SplitButtonModule,
+    CastingAppearanceControlsComponent,
   ],
   templateUrl: './song-sidebar.component.html',
   styleUrl: './song-sidebar.component.scss',
@@ -60,6 +62,7 @@ export class SongSidebarComponent {
   private readonly windowSrv = inject(WindowService);
   private readonly settingsSrv = inject(SettingsService);
   private readonly bridge = inject(BridgeService);
+  private readonly appearanceService = inject(CastingAppearanceService);
 
   isOpeningWindow = new BehaviorSubject<boolean>(false);
 
@@ -95,7 +98,10 @@ export class SongSidebarComponent {
         this.isOpeningWindow.next(true);
         setTimeout(() => this.isOpeningWindow.next(false), 1200);
       }
-      this.castingSrv.openCastingPageHandler(payload);
+      this.castingSrv.openCastingPageHandler({
+        ...payload,
+        appearance: this.appearanceService.appearance(),
+      });
     });
   }
 

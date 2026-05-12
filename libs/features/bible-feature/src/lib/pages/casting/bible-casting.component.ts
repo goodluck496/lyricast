@@ -11,16 +11,18 @@ import {
   signal,
   viewChildren
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { BibleBookShort, BibleVerseForCasting } from '@lyri-cast/entities';
 import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import Reveal, { Api } from 'reveal.js';
 
 import { Store } from '@ngrx/store';
-import { BridgeService, Pages } from '@lyri-cast/common-browser';
+import { BridgeService, CastingAppearanceService, Pages } from '@lyri-cast/common-browser';
 import { APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
 import {
   BiblePresentationNavigatePayload,
   BibleStartCastingPayload,
+  selectCastingAppearance,
   selectCastingPaused,
   selectCastingProcess,
   selectCastingProcessNavigate,
@@ -32,7 +34,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 @Component({
   selector: 'lyri-bible-casting-page',
   standalone: true,
-  imports: [Ng2FittextModule],
+  imports: [CommonModule, Ng2FittextModule],
   templateUrl: './bible-casting.component.html',
   styleUrl: './bible-casting.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +45,8 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly elRef = inject(ElementRef<HTMLElement>);
   private readonly store = inject(Store);
+  protected readonly appearanceService = inject(CastingAppearanceService);
+  protected readonly appearance = this.appearanceService.appearance;
 
   isMainWindow = input(false);
 
@@ -121,6 +125,12 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
         this.navigateCastingHandler(data);
       }
     });
+
+    this.store.select(selectCastingAppearance).subscribe((appearance) => {
+      this.appearanceService.set(appearance);
+      this.cdr.detectChanges();
+      this.updateTextSize();
+    });
   }
 
   async ngAfterViewInit() {
@@ -137,6 +147,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
   async startCastingHandler(payload: BibleStartCastingPayload) {
     this.clearSlides();
+    this.appearanceService.set(payload.appearance ?? this.appearance());
 
     this.selectedBook.set(payload.book);
     this.selectedBookTitle.set(payload.book.title.full);

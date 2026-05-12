@@ -8,6 +8,7 @@ import {
 } from './bible.actions';
 import { BibleState } from './bible.store';
 import {
+  CASTING_APPEARANCE_UPDATE_EVENT,
   BaseEffectsWithBridgeInterface,
   BridgeProcessForEffectsDecorator,
   BridgeService,
@@ -26,6 +27,8 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
     ),
   [BibleActionsEnum.pauseCasting]: () => BibleActions.pauseCasting(),
   [BibleActionsEnum.stopCasting]: () => BibleActions.stopCasting(),
+  [CASTING_APPEARANCE_UPDATE_EVENT]: (eventData) =>
+    BibleActions.updateCastingAppearance(eventData.payload as any),
 };
 
 @Injectable()

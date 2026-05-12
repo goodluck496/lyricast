@@ -68,6 +68,7 @@ import {
 import {
   PAGE_CONTAINER_TEMPLATES,
   Pages,
+  CastingAppearanceService,
   SidebarService,
 } from '@lyri-cast/common-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -123,6 +124,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   private readonly loadingStatusService = inject(LoadingStatusService);
   private readonly onboardingHelpService = inject(OnboardingHelpService);
   private readonly bibleOnboarding = inject(BibleOnboardingService);
+  private readonly appearanceService = inject(CastingAppearanceService);
 
   bibleFormGroup = new FormGroup({
     translate: new FormControl<IUiLyriListItem<BibleTranslateShort> | null>(
@@ -432,8 +434,9 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
             BibleActions.openCasting({
               book: groupValue.book.baseEntity,
               chapter: groupValue.chapter.baseEntity,
-              fromIndex: verse.number,
-              content: sections[0].content.map((el) => {
+                fromIndex: verse.number,
+                appearance: this.appearanceService.appearance(),
+                content: sections[0].content.map((el) => {
                 return {
                   ...el,
                   text: [el.text],

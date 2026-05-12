@@ -15,6 +15,7 @@ export const {
   selectCastingPaused,
   selectCastingProcess,
   selectCastingProcessNavigate,
+  selectCastingAppearance,
   selectSelectedBibleVerse,
   selectSelectedPrevOrNextVerse,
   selectSelectedPath,

@@ -9,6 +9,7 @@ import {
   OnDestroy,
   signal,
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 
 import Reveal from 'reveal.js';
@@ -17,11 +18,12 @@ import { LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { Ng2FittextModule } from 'ng2-fittext';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DomSanitizer } from '@angular/platform-browser';
+import { CastingAppearanceService } from '@lyri-cast/common-browser';
 
 @Component({
   selector: 'lyri-song-casting-preview',
   standalone: true,
-  imports: [Ng2FittextModule],
+  imports: [CommonModule, Ng2FittextModule],
   templateUrl: './song-casting-preview.component.html',
   styleUrl: './song-casting-preview.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,6 +33,8 @@ export class SongCastingPreviewComponent implements OnDestroy, AfterViewInit {
   public songPageSelectSrv = inject(SongPageSelectService);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
+  protected readonly appearanceService = inject(CastingAppearanceService);
+  protected readonly appearance = this.appearanceService.appearance;
   sanitizer: DomSanitizer = inject(DomSanitizer);
 
   deckRef?: Reveal.Api;

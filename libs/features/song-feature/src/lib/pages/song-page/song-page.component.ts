@@ -61,6 +61,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   OnboardingHelpService,
+  CastingAppearanceService,
   PAGE_CONTAINER_TEMPLATES,
   Pages,
 } from '@lyri-cast/common-browser';
@@ -114,6 +115,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   private readonly actions$ = inject(Actions);
   private readonly onboardingHelpService = inject(OnboardingHelpService);
   private readonly songOnboarding = inject(SongOnboardingService);
+  private readonly appearanceService = inject(CastingAppearanceService);
 
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
   // chorusAfterCouplet = signal(true);
@@ -417,7 +419,10 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    this.castingSrv.openCastingPageHandler(payload);
+    this.castingSrv.openCastingPageHandler({
+      ...payload,
+      appearance: this.appearanceService.appearance(),
+    });
 
     // this.onNavigateSlide('next');
   }

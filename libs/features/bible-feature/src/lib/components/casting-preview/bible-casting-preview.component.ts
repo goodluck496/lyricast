@@ -10,6 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 
 import Reveal from 'reveal.js';
@@ -27,11 +28,12 @@ import {
 } from '@lyri-cast/bible-store';
 import { combineLatest } from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
+import { CastingAppearanceService } from '@lyri-cast/common-browser';
 
 @Component({
   selector: 'lyri-bible-casting-preview',
   standalone: true,
-  imports: [Ng2FittextModule],
+  imports: [CommonModule, Ng2FittextModule],
   templateUrl: './bible-casting-preview.component.html',
   styleUrl: './bible-casting-preview.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +44,8 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
   private destroyRef = inject(DestroyRef);
   private store = inject(Store);
   private actions = inject(Actions);
+  protected readonly appearanceService = inject(CastingAppearanceService);
+  protected readonly appearance = this.appearanceService.appearance;
 
   deckRef?: Reveal.Api;
   deck?: Reveal.Api;

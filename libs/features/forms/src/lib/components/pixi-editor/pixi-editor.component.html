@@ -443,4 +443,18 @@
       </div>
     </mat-sidenav-content>
   </mat-sidenav-container>
+
+  <p-dialog
+    header="Выбор изображения"
+    [(visible)]="assetPickerVisible"
+    [modal]="true"
+    [style]="{ width: '70vw', maxWidth: '800px' }"
+    [draggable]="false"
+    [resizable]="false"
+  >
+    <lyri-asset-picker
+      [gridCols]="4"
+      (assetSelected)="onAssetPicked($event)"
+    ></lyri-asset-picker>
+  </p-dialog>
 }

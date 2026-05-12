@@ -6,6 +6,7 @@ export const assets = sqliteTable('assets', {
   filePath: text('file_path').notNull(),
   mimeType: text('mime_type').notNull(),
   size: integer('size').notNull(), // in bytes
+  kind: text('kind').notNull().default('content'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 

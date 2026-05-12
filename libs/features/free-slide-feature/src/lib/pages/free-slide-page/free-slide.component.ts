@@ -574,7 +574,9 @@ export class FreeSlideComponent implements AfterViewInit {
         // Upload new preview first; backend deduplicates by content hash
         const newAssetId = await this.assetStorage.saveAsset(
           blob,
-          'image/jpeg'
+          'image/jpeg',
+          undefined,
+          'preview'
         );
         if (this.loadedSlideId && this.loadedSlideId !== targetSlideId) return;
         const oldAssetId = currentSlide?.previewAssetId;

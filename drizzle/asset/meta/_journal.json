@@ -8,6 +8,13 @@
       "when": 1762328618929,
       "tag": "0000_parallel_vivisector",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1778517261029,
+      "tag": "0001_material_the_professor",
+      "breakpoints": true
     }
   ]
 }

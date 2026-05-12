@@ -73,6 +73,11 @@ import { PIXI_EDITOR_PROVIDERS } from './pixi-editor.providers';
 import { NodeFactoryService } from './services/node-factory.service';
 import { SceneViewportService } from './services/scene-viewport.service';
 import { NgScrollbarExt } from 'ngx-scrollbar';
+import { DialogModule } from 'primeng/dialog';
+import { AssetPickerComponent } from '@lyri-cast/asset-management';
+import { AssetDto } from '@lyri-cast/entities';
+
+
 
 type WorldContainer = Container & { app: Application };
 
@@ -95,6 +100,8 @@ type WorldContainer = Container & { app: Application };
     NgScrollbarModule,
     MatSidenavModule,
     MatSliderModule,
+    DialogModule,
+    AssetPickerComponent,
   ],
   templateUrl: 'pixi-editor.component.html',
   styleUrl: 'pixi-editor.component.scss',
@@ -136,6 +143,9 @@ export class PixiSlideEditorV2Component
   canSetBg = false;
   propertiesOpen = true;
   aspectRatio: '16:9' | '4:3' | 'none' = '16:9';
+
+  assetPickerVisible = false;
+  assetPickerMode: 'image' | 'background' | 'shape-background' = 'image';
 
   readonly cfg = inject(EDITOR_CONFIG);
   readonly store = inject(EditorStore);
@@ -999,9 +1009,10 @@ export class PixiSlideEditorV2Component
     this.history.redo();
   }
 
-  async onImageUrl() {
-    const url = await this.dialog.askUrl('Image URL');
-    if (url) this.emit({ t: 'ADD_IMAGE', url });
+  onImageUrl() {
+    this.assetPickerMode = 'image';
+    this.assetPickerVisible = true;
+    this.cdr.markForCheck();
   }
   async onVideoUrl() {
     const url = await this.dialog.askUrl('Video URL');
@@ -1016,11 +1027,12 @@ export class PixiSlideEditorV2Component
     if (id) this.emit({ t: 'UNGROUP', id });
   }
 
-  async onSetBackground() {
+  onSetBackground() {
     const id = this.store.snapshot((s) => s.selectedIds)[0];
     if (!id) return;
-    const url = await this.dialog.askUrl('Background image URL / data:');
-    if (url) this.emit({ t: 'SET_TEXT_BACKGROUND', url });
+    this.assetPickerMode = 'background';
+    this.assetPickerVisible = true;
+    this.cdr.markForCheck();
   }
 
   onClearBackground() {
@@ -1033,11 +1045,25 @@ export class PixiSlideEditorV2Component
     this.emit({ t: 'APPLY_STYLE', patch: { bgColorHex: hex, bgColor: color } });
   }
 
-  async onSetShapeBackground() {
+  onSetShapeBackground() {
     const id = this.store.snapshot((s) => s.selectedIds)[0];
     if (!id) return;
-    const url = await this.dialog.askUrl('Background image URL / data:');
-    if (url) this.emit({ t: 'SET_SHAPE_BACKGROUND', url });
+    this.assetPickerMode = 'shape-background';
+    this.assetPickerVisible = true;
+    this.cdr.markForCheck();
+  }
+  
+  onAssetPicked(event: { asset: AssetDto; url: string }) {
+    this.assetPickerVisible = false;
+    this.cdr.markForCheck();
+    
+    if (this.assetPickerMode === 'image') {
+      this.emit({ t: 'ADD_IMAGE', url: event.url });
+    } else if (this.assetPickerMode === 'background') {
+      this.emit({ t: 'SET_TEXT_BACKGROUND', url: event.url });
+    } else if (this.assetPickerMode === 'shape-background') {
+      this.emit({ t: 'SET_SHAPE_BACKGROUND', url: event.url });
+    }
   }
   onApplyShapeFill() {
     const color = this.store.snapshot((s) => s.ui).color || 0x000000;

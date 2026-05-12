@@ -7,6 +7,7 @@ export type UploadAssetBase64Payload = {
   originalName: string;
   mimeType: string;
   dataBase64: string;
+  kind?: 'content' | 'preview';
 };
 
 @Injectable({ providedIn: 'root' })
@@ -23,9 +24,12 @@ export class AssetsApiService {
     return `${this.baseUrl}/${id}/file`;
   }
 
-  uploadAsset(file: File): Observable<AssetDto> {
+  uploadAsset(file: File, kind?: string): Observable<AssetDto> {
     const formData = new FormData();
     formData.append('file', file);
+    if (kind) {
+      formData.append('kind', kind);
+    }
     // The full URL will be svc://asset-service/assets/upload
     return this.http.post<AssetDto>(`${this.baseUrl}/upload`, formData);
   }

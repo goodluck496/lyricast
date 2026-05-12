@@ -40,6 +40,7 @@ type UploadAssetBase64Payload = {
   originalName: string;
   mimeType: string;
   dataBase64: string;
+  kind?: 'content' | 'preview';
 };
 
 function parseMultipartToMulterFile(
@@ -144,12 +145,12 @@ export class AssetDomainController {
       fileFilter: (_req, _file, cb) => cb(null, true),
     })
   )
-  async uploadFile(@UploadedFile() file: UploadedMulterFile) {
+  async uploadFile(@UploadedFile() file: UploadedMulterFile, @Body() body?: { kind?: 'content' | 'preview' }) {
     // async uploadFile(@Req() req: Request) {
 
     // бай-пасс если multer  не заработает с Express 5+
     // const { file, fields } = await parseMultipartToMulterFile(req);
-    return this.assetDomainService.create(file);
+    return this.assetDomainService.create(file, body?.kind as 'content' | 'preview' | undefined);
   }
 
   @Post('upload-base64')
@@ -160,6 +161,7 @@ export class AssetDomainController {
       originalName: body.originalName,
       mimeType: body.mimeType,
       size: buffer.length,
+      kind: body.kind,
     });
   }
 

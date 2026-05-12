@@ -27,7 +27,8 @@ export class AssetStorageService {
   async saveAsset(
     blobOrFile: Blob | File,
     mimeType: string,
-    originalUrl?: string
+    originalUrl?: string,
+    kind?: 'content' | 'preview'
   ): Promise<string> {
     let fileToUpload: File;
 
@@ -58,6 +59,7 @@ export class AssetStorageService {
         originalName: fileToUpload.name,
         mimeType: fileToUpload.type || mimeType || 'application/octet-stream',
         dataBase64: await this.blobToBase64(fileToUpload),
+        kind: kind,
       })
       .pipe(map((dto) => dto.id));
     return firstValueFrom(asset$);
@@ -145,7 +147,8 @@ export class AssetStorageService {
         return await this.saveAsset(
           dataAsset.blob,
           dataAsset.mimeType,
-          this.createDataUrlFileName(dataAsset.mimeType)
+          this.createDataUrlFileName(dataAsset.mimeType),
+          'content'
         );
       }
 
@@ -159,7 +162,7 @@ export class AssetStorageService {
         throw new Error('Failed to fetch blob from URL');
       }
 
-      return await this.saveAsset(blob, mimeType || 'application/octet-stream', url);
+      return await this.saveAsset(blob, mimeType || 'application/octet-stream', url, 'content');
     } catch (error) {
       console.error(`[AssetStorageService] Failed to import asset from URL: ${url}`, error);
       throw error; // Re-throw to allow the caller to handle it

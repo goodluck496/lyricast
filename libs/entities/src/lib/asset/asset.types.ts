@@ -4,5 +4,6 @@ export interface Asset {
   filePath: string;
   mimeType: string;
   size: number; // in bytes
+  kind: 'content' | 'preview';
   createdAt: number; // timestamp
 }

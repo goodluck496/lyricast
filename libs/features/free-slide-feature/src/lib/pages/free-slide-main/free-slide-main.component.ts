@@ -296,7 +296,7 @@ export class FreeSlideMainComponent implements OnInit {
   }
 
   private async savePptxPreviewAsset(blob: Blob): Promise<string> {
-    return this.assetStorage.saveAsset(blob, 'image/jpeg');
+    return this.assetStorage.saveAsset(blob, 'image/jpeg', undefined, 'preview');
   }
 
   private async persistImportedImageAssets(

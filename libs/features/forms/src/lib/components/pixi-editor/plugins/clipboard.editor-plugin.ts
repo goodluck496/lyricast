@@ -29,7 +29,7 @@ export class ClipboardPlugin implements EditorPlugin {
           if (file.type.startsWith('image/')) {
             imageProcessed = true; // Отмечаем, что изображение обработано
             // Save the file (Blob) directly to AssetStorageService
-            this.assetStorage.saveAsset(file, file.type).then(assetId => {
+            this.assetStorage.saveAsset(file, file.type, undefined, 'content').then(assetId => {
               const sel = ctx.store.snapshot(s => s.selectedIds) || [];
               const nodes = ctx.store.snapshot(s => s.nodes);
               const hasTextSel = sel.some(id => nodes[id]?.type === 'text');
@@ -70,7 +70,7 @@ export class ClipboardPlugin implements EditorPlugin {
               const base64 = str.split(',')[1];
               const blob = this.utils.base64ToBlob(base64, mimeType);
 
-              this.assetStorage.saveAsset(blob, mimeType).then(assetId => {
+              this.assetStorage.saveAsset(blob, mimeType, undefined, 'content').then(assetId => {
                 if (hasTextSel) {
                   ctx.bus.emit({ t: 'SET_TEXT_BACKGROUND', assetId: assetId });
                 } else if (hasShapeSel) {

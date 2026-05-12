@@ -1,0 +1,61 @@
+<div class="asset-picker">
+  <p-tabs value="0">
+    <p-tablist>
+      <p-tab value="0">Все ассеты</p-tab>
+      <p-tab value="1">Загрузить</p-tab>
+    </p-tablist>
+    
+    <p-tabpanels>
+      <p-tabpanel value="0">
+        @if (loading()) {
+          <div class="loading-state">
+            <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+            <span>Загрузка ассетов...</span>
+          </div>
+        } @else if (assets().length === 0) {
+          <div class="empty-state">
+            <i class="pi pi-images empty-icon"></i>
+            <span>Нет доступных изображений</span>
+          </div>
+        } @else {
+          <div class="image-grid" [style.grid-template-columns]="'repeat(' + gridCols + ', 1fr)'">
+            @for (asset of assets(); track asset.id) {
+              <div class="image-card" (click)="onSelect(asset)">
+                <img [src]="getAssetUrl(asset)" (error)="onImageError(asset)" [alt]="asset.originalName" loading="lazy" />
+                <div class="image-name" [title]="asset.originalName">{{ asset.originalName }}</div>
+              </div>
+            }
+          </div>
+        }
+      </p-tabpanel>
+      
+      <p-tabpanel value="1">
+        <p-fileUpload
+          name="files[]"
+          [multiple]="true"
+          accept="image/*"
+          maxFileSize="10000000"
+          [customUpload]="true"
+          (uploadHandler)="onUpload($event)"
+          chooseLabel="Выбрать"
+          uploadLabel="Загрузить"
+          cancelLabel="Отмена"
+        >
+          <ng-template pTemplate="content">
+            @if (!loading()) {
+              <div class="upload-placeholder">
+                <i class="pi pi-cloud-upload"></i>
+                <p>Перетащите файлы сюда или нажмите "Выбрать"</p>
+              </div>
+            } @else {
+              <div class="loading-state">
+                <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+                <span>Загрузка файлов...</span>
+              </div>
+            }
+          </ng-template>
+        </p-fileUpload>
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+</div>

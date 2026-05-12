@@ -37,13 +37,14 @@ export class AssetDomainService {
       : path.join(assetsEnvPath, 'user-assets');
   }
 
-  async create(file: UploadedMulterFile): Promise<Asset> {
+  async create(file: UploadedMulterFile, kind?: 'content' | 'preview'): Promise<Asset> {
     console.log('file?,',file);
     return this.createFromBuffer({
       buffer: file.buffer as Buffer,
       originalName: file.originalname,
       mimeType: file.mimetype,
       size: file.size,
+      kind: kind,
     });
   }
 
@@ -52,6 +53,7 @@ export class AssetDomainService {
     originalName: string;
     mimeType: string;
     size: number;
+    kind?: 'content' | 'preview';
   }): Promise<Asset> {
     const hash = createHash('sha256').update(input.buffer).digest('hex');
 
@@ -69,6 +71,7 @@ export class AssetDomainService {
       filePath: filePath,
       mimeType: input.mimeType,
       size: input.size,
+      kind: input.kind || 'content',
       createdAt: new Date(),
     };
 

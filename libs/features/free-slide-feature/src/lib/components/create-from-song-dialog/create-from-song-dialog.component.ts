@@ -330,7 +330,7 @@ export class CreateFromSongDialogComponent {
 
     const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
     if (!blob) return undefined;
-    return await this.assetStorage.saveAsset(blob, 'image/jpeg');
+    return await this.assetStorage.saveAsset(blob, 'image/jpeg', undefined, 'preview');
   }
 
   private drawWrappedText(

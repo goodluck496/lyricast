@@ -5,6 +5,8 @@ export default {
   out: './drizzle/asset',
   dialect: 'sqlite',
   dbCredentials: {
-    url: './data/assets.sqlite',
+    url: process.env.ASSET_DB_PATH
+      ? `file:///${process.env.ASSET_DB_PATH.replace(/\\/g, '/')}`
+      : 'file:./data/assets.sqlite',
   },
 } satisfies Config;

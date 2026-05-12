@@ -82,6 +82,7 @@
     "noop5": "---  FOR DATABASES  ---",
     "db:generate-free-slide": "drizzle-kit generate --config=drizzle.config.free-slide.ts",
     "db:generate-asset": "drizzle-kit generate --config=drizzle.config.asset.ts",
+    "db:push-asset": "drizzle-kit push --config=drizzle.config.asset.ts",
     "db:generate-dictionary": "dotenv -e environments/.env.dictionary -- drizzle-kit generate --config=drizzle.config.dictionary.ts",
     "db:push-dictionary": "dotenv -e environments/.env.dictionary -- drizzle-kit push --config=drizzle.config.dictionary.ts",
     "noop6": "---   build bible translates  ---",

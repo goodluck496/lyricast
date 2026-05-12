@@ -39,6 +39,9 @@ export const databaseProvider: Provider = {
       fs.mkdirSync(assetsPath, { recursive: true });
     }
 
+    // Apply database migrations
+    runMigrations(sqlite);
+
     return drizzle(sqlite, { schema });
   },
 };

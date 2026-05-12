@@ -13,6 +13,7 @@ import { PrimeTemplate } from 'primeng/api';
 import {
   BehaviorSubject,
   combineLatest,
+  catchError,
   debounceTime,
   filter,
   fromEvent,
@@ -20,6 +21,7 @@ import {
   Observable,
   of,
   shareReplay,
+  startWith,
   switchMap,
   take,
   tap,
@@ -37,6 +39,7 @@ import {
 import { filterEmpty, snapshot } from '@lyri-cast/common';
 import { SelectModule } from 'primeng/select';
 import { ListboxModule } from 'primeng/listbox';
+import { TooltipModule } from 'primeng/tooltip';
 import { CastingService } from '../../services/casting.service';
 import { InputTextModule } from 'primeng/inputtext';
 import {
@@ -71,6 +74,12 @@ import { SongSidebarComponent } from '../../components/song-sidebar/song-sidebar
 import { Router } from '@angular/router';
 import { TourAnchorPrimeNgDirective, TourPrimeNgModule } from 'ngx-ui-tour-primeng';
 import { SongOnboardingService } from '../../services/song-onboarding.service';
+import { SongDisplaySettingsService } from '../../services/song-display-settings.service';
+import { SongUsageTrackingService } from '../../services/song-usage-tracking.service';
+import {
+  SongUsageApiService,
+  SongUsageSummaryDto,
+} from '@lyri-cast/data-access-song-usage';
 
 export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
   [SPLIT_PARTS_COUNT.NONE]: 'Нет',
@@ -78,6 +87,12 @@ export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
   [SPLIT_PARTS_COUNT.THREE]: '3',
   [SPLIT_PARTS_COUNT.FOUR]: '4',
 };
+
+type SongListMode = 'book' | 'frequent' | 'recent';
+
+interface SongListItem extends IUiLyriItemInList<IShortSong> {
+  usageSummary?: SongUsageSummaryDto;
+}
 
 @Component({
   selector: 'lyri-song-page-new',
@@ -87,6 +102,7 @@ export const SplitPartsCountMapVm: Record<SplitPartsCount, string> = {
     AsyncPipe,
     ReactiveFormsModule,
     SelectModule,
+    TooltipModule,
     ListboxModule,
     ListBoxComponent,
     SongComponent,
@@ -116,6 +132,9 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   private readonly onboardingHelpService = inject(OnboardingHelpService);
   private readonly songOnboarding = inject(SongOnboardingService);
   private readonly appearanceService = inject(CastingAppearanceService);
+  private readonly songDisplaySettings = inject(SongDisplaySettingsService);
+  private readonly songUsageTracking = inject(SongUsageTrackingService);
+  private readonly songUsageApi = inject(SongUsageApiService);
 
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
   // chorusAfterCouplet = signal(true);
@@ -143,29 +162,22 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
   selectedBook = new FormControl<IUiLyriListItem<ISongBookName> | null>(null);
   songControl = new FormControl<IUiLyriListItem<IShortSong> | null>(null);
+  songListMode = new FormControl<SongListMode>('book', { nonNullable: true });
 
-  currentSongsList$ = new BehaviorSubject<IUiLyriItemInList<IShortSong>[]>([]);
+  currentSongsList$ = new BehaviorSubject<SongListItem[]>([]);
+  usageSummaries$ = new BehaviorSubject<SongUsageSummaryDto[]>([]);
 
   firstLoad = false;
 
-  songsList$: Observable<IUiLyriItemInList<IShortSong>[]> =
+  songsBySelectedBook$: Observable<SongListItem[]> =
     this.selectedBook.valueChanges.pipe(
       filterEmpty(),
       switchMap((value) => {
         this.isLoading.set(true);
         return this.songsApiService.getAllSongsByBook(value.baseEntity);
       }),
-      map((data) => {
-        return data.map((el) => {
-          return {
-            title: el.title,
-            searchKey: String(el.number),
-            baseEntity: el,
-          };
-        });
-      }),
+      map((data) => this.buildSongList(data, this.usageSummaries$.value)),
       tap((songs) => {
-        this.currentSongsList$.next(songs);
         this.isLoading.set(false);
         if (!this.firstLoad) {
           this.firstLoad = true;
@@ -174,6 +186,25 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       }),
       shareReplay(1)
     );
+
+  songsList$: Observable<SongListItem[]> = combineLatest([
+    this.songsBySelectedBook$,
+    this.usageSummaries$,
+    this.songListMode.valueChanges.pipe(startWith(this.songListMode.value)),
+  ]).pipe(
+    map(([songs, summaries, mode]) => {
+      const enrichedSongs = this.mergeUsageSummaries(songs, summaries);
+      return this.applySongListMode(enrichedSongs, mode);
+    }),
+    tap((songs) => {
+      this.currentSongsList$.next(songs);
+      const selected = this.songControl.value;
+      if (selected && !songs.some((song) => song.searchKey === selected.searchKey)) {
+        this.songControl.setValue(songs[0] ?? null);
+      }
+    }),
+    shareReplay(1)
+  );
 
   selectedSong$ = new BehaviorSubject<ISong | null>(null);
   _selectedSong$: Observable<ISong | null> = this.songControl.valueChanges.pipe(
@@ -237,6 +268,9 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   );
 
   ngOnInit() {
+    this.songUsageTracking.connect();
+    this.refreshUsageSummaries();
+
     this.onboardingHelpService.helpRequested$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((context) => {
@@ -315,6 +349,24 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
         this.selectedSong$.next(newSong);
 
+        this.songDisplaySettings.restore(newSong).pipe(take(1)).subscribe({
+          next: (settings) => {
+            if (!settings) {
+              return;
+            }
+
+            this.appearanceService.set(settings.appearance);
+
+            if (typeof settings.splitPartsCount === 'number') {
+              this.splitCount.set(settings.splitPartsCount);
+              this.songPageSelectSrv.setSplitCountValue(settings.splitPartsCount);
+            }
+          },
+          error: () => {
+            return;
+          },
+        });
+
         if (this.selectedBook.value) {
           this.store.dispatch(
             SongActions[SongActionsEnum.selectSong]({
@@ -355,6 +407,17 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     this.selectSongByNumber$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe();
+
+    this.actions$
+      .pipe(
+        ofType(
+          SongActions[SongActionsEnum.pauseCasting],
+          SongActions[SongActionsEnum.stopCasting]
+        ),
+        debounceTime(300),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.refreshUsageSummaries());
 
     this.slideNavigateInStore$
       .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
@@ -468,6 +531,14 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   }
 
   protected readonly ListBoxTemplates = ListBoxTemplates;
+  protected readonly SongListModeOptions: Array<{
+    label: string;
+    value: SongListMode;
+  }> = [
+    { label: 'Все', value: 'book' },
+    { label: 'Часто', value: 'frequent' },
+    { label: 'Недавно', value: 'recent' },
+  ];
   protected readonly SplitPartsCountOptions = (
     Object.keys(SPLIT_PARTS_COUNT) as Array<keyof typeof SPLIT_PARTS_COUNT>
   ).map((key) => {
@@ -480,4 +551,104 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   });
   protected readonly Pages = Pages;
   protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
+
+  protected getUsageDate(item: SongListItem): string {
+    const summary = item.usageSummary;
+    if (!summary?.lastUsedAt) {
+      return '';
+    }
+
+    return this.formatUsageDate(summary.lastUsedAt);
+  }
+
+  protected getUsageTooltip(item: SongListItem): string {
+    const summary = item.usageSummary;
+    if (!summary?.lastUsedAt) {
+      return '';
+    }
+
+    return `Последнее исполнение: ${this.formatUsageDate(summary.lastUsedAt)}\nВсего пели: ${summary.useCount}`;
+  }
+
+  private formatUsageDate(value: string): string {
+    return new Date(value).toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    });
+  }
+
+  private refreshUsageSummaries(): void {
+    this.songUsageApi
+      .getSummaries()
+      .pipe(take(1), catchError(() => of([])))
+      .subscribe((summaries) => this.usageSummaries$.next(summaries));
+  }
+
+  private buildSongList(
+    songs: IShortSong[],
+    summaries: SongUsageSummaryDto[]
+  ): SongListItem[] {
+    return this.mergeUsageSummaries(
+      songs.map((el) => ({
+        title: el.title,
+        searchKey: String(el.number),
+        baseEntity: el,
+      })),
+      summaries
+    );
+  }
+
+  private mergeUsageSummaries(
+    songs: SongListItem[],
+    summaries: SongUsageSummaryDto[]
+  ): SongListItem[] {
+    const summariesMap = new Map(
+      summaries.map((summary) => [this.getSummaryKey(summary), summary])
+    );
+
+    return songs.map((song) => ({
+      ...song,
+      usageSummary: summariesMap.get(this.getSongKey(song.baseEntity)),
+    }));
+  }
+
+  private applySongListMode(
+    songs: SongListItem[],
+    mode: SongListMode
+  ): SongListItem[] {
+    if (mode === 'book') {
+      return songs;
+    }
+
+    const usedSongs = songs.filter((song) => !!song.usageSummary);
+    if (mode === 'frequent') {
+      return usedSongs.sort((a, b) => {
+        const countDiff =
+          (b.usageSummary?.useCount ?? 0) - (a.usageSummary?.useCount ?? 0);
+        return countDiff || this.compareLastUsedDesc(a, b);
+      });
+    }
+
+    return usedSongs.sort((a, b) => this.compareLastUsedDesc(a, b));
+  }
+
+  private compareLastUsedDesc(a: SongListItem, b: SongListItem): number {
+    return (
+      this.getLastUsedTime(b.usageSummary) -
+      this.getLastUsedTime(a.usageSummary)
+    );
+  }
+
+  private getLastUsedTime(summary?: SongUsageSummaryDto): number {
+    return summary?.lastUsedAt ? new Date(summary.lastUsedAt).getTime() : 0;
+  }
+
+  private getSongKey(song: IShortSong): string {
+    return `${song.bookName.fileKey}:${song.number}`;
+  }
+
+  private getSummaryKey(summary: SongUsageSummaryDto): string {
+    return `${summary.songBookKey}:${summary.songNumber}`;
+  }
 }

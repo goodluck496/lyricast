@@ -45,7 +45,7 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
   private store = inject(Store);
   private actions = inject(Actions);
   protected readonly appearanceService = inject(CastingAppearanceService);
-  protected readonly appearance = this.appearanceService.appearance;
+  protected readonly appearance = this.appearanceService.appearanceFor('bible');
 
   deckRef?: Reveal.Api;
   deck?: Reveal.Api;

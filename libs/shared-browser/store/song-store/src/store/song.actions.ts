@@ -25,6 +25,7 @@ export type SongStartCastingPayload = {
   lyrics: LyricForCasting[];
   fromIndex?: number;
   appearance?: CastingAppearance;
+  splitPartsCount?: number;
 };
 
 export type SongPresentationNavigatePayload = {

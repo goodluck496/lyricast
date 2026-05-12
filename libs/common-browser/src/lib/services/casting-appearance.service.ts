@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, WritableSignal } from '@angular/core';
 
 export interface CastingAppearance {
   fontFamily: string;
@@ -15,6 +15,7 @@ export interface CastingAppearance {
 }
 
 export const CASTING_APPEARANCE_UPDATE_EVENT = 'updateCastingAppearance';
+export type CastingAppearanceScope = 'songs' | 'bible';
 
 export const DEFAULT_CASTING_APPEARANCE: CastingAppearance = {
   fontFamily: 'sans-serif',
@@ -31,29 +32,49 @@ export const DEFAULT_CASTING_APPEARANCE: CastingAppearance = {
 };
 
 const STORAGE_KEY = 'lyricast.castingAppearance';
+const SCOPED_STORAGE_KEY_PREFIX = 'lyricast.castingAppearance.';
 
 @Injectable({ providedIn: 'root' })
 export class CastingAppearanceService {
-  readonly appearance = signal<CastingAppearance>(this.load());
+  private readonly appearances: Record<
+    CastingAppearanceScope,
+    WritableSignal<CastingAppearance>
+  > = {
+    songs: signal<CastingAppearance>(this.load('songs')),
+    bible: signal<CastingAppearance>(this.load('bible')),
+  };
 
-  update(patch: Partial<CastingAppearance>): CastingAppearance {
-    const next = this.normalize({ ...this.appearance(), ...patch });
-    this.appearance.set(next);
-    this.save(next);
+  readonly appearance = this.appearances.songs;
+
+  appearanceFor(scope: CastingAppearanceScope): WritableSignal<CastingAppearance> {
+    return this.appearances[scope];
+  }
+
+  update(
+    patch: Partial<CastingAppearance>,
+    scope: CastingAppearanceScope = 'songs'
+  ): CastingAppearance {
+    const appearance = this.appearanceFor(scope);
+    const next = this.normalize({ ...appearance(), ...patch });
+    appearance.set(next);
+    this.save(next, scope);
     return next;
   }
 
-  set(appearance: CastingAppearance): void {
+  set(appearance: CastingAppearance, scope: CastingAppearanceScope = 'songs'): void {
     const next = this.normalize(appearance);
-    this.appearance.set(next);
-    this.save(next);
+    this.appearanceFor(scope).set(next);
+    this.save(next, scope);
   }
 
-  resetBackground(): CastingAppearance {
-    return this.update({
-      backgroundAssetId: null,
-      backgroundImageUrl: null,
-    });
+  resetBackground(scope: CastingAppearanceScope = 'songs'): CastingAppearance {
+    return this.update(
+      {
+        backgroundAssetId: null,
+        backgroundImageUrl: null,
+      },
+      scope
+    );
   }
 
   getTextStyles(appearance = this.appearance()): Record<string, string> {
@@ -86,9 +107,11 @@ export class CastingAppearanceService {
     };
   }
 
-  private load(): CastingAppearance {
+  private load(scope: CastingAppearanceScope): CastingAppearance {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw =
+        localStorage.getItem(this.getStorageKey(scope)) ??
+        (scope === 'songs' ? localStorage.getItem(STORAGE_KEY) : null);
       if (!raw) {
         return DEFAULT_CASTING_APPEARANCE;
       }
@@ -107,12 +130,19 @@ export class CastingAppearanceService {
     }
   }
 
-  private save(appearance: CastingAppearance): void {
+  private save(
+    appearance: CastingAppearance,
+    scope: CastingAppearanceScope
+  ): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(appearance));
+      localStorage.setItem(this.getStorageKey(scope), JSON.stringify(appearance));
     } catch {
       return;
     }
+  }
+
+  private getStorageKey(scope: CastingAppearanceScope): string {
+    return `${SCOPED_STORAGE_KEY_PREFIX}${scope}`;
   }
 
   private normalize(appearance: CastingAppearance): CastingAppearance {

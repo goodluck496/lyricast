@@ -47,6 +47,32 @@ lyri-search-feature {
   }
 }
 
+.bible-books-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  width: 100%;
+
+  &__translate {
+    min-width: 0;
+  }
+
+  &__view-button {
+    width: 42px;
+    min-width: 42px;
+    height: var(--list-box-item-h, 42px);
+    min-height: var(--list-box-item-h, 42px);
+    border-radius: 0;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 .dash-box {
   --dash-box-item-selected-border-color: var(--dash-box-item-hover-border-color);
 

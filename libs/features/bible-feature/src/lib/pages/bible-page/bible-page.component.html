@@ -1,26 +1,31 @@
 <lyri-page-container [pagePath]="[Pages.MAIN, Pages.BIBLE_FEATURE, Pages.BIBLE]">
-  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER">
-    <button pButton (click)="onChangeBookDisplayStyle()">
-      @if(booksLikeList) {
-        <lyri-icon name="bullet_list" style="color: red"></lyri-icon>
-      } @else {
-        <lyri-icon name="grid" style="color: red"></lyri-icon>
-      }
-      Книги</button>
-  </ng-template>
+  <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER"></ng-template>
   <ng-container page-content [formGroup]="bibleFormGroup">
     <div class="list-search-wrapper list-search-wrapper__books">
       <div class="list-search-block ">
-        <div tourAnchor="bible:translate">
+        <div class="bible-books-toolbar" tourAnchor="bible:translate">
           <p-select
             [formControl]="bibleFormGroup.controls.translate"
             [options]="bibleTranslates"
             appendTo="body"
             optionLabel="title"
-            styleClass="list-search-dropdown"
+            styleClass="list-search-dropdown bible-books-toolbar__translate"
           >
             <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
           </p-select>
+          <button
+            pButton
+            type="button"
+            class="bible-books-toolbar__view-button"
+            (click)="onChangeBookDisplayStyle()"
+            [attr.aria-label]="booksLikeList ? 'Показать книги плиткой' : 'Показать книги списком'"
+          >
+            @if(booksLikeList) {
+              <lyri-icon name="bullet_list"></lyri-icon>
+            } @else {
+              <lyri-icon name="grid"></lyri-icon>
+            }
+          </button>
         </div>
 
 

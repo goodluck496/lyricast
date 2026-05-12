@@ -8,6 +8,11 @@ export const WORKER_SPECS = [
     distSubdir: 'songs-service',
   },
   {
+    name: 'song-usage',
+    rootApiPath: 'song-usage',
+    distSubdir: 'song-usage-service',
+  },
+  {
     name: 'bible',
     rootApiPath: 'bible',
     distSubdir: 'bible-service',

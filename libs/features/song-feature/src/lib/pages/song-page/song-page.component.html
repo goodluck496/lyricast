@@ -18,16 +18,27 @@
   <ng-container page-content>
     <div class="list-search-wrapper">
       <div class="list-search-block list-search-block--wide">
-        <p-select
-          [formControl]="selectedBook"
-          [options]="songBooksDict"
-          appendTo="body"
-          optionLabel="title"
-          styleClass="list-search-dropdown"
-          tourAnchor="songs:dict"
-        >
-          <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
-        </p-select>
+        <div class="song-list-toolbar">
+          <p-select
+            [formControl]="selectedBook"
+            [options]="songBooksDict"
+            appendTo="body"
+            optionLabel="title"
+            styleClass="list-search-dropdown song-list-toolbar__book"
+            tourAnchor="songs:dict"
+          >
+            <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
+          </p-select>
+
+          <p-select
+            [formControl]="songListMode"
+            [options]="SongListModeOptions"
+            appendTo="body"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="list-search-dropdown song-list-toolbar__mode"
+          ></p-select>
+        </div>
 
         <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl" [tabIndex]="0"
                        [loading]="isLoading()">
@@ -37,6 +48,13 @@
                 <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
                 <div class="list-item__title" tourAnchor="songs:song">
                   <span class="list-item__title-content" [innerHTML]="data.title | highliter: search"></span>
+                  @if (data.usageSummary) {
+                    <span
+                      class="list-item__usage"
+                      [pTooltip]="getUsageTooltip(data)"
+                      tooltipPosition="right"
+                    >{{ getUsageDate(data) }}</span>
+                  }
                 </div>
               </div>
             } @else {
@@ -44,6 +62,13 @@
                 <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
                 <div class="list-item__title">
                   <span class="list-item__title-content" [innerHTML]="data.title | highliter: search"></span>
+                  @if (data.usageSummary) {
+                    <span
+                      class="list-item__usage"
+                      [pTooltip]="getUsageTooltip(data)"
+                      tooltipPosition="right"
+                    >{{ getUsageDate(data) }}</span>
+                  }
                 </div>
               </div>
             }

@@ -40,3 +40,47 @@
   }
 
 }
+
+:host ::ng-deep {
+  .song-list-toolbar {
+    &__book {
+      min-width: 0;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    &__mode {
+      width: 118px;
+      min-width: 118px;
+      font-weight: 500;
+    }
+  }
+}
+
+.song-list-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px;
+  width: 100%;
+}
+
+.list-item {
+  &__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  &__title-content {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__usage {
+    flex: 0 0 auto;
+    margin-left: auto;
+    font-size: 10px;
+    opacity: 0.54;
+    white-space: nowrap;
+  }
+}

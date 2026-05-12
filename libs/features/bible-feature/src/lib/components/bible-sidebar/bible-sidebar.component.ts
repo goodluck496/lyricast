@@ -122,7 +122,7 @@ export class BibleSidebarComponent {
                 chapter: chapterEntity,
                 fromIndex: fromNumber,
                 range: range ? { from: fromNumber, to: toNumber } : undefined,
-                appearance: this.appearanceService.appearance(),
+                appearance: this.appearanceService.appearanceFor('bible')(),
                 content: sections[0].content.map((el) => {
                   return {
                     ...el,

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -11,6 +11,7 @@ import { AssetDto } from '@lyri-cast/entities';
 import {
   CASTING_APPEARANCE_UPDATE_EVENT,
   CastingAppearance,
+  CastingAppearanceScope,
   CastingAppearanceService,
   BridgeService,
 } from '@lyri-cast/common-browser';
@@ -38,7 +39,10 @@ export class CastingAppearanceControlsComponent {
   private readonly appearanceService = inject(CastingAppearanceService);
   private readonly bridge = inject(BridgeService);
 
-  readonly appearance = this.appearanceService.appearance;
+  readonly scope = input<CastingAppearanceScope>('songs');
+  readonly appearance = computed(() =>
+    this.appearanceService.appearanceFor(this.scope())()
+  );
   backgroundDialogVisible = false;
 
   readonly fontOptions = [
@@ -72,7 +76,7 @@ export class CastingAppearanceControlsComponent {
   }
 
   update(patch: Partial<CastingAppearance>): void {
-    const next = this.appearanceService.update(patch);
+    const next = this.appearanceService.update(patch, this.scope());
     this.bridge.send(CASTING_APPEARANCE_UPDATE_EVENT, next);
   }
 
@@ -85,7 +89,7 @@ export class CastingAppearanceControlsComponent {
   }
 
   onResetBackground(): void {
-    const next = this.appearanceService.resetBackground();
+    const next = this.appearanceService.resetBackground(this.scope());
     this.bridge.send(CASTING_APPEARANCE_UPDATE_EVENT, next);
   }
 }

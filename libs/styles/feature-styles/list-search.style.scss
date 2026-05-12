@@ -52,9 +52,13 @@ html:not(.my-app-dark) .list-search-dropdown {
 
   &-dropdown {
     width: 100%;
+    height: var(--list-box-item-h, 42px);
+    min-height: var(--list-box-item-h, 42px);
     border: 0;
     font-weight: bold;
-    padding: 6px;
+    padding: 0 6px;
+    display: flex;
+    align-items: center;
   }
 
 }

@@ -18,11 +18,9 @@
     </ng-scrollbar>
   </p-tabpanel>
   <p-tabpanel value="history" class="navigator-tab">
-    <ng-scrollbar class="navigator-tabs__scroll" visibility="hover">
-      <div class="navigator-tabs__content">
-        <lyri-navigator-history [feature]="feature()" tourAnchor="history"></lyri-navigator-history>
-      </div>
-    </ng-scrollbar>
+    <div class="navigator-tabs__content navigator-tabs__content--history">
+      <lyri-navigator-history [feature]="feature()" tourAnchor="history"></lyri-navigator-history>
+    </div>
   </p-tabpanel>
   <p-tabpanel value="queue">
   </p-tabpanel>

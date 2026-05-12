@@ -46,7 +46,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
   private readonly elRef = inject(ElementRef<HTMLElement>);
   private readonly store = inject(Store);
   protected readonly appearanceService = inject(CastingAppearanceService);
-  protected readonly appearance = this.appearanceService.appearance;
+  protected readonly appearance = this.appearanceService.appearanceFor('bible');
 
   isMainWindow = input(false);
 
@@ -127,7 +127,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     });
 
     this.store.select(selectCastingAppearance).subscribe((appearance) => {
-      this.appearanceService.set(appearance);
+      this.appearanceService.set(appearance, 'bible');
       this.cdr.detectChanges();
       this.updateTextSize();
     });
@@ -147,7 +147,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
   async startCastingHandler(payload: BibleStartCastingPayload) {
     this.clearSlides();
-    this.appearanceService.set(payload.appearance ?? this.appearance());
+    this.appearanceService.set(payload.appearance ?? this.appearance(), 'bible');
 
     this.selectedBook.set(payload.book);
     this.selectedBookTitle.set(payload.book.title.full);

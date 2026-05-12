@@ -435,7 +435,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
               book: groupValue.book.baseEntity,
               chapter: groupValue.chapter.baseEntity,
                 fromIndex: verse.number,
-                appearance: this.appearanceService.appearance(),
+                appearance: this.appearanceService.appearanceFor('bible')(),
                 content: sections[0].content.map((el) => {
                 return {
                   ...el,

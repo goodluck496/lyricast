@@ -68,6 +68,12 @@
         "libs/shared-browser/store/song-store/src/index.ts"
       ],
       "@lyri-cast/songs-domain": ["libs/domains/songs-domain/src/index.ts"],
+      "@lyri-cast/song-usage-domain": [
+        "libs/domains/song-usage-domain/src/index.ts"
+      ],
+      "@lyri-cast/data-access-song-usage": [
+        "libs/shared-browser/data-access/song-usage/src/index.ts"
+      ],
       "@lyri-cast/styles": ["libs/styles/src/index.ts"],
       "@lyri-cast/svg-icons": ["libs/svg-icons/src/index.ts"],
       "@lyri-cast/svg-icons/*": ["libs/svg-icons/src/*"],

@@ -49,6 +49,7 @@ export class SongPageSelectService {
       lyrics,
       fromIndex,
       currentLyric: selectedLyric ?? lyrics[0],
+      splitPartsCount: this.splitPartsCount(),
     };
   }
 

@@ -1,4 +1,5 @@
-import { Injectable, signal, WritableSignal } from '@angular/core';
+import { Injectable, inject, signal, WritableSignal } from '@angular/core';
+import { WindowService } from './window.service';
 
 export interface CastingAppearance {
   fontFamily: string;
@@ -36,13 +37,20 @@ const SCOPED_STORAGE_KEY_PREFIX = 'lyricast.castingAppearance.';
 
 @Injectable({ providedIn: 'root' })
 export class CastingAppearanceService {
+  private readonly windowSrv = inject(WindowService);
   private readonly appearances: Record<
     CastingAppearanceScope,
     WritableSignal<CastingAppearance>
   > = {
-    songs: signal<CastingAppearance>(this.load('songs')),
+    // Синхронная инициализация из localStorage для мгновенного старта
+    songs: signal<CastingAppearance>(DEFAULT_CASTING_APPEARANCE),
     bible: signal<CastingAppearance>(this.load('bible')),
   };
+
+  // При наличии Electron догоним фактические значения из файлового хранилища
+  constructor() {
+    this.hydrateBibleFromElectronSettings();
+  }
 
   readonly appearance = this.appearances.songs;
 
@@ -108,10 +116,14 @@ export class CastingAppearanceService {
   }
 
   private load(scope: CastingAppearanceScope): CastingAppearance {
+    if (scope === 'songs') {
+      return DEFAULT_CASTING_APPEARANCE;
+    }
+
     try {
       const raw =
         localStorage.getItem(this.getStorageKey(scope)) ??
-        (scope === 'songs' ? localStorage.getItem(STORAGE_KEY) : null);
+        localStorage.getItem(STORAGE_KEY);
       if (!raw) {
         return DEFAULT_CASTING_APPEARANCE;
       }
@@ -134,8 +146,38 @@ export class CastingAppearanceService {
     appearance: CastingAppearance,
     scope: CastingAppearanceScope
   ): void {
+    if (scope === 'songs') {
+      return;
+    }
+
     try {
+      // Браузерный fallback (нужен для dev и если Electron недоступен)
       localStorage.setItem(this.getStorageKey(scope), JSON.stringify(appearance));
+
+      // Persist в файловое хранилище Electron, чтобы настройки не зависели от origin/порта
+      if (this.windowSrv.hasElectron) {
+        // Выполняем без ожидания (fire-and-forget), т.к. это сервис UI
+        (async () => {
+          try {
+            const electron = this.windowSrv.electronContext;
+            const settings: any = (await electron.loadUserSettings()) ?? {};
+            const current = settings.castingAppearance || {};
+            const updated = {
+              ...settings,
+              castingAppearance: {
+                ...current,
+                [scope]: appearance,
+              },
+            };
+            await electron.saveUserSettings(updated);
+          } catch (error) {
+            console.warn(
+              `[CastingAppearanceService] Failed to save [scope:${scope}] appearance settings`,
+              error
+            );
+          }
+        })();
+      }
     } catch {
       return;
     }
@@ -175,5 +217,61 @@ export class CastingAppearanceService {
 
   private isAppearanceRecord(value: unknown): value is CastingAppearance {
     return typeof value === 'object' && value !== null;
+  }
+
+  /**
+   * Догружает значения из настроек Electron (файловое хранилище) и обновляет сигналы.
+   * Обеспечивает миграцию: если в файле пусто, но есть localStorage — записываем в файл.
+   */
+  private async hydrateBibleFromElectronSettings(): Promise<void> {
+    try {
+      if (!this.windowSrv.hasElectron) {
+        return; // браузерный режим — остаёмся на localStorage
+      }
+
+      const electron = this.windowSrv.electronContext;
+      const settings: any = (await electron.loadUserSettings()) ?? {};
+      const stored = settings.castingAppearance as
+        | Partial<Record<CastingAppearanceScope, CastingAppearance>>
+        | undefined;
+
+      const localBible = this.appearances.bible();
+
+      const fromFileBible = stored?.bible;
+
+      let needSaveBack = false;
+
+        // синхронизируем и localStorage для совместимости
+      if (fromFileBible && this.isAppearanceRecord(fromFileBible)) {
+        const next = this.normalize({ ...DEFAULT_CASTING_APPEARANCE, ...fromFileBible });
+        this.appearances.bible.set(next);
+        localStorage.setItem(this.getStorageKey('bible'), JSON.stringify(next));
+      } else if (localBible) {
+        needSaveBack = true;
+      }
+
+      if (needSaveBack) {
+        try {
+          const updated = {
+            ...settings,
+            castingAppearance: {
+              ...(settings.castingAppearance ?? {}),
+              bible: this.appearances.bible(),
+            },
+          };
+          await electron.saveUserSettings(updated);
+        } catch (error) {
+          console.warn(
+            '[CastingAppearanceService] Failed to migrate bible appearance settings',
+            error
+          );
+        }
+      }
+    } catch (error) {
+      console.warn(
+        '[CastingAppearanceService] Failed to hydrate bible appearance settings',
+        error
+      );
+    }
   }
 }

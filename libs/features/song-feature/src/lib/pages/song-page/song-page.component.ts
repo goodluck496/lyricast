@@ -61,10 +61,11 @@ import {
   ListBoxTemplates,
 } from '@lyri-cast/form';
 import { CheckboxModule } from 'primeng/checkbox';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import {
   OnboardingHelpService,
   CastingAppearanceService,
+  DEFAULT_CASTING_APPEARANCE,
   PAGE_CONTAINER_TEMPLATES,
   Pages,
 } from '@lyri-cast/common-browser';
@@ -135,6 +136,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   private readonly songDisplaySettings = inject(SongDisplaySettingsService);
   private readonly songUsageTracking = inject(SongUsageTrackingService);
   private readonly songUsageApi = inject(SongUsageApiService);
+  private readonly appearance$ = toObservable(this.appearanceService.appearance);
 
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
   // chorusAfterCouplet = signal(true);
@@ -168,6 +170,7 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   usageSummaries$ = new BehaviorSubject<SongUsageSummaryDto[]>([]);
 
   firstLoad = false;
+  private suppressSongAppearanceSave = false;
 
   songsBySelectedBook$: Observable<SongListItem[]> =
     this.selectedBook.valueChanges.pipe(
@@ -310,6 +313,22 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         });
       });
 
+    combineLatest([
+      this.selectedSong$.pipe(filterEmpty()),
+      this.appearance$,
+    ])
+      .pipe(
+        debounceTime(300),
+        filter(() => !this.suppressSongAppearanceSave),
+        switchMap(([song, appearance]) =>
+          this.songDisplaySettings
+            .save(song, appearance, this.splitCount())
+            .pipe(catchError(() => of(null)))
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe();
+
     fromEvent<KeyboardEvent>(window /*this.elRef.nativeElement*/, 'keydown')
       .pipe(
         debounceTime(100),
@@ -349,9 +368,12 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
         this.selectedSong$.next(newSong);
 
+        this.suppressSongAppearanceSave = true;
         this.songDisplaySettings.restore(newSong).pipe(take(1)).subscribe({
           next: (settings) => {
             if (!settings) {
+              this.appearanceService.set(DEFAULT_CASTING_APPEARANCE);
+              this.suppressSongAppearanceSave = false;
               return;
             }
 
@@ -361,8 +383,11 @@ export class SongPageComponent implements OnInit, AfterViewInit {
               this.splitCount.set(settings.splitPartsCount);
               this.songPageSelectSrv.setSplitCountValue(settings.splitPartsCount);
             }
+
+            this.suppressSongAppearanceSave = false;
           },
           error: () => {
+            this.suppressSongAppearanceSave = false;
             return;
           },
         });
@@ -515,7 +540,9 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   }
 
   onSelectSplitValue(value: SplitPartsCount) {
+    this.splitCount.set(value);
     this.songPageSelectSrv.setSplitCountValue(value);
+    this.saveCurrentSongDisplaySettings();
   }
 
   onNavigateSlide(dir: 'prev' | 'next', index?: number) {
@@ -583,6 +610,18 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       .getSummaries()
       .pipe(take(1), catchError(() => of([])))
       .subscribe((summaries) => this.usageSummaries$.next(summaries));
+  }
+
+  private saveCurrentSongDisplaySettings(): void {
+    const song = this.selectedSong$.value;
+    if (!song) {
+      return;
+    }
+
+    this.songDisplaySettings
+      .save(song, this.appearanceService.appearance(), this.splitCount())
+      .pipe(take(1), catchError(() => of(null)))
+      .subscribe();
   }
 
   private buildSongList(

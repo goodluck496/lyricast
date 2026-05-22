@@ -1,7 +1,7 @@
 <div class="preview-surface" [ngStyle]="appearanceService.getBackgroundStyles(appearance())">
   <div class="preview-header">
     @if (selectedBibleVerseForCast(); as data) {
-      <div>
+      <div [ngStyle]="appearanceService.getReferenceStyles(appearance())">
         {{ data.bookTitle.full }}
         {{ data.chapterId }}:
         @if (selectedRange(); as range) {
@@ -29,7 +29,7 @@
             [activateOnResize]="true"
           >
             <div
-              [innerHTML]="slideText"
+              [innerHTML]="sanitizeHtml(slideText)"
               [ngStyle]="appearanceService.getTextStyles(appearance())"
               class="slide-content"></div>
           </div>

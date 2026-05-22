@@ -29,6 +29,7 @@ import {
 import { combineLatest } from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
 import { CastingAppearanceService } from '@lyri-cast/common-browser';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'lyri-bible-casting-preview',
@@ -44,6 +45,7 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
   private destroyRef = inject(DestroyRef);
   private store = inject(Store);
   private actions = inject(Actions);
+  private sanitizer = inject(DomSanitizer);
   protected readonly appearanceService = inject(CastingAppearanceService);
   protected readonly appearance = this.appearanceService.appearanceFor('bible');
 
@@ -96,10 +98,7 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
 
         if (versesInRange.length > 1) {
           this.slideText = versesInRange
-            .map((v) => {
-              const text = v.text;
-              return `<span class="bible-casting__verse-number">${v.number}</span> ${text}`;
-            })
+            .map((verse) => this.buildVerseHtml(verse.number, verse.text))
             .join(' ');
         } else if (versesInRange.length === 1) {
           // Для одиночного стиха в "диапазоне" не показываем номер, как и при обычном кастинге
@@ -159,6 +158,10 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
     this.deck?.destroy?.();
   }
 
+  sanitizeHtml(rawHtml: string): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(rawHtml);
+  }
+
   ngAfterViewInit() {
     this.initDeck();
   }
@@ -166,5 +169,16 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
   ngOnDestroy() {
     clearTimeout(this.initTimeoutId);
     this.deck?.destroy?.();
+  }
+
+  private buildVerseHtml(verseNumber: number, text: string): string {
+    const verseNumberStyle = [
+      'color: var(--bible-verse-number-color)',
+      'font-size: 0.7em',
+      'font-weight: 400',
+      'margin-right: 4px',
+    ].join('; ');
+
+    return `<span class="bible-casting__verse-number" style="${verseNumberStyle}">${verseNumber}</span> ${text}`;
   }
 }

@@ -56,7 +56,12 @@ export const SongPageReducers = createReducer<SongPageState>(
     } satisfies SongPageState;
   }),
   on(SongActions[SongActionsEnum.pauseCasting], (state) => {
-    return { ...state, castingPaused: true } satisfies SongPageState;
+    return {
+      ...state,
+      castingPaused: true,
+      castingProcess: null,
+      navigateState: null,
+    } satisfies SongPageState;
   }),
   on(SongActions[SongActionsEnum.stopCasting], (state) => {
     return {
@@ -70,6 +75,9 @@ export const SongPageReducers = createReducer<SongPageState>(
     return { ...state, navigateState: payload } satisfies SongPageState;
   }),
   on(SongActions[SongActionsEnum.updateCastingAppearance], (state, payload) => {
-    return { ...state, castingAppearance: payload } satisfies SongPageState;
+    return {
+      ...state,
+      castingAppearance: payload,
+    } satisfies SongPageState;
   })
 );

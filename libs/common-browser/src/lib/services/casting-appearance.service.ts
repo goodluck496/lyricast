@@ -93,6 +93,16 @@ export class CastingAppearanceService {
       'font-weight': appearance.fontWeight,
       color: appearance.textColor,
       'text-shadow': shadow,
+      '--bible-verse-number-color': this.getVerseNumberColor(appearance),
+    };
+  }
+
+  getReferenceStyles(appearance = this.appearance()): Record<string, string> {
+    const shadow = `${appearance.shadowOffsetX}px ${appearance.shadowOffsetY}px ${appearance.shadowBlur}px ${appearance.shadowColor}`;
+
+    return {
+      color: this.getVerseNumberColor(appearance),
+      'text-shadow': shadow,
     };
   }
 
@@ -213,6 +223,117 @@ export class CastingAppearanceService {
 
   private normalizeColor(value: string, fallback: string): string {
     return /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+  }
+
+  private getVerseNumberColor(appearance: CastingAppearance): string {
+    const textColor = this.parseHexColor(appearance.textColor);
+    const backgroundColor = this.parseHexColor(appearance.backgroundColor);
+    if (!textColor || !backgroundColor) {
+      return '#ffffff';
+    }
+
+    const backgroundIsDark = this.getRelativeLuminance(backgroundColor) < 0.45;
+    const candidates = (
+      backgroundIsDark
+        ? ['#ffffff', '#ffdd00', '#38bdf8', '#f97316']
+        : ['#111111', '#1f2937', '#0f766e', '#7c2d12']
+    )
+      .map((color) => {
+        const rgb = this.parseHexColor(color);
+        if (!rgb) {
+          return null;
+        }
+
+        return {
+          color,
+          textDistance: this.getColorDistance(rgb, textColor),
+          backgroundContrast: this.getContrastRatio(rgb, backgroundColor),
+        };
+      })
+      .filter((candidate) => candidate !== null);
+
+    const distinctCandidates = candidates
+      .filter((candidate) => candidate.textDistance >= 90)
+      .sort((a, b) => {
+        const contrastDiff = b.backgroundContrast - a.backgroundContrast;
+        return contrastDiff || b.textDistance - a.textDistance;
+      });
+
+    return distinctCandidates[0]?.color ?? this.invertColor(appearance.textColor);
+  }
+
+  private parseHexColor(
+    value: string
+  ): { red: number; green: number; blue: number } | null {
+    if (!/^#[0-9a-f]{6}$/i.test(value)) {
+      return null;
+    }
+
+    return {
+      red: Number.parseInt(value.slice(1, 3), 16),
+      green: Number.parseInt(value.slice(3, 5), 16),
+      blue: Number.parseInt(value.slice(5, 7), 16),
+    };
+  }
+
+  private getColorDistance(
+    first: { red: number; green: number; blue: number },
+    second: { red: number; green: number; blue: number }
+  ): number {
+    const red = first.red - second.red;
+    const green = first.green - second.green;
+    const blue = first.blue - second.blue;
+
+    return Math.sqrt(red * red + green * green + blue * blue);
+  }
+
+  private getContrastRatio(
+    first: { red: number; green: number; blue: number },
+    second: { red: number; green: number; blue: number }
+  ): number {
+    const firstLuminance = this.getRelativeLuminance(first);
+    const secondLuminance = this.getRelativeLuminance(second);
+    const lighter = Math.max(firstLuminance, secondLuminance);
+    const darker = Math.min(firstLuminance, secondLuminance);
+
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  private getRelativeLuminance({
+    red,
+    green,
+    blue,
+  }: {
+    red: number;
+    green: number;
+    blue: number;
+  }): number {
+    const r = this.getLinearColorChannel(red);
+    const g = this.getLinearColorChannel(green);
+    const b = this.getLinearColorChannel(blue);
+
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  private getLinearColorChannel(channel: number): number {
+    const normalized = channel / 255;
+
+    return normalized <= 0.03928
+      ? normalized / 12.92
+      : Math.pow((normalized + 0.055) / 1.055, 2.4);
+  }
+
+  private invertColor(value: string): string {
+    const color = this.parseHexColor(value);
+    if (!color) {
+      return '#ffffff';
+    }
+
+    return `#${(255 - color.red).toString(16).padStart(2, '0')}${(
+      255 - color.green
+    )
+      .toString(16)
+      .padStart(2, '0')}${(255 - color.blue).toString(16).padStart(2, '0')}`;
   }
 
   private isAppearanceRecord(value: unknown): value is CastingAppearance {

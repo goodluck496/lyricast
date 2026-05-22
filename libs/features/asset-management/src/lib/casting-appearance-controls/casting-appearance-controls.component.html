@@ -56,7 +56,8 @@
         appendTo="body"
         format="hex"
         [ngModel]="appearance().textColor"
-        (ngModelChange)="update({ textColor: $event })"
+        (onChange)="updateColor('textColor', $event)"
+        (onHide)="commitColorUpdate()"
       ></p-colorPicker>
     </div>
   </section>
@@ -71,7 +72,8 @@
         appendTo="body"
         format="hex"
         [ngModel]="appearance().shadowColor"
-        (ngModelChange)="update({ shadowColor: $event })"
+        (onChange)="updateColor('shadowColor', $event)"
+        (onHide)="commitColorUpdate()"
       ></p-colorPicker>
     </div>
 
@@ -125,7 +127,8 @@
         appendTo="body"
         format="hex"
         [ngModel]="appearance().backgroundColor"
-        (ngModelChange)="update({ backgroundColor: $event })"
+        (onChange)="updateColor('backgroundColor', $event)"
+        (onHide)="commitColorUpdate()"
       ></p-colorPicker>
     </div>
 
@@ -163,10 +166,13 @@
   header="Фон трансляции"
   [(visible)]="backgroundDialogVisible"
   [modal]="true"
-  [style]="{ width: '720px', maxWidth: '95vw' }"
+  appendTo="body"
+  styleClass="casting-appearance__asset-dialog"
+  [style]="{ width: '640px', maxWidth: '95vw', height: '80vh', maxHeight: '80vh' }"
+  [contentStyle]="{ height: 'calc(80vh - 5rem)', overflow: 'hidden' }"
 >
   <lyri-asset-picker
-    [gridCols]="4"
+    [gridCols]="3"
     (assetSelected)="onAssetSelected($event)"
   ></lyri-asset-picker>
 </p-dialog>

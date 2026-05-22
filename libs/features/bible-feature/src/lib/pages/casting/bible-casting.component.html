@@ -1,6 +1,10 @@
 <div class="casting-surface" [ngStyle]="appearanceService.getBackgroundStyles(appearance())">
   <div class="info-block" [class.hide]="!showingContent()">
-    <div class="info-block__type" [class.hide]="!selectedBookTitle()">
+    <div
+      class="info-block__type"
+      [class.hide]="!selectedBookTitle()"
+      [ngStyle]="appearanceService.getReferenceStyles(appearance())"
+    >
       {{ selectedBookTitle() }} - {{ selectedChapterId() }}:
       @if (selectedRange(); as range) {
         @if (range.from === range.to) {

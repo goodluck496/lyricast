@@ -163,10 +163,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
       if (versesInRange.length > 1) {
         const first = versesInRange[0];
         const combinedHtml = versesInRange
-          .map((v) => {
-            const text = Array.isArray(v.text) ? v.text.join(' ') : (v as any).text;
-            return `<span class="bible-casting__verse-number">${v.number}</span> ${text}`;
-          })
+          .map((verse) => this.buildVerseHtml(verse.number, verse.text))
           .join(' ');
 
         this.selectedContents.set([
@@ -243,10 +240,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
       this.selectedRange.set(payload.range);
 
       const combinedHtml = payload.versesInRange
-        .map((v) => {
-          const text = Array.isArray(v.text) ? v.text.join(' ') : (v as any).text;
-          return `<span class="bible-casting__verse-number">${v.number}</span> ${text}`;
-        })
+        .map((verse) => this.buildVerseHtml(verse.number, verse.text))
         .join(' ');
 
       const first = payload.versesInRange[0];
@@ -319,5 +313,17 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     this.deckRef?.destroy();
 
     this.showingContent.set(false);
+  }
+
+  private buildVerseHtml(verseNumber: number, textLines: string[]): string {
+    const text = textLines.join(' ');
+    const verseNumberStyle = [
+      'color: var(--bible-verse-number-color)',
+      'font-size: 0.7em',
+      'font-weight: 400',
+      'margin-right: 8px',
+    ].join('; ');
+
+    return `<span class="bible-casting__verse-number" style="${verseNumberStyle}">${verseNumber}</span> ${text}`;
   }
 }

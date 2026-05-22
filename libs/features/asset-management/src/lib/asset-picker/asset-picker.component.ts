@@ -40,23 +40,26 @@ export class AssetPickerComponent implements OnInit {
 
   assets = signal<AssetDto[]>([]);
   loading = signal(false);
+  activeTab = signal('0');
+  selectedAssetId = signal<string | null>(null);
 
   ngOnInit() {
     this.loadAssets();
   }
 
-  loadAssets() {
+  loadAssets(assetToSelect: AssetDto | null = null) {
     this.loading.set(true);
     this.assetsApiService.getAssets().subscribe({
       next: (assets) => {
-        // Filter only images and exclude previews by kind
-        this.assets.set(
-          assets.filter(
-            (a) =>
-              a.mimeType.startsWith('image/') && a.kind !== 'preview'
-          )
-        );
+        const imageAssets = this.toImageAssets(assets);
+        this.assets.set(imageAssets);
         this.loading.set(false);
+        if (assetToSelect) {
+          const selectedAsset =
+            imageAssets.find((asset) => asset.id === assetToSelect.id) ??
+            assetToSelect;
+          this.onSelect(selectedAsset);
+        }
       },
       error: () => {
         this.loading.set(false);
@@ -81,6 +84,7 @@ export class AssetPickerComponent implements OnInit {
   }
 
   onSelect(asset: AssetDto) {
+    this.selectedAssetId.set(asset.id);
     const url = this.getAssetUrl(asset);
     this.assetSelected.emit({ asset, url });
   }
@@ -97,14 +101,18 @@ export class AssetPickerComponent implements OnInit {
     );
 
     forkJoin(uploadObservables).subscribe({
-      next: () => {
+      next: (uploadedAssets) => {
+        const uploadedImageAssets = this.toImageAssets(uploadedAssets);
+        const assetToSelect =
+          uploadedImageAssets[uploadedImageAssets.length - 1] ?? null;
         this.messageService.add({
           severity: 'success',
           summary: 'Успешно',
           detail: `Загружено файлов: ${files.length}.`,
           life: 3000,
         });
-        this.loadAssets();
+        this.activeTab.set('0');
+        this.loadAssets(assetToSelect);
       },
       error: () => {
         this.loading.set(false);
@@ -116,5 +124,17 @@ export class AssetPickerComponent implements OnInit {
         });
       }
     });
+  }
+
+  onTabChange(value: unknown): void {
+    if (typeof value === 'string' || typeof value === 'number') {
+      this.activeTab.set(String(value));
+    }
+  }
+
+  private toImageAssets(assets: AssetDto[]): AssetDto[] {
+    return assets.filter(
+      (asset) => asset.mimeType.startsWith('image/') && asset.kind !== 'preview'
+    );
   }
 }

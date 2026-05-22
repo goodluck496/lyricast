@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   ElementRef,
   HostListener,
   inject,
@@ -29,6 +30,7 @@ import {
 import { APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
 import { sanitize } from 'quill/formats/link';
 import { DomSanitizer } from '@angular/platform-browser';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'lyri-casting-page',
@@ -41,6 +43,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 export class CastingComponent implements OnInit, AfterViewInit {
   private readonly bridge = inject(BridgeService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly elRef = inject(ElementRef<HTMLElement>);
   private readonly store = inject(Store);
   private readonly snowfall = inject(SnowfallManager);
@@ -60,6 +63,8 @@ export class CastingComponent implements OnInit, AfterViewInit {
   fitTexts = viewChildren(Ng2FittextDirective);
 
   hideContent = true;
+  private revealInitVersion = 0;
+  private hideContentTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   castingPaused$ = this.store.select(selectCastingPaused);
 
@@ -74,7 +79,9 @@ export class CastingComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
-    this.castingPaused$.subscribe((value) => {
+    this.castingPaused$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => {
       this.showingContent.set(!value);
 
       if (value) {
@@ -85,26 +92,37 @@ export class CastingComponent implements OnInit, AfterViewInit {
         this.snowfall.ensureRunning();
       }
 
-      setTimeout(() => {
+      this.clearHideContentTimeout();
+      this.hideContentTimeoutId = setTimeout(() => {
         this.hideContent = value;
         this.cdr.detectChanges();
       }, 500);
     });
 
-    this.store.select(selectCastingProcess).subscribe((data) => {
+    this.store.select(selectCastingProcess)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data) => {
       console.log('change cast proc', data);
       if (data) {
         this.startCastingHandler(data);
+        return;
       }
+
+      this.clearSlides();
+      this.cdr.detectChanges();
     });
 
-    this.store.select(selectNavigateState).subscribe((data) => {
+    this.store.select(selectNavigateState)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data) => {
       if (data) {
         this.navigateCastingHandler(data);
       }
     });
 
-    this.store.select(selectCastingAppearance).subscribe((appearance) => {
+    this.store.select(selectCastingAppearance)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((appearance) => {
       this.appearanceService.set(appearance);
       this.cdr.detectChanges();
       this.updateTextSize();
@@ -121,8 +139,12 @@ export class CastingComponent implements OnInit, AfterViewInit {
   }
 
   async startCastingHandler(payload: SongStartCastingPayload) {
+    const wasShowingContent = this.showingContent();
     this.clearSlides();
-    this.appearanceService.set(payload.appearance ?? this.appearance());
+    const version = ++this.revealInitVersion;
+    this.appearanceService.set(
+      wasShowingContent ? this.appearance() : payload.appearance ?? this.appearance()
+    );
 
     this.selectedSong.set(payload.song);
     this.selectedLyrics.set(payload.lyrics);
@@ -130,7 +152,11 @@ export class CastingComponent implements OnInit, AfterViewInit {
     this.showingContent.set(true);
     this.cdr.detectChanges();
 
-    await this.initReveal();
+    await this.initReveal(version);
+    if (version !== this.revealInitVersion || !this.showingContent()) {
+      return;
+    }
+
     this.deckRef?.layout();
     this.deckRef?.sync();
 
@@ -148,7 +174,12 @@ export class CastingComponent implements OnInit, AfterViewInit {
     }
     this.updateTextSize();
 
-    setTimeout(() => {
+    this.clearHideContentTimeout();
+    this.hideContentTimeoutId = setTimeout(() => {
+      if (version !== this.revealInitVersion || !this.showingContent()) {
+        return;
+      }
+
       this.hideContent = false;
       this.cdr.detectChanges();
     }, 500);
@@ -170,10 +201,20 @@ export class CastingComponent implements OnInit, AfterViewInit {
     this.updateTextSize();
   }
 
-  async initReveal(): Promise<Api> {
-    return new Promise((res, rej) => {
+  async initReveal(version = this.revealInitVersion): Promise<Api | undefined> {
+    return new Promise((res) => {
       setTimeout(async () => {
+        if (version !== this.revealInitVersion) {
+          res(undefined);
+          return;
+        }
+
         const revealContainer = this.elRef.nativeElement.querySelector('.reveal')
+        if (!revealContainer) {
+          res(undefined);
+          return;
+        }
+
         this.deckRef = new Reveal(revealContainer, {
           margin: -1,
           disableLayout: true,
@@ -187,6 +228,9 @@ export class CastingComponent implements OnInit, AfterViewInit {
         });
 
         const deck = await this.deckRef?.initialize();
+        if (version !== this.revealInitVersion) {
+          this.deckRef?.destroy();
+        }
 
         res(deck);
       }, 300);
@@ -200,9 +244,21 @@ export class CastingComponent implements OnInit, AfterViewInit {
   }
 
   clearSlides(): void {
+    this.revealInitVersion++;
+    this.clearHideContentTimeout();
     this.deckRef?.destroy();
 
     this.showingContent.set(false);
+    this.hideContent = true;
+  }
+
+  private clearHideContentTimeout(): void {
+    if (!this.hideContentTimeoutId) {
+      return;
+    }
+
+    clearTimeout(this.hideContentTimeoutId);
+    this.hideContentTimeoutId = null;
   }
 
   protected readonly sanitize = sanitize;

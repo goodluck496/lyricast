@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Action, Store } from '@ngrx/store';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { BibleActions } from './bible.actions';
-import { delay, filter, map, mergeMap, of, switchMap, take, tap, withLatestFrom } from 'rxjs';
+import { EMPTY, Observable, filter, map, of, switchMap, take, tap, withLatestFrom, catchError } from 'rxjs';
 
 import { BibleState } from './bible.store';
 import {
@@ -10,11 +10,15 @@ import {
   selectBooks,
   selectCastingPaused,
   selectSelectedBook,
+  selectSelectedChapter,
   selectSelectedPath,
   selectSelectedTranslate,
   selectSelectedChapterSections,
   selectSelectedVersesRange,
   selectSelectedBibleVerse,
+  selectCastingProcess,
+  selectSecondaryTranslationCache,
+  selectSecondaryTranslationSettings,
 } from './bible.selectors';
 import {
   AppActions,
@@ -26,10 +30,16 @@ import {
 import { APP_COMMON_ACTIONS, AppWindowTypes, EventData } from '@lyri-cast/common-electron';
 import {
   BibleBookShort,
-  BibleBookTitle,
   BibleChapter,
   BibleChapterSection,
+  BibleVerse,
+  BibleVerseForCasting,
 } from '@lyri-cast/entities';
+import {
+  BiblePresentationNavigatePayload,
+  BibleSecondaryCastingContent,
+  createBibleSecondaryTranslationCacheKey,
+} from './bible.actions';
 import { BibleApiService } from '@lyri-cast/data-access-bible';
 
 const actionsMap: Record<string, (eventData: EventData) => Action> = {
@@ -190,46 +200,62 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
       ofType(BibleActions.selectBibleVerse),
       withLatestFrom(
         this.store.select(selectCastingPaused),
-        this.store.select(selectBooks),
+        this.store.select(selectSelectedBook),
         this.store.select(selectSelectedVersesRange),
-        this.store.select(selectSelectedChapterSections)
+        this.store.select(selectSelectedChapterSections),
+        this.store.select(selectCastingProcess)
       ),
-      filter(([verse, paused]) => !paused),
-      map(([verse, paused, books, range, sections]) => {
-        const book = books.find((book) => book.number === verse.bookId);
+      filter(([, paused]) => !paused),
+      switchMap(([verse, , book, range, sections, castingProcess]) =>
+        this.createNavigateAction(
+          verse,
+          castingProcess?.book ?? book,
+          range,
+          sections,
+          castingProcess?.secondaryContent
+        )
+      )
+    )
+  );
 
-        let versesInRange: any[] | undefined;
-        let effectiveRange: { from: number; to: number } | undefined;
-
-        if (range && sections && sections.length) {
-          const from = Math.min(range.from, range.to);
-          const to = Math.max(range.from, range.to);
-
-          const allVerses = sections.flatMap((sec) => sec.content);
-          const filtered = allVerses.filter(
-            (v) => v.number >= from && v.number <= to
-          );
-
-          if (filtered.length) {
-            versesInRange = filtered.map((v) => ({
-              ...v,
-              text: [v.text],
-              bookTitle: book!.title as BibleBookTitle,
-            }));
-            effectiveRange = { from, to };
-          }
+  preloadSecondaryTranslation$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(
+        BibleActions.updateSecondaryTranslationSettings,
+        BibleActions.selectChapter,
+        BibleActions.selectChapterSection,
+        BibleActions.selectBibleVerse
+      ),
+      withLatestFrom(
+        this.store.select(selectSecondaryTranslationSettings),
+        this.store.select(selectSelectedBook),
+        this.store.select(selectSelectedChapter),
+        this.store.select(selectSecondaryTranslationCache)
+      ),
+      switchMap(([, settings, book, chapter, cache]) => {
+        if (!settings.enabled || !settings.translate || !book || !chapter) {
+          return EMPTY;
         }
 
-        return BibleActions.castingProcessChange({
-          currentContent: {
-            ...verse,
-            bookTitle: book!.title as BibleBookTitle,
-            text: [verse.text],
-          },
-          nextIndex: verse.number,
-          range: effectiveRange,
-          versesInRange,
-        });
+        const cacheKey = createBibleSecondaryTranslationCacheKey(
+          settings.translate,
+          book,
+          chapter
+        );
+
+        if (cache[cacheKey]) {
+          return EMPTY;
+        }
+
+        return this.apiSrv.getSections(settings.translate, book, chapter).pipe(
+          map((sections) =>
+            BibleActions.setSecondaryTranslationChapter({
+              cacheKey,
+              sections,
+            })
+          ),
+          catchError(() => EMPTY)
+        );
       })
     )
   );
@@ -239,50 +265,133 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
       ofType(BibleActions.selectPrevOrNextVerse),
       withLatestFrom(
         this.store.select(selectCastingPaused),
-        this.store.select(selectBooks),
+        this.store.select(selectSelectedBook),
         this.store.select(selectSelectedVersesRange),
         this.store.select(selectSelectedChapterSections),
-        this.store.select(selectSelectedBibleVerse)
+        this.store.select(selectSelectedBibleVerse),
+        this.store.select(selectCastingProcess)
       ),
       filter(([, paused]) => !paused),
-      filter(([, , , , , verse]) => !!verse),
-      map(([, , books, range, sections, verse]) => {
-        const v = verse!;
-        const book = books.find((book) => book.number === v.bookId);
-
-        let versesInRange: any[] | undefined;
-        let effectiveRange: { from: number; to: number } | undefined;
-
-        if (range && sections && sections.length) {
-          const from = Math.min(range.from, range.to);
-          const to = Math.max(range.from, range.to);
-
-          const allVerses = sections.flatMap((sec) => sec.content);
-          const filtered = allVerses.filter(
-            (el) => el.number >= from && el.number <= to
-          );
-
-          if (filtered.length) {
-            versesInRange = filtered.map((el) => ({
-              ...el,
-              text: [el.text],
-              bookTitle: book!.title as BibleBookTitle,
-            }));
-            effectiveRange = { from, to };
-          }
+      switchMap(([, , book, range, sections, verse, castingProcess]) => {
+        if (!verse) {
+          return EMPTY;
         }
 
-        return BibleActions.castingProcessChange({
-          currentContent: {
-            ...v,
-            bookTitle: book!.title as BibleBookTitle,
-            text: [v.text],
-          },
-          nextIndex: v.number,
-          range: effectiveRange,
-          versesInRange,
-        });
+        return this.createNavigateAction(
+          verse,
+          castingProcess?.book ?? book,
+          range,
+          sections,
+          castingProcess?.secondaryContent
+        );
       })
     )
   );
+
+  private createNavigateAction(
+    verse: BibleVerse,
+    book: BibleBookShort | null,
+    range: { from: number; to: number } | null,
+    sections: BibleChapterSection[],
+    secondaryContent: BibleSecondaryCastingContent | undefined
+  ): Observable<Action> {
+    if (!book) {
+      return EMPTY;
+    }
+
+    return of(secondaryContent).pipe(
+      map((content) => {
+        const payload = this.createNavigatePayload(
+          verse,
+          book,
+          range,
+          sections,
+          content
+        );
+
+        return {
+          type: BibleActions.castingProcessChange.type,
+          ...payload,
+        };
+      })
+    );
+  }
+
+  private createNavigatePayload(
+    verse: BibleVerse,
+    book: BibleBookShort,
+    range: { from: number; to: number } | null,
+    sections: BibleChapterSection[],
+    secondaryContent: BibleSecondaryCastingContent | undefined
+  ): BiblePresentationNavigatePayload {
+    const rangeData = this.createRangePayload(range, sections, book);
+
+    let filteredSecondaryContent: BibleSecondaryCastingContent | undefined;
+    if (secondaryContent) {
+      let secVerses: BibleVerseForCasting[] = [];
+      if (range) {
+        const from = Math.min(range.from, range.to);
+        const to = Math.max(range.from, range.to);
+        secVerses = secondaryContent.content.filter(
+          (v) => v.number >= from && v.number <= to
+        );
+      } else {
+        const single = secondaryContent.content.find((v) => v.number === verse.number);
+        if (single) {
+          secVerses = [single];
+        }
+      }
+
+      filteredSecondaryContent = {
+        translate: secondaryContent.translate,
+        content: secVerses,
+      };
+    }
+
+    return {
+      currentContent: {
+        ...verse,
+        bookTitle: book.title,
+        text: [verse.text],
+      },
+      secondaryContent: filteredSecondaryContent,
+      nextIndex: verse.number,
+      range: rangeData.range,
+      versesInRange: rangeData.versesInRange,
+    };
+  }
+
+  private createRangePayload(
+    range: { from: number; to: number } | null,
+    sections: BibleChapterSection[],
+    book: BibleBookShort
+  ): {
+    range?: { from: number; to: number };
+    versesInRange?: BibleVerseForCasting[];
+  } {
+    if (!range || !sections.length) {
+      return {};
+    }
+
+    const from = Math.min(range.from, range.to);
+    const to = Math.max(range.from, range.to);
+    const allVerses = sections.flatMap((section) => section.content);
+    const versesInRange = allVerses
+      .filter((verse) => verse.number >= from && verse.number <= to)
+      .map((verse) => ({
+        ...verse,
+        text: [verse.text],
+        bookTitle: book.title,
+      }));
+
+    if (!versesInRange.length) {
+      return {};
+    }
+
+    return {
+      range: { from, to },
+      versesInRange,
+    };
+  }
+
 }

@@ -4,20 +4,31 @@ import {
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { BibleCastingPreviewComponent } from '../casting-preview/bible-casting-preview.component';
+import { BibleCastingPreviewComponent } from '../casting-preview';
 import { NavigatorFeatureComponent } from '@lyri-cast/navigator-feature';
 import {
   BibleActions,
+  BibleSecondaryCastingLayout,
+  BibleSecondaryCastingContent,
   BibleState,
+  createBibleSecondaryTranslationCacheKey,
   selectCastingPaused,
+  selectSecondaryTranslationSettings,
+  selectSecondaryTranslationCache,
   selectSelectedBibleVerse,
   selectSelectedChapterSections,
   selectSelectedVersesRange,
 } from '@lyri-cast/bible-store';
 import { Store } from '@ngrx/store';
-import { map, Observable, take, withLatestFrom } from 'rxjs';
+import { map, Observable, of, switchMap, take, withLatestFrom } from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
-import { BibleBookTitle, BibleChapterSection } from '@lyri-cast/entities';
+import {
+  BibleBookShort,
+  BibleChapterSection,
+  BibleChapterShort,
+  BibleTranslateShort,
+  BibleVerseForCasting,
+} from '@lyri-cast/entities';
 import { AppActions, selectOpenedWindow, SidebarService, WindowService, SettingsService, BridgeService, Pages, DEFAULT_CASTING_PAGE_CONFIG, CastingAppearanceService } from '@lyri-cast/common-browser';
 import { BibleSidebarData } from '../../types';
 import { AppWindowTypes, APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
@@ -29,6 +40,11 @@ import { TourService } from 'ngx-ui-tour-primeng';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { MenuItem } from 'primeng/api';
 import { CastingAppearanceControlsComponent } from '@lyri-cast/asset-management';
+import { BibleApiService } from '@lyri-cast/data-access-bible';
+import { SelectModule } from 'primeng/select';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { FormsModule } from '@angular/forms';
+import { MatSliderModule } from '@angular/material/slider';
 
 @Component({
   selector: 'lyri-bible-sidebar',
@@ -40,6 +56,10 @@ import { CastingAppearanceControlsComponent } from '@lyri-cast/asset-management'
     TourPrimeNgModule,
     SplitButtonModule,
     CastingAppearanceControlsComponent,
+    SelectModule,
+    ToggleSwitchModule,
+    FormsModule,
+    MatSliderModule,
   ],
   templateUrl: './bible-sidebar.component.html',
   styleUrl: './bible-sidebar.component.scss',
@@ -55,6 +75,7 @@ export class BibleSidebarComponent {
   private readonly settingsSrv = inject(SettingsService);
   private readonly bridge = inject(BridgeService);
   private readonly appearanceService = inject(CastingAppearanceService);
+  private readonly apiSrv = inject(BibleApiService);
 
   private canTourNext(tourService: unknown): tourService is { next: () => void } {
     return typeof (tourService as { next: () => void }).next === 'function';
@@ -66,8 +87,23 @@ export class BibleSidebarComponent {
     selectSelectedChapterSections
   );
   selectedRange$ = this.store.select(selectSelectedVersesRange);
+  secondarySettings$ = this.store.select(selectSecondaryTranslationSettings);
+  secondaryCache$ = this.store.select(selectSecondaryTranslationCache);
+  secondaryTranslateOptions$ = this.apiSrv.getTranslates().pipe(
+    map((translates) =>
+      translates.map((translate) => ({
+        label: translate.title || translate.sourceTitle,
+        value: translate,
+      }))
+    )
+  );
 
   isOpeningWindow = new BehaviorSubject<boolean>(false);
+  layoutOptions: { label: string; value: BibleSecondaryCastingLayout }[] = [
+    { label: 'Справа', value: 'right' },
+    { label: 'Снизу', value: 'bottom' },
+    { label: 'Поверх снизу', value: 'bottomOverlay' },
+  ];
 
   closeMenuItems$: Observable<MenuItem[]> = combineLatest([
     this.openedCastingWindow$,
@@ -95,46 +131,87 @@ export class BibleSidebarComponent {
       .pipe(
         take(1),
         filterEmpty(),
-        withLatestFrom(this.sectionList$, this.sidebarService.data$, this.selectedRange$)
-      )
-      .subscribe(([verse, sections, sidebarData, range]) => {
-        if (!sidebarData || !sidebarData.bibleForm) {
-          return;
-        }
-        const groupValue = sidebarData.bibleForm;
+        withLatestFrom(
+          this.sectionList$,
+          this.sidebarService.data$,
+          this.selectedRange$,
+          this.secondarySettings$,
+          this.secondaryCache$
+        ),
+        switchMap(([verse, sections, sidebarData, range, secondarySettings, secondaryCache]) => {
+          if (!sidebarData || !sidebarData.bibleForm) {
+            return of(null);
+          }
 
-        if (groupValue.book && groupValue.chapter && sections.length) {
+          const groupValue = sidebarData.bibleForm;
+
+          if (!groupValue.book || !groupValue.chapter || !sections.length) {
+            return of(null);
+          }
+
           const fromNumber = range?.from ?? verse.number;
           const toNumber = range?.to ?? verse.number;
-
           const bookEntity = groupValue.book.baseEntity;
           const chapterEntity = groupValue.chapter.baseEntity;
-          const bookTitle = groupValue.book.baseEntity?.title as BibleBookTitle;
+          const content = this.createCastingContent(sections, bookEntity);
+          const basePayload = {
+            book: bookEntity,
+            chapter: chapterEntity,
+            fromIndex: fromNumber,
+            range: range ? { from: fromNumber, to: toNumber } : undefined,
+            appearance: this.appearanceService.appearanceFor('bible')(),
+            content,
+            secondarySettings,
+          };
 
-          this.openedCastingWindow$.pipe(take(1)).subscribe((isOpen) => {
-            if (!isOpen) {
-              this.isOpeningWindow.next(true);
-              setTimeout(() => this.isOpeningWindow.next(false), 1200);
-            }
-            this.store.dispatch(
-              BibleActions.openCasting({
-                book: bookEntity,
-                chapter: chapterEntity,
-                fromIndex: fromNumber,
-                range: range ? { from: fromNumber, to: toNumber } : undefined,
-                appearance: this.appearanceService.appearanceFor('bible')(),
-                content: sections[0].content.map((el) => {
-                  return {
-                    ...el,
-                    text: [el.text],
-                    bookTitle: bookTitle,
-                  };
-                }),
-              })
-            );
-          });
-        }
+          return this.resolveSecondaryContent(
+            secondarySettings.enabled,
+            secondarySettings.translate,
+            secondaryCache,
+            bookEntity,
+            chapterEntity
+          ).pipe(
+            map((secondaryContent) => ({
+              ...basePayload,
+              secondaryContent,
+            }))
+          );
+        }),
+        filterEmpty()
+      )
+      .subscribe((payload) => {
+        this.openedCastingWindow$.pipe(take(1)).subscribe((isOpen) => {
+          if (!isOpen) {
+            this.isOpeningWindow.next(true);
+            setTimeout(() => this.isOpeningWindow.next(false), 1200);
+          }
+          this.store.dispatch(BibleActions.openCasting(payload));
+        });
       });
+  }
+
+  onSecondaryEnabledChange(enabled: boolean): void {
+    this.store.dispatch(
+      BibleActions.updateSecondaryTranslationSettings({ enabled })
+    );
+  }
+
+  onSecondaryTranslateChange(translate: BibleTranslateShort | null): void {
+    this.store.dispatch(
+      BibleActions.updateSecondaryTranslationSettings({ translate })
+    );
+  }
+
+  onSecondaryLayoutChange(layout: BibleSecondaryCastingLayout): void {
+    this.store.dispatch(
+      BibleActions.updateSecondaryTranslationSettings({ layout })
+    );
+  }
+
+  onSecondarySizeChange(sizePercent: number): void {
+    this.store.dispatch(
+      BibleActions.updateSecondaryTranslationSettings({ sizePercent })
+    );
   }
 
   onStopCasting() {
@@ -191,5 +268,60 @@ export class BibleSidebarComponent {
     } finally {
       this.isOpeningWindow.next(false);
     }
+  }
+
+  private createCastingContent(
+    sections: BibleChapterSection[],
+    book: BibleBookShort
+  ): BibleVerseForCasting[] {
+    return sections.flatMap((section) =>
+      section.content.map((verse) => ({
+        ...verse,
+        text: [verse.text],
+        bookTitle: book.title,
+      }))
+    );
+  }
+
+  private resolveSecondaryContent(
+    enabled: boolean,
+    translate: BibleTranslateShort | null,
+    cache: Record<string, BibleChapterSection[]>,
+    book: BibleBookShort,
+    chapter: BibleChapterShort
+  ): Observable<BibleSecondaryCastingContent | undefined> {
+    if (!enabled || !translate) {
+      return of(undefined);
+    }
+
+    const cacheKey = createBibleSecondaryTranslationCacheKey(
+      translate,
+      book,
+      chapter
+    );
+    const cachedSections = cache[cacheKey];
+
+    if (cachedSections) {
+      return of({
+        translate,
+        content: this.createCastingContent(cachedSections, book),
+      });
+    }
+
+    return this.apiSrv.getSections(translate, book, chapter).pipe(
+      map((sections) => {
+        this.store.dispatch(
+          BibleActions.setSecondaryTranslationChapter({
+            cacheKey,
+            sections,
+          })
+        );
+
+        return {
+          translate,
+          content: this.createCastingContent(sections, book),
+        };
+      })
+    );
   }
 }

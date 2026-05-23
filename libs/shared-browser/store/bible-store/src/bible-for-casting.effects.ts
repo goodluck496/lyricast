@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { Actions } from '@ngrx/effects';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import {
   createCastingFlow,
@@ -16,6 +16,7 @@ import {
 } from './bible.actions';
 import { BibleState } from './bible.store';
 import { selectCastingProcess } from './bible.selectors';
+import { map, tap } from 'rxjs';
 
 @Injectable()
 export class BibleForCastingEffects {
@@ -50,4 +51,13 @@ export class BibleForCastingEffects {
   pauseCasting$ = this.base.pauseCasting$;
   stopCasting$ = this.base.stopCasting$;
   slideNavigate$ = this.base.slideNavigate$;
+  updateSecondaryTranslationSettings$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(BibleActions.updateSecondaryTranslationSettings),
+      tap((data) => {
+        this.bridge.send(BibleActionsEnum.updateSecondaryTranslationSettings, data);
+      }),
+      map(() => ({ type: '[BibleForCastingEffects] secondary settings sent' }))
+    )
+  );
 }

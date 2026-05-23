@@ -25,7 +25,7 @@ export const bibleFeatureRoutes: Route[] = [
   {
     path: Pages.BIBLE,
     loadComponent: () =>
-      import('./pages/bible-page/bible-page.component').then(
+      import('./pages').then(
         (p) => p.BiblePageComponent
       ),
     resolve: [() => {
@@ -50,7 +50,7 @@ export const bibleFeatureRoutes: Route[] = [
   {
     path: Pages.CASTING,
     loadComponent: () =>
-      import('./pages/casting/bible-casting.component').then(
+      import('./pages').then(
         (p) => p.BibleCastingComponent
       ),
     providers: [

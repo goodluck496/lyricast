@@ -20,22 +20,57 @@
   <div class="preview-deck">
     <div class="reveal">
       <div class="slides">
-        <section>
-          <div
-            [fittext]="true"
-            [maxFontSize]="21"
-            [minFontSize]="8"
-            [activateOnInputEvents]="true"
-            [activateOnResize]="true"
-          >
+        <section
+          [class.preview-slide--with-secondary]="hasSecondaryContent()"
+          [class.preview-slide--right]="hasSecondaryContent() && isSecondaryLayout('right')"
+          [class.preview-slide--bottom]="hasSecondaryContent() && isSecondaryLayout('bottom')"
+          [class.preview-slide--bottomOverlay]="hasSecondaryContent() && isSecondaryLayout('bottomOverlay')"
+          [style.--secondary-size.%]="secondarySizePercent()"
+        >
+          <div class="preview-primary">
             <div
-              [innerHTML]="sanitizeHtml(slideText)"
-              [ngStyle]="appearanceService.getTextStyles(appearance())"
-              class="slide-content"></div>
+              class="preview-fit"
+              lyriFitText
+              [maxFontSize]="21"
+              [minFontSize]="8"
+              [textToWatch]="slideText()"
+            >
+              <div class="slide-content-wrapper">
+                <div
+                  [innerHTML]="slideText()"
+                  [ngStyle]="appearanceService.getTextStyles(appearance())"
+                  class="slide-content"></div>
+              </div>
+            </div>
           </div>
-
+          @if (hasSecondaryContent()) {
+            <div class="preview-secondary">
+              @if (secondaryTranslateTitle()) {
+                <div class="preview-secondary-title">
+                  {{ secondaryTranslateTitle() }}
+                </div>
+              }
+              <div class="preview-fit-wrapper">
+                <div
+                  class="preview-fit"
+                  lyriFitText
+                  [maxFontSize]="16"
+                  [minFontSize]="8"
+                  [textToWatch]="secondarySlideText()"
+                >
+                  <div class="slide-content-wrapper">
+                    <div
+                      [innerHTML]="secondarySlideText()"
+                      [ngStyle]="appearanceService.getTextStyles(appearance())"
+                      class="slide-content slide-content--secondary"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
         </section>
       </div>
     </div>
   </div>
 </div>
+

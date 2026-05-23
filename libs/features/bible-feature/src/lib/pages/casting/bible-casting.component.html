@@ -24,10 +24,9 @@
         <section class="stack">
           <section class="slides__section">
             <div
-              [fittext]="true"
+              lyriFitText
               [maxFontSize]="120"
-              [minFontSize]="appearance().minFontSize"
-              [activateOnResize]="true"
+              [minFontSize]="8"
             >
               <div class="slides__content"></div>
             </div>
@@ -36,21 +35,79 @@
           @for (content of selectedContents(); track content.number) {
             @for (line of content.text; track line) {
               @if (showingContent()) {
-                <section class="slides__section">
-                  <div
-                    [fittext]="true"
-                    [maxFontSize]="120"
-                    [minFontSize]="appearance().minFontSize"
-                    [activateOnResize]="true"
-                  >
+                @if (!hasSecondaryContent()) {
+                  <section class="slides__section">
                     <div
-                      class="slides__content"
-                      [ngStyle]="appearanceService.getTextStyles(appearance())"
-                      [innerHTML]="sanitizeHtml(line)">
+                      class="slides__fit"
+                      lyriFitText
+                      [maxFontSize]="80"
+                      [minFontSize]="8"
+                      [textToWatch]="line"
+                    >
+                      <div class="slides__content-wrapper">
+                        <div
+                          class="slides__content"
+                          [ngStyle]="appearanceService.getTextStyles(appearance())"
+                          [innerHTML]="sanitizeHtml(line)">
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  </section>
+                } @else {
+                  <section
+                    class="slides__section slides__section--with-secondary"
+                    [class.slides__secondary--right]="isSecondaryLayout('right')"
+                    [class.slides__secondary--bottom]="isSecondaryLayout('bottom')"
+                    [class.slides__secondary--bottomOverlay]="isSecondaryLayout('bottomOverlay')"
+                    [style.--secondary-size.%]="secondarySizePercent()"
+                  >
+                    <div class="slides__primary">
+                      <div
+                        class="slides__fit"
+                        lyriFitText
+                        [maxFontSize]="80"
+                        [minFontSize]="8"
+                        [textToWatch]="line"
+                      >
+                        <div class="slides__content-wrapper">
+                          <div
+                            class="slides__content"
+                            [ngStyle]="appearanceService.getTextStyles(appearance())"
+                            [innerHTML]="sanitizeHtml(line)">
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                </section>
+                    <div class="slides__secondary">
+                      @if (secondaryTranslateTitle()) {
+                        <div class="slides__secondary-title">
+                          {{ secondaryTranslateTitle() }}
+                        </div>
+                      }
+
+                      @for (secondaryContent of secondaryContents(); track secondaryContent.number) {
+                        @for (secondaryLine of secondaryContent.text; track secondaryLine) {
+                          <div
+                            class="slides__fit slides__fit--secondary"
+                            lyriFitText
+                            [maxFontSize]="90"
+                            [minFontSize]="8"
+                            [textToWatch]="secondaryLine"
+                          >
+                            <div class="slides__content-wrapper">
+                              <div
+                                class="slides__content slides__content--secondary"
+                                [ngStyle]="appearanceService.getTextStyles(appearance())"
+                                [innerHTML]="sanitizeHtml(secondaryLine)">
+                              </div>
+                            </div>
+                          </div>
+                        }
+                      }
+                    </div>
+                  </section>
+                }
               }
             }
           }

@@ -4,6 +4,7 @@ import {
   BibleActions,
   BibleActionsEnum,
   BiblePresentationNavigatePayload,
+  BibleSecondaryTranslationSettings,
   BibleStartCastingPayload,
 } from './bible.actions';
 import { BibleState } from './bible.store';
@@ -27,6 +28,10 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
     ),
   [BibleActionsEnum.pauseCasting]: () => BibleActions.pauseCasting(),
   [BibleActionsEnum.stopCasting]: () => BibleActions.stopCasting(),
+  [BibleActionsEnum.updateSecondaryTranslationSettings]: (eventData) =>
+    BibleActions.updateSecondaryTranslationSettings(
+      eventData.payload as Partial<BibleSecondaryTranslationSettings>
+    ),
   [CASTING_APPEARANCE_UPDATE_EVENT]: (eventData) =>
     BibleActions.updateCastingAppearance(eventData.payload as any),
 };

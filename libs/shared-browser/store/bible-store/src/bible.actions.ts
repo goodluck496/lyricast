@@ -15,13 +15,38 @@ export type BibleStartCastingPayload = {
   book: BibleBookShort;
   chapter: BibleChapterShort;
   content: BibleVerseForCasting[];
+  secondaryContent?: BibleSecondaryCastingContent;
+  secondarySettings?: BibleSecondaryTranslationSettings;
   fromIndex: number;
   range?: { from: number; to: number };
   appearance?: CastingAppearance;
 };
 
+export type BibleSecondaryCastingLayout = 'right' | 'bottom' | 'bottomOverlay';
+
+export type BibleSecondaryCastingContent = {
+  translate: BibleTranslateShort;
+  content: BibleVerseForCasting[];
+};
+
+export type BibleSecondaryTranslationSettings = {
+  enabled: boolean;
+  translate: BibleTranslateShort | null;
+  layout: BibleSecondaryCastingLayout;
+  sizePercent: number;
+};
+
+export function createBibleSecondaryTranslationCacheKey(
+  translate: BibleTranslateShort,
+  book: BibleBookShort,
+  chapter: BibleChapterShort
+): string {
+  return [translate.keyForSearch, book.number, chapter.number].join(':');
+}
+
 export type BiblePresentationNavigatePayload = {
   currentContent: BibleVerseForCasting;
+  secondaryContent?: BibleSecondaryCastingContent;
   nextIndex: number;
   /**
    * Перемещает слайды по порядку
@@ -54,6 +79,9 @@ export const BibleActionsEnum = {
   pauseCasting: 'pauseCasting',
   castingProcessChange: 'castingProcessChange',
   updateCastingAppearance: 'updateCastingAppearance',
+  updateSecondaryTranslationSettings: 'updateSecondaryTranslationSettings',
+  setSecondaryTranslationChapter: 'setSecondaryTranslationChapter',
+  clearSecondaryTranslationCache: 'clearSecondaryTranslationCache',
   selectVersesRange: 'selectVersesRange',
   resetVersesRange: 'resetVersesRange',
 } as const;
@@ -94,6 +122,13 @@ export const BibleActions = createActionGroup({
     [BibleActionsEnum.castingProcessChange]:
       props<BiblePresentationNavigatePayload>(),
     [BibleActionsEnum.updateCastingAppearance]: props<CastingAppearance>(),
+    [BibleActionsEnum.updateSecondaryTranslationSettings]:
+      props<Partial<BibleSecondaryTranslationSettings>>(),
+    [BibleActionsEnum.setSecondaryTranslationChapter]: props<{
+      cacheKey: string;
+      sections: BibleChapterSection[];
+    }>(),
+    [BibleActionsEnum.clearSecondaryTranslationCache]: emptyProps(),
     [BibleActionsEnum.openedCastingPage]: emptyProps(),
     [BibleActionsEnum.selectVersesRange]: props<{ from: number; to: number }>(),
     [BibleActionsEnum.resetVersesRange]: emptyProps(),

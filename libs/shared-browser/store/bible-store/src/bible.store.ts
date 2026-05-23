@@ -7,6 +7,7 @@ import {
   PrevOrNextVerse,
 } from '@lyri-cast/entities';
 import {
+  BibleSecondaryTranslationSettings,
   BiblePresentationNavigatePayload,
   BibleStartCastingPayload,
 } from './bible.actions';
@@ -40,6 +41,8 @@ export type BibleState = {
   castingProcess: BibleStartCastingPayload | null;
   castingProcessNavigate: BiblePresentationNavigatePayload | null;
   castingAppearance: CastingAppearance;
+  secondaryTranslationSettings: BibleSecondaryTranslationSettings;
+  secondaryTranslationCache: Record<string, BibleChapterSection[]>;
 
   castingPaused: boolean;
 };
@@ -67,4 +70,11 @@ export const bibleInitialState: BibleState = {
   castingPaused: true,
   castingProcess: null,
   castingAppearance: DEFAULT_CASTING_APPEARANCE,
+  secondaryTranslationSettings: {
+    enabled: false,
+    translate: null,
+    layout: 'right',
+    sizePercent: 50,
+  },
+  secondaryTranslationCache: {},
 };

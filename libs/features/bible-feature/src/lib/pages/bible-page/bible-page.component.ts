@@ -477,6 +477,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   }
 
   onNavigateSlide(dir: 'prev' | 'next', selectedVerse: BibleVerse) {
+    this.store.dispatch(BibleActions.resetVersesRange());
     if (dir === 'prev') {
       if (selectedVerse.prev.chapterChanged || selectedVerse.prev.bookChanged) {
         this.store.dispatch(

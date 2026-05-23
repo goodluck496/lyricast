@@ -105,6 +105,8 @@ export const BibleReducers = createReducer<BibleState>(
       ...state,
       castingProcess: data,
       castingAppearance: data.appearance ?? state.castingAppearance,
+      secondaryTranslationSettings:
+        data.secondarySettings ?? state.secondaryTranslationSettings,
       castingPaused: false,
     } satisfies BibleState;
   }),
@@ -113,6 +115,8 @@ export const BibleReducers = createReducer<BibleState>(
       ...state,
       castingProcess: data,
       castingAppearance: data.appearance ?? state.castingAppearance,
+      secondaryTranslationSettings:
+        data.secondarySettings ?? state.secondaryTranslationSettings,
       castingPaused: false,
     } satisfies BibleState;
   }),
@@ -140,6 +144,37 @@ export const BibleReducers = createReducer<BibleState>(
     return {
       ...state,
       castingAppearance: data,
+    } satisfies BibleState;
+  }),
+  on(BibleActions.updateSecondaryTranslationSettings, (state, data) => {
+    const enabled = data.enabled ?? state.secondaryTranslationSettings.enabled;
+
+    return {
+      ...state,
+      secondaryTranslationSettings: {
+        ...state.secondaryTranslationSettings,
+        ...data,
+      },
+      secondaryTranslationCache: enabled ? state.secondaryTranslationCache : {},
+    } satisfies BibleState;
+  }),
+  on(BibleActions.setSecondaryTranslationChapter, (state, data) => {
+    return {
+      ...state,
+      secondaryTranslationCache: {
+        ...state.secondaryTranslationCache,
+        [data.cacheKey]: data.sections,
+      },
+    } satisfies BibleState;
+  }),
+  on(BibleActions.clearSecondaryTranslationCache, (state) => {
+    return {
+      ...state,
+      secondaryTranslationCache: {},
+      secondaryTranslationSettings: {
+        ...state.secondaryTranslationSettings,
+        enabled: false,
+      },
     } satisfies BibleState;
   }),
   on(BibleActions.changePath, (state, data) => {

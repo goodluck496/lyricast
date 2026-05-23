@@ -21,7 +21,8 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke(ElectronActionEvents.CLOSE_WINDOW, arg),
   getDisplays: () => ipcRenderer.invoke(ElectronAppEvents.GET_DISPLAYS),
   send: (data: EventData) => {
-    return ipcRenderer.invoke(ElectronCommonEvents.SEND, JSON.stringify(data));
+    const str = JSON.stringify(data);
+    return ipcRenderer.invoke(ElectronCommonEvents.SEND, str);
   },
   receive: (callback) => {
     ipcRenderer.on(ElectronCommonEvents.RECEIVE, (senderEvent, data) => {
@@ -37,7 +38,8 @@ contextBridge.exposeInMainWorld('electron', {
   checkForAppUpdates: () => {
     ipcRenderer.send('APP_FORCE_CHECK_UPDATE');
   },
-  loadUserSettings: () => ipcRenderer.invoke(ElectronActionEvents.LOAD_SETTINGS),
+  loadUserSettings: () =>
+    ipcRenderer.invoke(ElectronActionEvents.LOAD_SETTINGS),
   saveUserSettings: (settings: unknown) =>
     ipcRenderer.invoke(ElectronActionEvents.SAVE_SETTINGS, settings),
 } satisfies Context);

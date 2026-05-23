@@ -86,11 +86,11 @@
   height: 100%;
 }
 
-.preview-slide--with-secondary {
+.slides > section.preview-slide--with-secondary {
   display: grid !important;
 }
 
-.preview-slide--right {
+.slides > section.preview-slide--right {
   grid-template-columns: minmax(0, calc(100% - var(--secondary-size))) minmax(0, var(--secondary-size));
   grid-template-rows: minmax(0, 1fr);
 
@@ -100,7 +100,7 @@
   }
 }
 
-.preview-slide--bottom {
+.slides > section.preview-slide--bottom {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, calc(100% - var(--secondary-size))) minmax(0, var(--secondary-size));
 
@@ -110,27 +110,6 @@
   }
 }
 
-.preview-slide--bottomOverlay {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-
-  .preview-primary {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .preview-secondary {
-    position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: 12px;
-    height: var(--secondary-size);
-    padding: 6px 8px;
-    background: rgb(0 0 0 / 36%);
-    border: 1px solid rgb(255 255 255 / 24%);
-    border-radius: 4px;
-  }
-}
 
 .preview-secondary {
   // Title takes some space, so we need to account for it

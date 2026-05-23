@@ -1,15 +1,4 @@
-import {
-  Component,
-  DestroyRef,
-  effect,
-  ElementRef,
-  inject,
-  input,
-  OnInit,
-  output,
-  signal,
-  viewChildren,
-} from '@angular/core';
+import { Component, DestroyRef, ElementRef, inject, input, OnInit, output, signal, viewChildren } from '@angular/core';
 
 import { NgScrollbar } from 'ngx-scrollbar';
 import { BibleChapterSection, BibleVerse } from '@lyri-cast/entities';
@@ -19,7 +8,7 @@ import {
   selectSelectedBibleVerse,
   selectSelectedPath,
   selectSelectedPrevOrNextVerse,
-  selectSelectedVersesRange,
+  selectSelectedVersesRange
 } from '@lyri-cast/bible-store';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime } from 'rxjs';
@@ -41,26 +30,21 @@ export class BibleChapterComponent implements OnInit {
   destroyRef = inject(DestroyRef);
   elRef = inject(ElementRef);
   sanitizer = inject(DomSanitizer);
-  private readonly bibleOnboarding = inject(BibleOnboardingService);
   listItems = viewChildren<ElementRef<HTMLElement>>('verseItem');
-
   sections = input<BibleChapterSection[]>([]);
-
-  startCasting = output();
-
+  startCasting = output<BibleVerse>();
   selectedVerse = signal<BibleVerse | null>(null);
   selectedVerse$ = this.store.select(selectSelectedBibleVerse);
   selectedPrevOrNextVerse$ = this.store.select(selectSelectedPrevOrNextVerse);
   selectedPath$ = this.store.select(selectSelectedPath);
-
   selectedRange = signal<{ from: number; to: number } | null>(null);
   selectedRange$ = this.store.select(selectSelectedVersesRange);
-
   isScrolled = false;
-
+  private readonly bibleOnboarding = inject(BibleOnboardingService);
   private scrollRetryTimer: any = null;
   private scrollRetryCount = 0;
   private readonly scrollRetryMax = 10;
+  private scrollTimeout: any;
 
   // Функция для санитизации HTML
   sanitizeHtml(rawHtml: string): SafeHtml {
@@ -125,8 +109,6 @@ export class BibleChapterComponent implements OnInit {
       });
     });
   }
-
-  private scrollTimeout: any;
 
   scrollToSelected() {
     if (this.isScrolled) {
@@ -215,7 +197,7 @@ export class BibleChapterComponent implements OnInit {
     }
 
     if (casting) {
-      this.startCasting.emit();
+      this.startCasting.emit(verse);
     }
   }
 }

@@ -1,26 +1,32 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BibleCastingPreviewComponent } from '../casting-preview';
 import { NavigatorFeatureComponent } from '@lyri-cast/navigator-feature';
 import {
   BibleActions,
-  BibleSecondaryCastingLayout,
   BibleSecondaryCastingContent,
+  BibleSecondaryCastingLayout,
   BibleState,
   createBibleSecondaryTranslationCacheKey,
   selectCastingPaused,
-  selectSecondaryTranslationSettings,
   selectSecondaryTranslationCache,
+  selectSecondaryTranslationSettings,
   selectSelectedBibleVerse,
   selectSelectedChapterSections,
   selectSelectedVersesRange,
 } from '@lyri-cast/bible-store';
 import { Store } from '@ngrx/store';
-import { map, Observable, of, switchMap, take, withLatestFrom } from 'rxjs';
+import {
+  BehaviorSubject,
+  combineLatest,
+  firstValueFrom,
+  map,
+  Observable,
+  of,
+  switchMap,
+  take,
+  withLatestFrom,
+} from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
 import {
   BibleBookShort,
@@ -29,14 +35,22 @@ import {
   BibleTranslateShort,
   BibleVerseForCasting,
 } from '@lyri-cast/entities';
-import { AppActions, selectOpenedWindow, SidebarService, WindowService, SettingsService, BridgeService, Pages, DEFAULT_CASTING_PAGE_CONFIG, CastingAppearanceService } from '@lyri-cast/common-browser';
+import {
+  AppActions,
+  BridgeService,
+  CastingAppearanceService,
+  DEFAULT_CASTING_PAGE_CONFIG,
+  Pages,
+  selectOpenedWindow,
+  SettingsService,
+  SidebarService,
+  WindowService,
+} from '@lyri-cast/common-browser';
 import { BibleSidebarData } from '../../types';
-import { AppWindowTypes, APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
-import { firstValueFrom, BehaviorSubject, combineLatest } from 'rxjs';
-import { skip, filter } from 'rxjs/operators';
-import { TourPrimeNgModule } from 'ngx-ui-tour-primeng';
+import { APP_COMMON_ACTIONS, AppWindowTypes } from '@lyri-cast/common-electron';
+import { filter, skip } from 'rxjs/operators';
+import { TourPrimeNgModule, TourService } from 'ngx-ui-tour-primeng';
 import { BibleOnboardingService } from '../../services/bible-onboarding.service';
-import { TourService } from 'ngx-ui-tour-primeng';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { MenuItem } from 'primeng/api';
 import { CastingAppearanceControlsComponent } from '@lyri-cast/asset-management';
@@ -66,45 +80,11 @@ import { MatSliderModule } from '@angular/material/slider';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BibleSidebarComponent {
-  private readonly store = inject<Store<BibleState>>(Store<BibleState>);
-  private readonly sidebarService =
-    inject<SidebarService<BibleSidebarData>>(SidebarService);
-  private readonly bibleOnboarding = inject(BibleOnboardingService);
-  private readonly tourService = inject(TourService);
-  private readonly windowSrv = inject(WindowService);
-  private readonly settingsSrv = inject(SettingsService);
-  private readonly bridge = inject(BridgeService);
-  private readonly appearanceService = inject(CastingAppearanceService);
-  private readonly apiSrv = inject(BibleApiService);
-
-  private canTourNext(tourService: unknown): tourService is { next: () => void } {
-    return typeof (tourService as { next: () => void }).next === 'function';
-  }
-
-  openedCastingWindow$ = this.store.select(selectOpenedWindow).pipe(map((e) => !!e));
-  castingIsPaused$ = this.store.select(selectCastingPaused);
-  sectionList$: Observable<BibleChapterSection[]> = this.store.select(
-    selectSelectedChapterSections
-  );
-  selectedRange$ = this.store.select(selectSelectedVersesRange);
-  secondarySettings$ = this.store.select(selectSecondaryTranslationSettings);
-  secondaryCache$ = this.store.select(selectSecondaryTranslationCache);
-  secondaryTranslateOptions$ = this.apiSrv.getTranslates().pipe(
-    map((translates) =>
-      translates.map((translate) => ({
-        label: translate.title || translate.sourceTitle,
-        value: translate,
-      }))
-    )
-  );
-
   isOpeningWindow = new BehaviorSubject<boolean>(false);
   layoutOptions: { label: string; value: BibleSecondaryCastingLayout }[] = [
     { label: 'Справа', value: 'right' },
     { label: 'Снизу', value: 'bottom' },
-    { label: 'Поверх снизу', value: 'bottomOverlay' },
   ];
-
   closeMenuItems$: Observable<MenuItem[]> = combineLatest([
     this.openedCastingWindow$,
     this.isOpeningWindow,
@@ -124,6 +104,34 @@ export class BibleSidebarComponent {
       },
     ])
   );
+  private readonly store = inject<Store<BibleState>>(Store<BibleState>);
+  openedCastingWindow$ = this.store
+    .select(selectOpenedWindow)
+    .pipe(map((e) => !!e));
+  castingIsPaused$ = this.store.select(selectCastingPaused);
+  sectionList$: Observable<BibleChapterSection[]> = this.store.select(
+    selectSelectedChapterSections
+  );
+  selectedRange$ = this.store.select(selectSelectedVersesRange);
+  secondarySettings$ = this.store.select(selectSecondaryTranslationSettings);
+  secondaryCache$ = this.store.select(selectSecondaryTranslationCache);
+  private readonly sidebarService =
+    inject<SidebarService<BibleSidebarData>>(SidebarService);
+  private readonly bibleOnboarding = inject(BibleOnboardingService);
+  private readonly tourService = inject(TourService);
+  private readonly windowSrv = inject(WindowService);
+  private readonly settingsSrv = inject(SettingsService);
+  private readonly bridge = inject(BridgeService);
+  private readonly appearanceService = inject(CastingAppearanceService);
+  private readonly apiSrv = inject(BibleApiService);
+  secondaryTranslateOptions$ = this.apiSrv.getTranslates().pipe(
+    map((translates) =>
+      translates.map((translate) => ({
+        label: translate.title || translate.sourceTitle,
+        value: translate,
+      }))
+    )
+  );
 
   onStartCasting() {
     this.store
@@ -138,45 +146,54 @@ export class BibleSidebarComponent {
           this.secondarySettings$,
           this.secondaryCache$
         ),
-        switchMap(([verse, sections, sidebarData, range, secondarySettings, secondaryCache]) => {
-          if (!sidebarData || !sidebarData.bibleForm) {
-            return of(null);
-          }
-
-          const groupValue = sidebarData.bibleForm;
-
-          if (!groupValue.book || !groupValue.chapter || !sections.length) {
-            return of(null);
-          }
-
-          const fromNumber = range?.from ?? verse.number;
-          const toNumber = range?.to ?? verse.number;
-          const bookEntity = groupValue.book.baseEntity;
-          const chapterEntity = groupValue.chapter.baseEntity;
-          const content = this.createCastingContent(sections, bookEntity);
-          const basePayload = {
-            book: bookEntity,
-            chapter: chapterEntity,
-            fromIndex: fromNumber,
-            range: range ? { from: fromNumber, to: toNumber } : undefined,
-            appearance: this.appearanceService.appearanceFor('bible')(),
-            content,
+        switchMap(
+          ([
+            verse,
+            sections,
+            sidebarData,
+            range,
             secondarySettings,
-          };
-
-          return this.resolveSecondaryContent(
-            secondarySettings.enabled,
-            secondarySettings.translate,
             secondaryCache,
-            bookEntity,
-            chapterEntity
-          ).pipe(
-            map((secondaryContent) => ({
-              ...basePayload,
-              secondaryContent,
-            }))
-          );
-        }),
+          ]) => {
+            if (!sidebarData || !sidebarData.bibleForm) {
+              return of(null);
+            }
+
+            const groupValue = sidebarData.bibleForm;
+
+            if (!groupValue.book || !groupValue.chapter || !sections.length) {
+              return of(null);
+            }
+
+            const fromNumber = range?.from ?? verse.number;
+            const toNumber = range?.to ?? verse.number;
+            const bookEntity = groupValue.book.baseEntity;
+            const chapterEntity = groupValue.chapter.baseEntity;
+            const content = this.createCastingContent(sections, bookEntity);
+            const basePayload = {
+              book: bookEntity,
+              chapter: chapterEntity,
+              fromIndex: fromNumber,
+              range: range ? { from: fromNumber, to: toNumber } : undefined,
+              appearance: this.appearanceService.appearanceFor('bible')(),
+              content,
+              secondarySettings,
+            };
+
+            return this.resolveSecondaryContent(
+              secondarySettings.enabled,
+              secondarySettings.translate,
+              secondaryCache,
+              bookEntity,
+              chapterEntity
+            ).pipe(
+              map((secondaryContent) => ({
+                ...basePayload,
+                secondaryContent,
+              }))
+            );
+          }
+        ),
         filterEmpty()
       )
       .subscribe((payload) => {
@@ -240,26 +257,33 @@ export class BibleSidebarComponent {
     this.isOpeningWindow.next(true);
     try {
       await this.settingsSrv.init();
-      const display = await firstValueFrom(this.settingsSrv.getDisplayForCasting());
+      const display = await firstValueFrom(
+        this.settingsSrv.getDisplayForCasting()
+      );
       if (!display) return;
 
       this.store.dispatch(BibleActions.stopCasting());
 
-    const procId = await this.windowSrv.electronContext.openWindow({
-      ...DEFAULT_CASTING_PAGE_CONFIG,
-      display,
-      title: 'Casting Window',
-      type: AppWindowTypes.CASTING,
-    });
+      const procId = await this.windowSrv.electronContext.openWindow({
+        ...DEFAULT_CASTING_PAGE_CONFIG,
+        display,
+        title: 'Casting Window',
+        type: AppWindowTypes.CASTING,
+      });
 
-    this.store.dispatch(AppActions.setProcId({ procId, pageType: AppWindowTypes.CASTING }));
+      this.store.dispatch(
+        AppActions.setProcId({ procId, pageType: AppWindowTypes.CASTING })
+      );
 
-    await firstValueFrom(
-      this.bridge.queueEvents.pipe(
-        skip(1),
-        filter((event): event is { event: string; payload: unknown } => !!event && event.event === APP_COMMON_ACTIONS.appInit)
-      )
-    );
+      await firstValueFrom(
+        this.bridge.queueEvents.pipe(
+          skip(1),
+          filter(
+            (event): event is { event: string; payload: unknown } =>
+              !!event && event.event === APP_COMMON_ACTIONS.appInit
+          )
+        )
+      );
 
       await this.windowSrv.electronContext.send({
         event: APP_COMMON_ACTIONS.openPage,
@@ -268,6 +292,12 @@ export class BibleSidebarComponent {
     } finally {
       this.isOpeningWindow.next(false);
     }
+  }
+
+  private canTourNext(
+    tourService: unknown
+  ): tourService is { next: () => void } {
+    return typeof (tourService as { next: () => void }).next === 'function';
   }
 
   private createCastingContent(

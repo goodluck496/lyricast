@@ -16,12 +16,17 @@ import fs from 'fs';
 @Injectable()
 export class BibleByFilesService {
   // Встроенные ассеты в пакете приложения
-  assetsPath = path.resolve(process.cwd(), 'assets', 'complete-jsons', 'bibles');
+  assetsPath = path.resolve(
+    process.cwd(),
+    'assets',
+    'complete-jsons',
+    'bibles'
+  );
   // Внешние ассеты (user-assets / assetsPath), инициализируются в конструкторе
   assetsPathNew = '';
 
   biblesCache: Record<string, BibleTranslate> = {};
-
+  shortTranslatesCache: BibleTranslateShort[] = [];
   isReady = false;
 
   readedTranslates = false;
@@ -45,22 +50,22 @@ export class BibleByFilesService {
 
   getAllBibles(): BibleTranslate[] {
     const allBibles = this.getAllShortBibles();
-
-    return allBibles.map((el) => this.biblesCache[el.keyForSearch]);
+    return allBibles
+      .map((el) => this.loadBible(el.keyForSearch))
+      .filter((b): b is BibleTranslate => !!b);
   }
 
   getAllShortBibles(): BibleTranslateShort[] {
     if (this.readedTranslates) {
-      return Object.keys(this.biblesCache).map((key) => this.biblesCache[key]);
+      return this.shortTranslatesCache;
     }
     const translates: BibleTranslateShort[] = [];
     const seenKeys = new Set<string>();
 
     try {
-      // Читаем переводы из двух мест: встроенные ассеты и внешние (user-assets), если есть
       const dirs = [this.assetsPath, this.assetsPathNew]
         .filter(Boolean)
-        .filter((dir, idx, arr) => arr.indexOf(dir) === idx) // убираем дубликаты путей
+        .filter((dir, idx, arr) => arr.indexOf(dir) === idx)
         .filter((dir) => fs.existsSync(dir));
 
       for (const dir of dirs) {
@@ -69,44 +74,88 @@ export class BibleByFilesService {
           .filter((file) => file.toLowerCase().endsWith('.bible.json'));
 
         for (const translateFile of translatesFiles) {
-          const translateStr = fs.readFileSync(path.resolve(dir, translateFile));
-          const translate: BibleTranslate = JSON.parse(translateStr.toString());
+          const filePath = path.resolve(dir, translateFile);
+          const fileContent = fs.readFileSync(filePath, 'utf8');
 
-          const key = translate.keyForSearch;
-          if (!key) {
-            continue;
-          }
+          const keyForSearchM = fileContent.match(
+            /"keyForSearch"\s*:\s*"([^"]+)"/
+          );
+          const titleM = fileContent.match(/"title"\s*:\s*"([^"]+)"/);
+          const sourceTitleM = fileContent.match(
+            /"sourceTitle"\s*:\s*"([^"]+)"/
+          );
+          const langM = fileContent.match(/"lang"\s*:\s*"([^"]+)"/);
+          const versionM = fileContent.match(/"version"\s*:\s*"([^"]+)"/);
+          const isClassicBookOrderM = fileContent.match(
+            /"isClassicBookOrder"\s*:\s*(true|false)/
+          );
 
-          // Если такой перевод уже загружен (даже из другого файла) — не дублируем
-          if (seenKeys.has(key)) {
-            continue;
-          }
+          const key = keyForSearchM ? keyForSearchM[1] : '';
+          if (!key) continue;
+
+          if (seenKeys.has(key)) continue;
           seenKeys.add(key);
 
-          this.biblesCache[key] = translate;
-
           translates.push({
-            title: translate.title,
-            sourceTitle: translate.sourceTitle,
+            title: titleM ? titleM[1] : '',
+            sourceTitle: sourceTitleM ? sourceTitleM[1] : '',
             keyForSearch: key,
-            lang: translate.lang,
-            version: translate.version,
+            lang: langM ? langM[1] : 'en',
+            version: versionM ? versionM[1] : '',
             isDefault: false,
-            isClassicBookOrder: translate.isClassicBookOrder,
+            isClassicBookOrder: isClassicBookOrderM
+              ? isClassicBookOrderM[1] === 'true'
+              : false,
           });
         }
       }
 
+      this.shortTranslatesCache = translates;
       this.readedTranslates = true;
       return translates;
     } catch (error) {
-      console.log('getAllBibles', error);
+      console.log('getAllShortBibles error', error);
       return [];
     }
   }
 
+  loadBible(key: string): BibleTranslate | null {
+    if (this.biblesCache[key]) {
+      return this.biblesCache[key];
+    }
+
+    try {
+      const dirs = [this.assetsPath, this.assetsPathNew]
+        .filter(Boolean)
+        .filter((dir, idx, arr) => arr.indexOf(dir) === idx)
+        .filter((dir) => fs.existsSync(dir));
+
+      for (const dir of dirs) {
+        const translatesFiles = fs
+          .readdirSync(dir)
+          .filter((file) => file.toLowerCase().endsWith('.bible.json'));
+
+        for (const translateFile of translatesFiles) {
+          const filePath = path.resolve(dir, translateFile);
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+          const keyForSearchM = fileContent.match(
+            /"keyForSearch"\s*:\s*"([^"]+)"/
+          );
+          if (keyForSearchM && keyForSearchM[1] === key) {
+            const translate: BibleTranslate = JSON.parse(fileContent);
+            this.biblesCache[key] = translate;
+            return translate;
+          }
+        }
+      }
+    } catch (e) {
+      console.log('loadBible error', e);
+    }
+    return null;
+  }
+
   getBooks(key: string): BibleBook[] {
-    const translate = this.getAllBibles().find((el) => el.keyForSearch === key);
+    const translate = this.loadBible(key);
     if (!translate) {
       return [];
     }
@@ -152,7 +201,6 @@ export class BibleByFilesService {
     const chapters = this.getChaptersInBook(translate, bookId).find(
       (el) => String(el.number) === String(chapterId)
     );
-
     return chapters?.subsections || [];
   }
 

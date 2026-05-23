@@ -7,26 +7,20 @@ import {
   inject,
   OnInit,
   signal,
-  viewChild,
+  viewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HighlighterPipe, PageContainerComponent } from '@lyri-cast/ui-lib';
-import {
-  FormControl,
-  FormGroup,
-  FormsModule,
-  ReactiveFormsModule,
-} from '@angular/forms';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 
 import {
   BibleBookShort,
-  BibleBookTitle,
   BibleBookType,
   BibleChapterSection,
   BibleChapterShort,
   BibleTranslateShort,
-  BibleVerse,
+  BibleVerse
 } from '@lyri-cast/entities';
 import {
   combineLatest,
@@ -36,9 +30,10 @@ import {
   fromEvent,
   map,
   Observable,
+  of,
   take,
   tap,
-  withLatestFrom,
+  withLatestFrom
 } from 'rxjs';
 import { skip } from 'rxjs/operators';
 import { filterEmpty } from '@lyri-cast/common';
@@ -48,12 +43,16 @@ import { selectSelectedHistoryKey } from '@lyri-cast/navigator-feature';
 import {
   BibleActions,
   BibleState,
+  createBibleSecondaryTranslationCacheKey,
   selectBooks,
   selectChapterLoading,
+  selectSecondaryTranslationCache,
+  selectSecondaryTranslationSettings,
   selectSelectedBibleVerse,
   selectSelectedBook,
+  selectSelectedChapter,
   selectSelectedChapterSections,
-  selectSelectedPath,
+  selectSelectedPath
 } from '@lyri-cast/bible-store';
 import { BibleChapterComponent } from '../../components/bible-chapter/bible-chapter.component';
 import {
@@ -63,13 +62,15 @@ import {
   IUiLyriItemInList,
   IUiLyriListItem,
   ListBoxComponent,
-  ListBoxTemplates,
+  ListBoxTemplates
 } from '@lyri-cast/form';
 import {
+  CastingAppearanceService,
+  LoadingStatusService,
+  OnboardingHelpService,
   PAGE_CONTAINER_TEMPLATES,
   Pages,
-  CastingAppearanceService,
-  SidebarService,
+  SidebarService
 } from '@lyri-cast/common-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BibleApiService } from '@lyri-cast/data-access-bible';
@@ -80,11 +81,9 @@ import { BibleSidebarData } from '../../types';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { SvgIconComponent } from '@lyri-cast/svg-icons';
 import { ButtonDirective } from 'primeng/button';
-import { LoadingStatusService } from '@lyri-cast/common-browser';
 import { SelectModule } from 'primeng/select';
 import { PopoverModule } from 'primeng/popover';
 import { TourPrimeNgModule } from 'ngx-ui-tour-primeng';
-import { OnboardingHelpService } from '@lyri-cast/common-browser';
 import { BibleOnboardingService } from '../../services/bible-onboarding.service';
 
 @Component({
@@ -112,20 +111,6 @@ import { BibleOnboardingService } from '../../services/bible-onboarding.service'
   styleUrl: './bible-page.component.scss',
 })
 export class BiblePageComponent implements OnInit, AfterViewInit {
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly router = inject(Router);
-  private readonly elRef = inject(ElementRef);
-  private readonly apiSrv = inject(BibleApiService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly store = inject<Store<BibleState>>(Store<BibleState>);
-  private readonly actions$ = inject(Actions);
-  private readonly sidebarService =
-    inject<SidebarService<BibleSidebarData>>(SidebarService);
-  private readonly loadingStatusService = inject(LoadingStatusService);
-  private readonly onboardingHelpService = inject(OnboardingHelpService);
-  private readonly bibleOnboarding = inject(BibleOnboardingService);
-  private readonly appearanceService = inject(CastingAppearanceService);
-
   bibleFormGroup = new FormGroup({
     translate: new FormControl<IUiLyriListItem<BibleTranslateShort> | null>(
       null
@@ -134,31 +119,23 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
     chapter: new FormControl<IUiLyriListItem<BibleChapterShort> | null>(null),
     content: new FormControl(null),
   });
-
   lyriBibleChapter = viewChild(BibleChapterComponent);
-
   disableFormEmitChange = false;
-
-  bibleTranslates$: Observable<IUiLyriListItem<BibleTranslateShort>[]> =
-    this.apiSrv.getTranslates().pipe(
-      map((data) =>
-        data.map(
-          (el) =>
-            ({
-              title: el.title || el.sourceTitle,
-              searchKey: el.keyForSearch,
-              baseEntity: el,
-            } satisfies IUiLyriListItem<BibleTranslateShort>)
-        )
-      ),
-      tap(() => {
-        this.isLoading.set(false);
-        this.loadingStatusService.finishInitialLoading();
-      })
-    );
   bibleTranslates: IUiLyriListItem<BibleTranslateShort>[] = [];
-
   booksLikeList = false;
+  isLoading = signal(true);
+  firstLoad = false;
+  protected readonly ListBoxTemplates = ListBoxTemplates;
+  protected readonly BibleBookType = BibleBookType;
+  protected readonly Pages = Pages;
+  protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
+  protected readonly DashBoxTemplates = DashBoxTemplates;
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
+  private readonly elRef = inject(ElementRef);
+  private readonly apiSrv = inject(BibleApiService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly store = inject<Store<BibleState>>(Store<BibleState>);
   bookList$: Observable<IUiLyriDashItem<BibleBookShort>[]> = this.store
     .select(selectBooks)
     .pipe(
@@ -199,11 +176,27 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   sectionList$: Observable<BibleChapterSection[]> = this.store.select(
     selectSelectedChapterSections
   );
-
-  isLoading = signal(true);
-
-  firstLoad = false;
-
+  private readonly actions$ = inject(Actions);
+  private readonly sidebarService =
+    inject<SidebarService<BibleSidebarData>>(SidebarService);
+  private readonly loadingStatusService = inject(LoadingStatusService);
+  bibleTranslates$: Observable<IUiLyriListItem<BibleTranslateShort>[]> =
+    this.apiSrv.getTranslates().pipe(
+      map((data) =>
+        data.map(
+          (el) =>
+            ({
+              title: el.title || el.sourceTitle,
+              searchKey: el.keyForSearch,
+              baseEntity: el,
+            } satisfies IUiLyriListItem<BibleTranslateShort>)
+        )
+      ),
+      tap(() => {
+        this.isLoading.set(false);
+        this.loadingStatusService.finishInitialLoading();
+      })
+    );
   setBooks$ = this.actions$
     .pipe(
       ofType(BibleActions.setBooks),
@@ -227,6 +220,9 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
       })
     )
     .subscribe();
+  private readonly onboardingHelpService = inject(OnboardingHelpService);
+  private readonly bibleOnboarding = inject(BibleOnboardingService);
+  private readonly appearanceService = inject(CastingAppearanceService);
 
   constructor() {
     this.bibleFormGroup.controls.translate.valueChanges
@@ -419,37 +415,76 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
       });
   }
 
-  //////////////////////
-  ////////перенести в эффекты
-  //////////////////////
-  onStartCasting() {
-    this.store
-      .select(selectSelectedBibleVerse)
-      .pipe(take(1), filterEmpty(), withLatestFrom(this.sectionList$))
-      .subscribe(([verse, sections]) => {
-        const groupValue = this.bibleFormGroup.value;
+  onStartCasting(targetVerse?: BibleVerse) {
+    combineLatest([
+      targetVerse
+        ? of(targetVerse)
+        : this.store
+            .select(selectSelectedBibleVerse)
+            .pipe(filterEmpty(), take(1)),
+      this.store.select(selectSelectedBook).pipe(filterEmpty(), take(1)),
+      this.store.select(selectSelectedChapter).pipe(filterEmpty(), take(1)),
+      this.sectionList$.pipe(take(1)),
+      this.store.select(selectSecondaryTranslationSettings).pipe(take(1)),
+      this.store.select(selectSecondaryTranslationCache).pipe(take(1)),
+    ])
+      .pipe(take(1))
+      .subscribe(
+        ([
+          verse,
+          book,
+          chapter,
+          sections,
+          secondarySettings,
+          secondaryCache,
+        ]) => {
+          if (sections.length) {
+            const content = sections[0].content.map((el) => {
+              return {
+                ...el,
+                text: [el.text],
+                bookTitle: book.title,
+              };
+            });
 
-        if (groupValue.book && groupValue.chapter && sections.length) {
-          this.store.dispatch(
-            BibleActions.openCasting({
-              book: groupValue.book.baseEntity,
-              chapter: groupValue.chapter.baseEntity,
+            let secondaryContent: any = undefined;
+            if (secondarySettings.enabled && secondarySettings.translate) {
+              const cacheKey = createBibleSecondaryTranslationCacheKey(
+                secondarySettings.translate,
+                book,
+                chapter
+              );
+              const cachedSections = secondaryCache[cacheKey];
+              if (cachedSections) {
+                secondaryContent = {
+                  translate: secondarySettings.translate,
+                  content: cachedSections.flatMap((section) =>
+                    section.content.map((v) => ({
+                      ...v,
+                      text: [v.text],
+                      bookTitle: book.title,
+                    }))
+                  ),
+                };
+              }
+            }
+
+            this.store.dispatch(
+              BibleActions.openCasting({
+                book,
+                chapter,
                 fromIndex: verse.number,
                 appearance: this.appearanceService.appearanceFor('bible')(),
-                content: sections[0].content.map((el) => {
-                return {
-                  ...el,
-                  text: [el.text],
-                  bookTitle: groupValue?.book?.baseEntity
-                    ?.title as BibleBookTitle,
-                };
-              }),
-            })
-          );
+                content,
+                secondarySettings,
+                secondaryContent,
+              })
+            );
 
-          this.onFocusChapter();
+            this.onFocusChapter();
+          }
         }
-      });
+      );
   }
 
   onChangeBookDisplayStyle() {
@@ -483,10 +518,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
         this.store.dispatch(
           BibleActions.changePath({ path: selectedVerse.prev.path })
         );
-        //////////////////////
-        ////////перенести в эффекты
         this.onStartCasting();
-        //////////////////////
       } else {
         this.store.dispatch(
           BibleActions.selectPrevOrNextVerse(selectedVerse.prev)
@@ -497,11 +529,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
         this.store.dispatch(
           BibleActions.changePath({ path: selectedVerse.next.path })
         );
-
-        //////////////////////
-        ////////перенести в эффекты
         this.onStartCasting();
-        //////////////////////
       } else {
         this.store.dispatch(
           BibleActions.selectPrevOrNextVerse(selectedVerse.next)
@@ -509,10 +537,4 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
       }
     }
   }
-
-  protected readonly ListBoxTemplates = ListBoxTemplates;
-  protected readonly BibleBookType = BibleBookType;
-  protected readonly Pages = Pages;
-  protected readonly PAGE_CONTAINER_TEMPLATES = PAGE_CONTAINER_TEMPLATES;
-  protected readonly DashBoxTemplates = DashBoxTemplates;
 }

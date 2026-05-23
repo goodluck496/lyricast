@@ -1,9 +1,9 @@
-<div class="casting-surface" [ngStyle]="appearanceService.getBackgroundStyles(appearance())">
-  <div class="info-block" [class.hide]="!showingContent()">
+<div [ngStyle]="appearanceService.getBackgroundStyles(appearance())" class="casting-surface">
+  <div [class.hide]="!showingContent()" class="info-block">
     <div
-      class="info-block__type"
       [class.hide]="!selectedBookTitle()"
       [ngStyle]="appearanceService.getReferenceStyles(appearance())"
+      class="info-block__type"
     >
       {{ selectedBookTitle() }} - {{ selectedChapterId() }}:
       @if (selectedRange(); as range) {
@@ -18,101 +18,81 @@
     </div>
   </div>
 
-  <div class="slides__container" [class.hide]="!showingContent()">
+  <div [class.hide]="!showingContent()" class="slides__container">
     <div class="reveal">
       <div class="slides">
         <section class="stack">
-          <section class="slides__section">
-            <div
-              lyriFitText
-              [maxFontSize]="120"
-              [minFontSize]="8"
-            >
-              <div class="slides__content"></div>
-            </div>
-
-          </section>
-          @for (content of selectedContents(); track content.number) {
-            @for (line of content.text; track line) {
-              @if (showingContent()) {
-                @if (!hasSecondaryContent()) {
-                  <section class="slides__section">
+          @if (showingContent()) {
+            @if (!hasSecondaryContent()) {
+              <section class="slides__section">
+                <div
+                  [maxFontSize]="80"
+                  [minFontSize]="8"
+                  [textToWatch]="primaryLine()"
+                  class="slides__fit"
+                  lyriFitText
+                >
+                  <div class="slides__content-wrapper">
                     <div
-                      class="slides__fit"
-                      lyriFitText
-                      [maxFontSize]="80"
-                      [minFontSize]="8"
-                      [textToWatch]="line"
-                    >
-                      <div class="slides__content-wrapper">
-                        <div
-                          class="slides__content"
-                          [ngStyle]="appearanceService.getTextStyles(appearance())"
-                          [innerHTML]="sanitizeHtml(line)">
-                        </div>
-                      </div>
+                      [innerHTML]="sanitizeHtml(primaryLine())"
+                      [ngStyle]="appearanceService.getTextStyles(appearance())"
+                      class="slides__content">
                     </div>
-                  </section>
-                } @else {
-                  <section
-                    class="slides__section slides__section--with-secondary"
-                    [class.slides__secondary--right]="isSecondaryLayout('right')"
-                    [class.slides__secondary--bottom]="isSecondaryLayout('bottom')"
-                    [class.slides__secondary--bottomOverlay]="isSecondaryLayout('bottomOverlay')"
-                    [style.--secondary-size.%]="secondarySizePercent()"
+                  </div>
+                </div>
+              </section>
+            } @else {
+              <section
+                [class.slides__secondary--bottom]="isSecondaryLayout('bottom')"
+                [class.slides__secondary--right]="isSecondaryLayout('right')"
+                [style.--secondary-size.%]="secondarySizePercent()"
+                class="slides__section slides__section--with-secondary"
+              >
+                <div class="slides__primary">
+                  <div
+                    [maxFontSize]="80"
+                    [minFontSize]="8"
+                    [textToWatch]="primaryLine()"
+                    class="slides__fit"
+                    lyriFitText
                   >
-                    <div class="slides__primary">
+                    <div class="slides__content-wrapper">
                       <div
-                        class="slides__fit"
-                        lyriFitText
-                        [maxFontSize]="80"
-                        [minFontSize]="8"
-                        [textToWatch]="line"
-                      >
-                        <div class="slides__content-wrapper">
-                          <div
-                            class="slides__content"
-                            [ngStyle]="appearanceService.getTextStyles(appearance())"
-                            [innerHTML]="sanitizeHtml(line)">
-                          </div>
-                        </div>
+                        [innerHTML]="sanitizeHtml(primaryLine())"
+                        [ngStyle]="appearanceService.getTextStyles(appearance())"
+                        class="slides__content">
                       </div>
                     </div>
+                  </div>
+                </div>
 
-                    <div class="slides__secondary">
-                      @if (secondaryTranslateTitle()) {
-                        <div class="slides__secondary-title">
-                          {{ secondaryTranslateTitle() }}
-                        </div>
-                      }
-
-                      @for (secondaryContent of secondaryContents(); track secondaryContent.number) {
-                        @for (secondaryLine of secondaryContent.text; track secondaryLine) {
-                          <div
-                            class="slides__fit slides__fit--secondary"
-                            lyriFitText
-                            [maxFontSize]="90"
-                            [minFontSize]="8"
-                            [textToWatch]="secondaryLine"
-                          >
-                            <div class="slides__content-wrapper">
-                              <div
-                                class="slides__content slides__content--secondary"
-                                [ngStyle]="appearanceService.getTextStyles(appearance())"
-                                [innerHTML]="sanitizeHtml(secondaryLine)">
-                              </div>
-                            </div>
-                          </div>
-                        }
-                      }
+                <div class="slides__secondary">
+                  @if (secondaryTranslateTitle()) {
+                    <div class="slides__secondary-title">
+                      {{ secondaryTranslateTitle() }}
                     </div>
-                  </section>
-                }
-              }
+                  }
+
+                  <div
+                    [maxFontSize]="90"
+                    [minFontSize]="8"
+                    [textToWatch]="secondaryLine()"
+                    class="slides__fit slides__fit--secondary"
+                    lyriFitText
+                  >
+                    <div class="slides__content-wrapper">
+                      <div
+                        [innerHTML]="sanitizeHtml(secondaryLine())"
+                        [ngStyle]="appearanceService.getTextStyles(appearance())"
+                        class="slides__content slides__content--secondary">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
             }
           }
         </section>
-
       </div>
     </div>
   </div>

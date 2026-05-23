@@ -3,13 +3,12 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   OnDestroy,
-  signal,
-  computed,
-  effect,
   viewChildren,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -18,29 +17,29 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { Actions, ofType } from '@ngrx/effects';
 import Reveal from 'reveal.js';
-import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 
 import {
   BibleChapterSection,
   BibleVerse,
   BibleVerseForCasting,
 } from '@lyri-cast/entities';
-import { filterEmpty } from '@lyri-cast/common';
-import { CastingAppearanceService } from '@lyri-cast/common-browser';
+import {
+  CastingAppearanceService,
+  LyriFitTextDirective,
+} from '@lyri-cast/common-browser';
 import {
   BibleActions,
   BibleSecondaryCastingLayout,
+  selectCastingPaused,
+  selectCastingProcess,
+  selectCastingProcessNavigate,
   selectSecondaryTranslationSettings,
   selectSelectedBibleVerse,
   selectSelectedBook,
   selectSelectedChapterSections,
   selectSelectedSecondaryTranslationSections,
   selectSelectedVersesRange,
-  selectCastingProcess,
-  selectCastingProcessNavigate,
-  selectCastingPaused,
 } from '@lyri-cast/bible-store';
-import { LyriFitTextDirective } from '@lyri-cast/common-browser';
 
 @Component({
   selector: 'lyri-bible-casting-preview',
@@ -52,31 +51,9 @@ import { LyriFitTextDirective } from '@lyri-cast/common-browser';
 })
 export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
   public elRef = inject(ElementRef<HTMLElement>);
-  private cdr = inject(ChangeDetectorRef);
-  private destroyRef = inject(DestroyRef);
-  private store = inject(Store);
-  private actions = inject(Actions);
-  private sanitizer = inject(DomSanitizer);
-  protected readonly appearanceService = inject(CastingAppearanceService);
-  protected readonly appearance = this.appearanceService.appearanceFor('bible');
-
   deckRef?: Reveal.Api;
   deck?: Reveal.Api;
-
   fitTexts = viewChildren(LyriFitTextDirective);
-  private resizeFrameId: number | null = null;
-
-  castingProcess = toSignal(this.store.select(selectCastingProcess));
-  castingNavigate = toSignal(this.store.select(selectCastingProcessNavigate));
-  castingPaused = toSignal(this.store.select(selectCastingPaused), { initialValue: true });
-
-  selectedVerse = toSignal(this.store.select(selectSelectedBibleVerse));
-  selectedBook = toSignal(this.store.select(selectSelectedBook));
-  selectedRange = toSignal(this.store.select(selectSelectedVersesRange));
-  sections = toSignal(this.store.select(selectSelectedChapterSections), { initialValue: [] as BibleChapterSection[] });
-  secondarySettings = toSignal(this.store.select(selectSecondaryTranslationSettings));
-  secondarySections = toSignal(this.store.select(selectSelectedSecondaryTranslationSections), { initialValue: [] as BibleChapterSection[] });
-
   selectedBibleVerseForCast = computed(() => {
     const process = this.castingProcess();
     const navigate = this.castingNavigate();
@@ -90,7 +67,9 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
         } as BibleVerseForCasting;
       }
 
-      const activeContent = process.content.find(v => v.number === process.fromIndex);
+      const activeContent = process.content.find(
+        (v) => v.number === process.fromIndex
+      );
       if (activeContent) {
         return {
           ...activeContent,
@@ -108,7 +87,101 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
       bookTitle: book.title,
     } as BibleVerseForCasting;
   });
+  secondaryLayout = computed<BibleSecondaryCastingLayout>(
+    () => this.secondarySettings()?.layout ?? 'right'
+  );
+  secondarySizePercent = computed(
+    () => this.secondarySettings()?.sizePercent ?? 50
+  );
+  secondaryTranslateTitle = computed(() => {
+    const s = this.secondarySettings();
+    if (!s?.enabled) return '';
 
+    const process = this.castingProcess();
+    const navigate = this.castingNavigate();
+    const paused = this.castingPaused();
+
+    if (process && !paused) {
+      const secondaryContent =
+        navigate?.secondaryContent ?? process.secondaryContent;
+      return secondaryContent
+        ? secondaryContent.translate.title ||
+            secondaryContent.translate.sourceTitle
+        : '';
+    }
+
+    return s.translate ? s.translate.title || s.translate.sourceTitle : '';
+  });
+  hasSecondaryContent = computed(() => {
+    const s = this.secondarySettings();
+    if (!s?.enabled) {
+      return false;
+    }
+
+    const process = this.castingProcess();
+    const navigate = this.castingNavigate();
+    const paused = this.castingPaused();
+
+    let rawText = '';
+    if (process && !paused) {
+      const secondaryContent =
+        navigate?.secondaryContent ?? process.secondaryContent;
+      if (secondaryContent) {
+        const range = navigate?.range ?? process.range ?? null;
+        const fromIndex = navigate?.nextIndex ?? process.fromIndex;
+
+        const secondaryVerses = this.prepareContentForDisplay(
+          secondaryContent.content,
+          range,
+          fromIndex
+        );
+        if (secondaryVerses.length > 0) {
+          rawText = secondaryVerses.flatMap((v) => v.text).join(' ');
+        }
+      }
+    } else {
+      const secondarySections = this.secondarySections();
+      const range = this.selectedRange();
+      const verse = this.selectedVerse();
+
+      if (secondarySections?.length && verse) {
+        rawText = this.buildSecondarySlideText(
+          secondarySections,
+          range ?? null,
+          verse.number
+        );
+      }
+    }
+
+    return rawText.trim().length > 0;
+  });
+  protected readonly appearanceService = inject(CastingAppearanceService);
+  protected readonly appearance = this.appearanceService.appearanceFor('bible');
+  private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
+  private store = inject(Store);
+  castingProcess = toSignal(this.store.select(selectCastingProcess));
+  castingNavigate = toSignal(this.store.select(selectCastingProcessNavigate));
+  castingPaused = toSignal(this.store.select(selectCastingPaused), {
+    initialValue: true,
+  });
+  selectedVerse = toSignal(this.store.select(selectSelectedBibleVerse));
+  selectedBook = toSignal(this.store.select(selectSelectedBook));
+  selectedRange = toSignal(this.store.select(selectSelectedVersesRange));
+  sections = toSignal(this.store.select(selectSelectedChapterSections), {
+    initialValue: [] as BibleChapterSection[],
+  });
+  secondarySettings = toSignal(
+    this.store.select(selectSecondaryTranslationSettings)
+  );
+  secondarySections = toSignal(
+    this.store.select(selectSelectedSecondaryTranslationSections),
+    { initialValue: [] as BibleChapterSection[] }
+  );
+  private actions = inject(Actions);
+  stopCasting$ = this.actions.pipe(ofType(BibleActions.stopCasting));
+  startCasting$ = this.actions.pipe(ofType(BibleActions.startCasting));
+  private sanitizer = inject(DomSanitizer);
   slideText = computed<SafeHtml>(() => {
     const process = this.castingProcess();
     const navigate = this.castingNavigate();
@@ -121,45 +194,39 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
       const fromIndex = navigate?.nextIndex ?? process.fromIndex;
 
       if (navigate && navigate.versesInRange?.length) {
-        primaryVerses = this.prepareContentForDisplay(navigate.versesInRange, range, fromIndex);
+        primaryVerses = this.prepareContentForDisplay(
+          navigate.versesInRange,
+          range,
+          fromIndex
+        );
       } else if (navigate) {
         primaryVerses = [navigate.currentContent];
       } else {
-        primaryVerses = this.prepareContentForDisplay(process.content, range, fromIndex);
+        primaryVerses = this.prepareContentForDisplay(
+          process.content,
+          range,
+          fromIndex
+        );
       }
 
       if (primaryVerses.length > 0) {
-        rawText = primaryVerses.flatMap(v => v.text).join(' ');
+        rawText = primaryVerses.flatMap((v) => v.text).join(' ');
       }
     } else {
       const verse = this.selectedVerse();
       const sections = this.sections();
       const range = this.selectedRange();
       if (verse) {
-        rawText = this.buildSlideText(sections, range ?? null, verse.number, verse.text as unknown as string);
+        rawText = this.buildSlideText(
+          sections,
+          range ?? null,
+          verse.number,
+          verse.text as unknown as string
+        );
       }
     }
     return this.sanitizer.bypassSecurityTrustHtml(rawText);
   });
-
-  secondaryLayout = computed<BibleSecondaryCastingLayout>(() => this.secondarySettings()?.layout ?? 'right');
-  secondarySizePercent = computed(() => this.secondarySettings()?.sizePercent ?? 50);
-  secondaryTranslateTitle = computed(() => {
-    const s = this.secondarySettings();
-    if (!s?.enabled) return '';
-
-    const process = this.castingProcess();
-    const navigate = this.castingNavigate();
-    const paused = this.castingPaused();
-    
-    if (process && !paused) {
-      const secondaryContent = navigate?.secondaryContent ?? process.secondaryContent;
-      return secondaryContent ? (secondaryContent.translate.title || secondaryContent.translate.sourceTitle) : '';
-    }
-
-    return s.translate ? (s.translate.title || s.translate.sourceTitle) : '';
-  });
-
   secondarySlideText = computed<SafeHtml | null>(() => {
     const s = this.secondarySettings();
     if (!s?.enabled) return null;
@@ -170,32 +237,39 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
 
     let rawText = '';
     if (process && !paused) {
-      const secondaryContent = navigate?.secondaryContent ?? process.secondaryContent;
+      const secondaryContent =
+        navigate?.secondaryContent ?? process.secondaryContent;
       if (secondaryContent) {
         const range = navigate?.range ?? process.range ?? null;
         const fromIndex = navigate?.nextIndex ?? process.fromIndex;
 
-        const secondaryVerses = this.prepareContentForDisplay(secondaryContent.content, range, fromIndex);
+        const secondaryVerses = this.prepareContentForDisplay(
+          secondaryContent.content,
+          range,
+          fromIndex
+        );
         if (secondaryVerses.length > 0) {
-          rawText = secondaryVerses.flatMap(v => v.text).join(' ');
+          rawText = secondaryVerses.flatMap((v) => v.text).join(' ');
         }
       }
     } else {
-      const primarySections = this.sections();
       const secondarySections = this.secondarySections();
       const range = this.selectedRange();
       const verse = this.selectedVerse();
 
-      if (primarySections?.length && secondarySections?.length && verse) {
-        rawText = this.buildSecondarySlideText(primarySections, secondarySections, range ?? null, verse.number);
+      if (secondarySections?.length && verse) {
+        rawText = this.buildSecondarySlideText(
+          secondarySections,
+          range ?? null,
+          verse.number
+        );
       }
     }
 
     return rawText ? this.sanitizer.bypassSecurityTrustHtml(rawText) : null;
   });
-
-  stopCasting$ = this.actions.pipe(ofType(BibleActions.stopCasting));
-  startCasting$ = this.actions.pipe(ofType(BibleActions.startCasting));
+  private resizeFrameId: number | null = null;
+  private redrawFrameId: number | null = null;
 
   constructor() {
     effect(() => {
@@ -207,8 +281,14 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
       this.secondaryTranslateTitle();
       this.secondarySlideText();
 
-      // Defer redraw to allow DOM to update first
-      setTimeout(() => this.redrawPreview());
+      // Defer redraw using requestAnimationFrame instead of setTimeout to avoid macro task lag
+      if (this.redrawFrameId !== null) {
+        cancelAnimationFrame(this.redrawFrameId);
+      }
+      this.redrawFrameId = requestAnimationFrame(() => {
+        this.redrawPreview();
+        this.redrawFrameId = null;
+      });
     });
 
     this.stopCasting$
@@ -239,38 +319,6 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
     return this.sanitizer.bypassSecurityTrustHtml(rawHtml);
   }
 
-  hasSecondaryContent = computed(() => {
-    const process = this.castingProcess();
-    const navigate = this.castingNavigate();
-    const paused = this.castingPaused();
-
-    let rawText = '';
-    if (process && !paused) {
-      const secondaryContent = navigate?.secondaryContent ?? process.secondaryContent;
-      if (secondaryContent) {
-        const range = navigate?.range ?? process.range ?? null;
-        const fromIndex = navigate?.nextIndex ?? process.fromIndex;
-
-        const secondaryVerses = this.prepareContentForDisplay(secondaryContent.content, range, fromIndex);
-        if (secondaryVerses.length > 0) {
-          rawText = secondaryVerses.flatMap(v => v.text).join(' ');
-        }
-      }
-    } else {
-      const s = this.secondarySettings();
-      const primarySections = this.sections();
-      const secondarySections = this.secondarySections();
-      const range = this.selectedRange();
-      const verse = this.selectedVerse();
-
-      if (s?.enabled && primarySections?.length && secondarySections?.length && verse) {
-        rawText = this.buildSecondarySlideText(primarySections, secondarySections, range ?? null, verse.number);
-      }
-    }
-
-    return rawText.trim().length > 0;
-  });
-
   isSecondaryLayout(layout: BibleSecondaryCastingLayout): boolean {
     return this.secondaryLayout() === layout;
   }
@@ -279,32 +327,22 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
     if (this.resizeFrameId !== null) {
       cancelAnimationFrame(this.resizeFrameId);
     }
+    if (this.redrawFrameId !== null) {
+      cancelAnimationFrame(this.redrawFrameId);
+    }
     this.deck?.destroy?.();
   }
 
   private redrawPreview(): void {
     this.cdr.detectChanges();
-    this.deckRef?.layout();
     this.deckRef?.sync();
-    this.updateTextSize();
   }
 
   private updateTextSize(): void {
-    if (this.resizeFrameId !== null) {
-      cancelAnimationFrame(this.resizeFrameId);
-    }
-
-    this.resizeFrameId = requestAnimationFrame(() => {
-      this.fitTexts().forEach((fitText) => {
-        // @ts-ignore
-        if (fitText.fit) fitText.fit();
-      });
-      this.resizeFrameId = null;
-    });
+    // Left empty or unused, LyriFitTextDirective manages fit text lifecycle automatically.
   }
 
   private buildSecondarySlideText(
-    primarySections: BibleChapterSection[],
     secondarySections: BibleChapterSection[],
     range: { from: number; to: number } | null,
     verseNumber: number
@@ -312,16 +350,20 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
     const fromNumber = range?.from ?? verseNumber;
     const toNumber = range?.to ?? verseNumber;
 
-    const primaryVerses = primarySections.flatMap(s => s.content);
-    const secondaryVerses = secondarySections.flatMap(s => s.content);
-
-    const versesInRange = secondaryVerses.filter(
-      (verse) => verse.number >= fromNumber && verse.number <= toNumber
-    );
+    const versesInRange: BibleVerse[] = [];
+    for (const s of secondarySections) {
+      for (const v of s.content) {
+        if (v.number >= fromNumber && v.number <= toNumber) {
+          versesInRange.push(v);
+        }
+      }
+    }
 
     if (versesInRange.length > 1) {
       return versesInRange
-        .map((verse) => this.buildVerseHtml(verse.number, verse.text as unknown as string))
+        .map((verse) =>
+          this.buildVerseHtml(verse.number, verse.text as unknown as string)
+        )
         .join(' ');
     }
 
@@ -340,11 +382,15 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
   ): string {
     const fromNumber = range?.from ?? verseNumber;
     const toNumber = range?.to ?? verseNumber;
-    const versesInRange = sections
-      .flatMap((section) => section.content)
-      .filter(
-        (verse) => verse.number >= fromNumber && verse.number <= toNumber
-      );
+
+    const versesInRange: BibleVerse[] = [];
+    for (const s of sections) {
+      for (const v of s.content) {
+        if (v.number >= fromNumber && v.number <= toNumber) {
+          versesInRange.push(v);
+        }
+      }
+    }
 
     if (versesInRange.length > 1) {
       return versesInRange
@@ -383,7 +429,12 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
       if (versesInRange.length > 1) {
         const first = versesInRange[0];
         const combinedHtml = versesInRange
-          .map((verse) => this.buildVerseHtml(verse.number, verse.text[0] || verse.text as unknown as string))
+          .map((verse) =>
+            this.buildVerseHtml(
+              verse.number,
+              verse.text[0] || (verse.text as unknown as string)
+            )
+          )
           .join(' ');
 
         return [{ ...first, text: [combinedHtml] }];
@@ -398,5 +449,3 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
     return singleVerse ? [singleVerse] : [];
   }
 }
-
-

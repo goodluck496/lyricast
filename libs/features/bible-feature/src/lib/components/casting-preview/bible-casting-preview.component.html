@@ -1,4 +1,4 @@
-<div class="preview-surface" [ngStyle]="appearanceService.getBackgroundStyles(appearance())">
+<div [ngStyle]="appearanceService.getBackgroundStyles(appearance())" class="preview-surface">
   <div class="preview-header">
     @if (selectedBibleVerseForCast(); as data) {
       <div [ngStyle]="appearanceService.getReferenceStyles(appearance())">
@@ -21,19 +21,18 @@
     <div class="reveal">
       <div class="slides">
         <section
-          [class.preview-slide--with-secondary]="hasSecondaryContent()"
-          [class.preview-slide--right]="hasSecondaryContent() && isSecondaryLayout('right')"
           [class.preview-slide--bottom]="hasSecondaryContent() && isSecondaryLayout('bottom')"
-          [class.preview-slide--bottomOverlay]="hasSecondaryContent() && isSecondaryLayout('bottomOverlay')"
+          [class.preview-slide--right]="hasSecondaryContent() && isSecondaryLayout('right')"
+          [class.preview-slide--with-secondary]="hasSecondaryContent()"
           [style.--secondary-size.%]="secondarySizePercent()"
         >
           <div class="preview-primary">
             <div
-              class="preview-fit"
-              lyriFitText
               [maxFontSize]="21"
               [minFontSize]="8"
               [textToWatch]="slideText()"
+              class="preview-fit"
+              lyriFitText
             >
               <div class="slide-content-wrapper">
                 <div
@@ -52,11 +51,11 @@
               }
               <div class="preview-fit-wrapper">
                 <div
-                  class="preview-fit"
-                  lyriFitText
                   [maxFontSize]="16"
                   [minFontSize]="8"
                   [textToWatch]="secondarySlideText()"
+                  class="preview-fit"
+                  lyriFitText
                 >
                   <div class="slide-content-wrapper">
                     <div

@@ -7,8 +7,9 @@ export class BibleController {
   constructor(private readonly bibleService: BibleByFilesService) {}
 
   @Get('translates')
-  getTranslates(@Query('short') short: number) {
-    if (short) {
+  getTranslates(@Query('short') short: any) {
+    const isShort = short === 'true' || Number(short) === 1 || short === true;
+    if (isShort) {
       return this.bibleService.getAllShortBibles();
     } else {
       return this.bibleService.getAllBibles();
@@ -27,11 +28,9 @@ export class BibleController {
   }
 
   @Get('books/:translate')
-  getBooks(
-    @Param('translate') translate: string,
-    @Query('short') short: number
-  ) {
-    if (short) {
+  getBooks(@Param('translate') translate: string, @Query('short') short: any) {
+    const isShort = short === 'true' || Number(short) === 1 || short === true;
+    if (isShort) {
       return this.bibleService.getBooksShort(translate);
     } else {
       return this.bibleService.getBooks(translate);

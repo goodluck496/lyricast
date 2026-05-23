@@ -22,7 +22,7 @@ export type BibleStartCastingPayload = {
   appearance?: CastingAppearance;
 };
 
-export type BibleSecondaryCastingLayout = 'right' | 'bottom' | 'bottomOverlay';
+export type BibleSecondaryCastingLayout = 'right' | 'bottom';
 
 export type BibleSecondaryCastingContent = {
   translate: BibleTranslateShort;

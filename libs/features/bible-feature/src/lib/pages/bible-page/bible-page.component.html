@@ -1,6 +1,6 @@
 <lyri-page-container [pagePath]="[Pages.MAIN, Pages.BIBLE_FEATURE, Pages.BIBLE]">
   <ng-template [pTemplate]="PAGE_CONTAINER_TEMPLATES.PAGE_HEADER"></ng-template>
-  <ng-container page-content [formGroup]="bibleFormGroup">
+  <ng-container [formGroup]="bibleFormGroup" page-content>
     <div class="list-search-wrapper list-search-wrapper__books">
       <div class="list-search-block ">
         <div class="bible-books-toolbar" tourAnchor="bible:translate">
@@ -11,16 +11,16 @@
             optionLabel="title"
             styleClass="list-search-dropdown bible-books-toolbar__translate"
           >
-            <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
+            <ng-template let-data pTemplate="selectedItem">{{ data.title }}</ng-template>
           </p-select>
           <button
-            pButton
-            type="button"
-            class="bible-books-toolbar__view-button"
             (click)="onChangeBookDisplayStyle()"
             [attr.aria-label]="booksLikeList ? 'Показать книги плиткой' : 'Показать книги списком'"
+            class="bible-books-toolbar__view-button"
+            pButton
+            type="button"
           >
-            @if(booksLikeList) {
+            @if (booksLikeList) {
               <lyri-icon name="bullet_list"></lyri-icon>
             } @else {
               <lyri-icon name="grid"></lyri-icon>
@@ -29,17 +29,17 @@
         </div>
 
 
-
-        <div tourAnchor="bible:book" style="flex: 1; height: 100%; min-height: 0; display: flex; flex-direction: column;">
+        <div style="flex: 1; height: 100%; min-height: 0; display: flex; flex-direction: column;"
+             tourAnchor="bible:book">
           @if (booksLikeList) {
-            <lyri-list-box [items]="(bookList$ | async) || []"
-                           [formControl]="bibleFormGroup.controls.book"
-                           [tabIndex]="0"
+            <lyri-list-box [formControl]="bibleFormGroup.controls.book"
+                           [items]="(bookList$ | async) || []"
                            [loading]="isLoading()"
+                           [tabIndex]="0"
             >
               <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
                 <div class="list-item__wrapper">
-                  <div class="list-item__number"
+                  <div [innerHTML]="data.searchKey  | highliter: search"
                        [ngClass]="{
                       'list-item__number--law': data.baseEntity.type === BibleBookType.Law,
                       'list-item__number--history': data.baseEntity.type === BibleBookType.History,
@@ -53,23 +53,23 @@
                       'list-item__number--pastoral-epistle': data.baseEntity.type === BibleBookType.PastoralEpistle,
                       'list-item__number--apocalyptic': data.baseEntity.type === BibleBookType.Apocalyptic
                      }"
-                       [innerHTML]="data.searchKey  | highliter: search"></div>
+                       class="list-item__number"></div>
                   <div class="list-item__title">
-                    <span class="list-item__title-content" [innerHTML]="data.title | highliter: search"></span>
+                    <span [innerHTML]="data.title | highliter: search" class="list-item__title-content"></span>
                   </div>
                 </div>
               </ng-template>
             </lyri-list-box>
           } @else {
-            <lyri-dash-box [items]="(bookList$ | async) || []"
-                           [formControl]="bibleFormGroup.controls.book"
-                           [tabIndex]="0"
+            <lyri-dash-box [formControl]="bibleFormGroup.controls.book"
+                           [items]="(bookList$ | async) || []"
                            [loading]="isLoading()"
+                           [tabIndex]="0"
                            class="dash-box"
             >
-              <ng-template [pTemplate]="DashBoxTemplates.ITEM" let-data let-selected="selected" let-index="index" let-search="search">
-                <div class="dash-item__content"
-                     [ngClass]="{
+              <ng-template [pTemplate]="DashBoxTemplates.ITEM" let-data let-index="index" let-search="search"
+                           let-selected="selected">
+                <div [ngClass]="{
                       'dash-item__content--selected': selected,
                       'dash-item__content--law': data.baseEntity.type === BibleBookType.Law,
                       'dash-item__content--history': data.baseEntity.type === BibleBookType.History,
@@ -83,6 +83,7 @@
                       'dash-item__content--pastoral-epistle': data.baseEntity.type === BibleBookType.PastoralEpistle,
                       'dash-item__content--apocalyptic': data.baseEntity.type === BibleBookType.Apocalyptic
                      }"
+                     class="dash-item__content"
                 >
                   <div class="dash-item__content-wrapper">
                     <div class="dash-item__description">
@@ -108,11 +109,11 @@
             Главы
           </div>
 
-          <lyri-list-box  [items]="(chapterList$ | async) || []" [formControl]="bibleFormGroup.controls.chapter"
-                         [withSearch]="false" [tabIndex]="1">
+          <lyri-list-box [formControl]="bibleFormGroup.controls.chapter" [items]="(chapterList$ | async) || []"
+                         [tabIndex]="1" [withSearch]="false">
             <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
               <div class="list-item__wrapper">
-                <div class="list-item__title" [innerHTML]="data.title | highliter: search"></div>
+                <div [innerHTML]="data.title | highliter: search" class="list-item__title"></div>
               </div>
             </ng-template>
           </lyri-list-box>
@@ -120,7 +121,8 @@
       </div>
 
       @if ((sectionList$ | async); as sections) {
-        <lyri-bible-chapter [sections]="sections" [tabIndex]="2" (startCasting)="onStartCasting()"></lyri-bible-chapter>
+        <lyri-bible-chapter (startCasting)="onStartCasting($event)" [sections]="sections"
+                            [tabIndex]="2"></lyri-bible-chapter>
       }
     }
 

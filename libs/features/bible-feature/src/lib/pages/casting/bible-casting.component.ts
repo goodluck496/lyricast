@@ -3,14 +3,15 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   HostListener,
-  OnInit,
   inject,
   input,
+  OnInit,
   signal,
-  viewChildren,
+  viewChildren
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -19,12 +20,7 @@ import { Store } from '@ngrx/store';
 import Reveal, { Api } from 'reveal.js';
 
 import { BibleBookShort, BibleVerseForCasting } from '@lyri-cast/entities';
-import {
-  BridgeService,
-  CastingAppearanceService,
-  Pages,
-  LyriFitTextDirective
-} from '@lyri-cast/common-browser';
+import { BridgeService, CastingAppearanceService, LyriFitTextDirective, Pages } from '@lyri-cast/common-browser';
 import { APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
 import {
   BibleActions,
@@ -35,7 +31,7 @@ import {
   selectCastingPaused,
   selectCastingProcess,
   selectCastingProcessNavigate,
-  selectSecondaryTranslationSettings,
+  selectSecondaryTranslationSettings
 } from '@lyri-cast/bible-store';
 
 @Component({
@@ -47,39 +43,35 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BibleCastingComponent implements OnInit, AfterViewInit {
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly bridge = inject(BridgeService);
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly elRef = inject(ElementRef<HTMLElement>);
-  private readonly store = inject(Store);
-  private readonly sanitizer = inject(DomSanitizer);
-  protected readonly appearanceService = inject(CastingAppearanceService);
-  protected readonly appearance = this.appearanceService.appearanceFor('bible');
-
   isMainWindow = input(false);
-
   deckRef?: Reveal.Api;
-  private revealInitialized = false;
-  private resizeFrameId: number | null = null;
-  private currentCastingPayload: BibleStartCastingPayload | null = null;
-
   selectedBookTitle = signal('');
   selectedBook = signal<BibleBookShort | null>(null);
   selectedChapterId = signal<number | null>(null);
   selectedContents = signal<BibleVerseForCasting[]>([]);
   selectedVerseId = signal<number>(1);
   selectedRange = signal<{ from: number; to: number } | null>(null);
-
   secondaryContents = signal<BibleVerseForCasting[]>([]);
   secondaryTranslateTitle = signal('');
   secondaryEnabled = signal(false);
   secondaryLayout = signal<BibleSecondaryCastingLayout>('right');
   secondarySizePercent = signal(50);
-
+  primaryLine = computed(() => this.selectedContents()[0]?.text[0] ?? '');
+  secondaryLine = computed(() => this.secondaryContents()[0]?.text[0] ?? '');
   showingContent = signal(false);
-
   fitTexts = viewChildren(LyriFitTextDirective);
+  protected readonly appearanceService = inject(CastingAppearanceService);
+  protected readonly appearance = this.appearanceService.appearanceFor('bible');
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly bridge = inject(BridgeService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly elRef = inject(ElementRef<HTMLElement>);
+  private readonly store = inject(Store);
   castingPaused$ = this.store.select(selectCastingPaused);
+  private readonly sanitizer = inject(DomSanitizer);
+  private revealInitialized = false;
+  private resizeFrameId: number | null = null;
+  private currentCastingPayload: BibleStartCastingPayload | null = null;
 
   @HostListener('window:resize')
   resizeHandler() {
@@ -178,7 +170,10 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
   startCastingHandler(payload: BibleStartCastingPayload) {
     this.clearSlides();
     this.currentCastingPayload = payload;
-    this.appearanceService.set(payload.appearance ?? this.appearance(), 'bible');
+    this.appearanceService.set(
+      payload.appearance ?? this.appearance(),
+      'bible'
+    );
     this.applySecondarySettingsFromPayload(payload);
 
     const range = payload.range ?? null;
@@ -255,19 +250,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
   }
 
   updateTextSize() {
-    if (this.resizeFrameId !== null) {
-      cancelAnimationFrame(this.resizeFrameId);
-    }
-
-    this.resizeFrameId = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this.fitTexts().forEach((el) => {
-          // @ts-ignore
-          if (el.fit) el.fit();
-        });
-        this.resizeFrameId = null;
-      });
-    });
+    // Left empty, LyriFitTextDirective automatically manages refitting.
   }
 
   clearSlides(): void {
@@ -277,9 +260,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
   redrawDeck(): void {
     this.cdr.detectChanges();
-    this.deckRef?.layout();
     this.deckRef?.sync();
-    this.updateTextSize();
   }
 
   isSecondaryLayout(layout: BibleSecondaryCastingLayout): boolean {
@@ -332,7 +313,8 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    const nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    const nextIndex =
+      direction === 'next' ? currentIndex + 1 : currentIndex - 1;
     const nextVerse = payload.content[nextIndex];
 
     if (!nextVerse) {
@@ -348,7 +330,9 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     this.store.dispatch(BibleActions.castingProcessChange(nextPayload));
   }
 
-  private applySecondarySettingsFromPayload(payload: BibleStartCastingPayload): void {
+  private applySecondarySettingsFromPayload(
+    payload: BibleStartCastingPayload
+  ): void {
     if (!payload.secondarySettings) {
       return;
     }

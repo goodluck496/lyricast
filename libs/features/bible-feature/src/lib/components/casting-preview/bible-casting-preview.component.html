@@ -28,8 +28,11 @@
         >
           <div class="preview-primary">
             <div
-              [maxFontSize]="21"
-              [minFontSize]="8"
+              [maxFontSize]="900"
+              [minFontSize]="appearance().minFontSize"
+              [fontFamily]="appearance().fontFamily"
+              [virtualWidth]="1920"
+              [virtualHeight]="1080"
               [textToWatch]="slideText()"
               class="preview-fit"
               lyriFitText
@@ -51,8 +54,11 @@
               }
               <div class="preview-fit-wrapper">
                 <div
-                  [maxFontSize]="16"
-                  [minFontSize]="8"
+                  [maxFontSize]="900"
+                  [minFontSize]="appearance().minFontSize"
+                  [fontFamily]="appearance().fontFamily"
+                  [virtualWidth]="1920"
+                  [virtualHeight]="1080"
                   [textToWatch]="secondarySlideText()"
                   class="preview-fit"
                   lyriFitText

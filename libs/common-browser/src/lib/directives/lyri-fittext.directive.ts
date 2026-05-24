@@ -20,6 +20,9 @@ export class LyriFitTextDirective implements OnChanges, AfterViewInit {
   @Input() maxFontSize = 100;
   @Input() minFontSize = 10;
   @Input() textToWatch: any; // Trigger refit when this changes
+  @Input() fontFamily?: string; // Trigger refit when font family changes
+  @Input() virtualWidth?: number; // Virtual coordinate width for scaling
+  @Input() virtualHeight?: number; // Virtual coordinate height for scaling
   private el = inject(ElementRef);
   private zone = inject(NgZone);
   private resizeObserver: ResizeObserver | null = null;
@@ -27,7 +30,6 @@ export class LyriFitTextDirective implements OnChanges, AfterViewInit {
   private lastHeight = 0;
   private animationFrameId: number | null = null;
   private resizeDebounceTimeout: any = null;
-  private fontFamily = 'sans-serif';
 
   private static getCanvasContext(): CanvasRenderingContext2D | null {
     if (!this.canvas) {
@@ -38,15 +40,18 @@ export class LyriFitTextDirective implements OnChanges, AfterViewInit {
 
   ngAfterViewInit() {
     const el = this.el.nativeElement as HTMLElement;
-    const computedStyle = window.getComputedStyle(el);
-    this.fontFamily = computedStyle.fontFamily || 'sans-serif';
-
-    const parent = el.parentElement || el;
-    const rect = parent.getBoundingClientRect();
-    this.lastWidth = rect.width;
-    this.lastHeight = rect.height;
+    const parent = (el.parentElement || el) as HTMLElement;
+    this.lastWidth = parent.offsetWidth || parent.getBoundingClientRect().width;
+    this.lastHeight = parent.offsetHeight || parent.getBoundingClientRect().height;
 
     this.fit();
+
+    // Re-run fitting once asynchronous custom fonts are fully loaded in this window
+    if (typeof document !== 'undefined' && document.fonts) {
+      document.fonts.ready.then(() => {
+        this.fit();
+      });
+    }
 
     // Watch for container resize
     this.zone.runOutsideAngular(() => {
@@ -61,13 +66,8 @@ export class LyriFitTextDirective implements OnChanges, AfterViewInit {
             this.lastWidth = width;
             this.lastHeight = height;
 
-            // Debounce fit calculation during smooth CSS transitions (e.g. Reveal.js slide transition)
-            if (this.resizeDebounceTimeout) {
-              clearTimeout(this.resizeDebounceTimeout);
-            }
-            this.resizeDebounceTimeout = setTimeout(() => {
-              this.fit();
-            }, 150);
+            // Direct call to fit() since requestAnimationFrame handles layout throttling safely
+            this.fit();
           }
         }
       });
@@ -79,7 +79,10 @@ export class LyriFitTextDirective implements OnChanges, AfterViewInit {
     if (
       changes['textToWatch'] ||
       changes['maxFontSize'] ||
-      changes['minFontSize']
+      changes['minFontSize'] ||
+      changes['fontFamily'] ||
+      changes['virtualWidth'] ||
+      changes['virtualHeight']
     ) {
       this.fit();
     }
@@ -119,26 +122,57 @@ export class LyriFitTextDirective implements OnChanges, AfterViewInit {
 
   private calculateFontSize() {
     const el = this.el.nativeElement as HTMLElement;
-    if (!el.isConnected || this.lastWidth === 0 || this.lastHeight === 0)
+    if (!el.isConnected) return;
+
+    const parent = (el.parentElement || el) as HTMLElement;
+    
+    // Use offsetWidth and offsetHeight to get layout dimensions (pre-transform) and avoid Reveal.js zoom issues
+    const actualWidth = parent.offsetWidth || parent.getBoundingClientRect().width || this.lastWidth;
+    const actualHeight = parent.offsetHeight || parent.getBoundingClientRect().height || this.lastHeight;
+
+    if (actualWidth === 0 || actualHeight === 0) {
       return;
+    }
+
+    this.lastWidth = actualWidth;
+    this.lastHeight = actualHeight;
+
+    // Use virtual dimensions if provided (computes in virtual space e.g. 1920x1006, then scales down)
+    const useVirtual = !!(this.virtualWidth && this.virtualHeight);
+    const currentWidth = useVirtual ? this.virtualWidth! : actualWidth;
+    const currentHeight = useVirtual ? this.virtualHeight! : actualHeight;
 
     const ctx = LyriFitTextDirective.getCanvasContext();
     if (!ctx) return;
 
-    const fontFamily = this.fontFamily;
+    // Находим дочерний элемент, на котором реально заданы стили текста (font-family, font-weight)
+    let targetEl = el;
+    const contentEl = el.querySelector('.slide-content, .slides__content');
+    if (contentEl) {
+      targetEl = contentEl as HTMLElement;
+    }
+
+    const computedStyle = window.getComputedStyle(targetEl);
+    const fontFamily = computedStyle.fontFamily || 'sans-serif';
+    const fontWeight = computedStyle.fontWeight || '700';
+    const fontStyle = computedStyle.fontStyle || 'normal';
     const text = el.textContent || '';
 
-    // Accounts for paddings and margins safely (using ResizeObserver width/height to avoid layout thrashing)
+    // Accounts for paddings and margins safely
     const padding = 16;
-    const maxWidth = Math.max(0, this.lastWidth - padding);
-    const maxHeight = Math.max(0, this.lastHeight - padding);
+    const maxWidth = Math.max(0, currentWidth - padding);
+    const maxHeight = Math.max(0, currentHeight - padding);
 
     if (maxWidth === 0 || maxHeight === 0) return;
 
-    // Check if the text fits at max font size first
-    ctx.font = `${this.maxFontSize}px ${fontFamily}`;
+    // Check if the text fits at max font size first (passing font-weight and font-style to match DOM styling perfectly)
+    ctx.font = `${fontStyle} ${fontWeight} ${this.maxFontSize}px ${fontFamily}`;
     if (this.doesTextFit(ctx, text, this.maxFontSize, maxWidth, maxHeight)) {
-      el.style.fontSize = `${this.maxFontSize}px`;
+      const optimalSize = this.maxFontSize;
+      const scaleWidth = actualWidth / this.virtualWidth!;
+      const scaleHeight = actualHeight / this.virtualHeight!;
+      const finalSize = useVirtual ? optimalSize * Math.min(scaleWidth, scaleHeight) : optimalSize;
+      el.style.fontSize = `${finalSize}px`;
       return;
     }
 
@@ -149,18 +183,21 @@ export class LyriFitTextDirective implements OnChanges, AfterViewInit {
 
     while (low <= high) {
       const mid = Math.floor((low + high) / 2);
-      ctx.font = `${mid}px ${fontFamily}`;
+      ctx.font = `${fontStyle} ${fontWeight} ${mid}px ${fontFamily}`;
 
       if (this.doesTextFit(ctx, text, mid, maxWidth, maxHeight)) {
-        optimal = mid;
-        low = mid + 1; // Fits, try larger size
+         optimal = mid;
+         low = mid + 1; // Fits, try larger size
       } else {
-        high = mid - 1; // Too big, try smaller size
+         high = mid - 1; // Too big, try smaller size
       }
     }
 
-    // Set DOM styles exactly ONCE after calculations
-    el.style.fontSize = `${optimal}px`;
+    // Set DOM styles scaled down for virtual scaling if active
+    const scaleWidth = actualWidth / this.virtualWidth!;
+    const scaleHeight = actualHeight / this.virtualHeight!;
+    const finalSize = useVirtual ? optimal * Math.min(scaleWidth, scaleHeight) : optimal;
+    el.style.fontSize = `${finalSize}px`;
   }
 
   /**

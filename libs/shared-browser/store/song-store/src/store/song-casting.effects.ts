@@ -10,6 +10,7 @@ import {
   BridgeProcessForEffectsDecorator,
   BridgeService,
   WindowService,
+  Pages,
 } from '@lyri-cast/common-browser';
 import { EventData } from '@lyri-cast/common-electron';
 import { map } from 'rxjs';
@@ -28,7 +29,7 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
 };
 
 @Injectable()
-@BridgeProcessForEffectsDecorator(actionsMap)
+@BridgeProcessForEffectsDecorator(actionsMap, Pages.SONGS_FEATURE)
 export class SongForCastingEffects implements BaseEffectsWithBridgeInterface {
   actions$ = inject(Actions);
   store = inject(Store<SongPageState>);

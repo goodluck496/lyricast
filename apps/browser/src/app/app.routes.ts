@@ -25,8 +25,12 @@ function ensureSongDictionariesGuard(
   const router = inject(Router);
 
   // Allow dictionaries page itself, even if there are no local dictionaries,
-  // otherwise we'd get an infinite redirect loop.
-  if (state?.url?.includes(`/${Pages.MAIN}/dictionaries`)) {
+  // otherwise we'd get an infinite redirect loop. Also bypass for casting pages.
+  if (
+    state?.url?.includes(`/${Pages.MAIN}/dictionaries`) ||
+    state?.url?.includes(`/${Pages.CASTING}`) ||
+    state?.url?.includes('/casting')
+  ) {
     return of(true);
   }
 

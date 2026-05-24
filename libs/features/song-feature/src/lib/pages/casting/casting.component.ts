@@ -7,6 +7,7 @@ import {
   ElementRef,
   HostListener,
   inject,
+  OnDestroy,
   OnInit,
   signal,
   viewChildren,
@@ -40,7 +41,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
   styleUrl: './casting.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CastingComponent implements OnInit, AfterViewInit {
+export class CastingComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly bridge = inject(BridgeService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
@@ -136,6 +137,11 @@ export class CastingComponent implements OnInit, AfterViewInit {
       event: APP_COMMON_ACTIONS.openedPage,
       payload: { state: 'after-view-init', page: Pages.CASTING },
     });
+  }
+
+  ngOnDestroy() {
+    this.clearHideContentTimeout();
+    this.deckRef?.destroy();
   }
 
   async startCastingHandler(payload: SongStartCastingPayload) {

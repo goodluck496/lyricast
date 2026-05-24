@@ -9,6 +9,7 @@ import {
   HostListener,
   inject,
   input,
+  OnDestroy,
   OnInit,
   signal,
   viewChildren
@@ -42,7 +43,7 @@ import {
   styleUrl: './bible-casting.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class BibleCastingComponent implements OnInit, AfterViewInit {
+export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
   isMainWindow = input(false);
   deckRef?: Reveal.Api;
   selectedBookTitle = signal('');
@@ -56,7 +57,11 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
   secondaryEnabled = signal(false);
   secondaryLayout = signal<BibleSecondaryCastingLayout>('right');
   secondarySizePercent = signal(50);
-  primaryLine = computed(() => this.selectedContents()[0]?.text[0] ?? '');
+  primaryLine = computed(() => {
+    console.log('PRIMARY LINE', this.selectedContents()[0]?.text[0] ?? '', this.showingContent());
+
+    return this.selectedContents()[0]?.text[0] ?? ''
+  });
   secondaryLine = computed(() => this.secondaryContents()[0]?.text[0] ?? '');
   showingContent = signal(false);
   fitTexts = viewChildren(LyriFitTextDirective);
@@ -167,6 +172,13 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     });
   }
 
+  ngOnDestroy() {
+    if (this.resizeFrameId !== null) {
+      cancelAnimationFrame(this.resizeFrameId);
+    }
+    this.deckRef?.destroy();
+  }
+
   startCastingHandler(payload: BibleStartCastingPayload) {
     this.clearSlides();
     this.currentCastingPayload = payload;
@@ -195,7 +207,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
 
     this.showingContent.set(true);
     this.redrawDeck();
-    this.deckRef?.slide(undefined, 1);
+    this.deckRef?.slide(0, 0);
   }
 
   navigateCastingHandler(payload: BiblePresentationNavigatePayload) {
@@ -246,6 +258,19 @@ export class BibleCastingComponent implements OnInit, AfterViewInit {
     });
 
     this.revealInitialized = true;
+
+    // sync slides immediately after initialization if content is already available
+    if (this.showingContent()) {
+      this.cdr.detectChanges();
+      this.deckRef.sync();
+      this.deckRef.slide(0, 0);
+
+      // Принудительно запускаем пересчет размера шрифта после того, как Reveal.js стабилизирует DOM
+      setTimeout(() => {
+        this.fitTexts().forEach((dir) => dir.fit());
+      }, 150);
+    }
+
     return deck;
   }
 

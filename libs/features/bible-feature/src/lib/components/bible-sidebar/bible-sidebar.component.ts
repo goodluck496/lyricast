@@ -85,6 +85,12 @@ export class BibleSidebarComponent {
     { label: 'Справа', value: 'right' },
     { label: 'Снизу', value: 'bottom' },
   ];
+
+  private readonly store = inject<Store<BibleState>>(Store<BibleState>);
+  openedCastingWindow$ = this.store
+    .select(selectOpenedWindow)
+    .pipe(map((e) => !!e));
+  castingIsPaused$ = this.store.select(selectCastingPaused);
   closeMenuItems$: Observable<MenuItem[]> = combineLatest([
     this.openedCastingWindow$,
     this.isOpeningWindow,
@@ -104,11 +110,6 @@ export class BibleSidebarComponent {
       },
     ])
   );
-  private readonly store = inject<Store<BibleState>>(Store<BibleState>);
-  openedCastingWindow$ = this.store
-    .select(selectOpenedWindow)
-    .pipe(map((e) => !!e));
-  castingIsPaused$ = this.store.select(selectCastingPaused);
   sectionList$: Observable<BibleChapterSection[]> = this.store.select(
     selectSelectedChapterSections
   );

@@ -8,6 +8,7 @@ import {
   BridgeService,
   SettingsService,
   WindowService,
+  Pages,
 } from '@lyri-cast/common-browser';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { FreeSlideActions, FreeSlideActionsEnum } from './free-slide.actions';
@@ -46,7 +47,7 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
  * т.к. это принимающий сервис, а не инициатор
  */
 @Injectable()
-@BridgeProcessForEffectsDecorator(actionsMap)
+@BridgeProcessForEffectsDecorator(actionsMap, Pages.FREE_SLIDE_FEATURE)
 export class FreeSlideForCastingEffects
   implements BaseEffectsWithBridgeInterface
 {

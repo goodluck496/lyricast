@@ -37,7 +37,7 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
 };
 
 @Injectable()
-@BridgeProcessForEffectsDecorator(actionsMap)
+@BridgeProcessForEffectsDecorator(actionsMap, Pages.FREE_SLIDE_FEATURE)
 export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
   public readonly store = inject<Store<FreeSlideState>>(Store);
   public readonly bridge = inject(BridgeService);

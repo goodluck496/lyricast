@@ -14,6 +14,7 @@ import {
   BridgeProcessForEffectsDecorator,
   BridgeService,
   AppActions,
+  Pages,
 } from '@lyri-cast/common-browser';
 import { EventData } from '@lyri-cast/common-electron';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
@@ -37,7 +38,7 @@ const actionsMap: Record<string, (eventData: EventData) => Action> = {
 };
 
 @Injectable()
-@BridgeProcessForEffectsDecorator(actionsMap)
+@BridgeProcessForEffectsDecorator(actionsMap, Pages.BIBLE_FEATURE)
 export class BibleCastingPageEffects implements BaseEffectsWithBridgeInterface {
   store = inject<Store<BibleState>>(Store);
   bridge = inject(BridgeService);

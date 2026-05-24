@@ -73,7 +73,13 @@ export class AppEffects {
             replaceUrl: true,
             ...(data.queryParams ? { queryParams: data.queryParams } : {}),
           })
-          .then((r) => console.log('open page', r));
+          .then((r) => {
+            console.log('open page finished, result:', r);
+            this.bridge.send(APP_COMMON_ACTIONS.openedPage, {
+              state: 'navigation-ended',
+              path: data.path,
+            });
+          });
       }),
       map((data) => ({ type: APP_COMMON_ACTIONS.openPage, payload: data }))
     )

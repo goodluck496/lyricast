@@ -18,6 +18,8 @@ export const BibleReducers = createReducer<BibleState>(
       selectedBook: null,
       selectedChapter: null,
       selectedChapterSections: [],
+      selectedBibleVerse: null,
+      selectedPrevOrNextVerse: null,
       castingPaused: true,
     } satisfies BibleState;
   }),
@@ -40,6 +42,8 @@ export const BibleReducers = createReducer<BibleState>(
       selectedBook: data.book,
       selectedChapter: null,
       selectedChapterSections: [],
+      selectedBibleVerse: null,
+      selectedPrevOrNextVerse: null,
       castingPaused: true,
       selectedVersesRange: null,
     } satisfies BibleState;
@@ -60,6 +64,8 @@ export const BibleReducers = createReducer<BibleState>(
     return {
       ...state,
       selectedChapter: data.chapter,
+      selectedBibleVerse: null,
+      selectedPrevOrNextVerse: null,
       castingPaused: true,
       selectedPath: [
         ...state.selectedPath.slice(0, 1),
@@ -73,6 +79,8 @@ export const BibleReducers = createReducer<BibleState>(
     return {
       ...state,
       selectedChapterSections: data.chapterSection,
+      selectedBibleVerse: null,
+      selectedPrevOrNextVerse: null,
       castingPaused: true,
     } satisfies BibleState;
   }),
@@ -104,6 +112,7 @@ export const BibleReducers = createReducer<BibleState>(
     return {
       ...state,
       castingProcess: data,
+      castingProcessNavigate: null,
       castingAppearance: data.appearance ?? state.castingAppearance,
       secondaryTranslationSettings:
         data.secondarySettings ?? state.secondaryTranslationSettings,
@@ -114,6 +123,7 @@ export const BibleReducers = createReducer<BibleState>(
     return {
       ...state,
       castingProcess: data,
+      castingProcessNavigate: null,
       castingAppearance: data.appearance ?? state.castingAppearance,
       secondaryTranslationSettings:
         data.secondarySettings ?? state.secondaryTranslationSettings,

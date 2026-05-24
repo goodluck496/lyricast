@@ -1,6 +1,6 @@
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concat, EMPTY, from, Observable, of } from 'rxjs';
-import { filter, map, switchMap, tap, withLatestFrom, startWith, shareReplay } from 'rxjs/operators';
+import { filter, map, switchMap, tap, withLatestFrom, startWith, shareReplay, skip, take } from 'rxjs/operators';
 import {
   APP_COMMON_ACTIONS,
   AppDisplay,
@@ -192,7 +192,9 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     actions$.pipe(
       ofType(openPageAction),
       switchMap(() => bridge.queueEvents.pipe(
-        filter((event) => !!event && event.event === APP_COMMON_ACTIONS.openedPage)
+        skip(1),
+        filter((event) => !!event && event.event === APP_COMMON_ACTIONS.openedPage),
+        take(1)
       )),
       withLatestFrom(
         store.select(selectCastingProcess),

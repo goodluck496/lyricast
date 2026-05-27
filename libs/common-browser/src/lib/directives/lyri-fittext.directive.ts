@@ -137,10 +137,16 @@ export class LyriFitTextDirective implements OnChanges, AfterViewInit {
     this.lastWidth = actualWidth;
     this.lastHeight = actualHeight;
 
-    // Use virtual dimensions if provided (computes in virtual space e.g. 1920x1006, then scales down)
+    // Use virtual dimensions if provided.
+    // Width acts as the baseline axis, while virtual height is derived from the
+    // actual container height at the same width scale. This keeps full-height
+    // side-by-side layouts from shrinking text too aggressively.
     const useVirtual = !!(this.virtualWidth && this.virtualHeight);
+    const widthScale = useVirtual ? actualWidth / this.virtualWidth! : 1;
     const currentWidth = useVirtual ? this.virtualWidth! : actualWidth;
-    const currentHeight = useVirtual ? this.virtualHeight! : actualHeight;
+    const currentHeight = useVirtual
+      ? actualHeight / widthScale
+      : actualHeight;
 
     const ctx = LyriFitTextDirective.getCanvasContext();
     if (!ctx) return;
@@ -169,9 +175,7 @@ export class LyriFitTextDirective implements OnChanges, AfterViewInit {
     ctx.font = `${fontStyle} ${fontWeight} ${this.maxFontSize}px ${fontFamily}`;
     if (this.doesTextFit(ctx, text, this.maxFontSize, maxWidth, maxHeight)) {
       const optimalSize = this.maxFontSize;
-      const scaleWidth = actualWidth / this.virtualWidth!;
-      const scaleHeight = actualHeight / this.virtualHeight!;
-      const finalSize = useVirtual ? optimalSize * Math.min(scaleWidth, scaleHeight) : optimalSize;
+      const finalSize = useVirtual ? optimalSize * widthScale : optimalSize;
       el.style.fontSize = `${finalSize}px`;
       return;
     }
@@ -194,9 +198,7 @@ export class LyriFitTextDirective implements OnChanges, AfterViewInit {
     }
 
     // Set DOM styles scaled down for virtual scaling if active
-    const scaleWidth = actualWidth / this.virtualWidth!;
-    const scaleHeight = actualHeight / this.virtualHeight!;
-    const finalSize = useVirtual ? optimal * Math.min(scaleWidth, scaleHeight) : optimal;
+    const finalSize = useVirtual ? optimal * widthScale : optimal;
     el.style.fontSize = `${finalSize}px`;
   }
 

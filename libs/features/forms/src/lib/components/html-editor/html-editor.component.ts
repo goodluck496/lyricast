@@ -1,4 +1,3 @@
-// rich-text-overlay.component.ts
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -9,32 +8,53 @@ import {
   forwardRef,
   inject,
   input,
-  OnDestroy,
   OnInit,
   output,
   viewChild,
 } from '@angular/core';
-import {
-  ControlValueAccessor,
-  FormsModule,
-  NG_VALUE_ACCESSOR,
-} from '@angular/forms';
-
-import { Editor, EditorModule } from 'primeng/editor';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
   outputToObservable,
   takeUntilDestroyed,
 } from '@angular/core/rxjs-interop';
-import Quill from 'quill';
-import QuillResizeImage from 'quill-resize-image';
+import { TooltipModule } from 'primeng/tooltip';
 import { BehaviorSubject, fromEvent } from 'rxjs';
-
-try {
-  Quill.register('modules/resize', QuillResizeImage as any);
-} catch {}
 
 export type LyriHtmlEditorResult = {
   type: 'cancel' | 'submit';
+};
+
+export type LyriHtmlEditorVisualConfig = {
+  fontFamily: string;
+  fontSizePx: number;
+  fontWeight: string;
+  lineHeight: number;
+  color: string;
+  textAlign: 'left' | 'center' | 'right';
+  verticalAlign: 'top' | 'middle' | 'bottom';
+  backgroundColor: string;
+  shadowColor: string;
+  shadowOffsetPx: number;
+  shadowBlurPx: number;
+  toolbarOffsetPx: number;
+};
+
+type ToolbarAction =
+  | 'bold'
+  | 'italic'
+  | 'underline'
+  | 'strikeThrough'
+  | 'insertUnorderedList'
+  | 'insertOrderedList'
+  | 'justifyLeft'
+  | 'justifyCenter'
+  | 'justifyRight'
+  | 'removeFormat';
+
+type ToolbarItem = {
+  action: ToolbarAction;
+  label: string;
+  title: string;
 };
 
 @Component({
@@ -48,181 +68,215 @@ export type LyriHtmlEditorResult = {
       multi: true,
     },
   ],
+  imports: [TooltipModule],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EditorModule, FormsModule],
 })
 export class HtmlEditorComponent
-  implements ControlValueAccessor, OnInit, OnDestroy, AfterViewInit
+  implements ControlValueAccessor, OnInit, AfterViewInit
 {
-  cdr = inject(ChangeDetectorRef);
-  destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
 
-  html = input(''); // стартовый HTML
+  html = input('');
+  inlineMode = input(false);
+  visual = input<LyriHtmlEditorVisualConfig | null>(null);
+
   $htmlChange = output<string>();
+  htmlChange$ = outputToObservable(this.$htmlChange);
   $blur = output<void>();
   blur$ = outputToObservable(this.$blur);
   $keydown = output<KeyboardEvent>();
   keydown$ = outputToObservable(this.$keydown);
-
   $finish = output<LyriHtmlEditorResult>();
   finish$ = outputToObservable(this.$finish);
 
-  editorComp = viewChild.required(Editor);
   root = viewChild.required<ElementRef<HTMLElement>>('root');
+  content = viewChild.required<ElementRef<HTMLDivElement>>('content');
 
   model = '';
-
   isReady$ = new BehaviorSubject(false);
-
-  quillFormats = [
-    'header',
-    'bold',
-    'italic',
-    'underline',
-    'strike',
-    // 'blockquote',
-    // 'code-block',
-    'list',
-    'indent',
-    // 'script',
-    'color',
-    'background',
-    'font',
-    'align',
-    // 'link',
-    // 'image',
-    // 'video', // ← вот сюда
+  toolbarActions: ToolbarItem[] = [
+    { action: 'bold', label: 'B', title: 'Жирный' },
+    { action: 'italic', label: 'I', title: 'Курсив' },
+    { action: 'underline', label: 'U', title: 'Подчеркнутый' },
+    { action: 'strikeThrough', label: 'S', title: 'Зачеркнутый' },
+    { action: 'insertUnorderedList', label: 'UL', title: 'Маркированный список' },
+    { action: 'insertOrderedList', label: '1.', title: 'Нумерованный список' },
+    { action: 'justifyLeft', label: 'L', title: 'По левому краю' },
+    { action: 'justifyCenter', label: 'C', title: 'По центру' },
+    { action: 'justifyRight', label: 'R', title: 'По правому краю' },
+    { action: 'removeFormat', label: 'Tx', title: 'Очистить форматирование' },
   ];
 
-  quillModules: any = {
-    toolbar: [
-      ['bold', 'italic', 'underline', 'strike'], // жирный, курсив, подчёркнутый и зачёркнутый
-      // ['blockquote', 'code-block'], // цитата и блок кода
-      [{ header: 1 }, { header: 2 }], // заголовки
-      [{ list: 'ordered' }, { list: 'bullet' }], // списки
-      // [{ script: 'sub' }, { script: 'super' }], // верхний/нижний индекс
-      // [{ indent: '-1' }, { indent: '+1' }], // отступы
-      // [{ direction: 'rtl' }], // направление текста
-      // [{ size: ['small', false, 'large', 'huge'] }], // размер шрифта
-      [{ header: [1, 2, 3, 4, 5, 6, false] }], // заголовки 1–6
-      [{ color: [] }, { background: [] }], // цвет текста и фон
-      // [{ font: [] }], // шрифты
-      [{ align: [] }], // выравнивание
-      ['clean'], // убрать форматирование
-      // ['link', 'image', 'video'], // ← важно: кнопка Video
-    ],
-    // resize: {},
-  };
-
-  private onChange: (v: any) => void = () => {};
+  private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
+  private suppressBlur = false;
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.model = this.html();
   }
 
-  ngOnDestroy() {}
+  ngAfterViewInit(): void {
+    const rootEl = this.root().nativeElement;
+    const contentEl = this.content().nativeElement;
 
-  ngAfterViewInit() {
-    const container = this.root().nativeElement;
-    // Ловим как можно раньше
-    container.addEventListener(
+    contentEl.innerHTML = this.model;
+    this.isReady$.next(true);
+
+    rootEl.addEventListener(
       'pointerdown',
-      (e) => {
-        e.stopPropagation();
+      (event) => {
+        event.stopPropagation();
       },
       { capture: true }
     );
-  }
 
-  writeValue(v: any): void {
-    this.model = v ?? '';
-    this.setHTML(this.model);
-  }
-  registerOnChange(fn: any): void {
-    this.onChange = fn;
-  }
-  registerOnTouched(fn: any): void {
-    this.onTouched = fn;
-  }
+    fromEvent<InputEvent>(contentEl, 'input')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.model = contentEl.innerHTML;
+        this.emitChange();
+      });
 
-  onReady() {
-    // Фокус в поле сразу
-    this.editorComp().getQuill().focus();
-    this.isReady$.next(true);
+    fromEvent<FocusEvent>(contentEl, 'focus')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.cdr.markForCheck();
+      });
 
-    const quill: Quill = this.editorComp().getQuill();
-    fromEvent<KeyboardEvent>(quill.root, 'keydown')
+    fromEvent<FocusEvent>(contentEl, 'blur')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        queueMicrotask(() => {
+          if (this.suppressBlur) {
+            return;
+          }
+
+          this.cdr.markForCheck();
+          this.$blur.emit();
+        });
+      });
+
+    fromEvent<KeyboardEvent>(contentEl, 'keydown')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((event) => {
-        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-          event.stopPropagation();
-          event.preventDefault();
+        this.$keydown.emit(event);
 
-          this.$finish.emit({
-            type: 'submit',
-          });
-        }
-        if (event.key === 'Escape') {
-          event.stopPropagation();
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
           event.preventDefault();
+          event.stopPropagation();
+          this.$finish.emit({ type: 'submit' });
+          return;
+        }
+
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
           this.$finish.emit({ type: 'cancel' });
         }
       });
   }
 
-  emitChange() {
-    this.onChange(this.model);
-    this.$htmlChange.emit(this.model);
+  writeValue(value: string): void {
+    this.model = value ?? '';
+    this.setHTML(this.model);
   }
 
-  onSelectionChange(event: any) {
-    if (event.range === null) {
-      /**
-       * когда null, то считается, что редактор потерял фокус и надо бы отправить blur событие
-       */
-      // Важно: при клике по тулбару Quill может на мгновение отдавать range=null.
-      // Проверяем ФАКТИЧЕСКИЙ активный элемент после того как браузер обновит focus.
-      queueMicrotask(() => {
-        const rootEl = this.root().nativeElement;
-        const ae = document.activeElement as HTMLElement | null;
-        const stillInside = !!ae && rootEl.contains(ae);
-        if (!stillInside) {
-          this.$blur.emit();
-        }
-      });
-    }
+  registerOnChange(fn: (value: string) => void): void {
+    this.onChange = fn;
   }
 
-  // Унифицированный API, чтобы сервис мог забрать данные
+  registerOnTouched(fn: () => void): void {
+    this.onTouched = fn;
+  }
+
   getHTML(): string {
-    return this.model ?? this.html() ?? '';
+    return this.content().nativeElement.innerHTML;
   }
 
-  focus() {
-    this.editorComp().getQuill().focus();
-  }
-
-  /**
-   * Основной метод изменения HTML в quill
-   * @param html
-   */
-  setHTML(html: string) {
+  setHTML(html: string): void {
     this.model = html ?? '';
 
-    /**
-     * ngModel для quill не работает ... приходится изголяться вот так,
-     * для того чтобы в редактор можно было вставить какое-то значение
-     */
-    const quill: Quill | undefined = this.editorComp()?.getQuill();
-    if (!quill) {
+    const contentEl = this.content()?.nativeElement;
+    if (!contentEl) {
       return;
     }
 
-    const delta = (quill.clipboard as any).convert({ html: html ?? '' });
-    quill.setContents(delta);
-
+    contentEl.innerHTML = this.model;
     this.emitChange();
+  }
+
+  focus(): void {
+    this.content().nativeElement.focus();
+  }
+
+  focusAtEnd(): void {
+    const contentEl = this.content().nativeElement;
+    contentEl.focus();
+    this.placeCaretAtEnd(contentEl);
+  }
+
+  insertText(text: string): void {
+    this.content().nativeElement.focus();
+    this.insertTextAtSelection(text);
+    this.model = this.content().nativeElement.innerHTML;
+    this.emitChange();
+  }
+
+  onToolbarMouseDown(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.suppressBlur = true;
+  }
+
+  onToolbarMouseUp(): void {
+    this.suppressBlur = false;
+    this.content().nativeElement.focus();
+  }
+
+  applyToolbarAction(action: ToolbarAction): void {
+    document.execCommand(action, false);
+    this.content().nativeElement.focus();
+    this.model = this.content().nativeElement.innerHTML;
+    this.emitChange();
+  }
+
+  private emitChange(): void {
+    this.onChange(this.model);
+    this.onTouched();
+    this.$htmlChange.emit(this.model);
+  }
+
+  private placeCaretAtEnd(element: HTMLElement): void {
+    const selection = window.getSelection();
+    if (!selection) {
+      return;
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  private insertTextAtSelection(text: string): void {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      this.placeCaretAtEnd(this.content().nativeElement);
+    }
+
+    const activeSelection = window.getSelection();
+    if (!activeSelection || activeSelection.rangeCount === 0) {
+      return;
+    }
+
+    const range = activeSelection.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(document.createTextNode(text));
+    range.collapse(false);
+    activeSelection.removeAllRanges();
+    activeSelection.addRange(range);
   }
 }

@@ -435,6 +435,10 @@ export class PixiSlideEditorV2Component
           ?.isContentEditable;
         if (tagName === 'INPUT' || tagName === 'TEXTAREA' || isEditable) return;
 
+        if (this.tryStartInlineTextEditing(event)) {
+          return;
+        }
+
         // Undo: Ctrl/Cmd + Z
         if (
           (event.ctrlKey || event.metaKey) &&
@@ -1210,6 +1214,41 @@ export class PixiSlideEditorV2Component
     });
     this.fontOptions = Array.from(known.values());
     this.cdr.markForCheck();
+  }
+
+  private tryStartInlineTextEditing(event: KeyboardEvent): boolean {
+    if (this.overlay.isTextEditingActive()) {
+      return false;
+    }
+
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return false;
+    }
+
+    const selectedId = this.store.snapshot((state) => state.selectedIds)[0];
+    if (!selectedId) {
+      return false;
+    }
+
+    const selectedNode = this.store.snapshot((state) => state.nodes)[selectedId]
+      ?.ref;
+    if (!(selectedNode instanceof TextNode)) {
+      return false;
+    }
+
+    if (event.key === 'Enter' || event.key === 'F2') {
+      event.preventDefault();
+      this.overlay.attachHtmlEditor(selectedNode);
+      return true;
+    }
+
+    if (event.key.length !== 1) {
+      return false;
+    }
+
+    event.preventDefault();
+    this.overlay.attachHtmlEditor(selectedNode, { seedText: event.key });
+    return true;
   }
 
   public async generateSnapshot(options?: {

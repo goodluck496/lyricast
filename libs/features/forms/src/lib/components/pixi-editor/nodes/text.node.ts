@@ -6,6 +6,7 @@ import {
   Graphics,
   HTMLText,
   HTMLTextStyle,
+  Rectangle,
 } from 'pixi.js';
 import { normalizeFontWeight } from '../utils/text-utils';
 import { NodeBase } from './base.node';
@@ -48,6 +49,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
   }
 
   private fitScheduled = false;
+  private editingActive = false;
   public readonly textDisplay: HTMLText; // <-- Объявить тип без инициализации
   private readonly shadowDisplay: HTMLText;
   private readonly bgG = new Graphics(); // Keep for solid fill drawing
@@ -132,13 +134,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       lineHeight: size * this.style.lineHeight,
       fontSize: size,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
-      cssOverrides: [
-        ...this.fitter.getFontCssOverrides(this.style.font),
-        '* { margin: 0; padding: 0; }',
-        'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
-        'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
-        'li { margin: 0; padding: 0; }',
-      ],
+      cssOverrides: this.createCssOverrides(),
     });
     this.applyShadowDisplayStyle(size);
 
@@ -160,6 +156,75 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
     this.backgroundManager.clearBackground();
   }
 
+  setEditingActive(active: boolean): void {
+    this.editingActive = active;
+    this.textDisplay.visible = !active;
+    this.frame.visible = !active;
+    this.handlesContainer.visible = !active && this.selected;
+
+    if (active) {
+      this.shadowDisplay.visible = false;
+      return;
+    }
+
+    this.shadowDisplay.visible =
+      (this.style.shadowSize ?? 0) > 0 || (this.style.shadowBlur ?? 0) > 0;
+  }
+
+  override setSelected(isSelected: boolean): void {
+    super.setSelected(isSelected);
+
+    if (!this.editingActive) {
+      return;
+    }
+
+    this.frame.visible = false;
+    this.handlesContainer.visible = false;
+  }
+
+  getEditableTextRect(): {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } {
+    const innerW = Math.max(4, this.w - this.padding * 2);
+    const innerH = Math.max(4, this.h - this.padding * 2);
+    const textH = Math.max(
+      Math.ceil(this.textDisplay.height || 0),
+      Math.ceil(this.currentFontSize * this.style.lineHeight)
+    );
+
+    let top = this.padding;
+    const valign = this.style.valign ?? 'top';
+
+    if (valign === 'middle') {
+      top = this.padding + Math.max(0, (innerH - textH) / 2);
+    } else if (valign === 'bottom') {
+      top = this.padding + Math.max(0, innerH - textH);
+    }
+
+    return {
+      left: this.padding,
+      top,
+      width: innerW,
+      height: Math.min(innerH, textH),
+    };
+  }
+
+  private createCssOverrides(): string[] {
+    return [
+      ...this.fitter.getFontCssOverrides(this.style.font),
+      '* { margin: 0; padding: 0; }',
+      'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
+      'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
+      'li { margin: 0; padding: 0; }',
+      '.ql-align-center { text-align: center; }',
+      '.ql-align-right { text-align: right; }',
+      '.ql-align-justify { text-align: justify; }',
+    ];
+  }
+
   // Removed private updateBackgroundLayout()
 
   private redrawBackground() {
@@ -170,6 +235,30 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
         .roundRect(0, 0, this.w, this.h, 6)
         .fill(this.backgroundManager.bgFillColor);
     }
+  }
+
+  override drawFrame(): void {
+    if (this.destroyed) return;
+
+    const graphics = this.frame;
+    if (!graphics || graphics.destroyed || typeof graphics.clear !== 'function') {
+      return;
+    }
+
+    graphics.clear();
+
+    // Keep the interaction area for selection/resize logic, but do not render
+    // a visible border around text blocks in the editor.
+    const marginTop = 40;
+    const marginSide = 14;
+    const marginBottom = 14;
+
+    this.hitArea = new Rectangle(
+      -marginSide,
+      -marginTop,
+      this.w + marginSide * 2,
+      this.h + marginTop + marginBottom
+    );
   }
 
   /**
@@ -218,13 +307,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       fontSize: this.lastCalculatedFontSize,
       lineHeight: this.lastCalculatedFontSize * this.style.lineHeight,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
-      cssOverrides: [
-        ...this.fitter.getFontCssOverrides(this.style.font),
-        '* { margin: 0; padding: 0; }',
-        'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
-        'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
-        'li { margin: 0; padding: 0; }',
-      ],
+      cssOverrides: this.createCssOverrides(),
     });
     this.applyShadowDisplayStyle(this.lastCalculatedFontSize);
 
@@ -313,13 +396,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       lineHeight: size * this.style.lineHeight,
       fontSize: size,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
-      cssOverrides: [
-        ...this.fitter.getFontCssOverrides(this.style.font),
-        '* { margin: 0; padding: 0; }',
-        'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
-        'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
-        'li { margin: 0; padding: 0; }',
-      ],
+      cssOverrides: this.createCssOverrides(),
     });
     this.applyShadowDisplayStyle(size);
 
@@ -329,13 +406,14 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
   private applyShadowDisplayStyle(size: number): void {
     const shadowSize = Math.max(0, Math.round(this.style.shadowSize ?? 0));
     const shadowBlur = Math.max(0, Math.round(this.style.shadowBlur ?? 0));
-    this.shadowDisplay.visible = shadowSize > 0 || shadowBlur > 0;
+    this.shadowDisplay.visible =
+      !this.editingActive && (shadowSize > 0 || shadowBlur > 0);
     this.shadowDisplay.text = this.textHtml;
     this.shadowDisplay.filters = shadowBlur
       ? [new BlurFilter({ strength: shadowBlur })]
       : [];
 
-    if (!shadowSize && !shadowBlur) return;
+    if (this.editingActive || (!shadowSize && !shadowBlur)) return;
 
     this.shadowDisplay.style = new HTMLTextStyle({
       fontFamily: this.style.font,
@@ -348,13 +426,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
       lineHeight: size * this.style.lineHeight,
       fontSize: size,
       wordWrapWidth: Math.max(4, this.w - this.padding * 2),
-      cssOverrides: [
-        ...this.fitter.getFontCssOverrides(this.style.font),
-        '* { margin: 0; padding: 0; }',
-        'p, div { white-space: normal; word-break: normal; overflow-wrap: break-word; }',
-        'ul, ol { margin-top: 0; margin-bottom: 0; margin-left: 1.2em; padding-left: 0; list-style-position: inside; }',
-        'li { margin: 0; padding: 0; }',
-      ],
+      cssOverrides: this.createCssOverrides(),
     });
   }
 

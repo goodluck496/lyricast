@@ -109,7 +109,7 @@ export class TextPlugin implements EditorPlugin {
         getSceneBounds: ctx.getSceneBounds,
       });
 
-      // Double-click to edit in an overlay textarea
+      // Double-click starts inline editing in place.
       ctx.utils
         .fromPixi<FederatedPointerEvent>(textNode, 'pointertap')
         .pipe(filter((evt) => evt.detail >= 2), takeUntil(this.destroy$))

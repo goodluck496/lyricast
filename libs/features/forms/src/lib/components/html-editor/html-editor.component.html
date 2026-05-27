@@ -1,11 +1,47 @@
-<div class="rto-root" #root>
-  <p-editor
-    #editor
-    [(ngModel)]="model"
-    (onInit)="onReady()"
-    (onTextChange)="emitChange()"
-    (onSelectionChange)="onSelectionChange($event)"
-    class="editor"
-  >
-  </p-editor>
+<div
+  class="rto-root"
+  [class.rto-root--inline]="inlineMode()"
+  [class.rto-root--valign-middle]="visual()?.verticalAlign === 'middle'"
+  [class.rto-root--valign-bottom]="visual()?.verticalAlign === 'bottom'"
+  [style.--lyri-editor-font-family]="visual()?.fontFamily ?? 'inherit'"
+  [style.--lyri-editor-font-size]="(visual()?.fontSizePx ?? 16) + 'px'"
+  [style.--lyri-editor-font-weight]="visual()?.fontWeight ?? '400'"
+  [style.--lyri-editor-line-height]="visual()?.lineHeight ?? 1.2"
+  [style.--lyri-editor-color]="visual()?.color ?? '#ffffff'"
+  [style.--lyri-editor-align]="visual()?.textAlign ?? 'left'"
+  [style.--lyri-editor-bg]="visual()?.backgroundColor ?? 'transparent'"
+  [style.--lyri-editor-shadow-color]="visual()?.shadowColor ?? 'transparent'"
+  [style.--lyri-editor-shadow-offset]="(visual()?.shadowOffsetPx ?? 0) + 'px'"
+  [style.--lyri-editor-shadow-blur]="(visual()?.shadowBlurPx ?? 0) + 'px'"
+  [style.--lyri-editor-toolbar-offset]="(visual()?.toolbarOffsetPx ?? 0) + 'px'"
+  #root
+>
+  @if (inlineMode()) {
+    <div
+      class="inline-toolbar"
+      (mousedown)="onToolbarMouseDown($event)"
+      (mouseup)="onToolbarMouseUp()"
+    >
+      @for (item of toolbarActions; track item.action) {
+        <button
+          type="button"
+          class="inline-toolbar__button"
+          [pTooltip]="item.title"
+          tooltipPosition="top"
+          [showDelay]="120"
+          [attr.aria-label]="item.title"
+          (click)="applyToolbarAction(item.action)"
+        >
+          {{ item.label }}
+        </button>
+      }
+    </div>
+  }
+
+  <div
+    #content
+    class="content-surface"
+    contenteditable="true"
+    spellcheck="false"
+  ></div>
 </div>

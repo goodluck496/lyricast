@@ -16,6 +16,7 @@ import { IframeNode, NodeBase, TextNode, VideoNode } from '../nodes';
 import {
   HTML_EDITOR_COMPONENT,
   HtmlEditorComponent,
+  LyriHtmlEditorVisualConfig,
   LyriHtmlEditorResult,
 } from '../../html-editor';
 
@@ -26,9 +27,13 @@ export class OverlayService {
   private hostEl?: HTMLDivElement;
 
   private editorHostEl?: HTMLDivElement;
+  private editorContentEl?: HTMLElement;
   private editorRef?: ComponentRef<HtmlEditorComponent>;
   private editingTextNode?: TextNode;
   private originalHTML?: string;
+  private liveHtml?: string;
+  private liveSyncFrameId: number | null = null;
+  private liveSyncInProgress = false;
 
   private iframeEl?: HTMLIFrameElement;
   private iframeForNodeId?: string;
@@ -42,6 +47,20 @@ export class OverlayService {
 
   setHost(element: HTMLDivElement) {
     this.hostEl = element;
+  }
+
+  isTextEditingActive(): boolean {
+    return !!this.editorRef;
+  }
+
+  private colorToHex(color?: number, fallback = '#ffffff'): string {
+    if (typeof color !== 'number' || !Number.isFinite(color)) {
+      return fallback;
+    }
+
+    return `#${Math.max(0, Math.min(0xffffff, color))
+      .toString(16)
+      .padStart(6, '0')}`;
   }
 
   private safeRemove(el?: Element | null) {
@@ -60,16 +79,31 @@ export class OverlayService {
     } catch {}
   }
 
-  public attachHtmlEditor(node: TextNode, opts?: { onClose?: () => void }) {
+  public attachHtmlEditor(
+    node: TextNode,
+    opts?: { onClose?: () => void; seedText?: string }
+  ) {
     if (!this.hostEl) return;
+    if (this.editingTextNode?.id === node.id && this.editorRef) {
+      const editor = this.editorRef.instance;
+      editor.focusAtEnd();
+      if (opts?.seedText) {
+        editor.insertText(opts.seedText);
+      }
+      return;
+    }
+
+    this.commitAndCloseTextarea();
+    node.setEditingActive(true);
 
     // 1) контейнер под редактор
     // const bounds = node.getBounds();
     // const scaleY = bounds.height / node.h;
-    const deg = 0; //((node.rotation || 0) * 180) / Math.PI;
+    const deg = ((node.rotation || 0) * 180) / Math.PI;
 
     const { scaleX, scaleY } = node.getWorldScale();
     const { x: cx, y: cy } = node.getWorldCenter();
+    const textRect = node.getEditableTextRect();
 
     const width = node.w * scaleX;
     const height = node.h * scaleY;
@@ -81,16 +115,16 @@ export class OverlayService {
       top: `${cy - height / 2}px`,
       width: `${width}px`,
       height: `${height}px`,
-      background: 'rgba(0,0,0,0.85)',
-      border: '1px solid #334155',
-      borderRadius: '8px',
-      boxShadow: '0 6px 18px rgba(0,0,0,0.35)',
-      zIndex: '10',
-      padding: `${node.padding * scaleY}px`,
+      background: 'transparent',
+      border: 'none',
+      borderRadius: '0',
+      boxShadow: 'none',
+      outline: 'none',
+      zIndex: '12',
       transform: `rotate(${deg}deg)`,
       transformOrigin: 'center center',
-      // ВАЖНО: дай редактору управление мышью и клавой
       pointerEvents: 'auto',
+      overflow: 'visible',
     } as CSSStyleDeclaration);
 
     this.hostEl.appendChild(host);
@@ -101,27 +135,74 @@ export class OverlayService {
       environmentInjector: this.env,
     });
     this.editorRef = ref;
+    this.appRef.attachView(ref.hostView);
     ref.hostView.detectChanges();
-    host.appendChild(ref.location.nativeElement as HTMLElement);
+    const editorElement = ref.location.nativeElement as HTMLElement;
+    Object.assign(editorElement.style, {
+      position: 'absolute',
+      left: `${textRect.left * scaleX}px`,
+      top: `${textRect.top * scaleY}px`,
+      width: `${textRect.width * scaleX}px`,
+      height: `${Math.max(1, textRect.height * scaleY)}px`,
+    } as CSSStyleDeclaration);
+    host.appendChild(editorElement);
+    this.editorContentEl = editorElement;
 
     // 3) заполняем начальными данными
     const initialHtml = node.textHtml ?? '';
     this.originalHTML = initialHtml;
+    const visual: LyriHtmlEditorVisualConfig = {
+      fontFamily: node.style.font,
+      fontSizePx: Math.max(16, Math.round(node.currentFontSize * scaleY)),
+      fontWeight: String(node.style.weight),
+      lineHeight: node.style.lineHeight,
+      color: node.style.colorHex || this.colorToHex(node.style.color),
+      textAlign: node.style.align,
+      verticalAlign: node.style.valign ?? 'middle',
+      backgroundColor:
+        node.style.bgColorHex || this.colorToHex(node.style.bgColor, 'transparent'),
+      shadowColor:
+        node.style.shadowColorHex ||
+        this.colorToHex(node.style.shadowColor, '#000000'),
+      shadowOffsetPx: Math.max(0, Math.round((node.style.shadowSize ?? 0) * scaleY)),
+      shadowBlurPx: Math.max(0, Math.round((node.style.shadowBlur ?? 0) * scaleY)),
+      toolbarOffsetPx: Math.max(0, Math.round(textRect.top * scaleY)),
+    };
 
     // ВАЖНО: передаём initialHtml во входной input сразу после создания компонента,
     // а не только внутри isReady$, чтобы не зависеть от тайминга события onInit.
     ref.setInput('html', initialHtml);
+    ref.setInput('inlineMode', true);
+    ref.setInput('visual', visual);
+    ref.changeDetectorRef.detectChanges();
 
     // Когда редактор реально готов, даём фокус и при необходимости можем ещё раз
     // установить HTML (но, как правило, достаточно эффекта в HtmlEditorComponent).
-    ref.instance.isReady$.pipe(debounceTime(0), filter(Boolean)).subscribe(() => {
+    ref.instance.isReady$
+      .pipe(debounceTime(0), filter(Boolean))
+      .subscribe(() => {
       ref.instance.setHTML(initialHtml);
-      ref.instance.focus();
+      ref.instance.focusAtEnd();
+      if (opts?.seedText) {
+        ref.instance.insertText(opts.seedText);
+      }
     });
 
     const done$ = new Subject<void>();
 
-    const finish = (commit: boolean) => {
+    ref.instance.htmlChange$
+      .pipe(takeUntil(done$))
+      .subscribe((newHtml: string) => {
+        const currentNode = this.editingTextNode;
+        if (!currentNode) {
+          return;
+        }
+
+        const normalizedHTML = newHtml.replace(/&nbsp;/g, ' ');
+        this.scheduleLiveTextSync(currentNode, normalizedHTML);
+      });
+
+    const finish = async (commit: boolean) => {
       const comp = this.editorRef?.instance;
       const currentNode = this.editingTextNode;
       const origHtml = this.originalHTML ?? '';
@@ -129,17 +210,8 @@ export class OverlayService {
       try {
         if (commit && currentNode && comp) {
           const newHTML: string = comp.getHTML();
-
-          // Нормализуем HTML из редактора: убираем неразрывные пробелы,
-          // чтобы перенос происходил по словам, а не по буквам.
           const normalizedHTML = newHTML.replace(/&nbsp;/g, ' ');
-
-          // для fit и рендера текста оставляем .text (плэйн)
-          currentNode.textHtml = normalizedHTML;
-
-          currentNode.requestFit();
-
-          // История — на основе html (можно сделать ChangeContentCommand, если нужно)
+          await this.flushLiveTextSync(currentNode, normalizedHTML);
           if (origHtml !== undefined && newHTML !== origHtml) {
             const cmd = new ChangeTextCommand(
               currentNode,
@@ -148,9 +220,11 @@ export class OverlayService {
             );
             this.history.execute(cmd);
           }
+        } else if (!commit && currentNode) {
+          await this.flushLiveTextSync(currentNode, origHtml);
         }
       } finally {
-        // аккуратно гасим
+        currentNode?.setEditingActive(false);
         done$.next();
         done$.complete();
         this.teardownEditor();
@@ -159,17 +233,17 @@ export class OverlayService {
     };
 
     ref.instance.blur$.pipe(takeUntil(done$)).subscribe(() => {
-      finish(true);
+      void finish(true);
     });
 
     ref.instance.finish$
       .pipe(takeUntil(done$))
       .subscribe((data: LyriHtmlEditorResult) => {
         if (data.type === 'cancel') {
-          finish(false);
+          void finish(false);
         }
         if (data.type === 'submit') {
-          finish(true);
+          void finish(true);
         }
       });
 
@@ -178,10 +252,20 @@ export class OverlayService {
   }
 
   public teardownEditor() {
+    if (this.liveSyncFrameId !== null) {
+      cancelAnimationFrame(this.liveSyncFrameId);
+    }
+    this.liveSyncFrameId = null;
+    this.liveSyncInProgress = false;
+    this.liveHtml = undefined;
     try {
+      if (this.editorRef) {
+        this.appRef.detachView(this.editorRef.hostView);
+      }
       this.editorRef?.destroy();
     } catch {}
     this.editorRef = undefined;
+    this.editorContentEl = undefined;
     this.safeRemove(this.editorHostEl);
     this.editorHostEl = undefined;
     this.editingTextNode = undefined;
@@ -202,14 +286,61 @@ export class OverlayService {
       const normalizedHTML = newHTML.replace(/&nbsp;/g, ' ');
 
       node.textHtml = normalizedHTML;
-      node.requestFit();
+      void node.layout();
 
       if (originalHTML !== undefined && newHTML !== originalHTML) {
         const cmd = new ChangeTextCommand(node, originalHTML, normalizedHTML);
         this.history.execute(cmd);
       }
     }
+    node?.setEditingActive(false);
     this.teardownEditor();
+  }
+
+  private scheduleLiveTextSync(node: TextNode, html: string): void {
+    this.liveHtml = html;
+    if (this.liveSyncFrameId !== null || this.liveSyncInProgress) {
+      return;
+    }
+
+    this.liveSyncFrameId = requestAnimationFrame(() => {
+      this.liveSyncFrameId = null;
+      void this.runLiveTextSync(node);
+    });
+  }
+
+  private async runLiveTextSync(node: TextNode): Promise<void> {
+    if (!this.liveHtml) {
+      return;
+    }
+
+    this.liveSyncInProgress = true;
+    const html = this.liveHtml;
+    this.liveHtml = undefined;
+
+    try {
+      node.textHtml = html;
+      await node.layout();
+      this.syncToNode(node);
+    } finally {
+      this.liveSyncInProgress = false;
+    }
+
+    if (this.liveHtml !== undefined) {
+      this.scheduleLiveTextSync(node, this.liveHtml);
+    }
+  }
+
+  private async flushLiveTextSync(node: TextNode, html: string): Promise<void> {
+    this.liveHtml = undefined;
+    if (this.liveSyncFrameId !== null) {
+      cancelAnimationFrame(this.liveSyncFrameId);
+      this.liveSyncFrameId = null;
+    }
+
+    node.textHtml = html;
+    await node.layout();
+    this.syncToNode(node);
   }
 
   /** === iframe (как было) === */
@@ -275,6 +406,7 @@ export class OverlayService {
     if (this.editorHostEl && node instanceof TextNode) {
       const { scaleX, scaleY } = node.getWorldScale();
       const { x: cx, y: cy } = node.getWorldCenter();
+      const textRect = node.getEditableTextRect();
 
       const width = node.w * scaleX;
       const height = node.h * scaleY;
@@ -286,10 +418,43 @@ export class OverlayService {
         top: `${cy - height / 2}px`,
         width: `${width}px`,
         height: `${height}px`,
-        padding: `${node.padding * scaleY}px`,
         transform: `rotate(${deg}deg)`,
         transformOrigin: 'center center',
       } as CSSStyleDeclaration);
+
+      if (this.editorContentEl) {
+        Object.assign(this.editorContentEl.style, {
+          left: `${textRect.left * scaleX}px`,
+          top: `${textRect.top * scaleY}px`,
+          width: `${textRect.width * scaleX}px`,
+          height: `${Math.max(1, textRect.height * scaleY)}px`,
+        } as CSSStyleDeclaration);
+      }
+
+      this.editorRef?.setInput('visual', {
+        fontFamily: node.style.font,
+        fontSizePx: Math.max(16, Math.round(node.currentFontSize * scaleY)),
+        fontWeight: String(node.style.weight),
+        lineHeight: node.style.lineHeight,
+        color: node.style.colorHex || this.colorToHex(node.style.color),
+        textAlign: node.style.align,
+        verticalAlign: node.style.valign ?? 'middle',
+        backgroundColor:
+          node.style.bgColorHex || this.colorToHex(node.style.bgColor, 'transparent'),
+        shadowColor:
+          node.style.shadowColorHex ||
+          this.colorToHex(node.style.shadowColor, '#000000'),
+        shadowOffsetPx: Math.max(
+          0,
+          Math.round((node.style.shadowSize ?? 0) * scaleY)
+        ),
+        shadowBlurPx: Math.max(
+          0,
+          Math.round((node.style.shadowBlur ?? 0) * scaleY)
+        ),
+        toolbarOffsetPx: Math.max(0, Math.round(textRect.top * scaleY)),
+      } satisfies LyriHtmlEditorVisualConfig);
+      this.editorRef?.changeDetectorRef.detectChanges();
     }
 
     if (this.iframeEl && node instanceof IframeNode) {

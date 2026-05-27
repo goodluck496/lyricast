@@ -64,6 +64,17 @@ export class TextFitService {
   ]);
   private readonly fontLoadPromises = new Map<string, Promise<void>>();
 
+  private buildHtmlCssOverrides(family: string): string[] {
+    return [
+      ...this.getFontCssOverrides(family),
+      '.pixi-html-text, .pixi-html-text * { margin: 0; white-space: normal !important; word-break: normal !important; overflow-wrap: break-word !important; }',
+      '.pixi-html-text ul, .pixi-html-text ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
+      '.pixi-html-text .ql-align-center { text-align: center; }',
+      '.pixi-html-text .ql-align-right { text-align: right; }',
+      '.pixi-html-text .ql-align-justify { text-align: justify; }',
+    ];
+  }
+
 
   async fitBinary(options: {
     app: Application;
@@ -161,11 +172,7 @@ export class TextFitService {
           baseStyle && typeof baseStyle.fill === 'number'
             ? baseStyle.fill
             : this.utils.colorToNumber('#ffffee'),
-        cssOverrides: [
-          ...this.getFontCssOverrides(family),
-          '.pixi-html-text, .pixi-html-text * { margin: 0; white-space: normal !important; word-break: normal !important; overflow-wrap: break-word !important; }',
-          '.pixi-html-text ul, .pixi-html-text ol { margin: 0; padding-left: 70px; list-style-position: outside; }',
-        ],
+        cssOverrides: this.buildHtmlCssOverrides(family),
       },
     });
     probe.visible = false;

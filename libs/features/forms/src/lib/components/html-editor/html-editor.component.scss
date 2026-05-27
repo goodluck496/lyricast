@@ -1,34 +1,130 @@
-:host, .rto-root { width:100%; height:100%; }
-.rto-root ::ng-deep .p-editor-container { height:100%; }
-.rto-root ::ng-deep .p-editor-content { height: calc(100% - 42px); } /* учти тулбар */
-
-:host-context(.my-app-dark) .rto-root ::ng-deep {
-  .ql-snow.ql-toolbar button,
-  .ql-snow .ql-toolbar button,
-  .ql-snow.ql-toolbar .ql-picker,
-  .ql-snow .ql-toolbar .ql-picker {
-    color: #fff;
-  }
-
-  .ql-snow .ql-stroke {
-    stroke: #fff;
-  }
-
-  .ql-snow .ql-fill,
-  .ql-snow .ql-stroke.ql-fill {
-    fill: #fff;
-  }
-
-  .ql-snow .ql-picker-options {
-    background: #1f1f1f;
-  }
-
-  .ql-snow .ql-picker.ql-expanded .ql-picker-label,
-  .ql-snow .ql-picker-label {
-    color: #fff;
-  }
+:host,
+.rto-root {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.editor {
-  height:100%; display:block;
+.rto-root {
+  --lyri-editor-font-family: inherit;
+  --lyri-editor-font-size: 16px;
+  --lyri-editor-font-weight: 400;
+  --lyri-editor-line-height: 1.2;
+  --lyri-editor-color: #ffffff;
+  --lyri-editor-align: left;
+  --lyri-editor-bg: transparent;
+  --lyri-editor-shadow-color: transparent;
+  --lyri-editor-shadow-offset: 0px;
+  --lyri-editor-shadow-blur: 0px;
+  --lyri-editor-toolbar-offset: 0px;
+  position: relative;
+}
+
+.rto-root--inline {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.rto-root--inline.rto-root--valign-middle {
+  justify-content: center;
+}
+
+.rto-root--inline.rto-root--valign-bottom {
+  justify-content: flex-end;
+}
+
+.content-surface {
+  width: 100%;
+  min-height: 1em;
+  height: auto;
+  outline: none;
+  border: none;
+  background: transparent;
+  color: var(--lyri-editor-color);
+  font-family: var(--lyri-editor-font-family);
+  font-size: var(--lyri-editor-font-size);
+  font-weight: var(--lyri-editor-font-weight);
+  line-height: var(--lyri-editor-line-height);
+  text-align: var(--lyri-editor-align);
+  background: transparent;
+  overflow: hidden;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  caret-color: currentColor;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  text-shadow: var(--lyri-editor-shadow-offset) var(--lyri-editor-shadow-offset)
+    var(--lyri-editor-shadow-blur) var(--lyri-editor-shadow-color);
+}
+
+.content-surface > *:first-child {
+  margin-top: 0;
+}
+
+.content-surface > *:last-child {
+  margin-bottom: 0;
+}
+
+.content-surface p,
+.content-surface div,
+.content-surface ul,
+.content-surface ol {
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  text-shadow: inherit;
+  background-color: var(--lyri-editor-bg);
+}
+
+.content-surface ul,
+.content-surface ol {
+  padding-left: 1.2em;
+}
+
+.content-surface .ql-align-center {
+  text-align: center;
+}
+
+.content-surface .ql-align-right {
+  text-align: right;
+}
+
+.content-surface .ql-align-justify {
+  text-align: justify;
+}
+
+.inline-toolbar {
+  position: absolute;
+  left: 0;
+  top: calc(var(--lyri-editor-toolbar-offset) * -1);
+  transform: translateY(calc(-100% - 8px));
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 12px;
+  background: rgb(15 23 42 / 92%);
+  box-shadow: 0 12px 30px rgb(15 23 42 / 35%);
+  z-index: 5;
+}
+
+.inline-toolbar__button {
+  min-width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #e2e8f0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.inline-toolbar__button:hover {
+  background: rgb(148 163 184 / 18%);
+  color: #ffffff;
 }

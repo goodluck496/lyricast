@@ -13,6 +13,7 @@ import {
   debounceTime,
   EMPTY,
   filter,
+  from,
   map,
   Observable,
   of,
@@ -70,10 +71,23 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
   selectTranslate$ = createEffect(() =>
     this.actions$.pipe(
       ofType(BibleActions.selectTranslate),
-      switchMap((data) => this.apiSrv.getBooks(data.translate)),
-      map((data) => {
-        return BibleActions.setBooks({ data: data as BibleBookShort[] });
-      })
+      withLatestFrom(this.store.select(selectSelectedPath)),
+      switchMap(([data, selectedPath]) =>
+        this.apiSrv.getBooks(data.translate).pipe(
+          switchMap((books) => {
+            const nextBooks = books as BibleBookShort[];
+            const resolvedPath = this.resolvePathWithinBooks(
+              selectedPath,
+              nextBooks
+            );
+
+            return from([
+              BibleActions.setBooks({ data: nextBooks }),
+              BibleActions.changePath({ path: resolvedPath }),
+            ]);
+          })
+        )
+      )
     )
   );
   /**
@@ -189,9 +203,9 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
         const contentId = path[2];
         const section = sections.chapterSection[0];
         //todo допсекция ВСЕГДА, ПОКАЧТО ОДНА, возможно появятся, но пока пропускаем
-        const content = section.content.find(
-          (el) => el.number.toString() === contentId
-        );
+        const content =
+          section.content.find((el) => el.number.toString() === contentId) ??
+          section.content[0];
         if (!content) {
           throw new Error(
             `Not found content with id ${contentId} in chapter ${section.chapterId} in bookId ${section.bookId}`
@@ -541,5 +555,39 @@ export class BiblePageEffects implements BaseEffectsWithBridgeInterface {
       content,
     };
     return result;
+  }
+
+  private resolvePathWithinBooks(
+    selectedPath: string[],
+    books: BibleBookShort[]
+  ): string[] {
+    const fallbackBook = books[0];
+    const requestedBookNumber = selectedPath[0];
+    const requestedChapterNumber = selectedPath[1] ?? '1';
+    const requestedVerseNumber = selectedPath[2] ?? '1';
+
+    const resolvedBook =
+      books.find((book) => book.number.toString() === requestedBookNumber) ??
+      fallbackBook;
+
+    if (!resolvedBook) {
+      return selectedPath;
+    }
+
+    const fallbackChapter = resolvedBook.chapters[0];
+    const resolvedChapter =
+      resolvedBook.chapters.find(
+        (chapter) => chapter.number.toString() === requestedChapterNumber
+      ) ?? fallbackChapter;
+
+    if (!resolvedChapter) {
+      return [resolvedBook.number.toString(), '1', '1'];
+    }
+
+    return [
+      resolvedBook.number.toString(),
+      resolvedChapter.number.toString(),
+      requestedVerseNumber,
+    ];
   }
 }

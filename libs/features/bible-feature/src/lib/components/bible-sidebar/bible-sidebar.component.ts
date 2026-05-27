@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BibleCastingPreviewComponent } from '../casting-preview';
 import { NavigatorFeatureComponent } from '@lyri-cast/navigator-feature';
@@ -13,6 +18,7 @@ import {
   selectSecondaryTranslationSettings,
   selectSelectedBibleVerse,
   selectSelectedChapterSections,
+  selectSelectedTranslate,
   selectSelectedVersesRange,
 } from '@lyri-cast/bible-store';
 import { Store } from '@ngrx/store';
@@ -59,6 +65,7 @@ import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { FormsModule } from '@angular/forms';
 import { MatSliderModule } from '@angular/material/slider';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'lyri-bible-sidebar',
@@ -116,6 +123,7 @@ export class BibleSidebarComponent {
   selectedRange$ = this.store.select(selectSelectedVersesRange);
   secondarySettings$ = this.store.select(selectSecondaryTranslationSettings);
   secondaryCache$ = this.store.select(selectSecondaryTranslationCache);
+  primaryTranslate$ = this.store.select(selectSelectedTranslate);
   private readonly sidebarService =
     inject<SidebarService<BibleSidebarData>>(SidebarService);
   private readonly bibleOnboarding = inject(BibleOnboardingService);
@@ -123,16 +131,44 @@ export class BibleSidebarComponent {
   private readonly windowSrv = inject(WindowService);
   private readonly settingsSrv = inject(SettingsService);
   private readonly bridge = inject(BridgeService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly appearanceService = inject(CastingAppearanceService);
   private readonly apiSrv = inject(BibleApiService);
-  secondaryTranslateOptions$ = this.apiSrv.getTranslates().pipe(
-    map((translates) =>
-      translates.map((translate) => ({
-        label: translate.title || translate.sourceTitle,
-        value: translate,
-      }))
+  secondaryTranslateOptions$ = combineLatest([
+    this.apiSrv.getTranslates(),
+    this.primaryTranslate$,
+  ]).pipe(
+    map(([translates, primaryTranslate]) =>
+      translates
+        .filter(
+          (translate) =>
+            translate.keyForSearch !== primaryTranslate?.keyForSearch
+        )
+        .map((translate) => ({
+          label: translate.title || translate.sourceTitle,
+          value: translate,
+        }))
     )
   );
+
+  constructor() {
+    combineLatest([this.primaryTranslate$, this.secondarySettings$])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([primaryTranslate, secondarySettings]) => {
+        if (
+          !primaryTranslate ||
+          !secondarySettings.translate ||
+          primaryTranslate.keyForSearch !==
+            secondarySettings.translate.keyForSearch
+        ) {
+          return;
+        }
+
+        this.store.dispatch(
+          BibleActions.updateSecondaryTranslationSettings({ translate: null })
+        );
+      });
+  }
 
   onStartCasting() {
     this.store

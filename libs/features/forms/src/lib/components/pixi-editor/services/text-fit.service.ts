@@ -210,20 +210,43 @@ export class TextFitService {
       hi = Math.min(max, Math.ceil((hint + window) / step) * step);
     }
 
-    let best = lo;
-    while (lo <= hi) {
-      const mid = Math.round((lo + hi) / 2 / step) * step;
-      setStyle(mid);
-      // eslint-disable-next-line no-await-in-loop
+    const fitsAt = async (fontSize: number): Promise<boolean> => {
+      setStyle(fontSize);
       await rafOnce();
-      const fits =
-        probe.width <= innerW - fitMargin && probe.height <= innerH - fitMargin;
-      if (fits) {
-        best = mid;
-        lo = mid + step;
-      } else {
-        hi = mid - step;
+      return (
+        probe.width <= innerW - fitMargin && probe.height <= innerH - fitMargin
+      );
+    };
+
+    const searchBestFit = async (
+      rangeMin: number,
+      rangeMax: number,
+      initialBest: number
+    ): Promise<number> => {
+      let searchLo = rangeMin;
+      let searchHi = rangeMax;
+      let bestFit = initialBest;
+
+      while (searchLo <= searchHi) {
+        const mid = Math.round((searchLo + searchHi) / 2 / step) * step;
+        // eslint-disable-next-line no-await-in-loop
+        const fits = await fitsAt(mid);
+        if (fits) {
+          bestFit = mid;
+          searchLo = mid + step;
+        } else {
+          searchHi = mid - step;
+        }
       }
+
+      return bestFit;
+    };
+
+    let best = await searchBestFit(lo, hi, lo);
+
+    if (typeof hint === 'number' && !Number.isNaN(hint) && best >= hi && hi < max) {
+      const expandedLo = Math.min(max, hi + step);
+      best = await searchBestFit(expandedLo, max, best);
     }
 
     if (typeof hint === 'number' && !Number.isNaN(hint)) {

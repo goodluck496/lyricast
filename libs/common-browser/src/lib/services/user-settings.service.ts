@@ -1,10 +1,13 @@
 import { inject, Injectable } from '@angular/core';
+import type { AmbientBackgroundPresetId } from './ambient-background.service';
 import { WindowService } from './window.service';
 
 export type UserAppearanceSettings = {
   theme?: 'dark' | 'light';
   font?: string;
   snowEnabled?: boolean;
+  ambientBackgroundEnabled?: boolean;
+  ambientBackgroundPreset?: AmbientBackgroundPresetId;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -66,6 +69,30 @@ export class UserSettingsService {
           localStorage.setItem('lyricast.snow', s.snowEnabled ? 'on' : 'off');
         } catch {}
       }
+
+      if (typeof s.ambientBackgroundEnabled === 'boolean') {
+        result.ambientBackgroundEnabled = s.ambientBackgroundEnabled;
+        try {
+          localStorage.setItem(
+            'lyricast.ambient-background',
+            s.ambientBackgroundEnabled ? 'on' : 'off'
+          );
+        } catch {}
+      }
+
+      if (
+        s.ambientBackgroundPreset === 'aurora' ||
+        s.ambientBackgroundPreset === 'lagoon' ||
+        s.ambientBackgroundPreset === 'dusk'
+      ) {
+        result.ambientBackgroundPreset = s.ambientBackgroundPreset;
+        try {
+          localStorage.setItem(
+            'lyricast.ambient-background-preset',
+            s.ambientBackgroundPreset
+          );
+        } catch {}
+      }
     } catch {}
 
     return result;
@@ -75,6 +102,8 @@ export class UserSettingsService {
     theme: 'dark' | 'light';
     font: string;
     snowEnabled: boolean;
+    ambientBackgroundEnabled: boolean;
+    ambientBackgroundPreset: AmbientBackgroundPresetId;
   }): Promise<void> {
     try {
       const existing =

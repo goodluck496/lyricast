@@ -1,0 +1,4 @@
+interface:
+  display_name: "LyriCast UI Composition"
+  short_description: "PrimeNG, Material и UI-композиция"
+  default_prompt: "Use $lyricast-ui-composition to build or revise Angular UI in this LyriCast repository."

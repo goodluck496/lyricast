@@ -4,9 +4,9 @@
       <div class="lyric-item">
         <div class="lyric-item__header">{{ lyric.sectionTitle }}</div>
         <div class="lyric-item__content">
-          @for (line of lyric.lines; track line.rangeIndex;) {
+          @for (line of lyric.lines; track line.rangeIndex; let lineIndex = $index) {
             <div class="lyric-item__line"
-                 [tourAnchor]="'songs:lyric-index-' + index"
+                 [tourAnchor]="index === 0 && lineIndex === 0 ? 'songs:lyric-index-0' : ''"
                  #lyricItem
                  [class.lyric-item__line--selected]="selectedLyricLine()?.rangeIndex === line.rangeIndex
                  && lyric.uniqId === selectedLyric()?.uniqId"

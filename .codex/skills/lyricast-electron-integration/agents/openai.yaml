@@ -1,0 +1,4 @@
+interface:
+  display_name: "LyriCast Electron Integration"
+  short_description: "Electron, preload и svc-протокол"
+  default_prompt: "Use $lyricast-electron-integration to implement or debug Electron integration in this LyriCast repository."

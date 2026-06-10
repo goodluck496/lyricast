@@ -1,0 +1,4 @@
+interface:
+  display_name: "LyriCast Worker Domain"
+  short_description: "Воркеры, домены и регистрация"
+  default_prompt: "Use $lyricast-worker-domain to add or modify a worker-backed domain in this LyriCast repository."

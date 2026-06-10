@@ -11,13 +11,11 @@
       <h3>Выбор экрана для отображения презентаций</h3>
       <div class="settings__displays">
         @if (selectedDisplay$ | async; as selectedDisplay) {
-          @for (display of
-            displays; track display.id) {
+          @for (display of displays; track display.id) {
             <p-card class="settings__display-item">
               <ng-template pTemplate="title">{{
-                  display.label || 'Display - ' + display.id
-                }}
-              </ng-template>
+                display.label || 'Display - ' + display.id
+              }}</ng-template>
 
               <p>
                 {{ display.bounds.width }}x{{ display.bounds.height }}
@@ -44,6 +42,7 @@
         }
       </div>
     </p-tabpanel>
+
     <p-tabpanel [value]="1">
       <div class="settings__updates">
         <p>Текущая версия: v{{ appVersion }}</p>
@@ -59,11 +58,13 @@
         ></button>
       </div>
     </p-tabpanel>
+
     <p-tabpanel [value]="2">
       <div class="settings__assets">
         <lyri-asset-management></lyri-asset-management>
       </div>
     </p-tabpanel>
+
     <p-tabpanel [value]="3">
       <div class="settings__appearance-wrapper">
         <div class="settings__appearance">
@@ -81,6 +82,7 @@
               ></p-toggleButton>
             </div>
           </div>
+
           <div class="settings__field">
             <div class="settings__field-options">
               <div class="settings__field-label">Снежинки</div>
@@ -89,12 +91,55 @@
                 [ngModel]="snowEnabled"
                 (ngModelChange)="onSnowToggle($event)"
               ></p-toggleswitch>
-
             </div>
           </div>
+
+          <div class="settings__field">
+            <div class="settings__field-options">
+              <div class="settings__field-label">Живой фон</div>
+              <p-toggleswitch
+                inputId="ambientBackgroundToggle"
+                [ngModel]="ambientBackgroundEnabled"
+                (ngModelChange)="onAmbientBackgroundToggle($event)"
+              ></p-toggleswitch>
+            </div>
+          </div>
+
+          <div class="settings__field settings__field--stacked">
+            <div class="settings__field-label">Палитра фона</div>
+            <p-select
+              inputId="ambientBackgroundPresetSelect"
+              [options]="ambientBackgroundPresetOptions"
+              [ngModel]="ambientBackgroundPreset"
+              [disabled]="!ambientBackgroundEnabled"
+              (ngModelChange)="onAmbientBackgroundPresetChange($event)"
+            >
+              <ng-template pTemplate="selectedItem" let-value>
+                <span>{{ value?.label || value }}</span>
+              </ng-template>
+              <ng-template pTemplate="item" let-option>
+                <div class="settings__preset-option">
+                  <div class="settings__preset-copy">
+                    <div class="settings__preset-title">{{ option.label }}</div>
+                    <div class="settings__preset-description">
+                      {{ option.description }}
+                    </div>
+                  </div>
+                  <div class="settings__preset-swatches">
+                    @for (swatch of option.swatches; track swatch) {
+                      <span
+                        class="settings__preset-swatch"
+                        [style.background]="swatch"
+                      ></span>
+                    }
+                  </div>
+                </div>
+              </ng-template>
+            </p-select>
+          </div>
+
           <div class="settings__field">
             <div class="settings__field-label">Шрифт</div>
-
             <p-select
               inputId="fontSelect"
               [options]="fontOptions"
@@ -129,8 +174,6 @@
           </div>
         </div>
       </div>
-
-
     </p-tabpanel>
 
     <p-tabpanel [value]="4">

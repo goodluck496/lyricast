@@ -1,0 +1,4 @@
+interface:
+  display_name: "LyriCast Feature Builder"
+  short_description: "Паттерны Angular feature для LyriCast"
+  default_prompt: "Use $lyricast-feature-builder to add or update a feature in this LyriCast repository."

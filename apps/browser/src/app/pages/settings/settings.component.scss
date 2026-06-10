@@ -39,6 +39,12 @@
     display: flex;
     align-items: center;
     column-gap: 16px;
+
+    &--stacked {
+      flex-direction: column;
+      align-items: flex-start;
+      row-gap: 12px;
+    }
   }
 
   &__displays {
@@ -64,6 +70,45 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+
+  &__preset-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__preset-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  &__preset-title {
+    font-weight: 600;
+  }
+
+  &__preset-description {
+    font-size: 12px;
+    opacity: 0.78;
+    line-height: 1.35;
+  }
+
+  &__preset-swatches {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  &__preset-swatch {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
   }
 
   &__dict-loading {

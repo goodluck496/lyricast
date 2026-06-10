@@ -1,0 +1,28 @@
+@if (ambientBackground.enabled()) {
+  <div class="ambient-shell" aria-hidden="true">
+    <div class="ambient-shell__wash"></div>
+
+    @for (drifter of drifters; track drifter.id) {
+      <div class="ambient-shell__drifter" [attr.style]="drifter.style"></div>
+    }
+
+    <div class="ambient-shell__cluster ambient-shell__cluster--cursor">
+      <div class="ambient-shell__blob ambient-shell__blob--cursor"></div>
+      <div class="ambient-shell__blob ambient-shell__blob--cursor-echo"></div>
+    </div>
+
+    <div class="ambient-shell__cluster ambient-shell__cluster--one">
+      <div class="ambient-shell__blob ambient-shell__blob--static"></div>
+    </div>
+
+    <div class="ambient-shell__cluster ambient-shell__cluster--two">
+      <div class="ambient-shell__blob ambient-shell__blob--static ambient-shell__blob--alt"></div>
+    </div>
+
+    <div class="ambient-shell__cluster ambient-shell__cluster--three">
+      <div class="ambient-shell__blob ambient-shell__blob--static ambient-shell__blob--deep"></div>
+    </div>
+
+    <div class="ambient-shell__veil"></div>
+  </div>
+}

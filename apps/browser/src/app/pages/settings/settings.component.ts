@@ -11,6 +11,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NavigationStart, RouteReuseStrategy, Router } from '@angular/router';
 import {
+  AmbientBackgroundManager,
+  AmbientBackgroundPresetId,
   SettingsService,
   UserSettingsService,
   WindowService,
@@ -59,6 +61,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   windowSrv = inject(WindowService);
   userSettings = inject(UserSettingsService);
   snowfall = inject(SnowfallManager);
+  ambientBackground = inject(AmbientBackgroundManager);
   routeReuse = inject(RouteReuseStrategy);
   router = inject(Router);
   confirmSrv = inject(ConfirmationService);
@@ -94,6 +97,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
   selectedFont = 'sans-serif';
   isDarkTheme = true;
   snowEnabled = false;
+  ambientBackgroundEnabled = false;
+  ambientBackgroundPreset: AmbientBackgroundPresetId = 'aurora';
+  ambientBackgroundPresetOptions = this.ambientBackground.presets.map((preset) => ({
+    label: preset.label,
+    value: preset.id,
+    description: preset.description,
+    swatches: preset.swatches,
+  }));
 
   async ngOnInit() {
     this.router.events
@@ -168,6 +179,20 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.snowEnabled = loadedSettings.snowEnabled;
         this.snowfall.setEnabled(this.snowEnabled);
       }
+
+      if (typeof loadedSettings.ambientBackgroundEnabled === 'boolean') {
+        this.ambientBackgroundEnabled = loadedSettings.ambientBackgroundEnabled;
+        this.ambientBackground.setEnabled(this.ambientBackgroundEnabled);
+      }
+
+      if (
+        loadedSettings.ambientBackgroundPreset === 'aurora' ||
+        loadedSettings.ambientBackgroundPreset === 'lagoon' ||
+        loadedSettings.ambientBackgroundPreset === 'dusk'
+      ) {
+        this.ambientBackgroundPreset = loadedSettings.ambientBackgroundPreset;
+        this.ambientBackground.setPreset(this.ambientBackgroundPreset);
+      }
     }
 
     // Initialize appearance settings from localStorage or current DOM
@@ -204,12 +229,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Apply detected or stored theme and font so UI is in sync immediately
-    this.onThemeToggle(this.isDarkTheme);
-    this.onFontChange(this.selectedFont);
-
     // Snowfall settings
     this.snowEnabled = this.snowfall.isEnabled();
+    this.ambientBackgroundEnabled = this.ambientBackground.isEnabled();
+    this.ambientBackgroundPreset = this.ambientBackground.presetId();
+
+    // Apply detected or stored theme and font so UI is in sync immediately.
+    // At this point dependent appearance toggles are already synchronized,
+    // so snapshot persistence will not overwrite them with stale defaults.
+    this.onThemeToggle(this.isDarkTheme);
+    this.onFontChange(this.selectedFont);
 
     this.cdr.detectChanges();
   }
@@ -221,8 +250,22 @@ export class SettingsComponent implements OnInit, OnDestroy {
       theme: this.isDarkTheme ? 'dark' : 'light',
       font: this.selectedFont,
       snowEnabled: this.snowEnabled,
+      ambientBackgroundEnabled: this.ambientBackgroundEnabled,
+      ambientBackgroundPreset: this.ambientBackgroundPreset,
     });
     this.cdr.detectChanges();
+  }
+
+  onAmbientBackgroundToggle(enabled: boolean) {
+    this.ambientBackgroundEnabled = enabled;
+    this.ambientBackground.setEnabled(enabled);
+    this.persistAppearanceSettings();
+  }
+
+  onAmbientBackgroundPresetChange(presetId: AmbientBackgroundPresetId) {
+    this.ambientBackgroundPreset = presetId;
+    this.ambientBackground.setPreset(presetId);
+    this.persistAppearanceSettings();
   }
 
   onSelectDisplay(display: AppDisplay) {
@@ -254,6 +297,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
       theme: this.isDarkTheme ? 'dark' : 'light',
       font: this.selectedFont,
       snowEnabled: this.snowEnabled,
+      ambientBackgroundEnabled: this.ambientBackgroundEnabled,
+      ambientBackgroundPreset: this.ambientBackgroundPreset,
     });
     this.cdr.detectChanges();
   }
@@ -275,6 +320,19 @@ export class SettingsComponent implements OnInit, OnDestroy {
       theme: this.isDarkTheme ? 'dark' : 'light',
       font: this.selectedFont,
       snowEnabled: this.snowEnabled,
+      ambientBackgroundEnabled: this.ambientBackgroundEnabled,
+      ambientBackgroundPreset: this.ambientBackgroundPreset,
+    });
+    this.cdr.detectChanges();
+  }
+
+  private persistAppearanceSettings() {
+    this.userSettings.saveAppearanceSnapshot({
+      theme: this.isDarkTheme ? 'dark' : 'light',
+      font: this.selectedFont,
+      snowEnabled: this.snowEnabled,
+      ambientBackgroundEnabled: this.ambientBackgroundEnabled,
+      ambientBackgroundPreset: this.ambientBackgroundPreset,
     });
     this.cdr.detectChanges();
   }

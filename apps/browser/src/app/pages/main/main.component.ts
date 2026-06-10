@@ -43,6 +43,7 @@ import { SearchFeatureComponent } from '@lyri-cast/search-feature';
 import { AsyncPipe, NgTemplateOutlet } from '@angular/common';
 import { IconsService, SvgIconComponent } from '@lyri-cast/svg-icons';
 import { MenuItem } from '../../types';
+import { AmbientBackgroundComponent } from '../../components/ambient-background/ambient-background.component';
 import { lyriBible } from '@lyri-cast/svg-icons/lyri-icons/lyri-bible.icon';
 import { lyriControl } from '@lyri-cast/svg-icons/lyri-icons/lyri-control.icon';
 import { lyriStoryboard } from '@lyri-cast/svg-icons/lyri-icons/lyri-storyboard.icon';
@@ -66,6 +67,7 @@ import { IStepOption, TourPrimeNgModule, TourService } from 'ngx-ui-tour-primeng
     NgTemplateOutlet,
     AsyncPipe,
     SvgIconComponent,
+    AmbientBackgroundComponent,
     TourPrimeNgModule,
   ],
   templateUrl: './main.component.html',

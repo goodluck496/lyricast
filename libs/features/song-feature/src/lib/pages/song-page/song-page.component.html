@@ -40,24 +40,10 @@
           ></p-select>
         </div>
 
-        <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl" [tabIndex]="0"
+        <div tourAnchor="songs:song">
+          <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl" [tabIndex]="0"
                        [loading]="isLoading()">
-          <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search" let-elementIndex="elementIndex">
-            @if (elementIndex === 0) {
-              <div class="list-item__wrapper" >
-                <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
-                <div class="list-item__title" tourAnchor="songs:song">
-                  <span class="list-item__title-content" [innerHTML]="data.title | highliter: search"></span>
-                  @if (data.usageSummary) {
-                    <span
-                      class="list-item__usage"
-                      [pTooltip]="getUsageTooltip(data)"
-                      tooltipPosition="right"
-                    >{{ getUsageDate(data) }}</span>
-                  }
-                </div>
-              </div>
-            } @else {
+            <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">
               <div class="list-item__wrapper">
                 <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
                 <div class="list-item__title">
@@ -71,9 +57,9 @@
                   }
                 </div>
               </div>
-            }
-          </ng-template>
-        </lyri-list-box>
+            </ng-template>
+          </lyri-list-box>
+        </div>
       </div>
     </div>
 

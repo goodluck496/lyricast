@@ -1,0 +1,4 @@
+interface:
+  display_name: "LyriCast Pixi Editor"
+  short_description: "Pixi editor, узлы и overlay-логика"
+  default_prompt: "Use $lyricast-pixi-editor to modify the Pixi editor in this LyriCast repository."

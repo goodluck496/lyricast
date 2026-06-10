@@ -30,6 +30,7 @@ import { filter, map, take } from 'rxjs';
 import { Store } from '@ngrx/store';
 import {
   AppActions,
+  AmbientBackgroundManager,
   BridgeService,
   LoadingStatusService,
   Pages,
@@ -66,6 +67,7 @@ export class AppComponent implements OnInit {
   settingsSrv = inject(SettingsService);
   loadingStatusService = inject(LoadingStatusService);
   snowfall = inject(SnowfallManager);
+  ambientBackground = inject(AmbientBackgroundManager);
   userSettings = inject(UserSettingsService);
 
   cdr = inject(ChangeDetectorRef);
@@ -169,6 +171,22 @@ export class AppComponent implements OnInit {
       .then((settings) => {
         if (settings && typeof settings.snowEnabled === 'boolean') {
           this.snowfall.setEnabled(settings.snowEnabled);
+        }
+
+        if (
+          settings &&
+          typeof settings.ambientBackgroundEnabled === 'boolean'
+        ) {
+          this.ambientBackground.setEnabled(settings.ambientBackgroundEnabled);
+        }
+
+        if (
+          settings &&
+          (settings.ambientBackgroundPreset === 'aurora' ||
+            settings.ambientBackgroundPreset === 'lagoon' ||
+            settings.ambientBackgroundPreset === 'dusk')
+        ) {
+          this.ambientBackground.setPreset(settings.ambientBackgroundPreset);
         }
 
         this.snowfall.ensureRunning();

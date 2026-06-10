@@ -1,0 +1,4 @@
+interface:
+  display_name: "LyriCast Casting Flow"
+  short_description: "Casting, bridge и второе окно Electron"
+  default_prompt: "Use $lyricast-casting-flow to implement or debug casting flow in this LyriCast repository."

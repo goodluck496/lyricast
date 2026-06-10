@@ -1,11 +1,12 @@
 {
   "name": "LyriCast",
-  "version": "2.8.0",
+  "version": "2.8.3",
   "main": "./dist/apps/electron/main.js",
   "description": "Casting bible, songs and other to projector",
   "author": "goodluck496 <nikita.a.kalinin@gmail.com>",
   "license": "MIT",
   "scripts": {
+    "release": "node tools/release.mjs",
     "start": "concurrently \"npm run _start:browser\" \"npm run _start-all-workers\" \"npm run _start:electron\" --kill-others --force-kill-after 5000",
     "build-win:prepare-npm-node-modules": "node tools/prepare-npm-node-modules.mjs",
     "build-win-PNPM": "npm-run-all -c build-win:prepare-npm-node-modules 01__build-win 02__build-win",

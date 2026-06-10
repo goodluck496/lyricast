@@ -1,0 +1,301 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+
+  --cursor-x: 50vw;
+  --cursor-y: 50vh;
+  --cursor-scale-x: 1;
+  --cursor-scale-y: 1;
+  --cursor-flow: 0;
+  --preset-cursor-hue: 206;
+  --preset-cursor-accent-hue: 164;
+
+  --blob-1-x: 18%;
+  --blob-1-y: 24%;
+  --blob-1-hue: 198;
+  --blob-1-react: 0;
+  --blob-1-offset-x: 0px;
+  --blob-1-offset-y: 0px;
+
+  --blob-2-x: 74%;
+  --blob-2-y: 30%;
+  --blob-2-hue: 166;
+  --blob-2-react: 0;
+  --blob-2-offset-x: 0px;
+  --blob-2-offset-y: 0px;
+
+  --blob-3-x: 58%;
+  --blob-3-y: 74%;
+  --blob-3-hue: 222;
+  --blob-3-react: 0;
+  --blob-3-offset-x: 0px;
+  --blob-3-offset-y: 0px;
+}
+
+.ambient-shell {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: transparent;
+
+  &__wash,
+  &__veil {
+    position: absolute;
+    inset: -12%;
+    pointer-events: none;
+  }
+
+  &__wash {
+    background:
+      radial-gradient(circle at 22% 18%, rgb(72 128 255 / 0.09), transparent 22%),
+      radial-gradient(circle at 80% 20%, rgb(72 224 184 / 0.08), transparent 20%),
+      radial-gradient(circle at 50% 62%, rgb(95 92 255 / 0.06), transparent 26%);
+    filter: blur(84px);
+    opacity: 1;
+  }
+
+  &__veil {
+    background:
+      radial-gradient(circle at 50% 48%, rgb(7 11 18 / 0.08), transparent 52%),
+      linear-gradient(180deg, rgb(5 8 14 / 0.04), rgb(5 8 14 / 0.16));
+    opacity: 0.9;
+  }
+
+  &__drifter {
+    position: absolute;
+    border-radius: 47% 53% 58% 42% / 42% 45% 55% 58%;
+    pointer-events: none;
+    filter: blur(56px);
+    opacity: 1;
+    will-change: transform, opacity;
+    background:
+      radial-gradient(circle at 30% 38%, hsl(var(--drifter-hue, 200) var(--drifter-saturation, 40%) var(--drifter-lightness, 42%) / var(--drifter-alpha, 0.2)), transparent 34%),
+      radial-gradient(circle at 66% 52%, hsl(calc(var(--drifter-hue, 200) + 24) calc(var(--drifter-saturation, 40%) - 6%) calc(var(--drifter-lightness, 42%) - 4%) / calc(var(--drifter-alpha, 0.2) * 0.88)), transparent 46%);
+    transform: translate3d(0, 0, 0) scale(var(--drifter-scale, 1));
+    animation: drifter-orbit var(--drifter-duration, 42000ms) ease-in-out infinite alternate;
+  }
+
+  &__cluster {
+    position: absolute;
+    width: 26rem;
+    height: 26rem;
+    pointer-events: none;
+    filter: blur(52px);
+    opacity: 0.52;
+    will-change: transform, opacity;
+
+    &--cursor {
+      left: 0;
+      top: 0;
+      width: 38rem;
+      height: 38rem;
+      transform:
+        translate3d(calc(var(--cursor-x) - 19rem), calc(var(--cursor-y) - 19rem), 0)
+        scale(var(--cursor-scale-x), var(--cursor-scale-y));
+      opacity: calc(0.28 + var(--cursor-flow) * 0.12);
+    }
+
+    &--one {
+      left: var(--blob-1-x);
+      top: var(--blob-1-y);
+      transform:
+        translate(
+          calc(-50% + var(--blob-1-offset-x)),
+          calc(-50% + var(--blob-1-offset-y))
+        )
+        scale(calc(1 + var(--blob-1-react) * 0.18))
+        rotate(calc(-8deg + var(--blob-1-react) * 12deg));
+      opacity: calc(0.16 + var(--blob-1-react) * 0.22);
+    }
+
+    &--two {
+      left: var(--blob-2-x);
+      top: var(--blob-2-y);
+      transform:
+        translate(
+          calc(-50% + var(--blob-2-offset-x)),
+          calc(-50% + var(--blob-2-offset-y))
+        )
+        scale(calc(1 + var(--blob-2-react) * 0.18))
+        rotate(calc(6deg - var(--blob-2-react) * 10deg));
+      opacity: calc(0.16 + var(--blob-2-react) * 0.22);
+    }
+
+    &--three {
+      left: var(--blob-3-x);
+      top: var(--blob-3-y);
+      transform:
+        translate(
+          calc(-50% + var(--blob-3-offset-x)),
+          calc(-50% + var(--blob-3-offset-y))
+        )
+        scale(calc(1 + var(--blob-3-react) * 0.22))
+        rotate(calc(-4deg + var(--blob-3-react) * 14deg));
+      opacity: calc(0.14 + var(--blob-3-react) * 0.24);
+    }
+  }
+
+  &__blob {
+    position: absolute;
+    inset: 0;
+    border-radius: 40% 60% 54% 46% / 49% 42% 58% 51%;
+    transform-origin: center;
+
+    &--cursor {
+      background:
+        radial-gradient(circle at 30% 32%, hsl(var(--preset-cursor-hue) 74% 64% / 0.3), transparent 34%),
+        radial-gradient(circle at 68% 34%, hsl(var(--preset-cursor-accent-hue) 66% 60% / 0.24), transparent 38%),
+        radial-gradient(circle at 48% 68%, hsl(calc(var(--preset-cursor-hue) + 28) 62% 62% / 0.22), transparent 44%),
+        radial-gradient(circle at 52% 52%, hsl(calc(var(--preset-cursor-hue) - 12) 68% 58% / 0.24), transparent 68%);
+      animation: cursor-morph 9.4s ease-in-out infinite alternate;
+    }
+
+    &--cursor-echo {
+      inset: 12%;
+      background:
+        radial-gradient(circle at 36% 42%, hsl(var(--preset-cursor-hue) 72% 76% / 0.18), transparent 28%),
+        radial-gradient(circle at 62% 55%, hsl(calc(var(--preset-cursor-hue) - 18) 64% 68% / 0.14), transparent 40%);
+      opacity: calc(0.18 + var(--cursor-flow) * 0.08);
+      animation: cursor-morph 7.2s ease-in-out infinite alternate-reverse;
+    }
+
+    &--static {
+      background:
+        radial-gradient(circle at 30% 35%, hsl(var(--blob-1-hue) 76% 62% / calc(0.26 + var(--blob-1-react) * 0.3)), transparent 30%),
+        radial-gradient(circle at 68% 42%, hsl(calc(var(--blob-1-hue) + 22) 72% 58% / calc(0.22 + var(--blob-1-react) * 0.28)), transparent 42%),
+        radial-gradient(circle at 44% 70%, hsl(calc(var(--blob-1-hue) - 16) 74% 52% / calc(0.18 + var(--blob-1-react) * 0.24)), transparent 48%);
+      animation: idle-morph 11s ease-in-out infinite alternate;
+    }
+
+    &--alt {
+      background:
+        radial-gradient(circle at 34% 32%, hsl(var(--blob-2-hue) 74% 60% / calc(0.24 + var(--blob-2-react) * 0.3)), transparent 28%),
+        radial-gradient(circle at 64% 44%, hsl(calc(var(--blob-2-hue) + 28) 70% 56% / calc(0.2 + var(--blob-2-react) * 0.28)), transparent 40%),
+        radial-gradient(circle at 50% 72%, hsl(calc(var(--blob-2-hue) - 20) 68% 50% / calc(0.16 + var(--blob-2-react) * 0.24)), transparent 46%);
+      animation-duration: 13s;
+    }
+
+    &--deep {
+      background:
+        radial-gradient(circle at 28% 32%, hsl(var(--blob-3-hue) 72% 60% / calc(0.24 + var(--blob-3-react) * 0.3)), transparent 30%),
+        radial-gradient(circle at 70% 40%, hsl(calc(var(--blob-3-hue) - 24) 76% 52% / calc(0.18 + var(--blob-3-react) * 0.26)), transparent 42%),
+        radial-gradient(circle at 46% 72%, hsl(calc(var(--blob-3-hue) + 18) 72% 58% / calc(0.14 + var(--blob-3-react) * 0.22)), transparent 50%);
+      animation-duration: 15s;
+    }
+  }
+}
+
+:host-context(html.my-app-dark) .ambient-shell {
+  &__wash {
+    background:
+      radial-gradient(circle at 22% 18%, rgb(74 122 255 / 0.16), transparent 22%),
+      radial-gradient(circle at 80% 20%, rgb(61 198 168 / 0.14), transparent 20%),
+      radial-gradient(circle at 50% 62%, rgb(98 76 255 / 0.12), transparent 26%);
+  }
+
+  &__veil {
+    background:
+      radial-gradient(circle at 50% 48%, rgb(2 5 9 / 0.16), transparent 54%),
+      linear-gradient(180deg, rgb(2 5 9 / 0.08), rgb(2 5 9 / 0.24));
+  }
+}
+
+:host-context(html:not(.my-app-dark)) .ambient-shell {
+  &__wash {
+    background:
+      radial-gradient(circle at 18% 16%, rgb(86 148 255 / 0.18), transparent 22%),
+      radial-gradient(circle at 78% 18%, rgb(72 206 178 / 0.16), transparent 20%),
+      radial-gradient(circle at 54% 66%, rgb(124 112 255 / 0.14), transparent 26%);
+    opacity: 0.72;
+  }
+
+  &__veil {
+    background:
+      radial-gradient(circle at 50% 48%, rgb(255 255 255 / 0.02), transparent 54%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.02), rgb(219 231 246 / 0.14));
+    opacity: 0.42;
+  }
+
+  &__drifter {
+    filter: blur(52px);
+    background:
+      radial-gradient(circle at 30% 38%, hsl(var(--drifter-hue, 200) calc(var(--drifter-saturation, 40%) + 10%) calc(var(--drifter-lightness, 42%) + 14%) / calc(var(--drifter-alpha, 0.2) * 1.42)), transparent 34%),
+      radial-gradient(circle at 66% 52%, hsl(calc(var(--drifter-hue, 200) + 24) calc(var(--drifter-saturation, 40%) + 4%) calc(var(--drifter-lightness, 42%) + 10%) / calc(var(--drifter-alpha, 0.2) * 1.22)), transparent 46%);
+  }
+
+  &__cluster {
+    opacity: 0.6;
+
+    &--cursor {
+      opacity: calc(0.34 + var(--cursor-flow) * 0.14);
+    }
+  }
+
+  &__blob {
+    &--cursor {
+      background:
+        radial-gradient(circle at 30% 32%, hsl(var(--preset-cursor-hue) 78% 66% / 0.38), transparent 34%),
+        radial-gradient(circle at 68% 34%, hsl(var(--preset-cursor-accent-hue) 68% 60% / 0.3), transparent 38%),
+        radial-gradient(circle at 48% 68%, hsl(calc(var(--preset-cursor-hue) + 24) 64% 64% / 0.28), transparent 44%),
+        radial-gradient(circle at 52% 52%, hsl(calc(var(--preset-cursor-hue) - 10) 70% 60% / 0.28), transparent 68%);
+    }
+
+    &--cursor-echo {
+      background:
+        radial-gradient(circle at 36% 42%, hsl(var(--preset-cursor-hue) 74% 74% / 0.22), transparent 28%),
+        radial-gradient(circle at 62% 55%, hsl(calc(var(--preset-cursor-hue) - 16) 68% 66% / 0.18), transparent 40%);
+      opacity: calc(0.22 + var(--cursor-flow) * 0.08);
+    }
+  }
+}
+
+@keyframes cursor-morph {
+  0% {
+    border-radius: 39% 61% 53% 47% / 47% 41% 59% 53%;
+  }
+
+  50% {
+    border-radius: 56% 44% 46% 54% / 40% 58% 42% 60%;
+  }
+
+  100% {
+    border-radius: 46% 54% 58% 42% / 55% 40% 60% 45%;
+  }
+}
+
+@keyframes idle-morph {
+  0% {
+    border-radius: 45% 55% 58% 42% / 52% 38% 62% 48%;
+    transform: scale(0.96);
+  }
+
+  100% {
+    border-radius: 58% 42% 46% 54% / 43% 60% 40% 57%;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes drifter-orbit {
+  0% {
+    transform:
+      translate3d(
+        calc(cos(var(--drifter-phase, 0rad)) * var(--drifter-dx, 1rem)),
+        calc(sin(var(--drifter-phase, 0rad)) * var(--drifter-dy, 1rem)),
+        0
+      )
+      scale(var(--drifter-scale, 1));
+  }
+
+  100% {
+    transform:
+      translate3d(
+        calc(cos(var(--drifter-phase, 0rad) + 3.14159rad) * var(--drifter-dx, 1rem)),
+        calc(sin(var(--drifter-phase, 0rad) + 3.14159rad) * var(--drifter-dy, 1rem)),
+        0
+      )
+      scale(calc(var(--drifter-scale, 1) * 1.06));
+  }
+}

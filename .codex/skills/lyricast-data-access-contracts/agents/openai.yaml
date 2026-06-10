@@ -1,0 +1,4 @@
+interface:
+  display_name: "LyriCast Data Access"
+  short_description: "DTO, OpenAPI и browser data-access"
+  default_prompt: "Use $lyricast-data-access-contracts to add or revise API contracts and browser data-access in this LyriCast repository."

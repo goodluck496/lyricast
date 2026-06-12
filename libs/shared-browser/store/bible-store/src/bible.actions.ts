@@ -82,6 +82,7 @@ export const BibleActionsEnum = {
   updateSecondaryTranslationSettings: 'updateSecondaryTranslationSettings',
   setSecondaryTranslationChapter: 'setSecondaryTranslationChapter',
   clearSecondaryTranslationCache: 'clearSecondaryTranslationCache',
+  requestAutoStartCasting: 'requestAutoStartCasting',
   selectVersesRange: 'selectVersesRange',
   resetVersesRange: 'resetVersesRange',
 } as const;
@@ -129,6 +130,7 @@ export const BibleActions = createActionGroup({
       sections: BibleChapterSection[];
     }>(),
     [BibleActionsEnum.clearSecondaryTranslationCache]: emptyProps(),
+    [BibleActionsEnum.requestAutoStartCasting]: props<{ path: string[] }>(),
     [BibleActionsEnum.openedCastingPage]: emptyProps(),
     [BibleActionsEnum.selectVersesRange]: props<{ from: number; to: number }>(),
     [BibleActionsEnum.resetVersesRange]: emptyProps(),

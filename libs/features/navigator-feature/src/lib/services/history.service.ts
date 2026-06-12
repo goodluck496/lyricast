@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { concatMap, Observable, take } from 'rxjs';
+import { filter, Observable, take } from 'rxjs';
 import { NavigatorActions, selectHistory, selectHistoryByType } from '../store';
 import {
   HistoryItem,
@@ -88,27 +88,27 @@ export class HistoryService {
           Pages.SONGS,
         ]);
 
-        setTimeout(() =>
-          this.store.dispatch(
-            SongActions[SongActionsEnum.selectBook](foundSong.payload.bookName)
-          )
+        this.store.dispatch(
+          SongActions[SongActionsEnum.selectBook](foundSong.payload.bookName)
+        );
+        this.store.dispatch(
+          SongActions[SongActionsEnum.selectSongByNumber]({
+            data: {
+              number: foundSong.payload.entity.number,
+              bookKey: foundSong.payload.bookName.fileKey,
+            },
+          })
         );
 
         this.actions$
           .pipe(
-            ofType(SongActions[SongActionsEnum.selectBook]),
-            take(1),
-            concatMap(() => {
-              this.store.dispatch(
-                SongActions[SongActionsEnum.selectSongByNumber]({
-                  data: { number: foundSong.payload.entity.number },
-                })
-              );
-              return this.actions$.pipe(
-                ofType(SongActions[SongActionsEnum.selectSong]),
-                take(1)
-              );
-            })
+            ofType(SongActions[SongActionsEnum.selectSong]),
+            filter(
+              ({ bookName, song }) =>
+                bookName.fileKey === foundSong.payload.bookName.fileKey &&
+                song.number === foundSong.payload.entity.number
+            ),
+            take(1)
           )
           .subscribe(() => {
             this.store.dispatch(

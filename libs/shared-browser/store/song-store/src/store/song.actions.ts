@@ -11,6 +11,7 @@ export const SongActionsEnum = {
   pauseCasting: '[SONG]pauseCasting',
   slideNavigate: '[SONG]slideNavigate',
   updateCastingAppearance: '[SONG]updateCastingAppearance',
+  requestAutoStartCasting: '[SONG]requestAutoStartCasting',
 
   selectBook: '[SONG]selectBook',
   selectSong: '[SONG]selectSong',
@@ -55,9 +56,14 @@ export const SongActions = createActionGroup({
     [SongActionsEnum.pauseCasting]: emptyProps(),
     [SongActionsEnum.slideNavigate]: props<SongPresentationNavigatePayload>(),
     [SongActionsEnum.updateCastingAppearance]: props<CastingAppearance>(),
+    [SongActionsEnum.requestAutoStartCasting]: props<{
+      data: { number: number; bookKey: string };
+    }>(),
 
     [SongActionsEnum.selectBook]: props<ISongBookName>(),
     [SongActionsEnum.selectSong]: props<{ bookName: ISongBookName; song: ISong }>(),
-    [SongActionsEnum.selectSongByNumber]: props<{ data: { number: number } }>(),
+    [SongActionsEnum.selectSongByNumber]: props<{
+      data: { number: number; bookKey?: string };
+    }>(),
   },
 });

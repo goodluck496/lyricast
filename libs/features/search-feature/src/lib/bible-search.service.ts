@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { BehaviorSubject, of, switchMap, tap } from 'rxjs';
-import { BibleSearchDto } from '@lyri-cast/entities';
+import { BibleSearchDto, BibleTranslateShort } from '@lyri-cast/entities';
 import { BibleApiService } from '@lyri-cast/data-access-bible';
 
 import { Store } from '@ngrx/store';
@@ -20,7 +20,7 @@ export class BibleSearchService {
     sections: [],
   });
 
-  public search(query: string) {
+  public search(query: string, translate?: BibleTranslateShort | null) {
     if (!query.length) {
       const data: BibleSearchDto = { search: '', sections: [] };
 
@@ -28,7 +28,9 @@ export class BibleSearchService {
       return of(data);
     }
 
-    const translate$ = this.store.select(selectSelectedTranslate);
+    const translate$ = translate
+      ? of(translate)
+      : this.store.select(selectSelectedTranslate);
     this.isLoading.set(true);
 
     if (this.searchResult$.value.search === query) {

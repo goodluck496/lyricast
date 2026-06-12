@@ -62,6 +62,17 @@
   width: 100%;
 }
 
+.song-list-host {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.song-list-host lyri-list-box {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .list-item {
   &__title {
     flex: 1 1 auto;

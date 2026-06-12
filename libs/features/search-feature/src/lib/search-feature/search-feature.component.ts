@@ -103,13 +103,6 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
   lastTab = SearchTypeTabs.BIBLE;
   activeTab = new FormControl<SearchTypeTabs>(SearchTypeTabs.BIBLE);
 
-  changePath$ = this.actions$.pipe(
-    ofType(BibleActions.changePath),
-    tap(() => {
-      this.searchOverlay().hide();
-    })
-  );
-
   updateSearchResult$ = new BehaviorSubject<void>(void 0);
 
   selectedSongBook: IUiLyriItemInList<ISongBookName> | null = null;
@@ -205,8 +198,6 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
       }
     });
 
-    this.changePath$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
-
     this.router.events
       .pipe(
         takeUntilDestroyed(),
@@ -231,7 +222,10 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
         debounceTime(500),
         switchMap(([_, tab, value]) => {
           if (tab === SearchTypeTabs.BIBLE) {
-            return this.bibleSearchSrv.search(value);
+            return this.bibleSearchSrv.search(
+              value,
+              this.selectedTranslate?.baseEntity ?? null
+            );
           }
           if (tab === SearchTypeTabs.SONGS) {
             return this.songSearchSrv.search(value);

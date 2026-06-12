@@ -24,6 +24,7 @@ import { Store } from '@ngrx/store';
 import { Pages } from '@lyri-cast/common-browser';
 import { Router } from '@angular/router';
 import { TabsModule } from 'primeng/tabs';
+import { ButtonModule } from 'primeng/button';
 
 @Component({
   selector: 'lyri-bible-search-result',
@@ -40,6 +41,7 @@ import { TabsModule } from 'primeng/tabs';
     CdkOption,
     HighlighterPipe,
     TabsModule,
+    ButtonModule,
   ],
   templateUrl: './bible-search-result.component.html',
   styleUrl: './bible-search-result.component.scss',
@@ -56,6 +58,17 @@ export class BibleSearchResultComponent {
   onSelectPath = output<string[]>();
 
   selectedTabIndex = 0;
+
+  private waitForNextFrame(): Promise<void> {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+  }
+
+  private async waitForPageReady(): Promise<void> {
+    await this.waitForNextFrame();
+    await this.waitForNextFrame();
+  }
 
   searchResult$: Observable<BibleSearchDto> = this.searchSrv.searchResult$
     .asObservable()
@@ -117,6 +130,27 @@ export class BibleSearchResultComponent {
       await this.router.navigate(pagePath);
     }
 
+    this.store.dispatch(BibleActions.changePath({ path: value.content.path }));
+    this.onSelectPath.emit(value.content.path);
+  }
+
+  async onPlaySearchElement(event: MouseEvent, value: BibleSearchSectionDto) {
+    event.stopPropagation();
+    const pagePath = [Pages.MAIN, Pages.BIBLE_FEATURE, Pages.BIBLE];
+    const isBiblePage = this.router.isActive(pagePath.join('/'), {
+      paths: 'exact',
+      queryParams: 'exact',
+      fragment: 'ignored',
+      matrixParams: 'ignored',
+    });
+    if (!isBiblePage) {
+      await this.router.navigate(pagePath);
+      await this.waitForPageReady();
+    }
+
+    this.store.dispatch(
+      BibleActions.requestAutoStartCasting({ path: value.content.path })
+    );
     this.store.dispatch(BibleActions.changePath({ path: value.content.path }));
     this.onSelectPath.emit(value.content.path);
   }

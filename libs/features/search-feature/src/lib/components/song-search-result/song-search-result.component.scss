@@ -18,16 +18,21 @@
     .list-item {
 
       &__wrapper {
+        width: auto;
+        flex: 1 1 auto;
+        min-width: 0;
         padding-left: 0;
         padding-right: 0;
       }
 
       &__number {
-        width: 5%;
+        flex: 0 0 40px;
+        width: 40px;
       }
 
       &__title {
-        width: 25%;
+        flex: 0 1 180px;
+        min-width: 0;
         cursor: pointer;
       }
     }
@@ -76,6 +81,8 @@
 
   &__wrapper {
     display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   &__item {
@@ -84,6 +91,10 @@
     height: 56px;
     display: flex;
     align-items: center;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding-right: 8px;
     //gap: 8px;
     //margin: 4px 0;
 
@@ -100,13 +111,19 @@
   }
 
   &__item-text {
-    //width: 100%;
-    //display: inline;
+    flex: 1 1 auto;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
 
-    max-width: 70%
+  &__play-button {
+    margin-left: auto;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
   }
 
 }

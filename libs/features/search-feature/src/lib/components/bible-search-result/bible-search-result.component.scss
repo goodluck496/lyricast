@@ -51,11 +51,15 @@
     min-height: 56px;
     max-height: 56px;
     height: 56px;
-    display: flex;
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr) 32px;
     align-items: center;
-    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    gap: 6px;
     margin: 4px 0 ;
-    padding: 0 8px;
+    padding: 0 6px;
 
     &:hover {
       background-color: #92cdff;
@@ -70,20 +74,43 @@
   }
 
   &__item-text {
-    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__play-button {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    justify-self: end;
   }
 
   /**
   TODO заменить на компоненты ссылки
    */
   &__link {
-    max-width: 100px;
-    width: 100px;
+    max-width: 84px;
+    width: 84px;
     display: inline-flex;
     align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     color: dodgerblue;
     text-decoration: underline;
     cursor: pointer;
+  }
+
+  ::ng-deep {
+    .bible-search-result__item {
+      .bible-search-result__link,
+      .bible-search-result__item-text {
+        min-width: 0;
+      }
+    }
   }
 
 }

@@ -7,7 +7,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { Store } from '@ngrx/store';
-import { map, Observable, take, tap } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
 import { ISongForSearch, SongsSearchDto } from '@lyri-cast/entities';
 import { SongSearchService } from '../../song-search.service';
 import { SongActions, SongActionsEnum } from '@lyri-cast/song-store';
@@ -23,9 +23,9 @@ import { CdkListbox, CdkOption } from '@angular/cdk/listbox';
 import { HighlighterPipe } from '@lyri-cast/ui-lib';
 import { filterEmpty } from '@lyri-cast/common';
 import { TabsModule } from 'primeng/tabs';
-import { Actions, ofType } from '@ngrx/effects';
 import { Router } from '@angular/router';
 import { Pages } from '@lyri-cast/common-browser';
+import { ButtonModule } from 'primeng/button';
 
 @Component({
   selector: 'lyri-song-search-result',
@@ -42,6 +42,7 @@ import { Pages } from '@lyri-cast/common-browser';
     CdkOption,
     HighlighterPipe,
     TabsModule,
+    ButtonModule,
   ],
   templateUrl: './song-search-result.component.html',
   styleUrl: './song-search-result.component.scss',
@@ -51,7 +52,6 @@ export class SongSearchResultComponent {
   cdr = inject(ChangeDetectorRef);
   searchSrv = inject(SongSearchService);
   store = inject(Store);
-  actions$ = inject(Actions);
   router = inject(Router);
 
   isLoading = this.searchSrv.isLoading;
@@ -59,6 +59,17 @@ export class SongSearchResultComponent {
   onSelectSong = output<ISongForSearch>();
 
   selectedTabIndex = 0;
+
+  private waitForNextFrame(): Promise<void> {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+  }
+
+  private async waitForPageReady(): Promise<void> {
+    await this.waitForNextFrame();
+    await this.waitForNextFrame();
+  }
 
   searchResult$: Observable<SongsSearchDto[]> = this.searchSrv.searchResult$
     .asObservable()
@@ -87,16 +98,40 @@ export class SongSearchResultComponent {
     if (!isSongPage) {
       await this.router.navigate(songPagePath);
     }
-    this.actions$
-      .pipe(ofType(SongActions[SongActionsEnum.selectBook]), take(1))
-      .subscribe((payload) => {
-        this.store.dispatch(
-          SongActions[SongActionsEnum.selectSongByNumber]({ data: { number: value.number } })
-        );
-        this.onSelectSong.emit(value);
-      });
-
     this.store.dispatch(SongActions[SongActionsEnum.selectBook](value.bookName));
+    this.store.dispatch(
+      SongActions[SongActionsEnum.selectSongByNumber]({
+        data: { number: value.number, bookKey: value.bookName.fileKey },
+      })
+    );
+    this.onSelectSong.emit(value);
+  }
+
+  async onPlaySearchElement(event: MouseEvent, value: ISongForSearch) {
+    event.stopPropagation();
+    const songPagePath = [Pages.MAIN, Pages.SONGS_FEATURE, Pages.SONGS];
+    const isSongPage = this.router.isActive(songPagePath.join('/'), {
+      paths: 'exact',
+      queryParams: 'exact',
+      fragment: 'ignored',
+      matrixParams: 'ignored',
+    });
+    if (!isSongPage) {
+      await this.router.navigate(songPagePath);
+      await this.waitForPageReady();
+    }
+    this.store.dispatch(
+      SongActions[SongActionsEnum.requestAutoStartCasting]({
+        data: { number: value.number, bookKey: value.bookName.fileKey },
+      })
+    );
+    this.store.dispatch(SongActions[SongActionsEnum.selectBook](value.bookName));
+    this.store.dispatch(
+      SongActions[SongActionsEnum.selectSongByNumber]({
+        data: { number: value.number, bookKey: value.bookName.fileKey },
+      })
+    );
+    this.onSelectSong.emit(value);
   }
 
   onChangeTab(tabValue: any) {

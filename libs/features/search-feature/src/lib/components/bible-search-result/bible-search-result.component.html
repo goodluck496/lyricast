@@ -26,7 +26,7 @@
                   [itemSize]="64"
                   class="bible-search-result__viewport"
                 >
-                  <span cdkListbox>
+                  <div cdkListbox>
                     <div
                       *cdkVirtualFor="let item of group.sections; let index; templateCacheSize: 5"
                       [cdkOption]="item"
@@ -41,8 +41,15 @@
                         class="bible-search-result__item-text"
                         [innerHTML]="item.content.text | highliter: searchResultDto.search || ''"
                       ></div>
+                      <button
+                        pButton
+                        type="button"
+                        icon="pi pi-play"
+                        class="bible-search-result__play-button"
+                        (click)="onPlaySearchElement($event, item)"
+                      ></button>
                     </div>
-                  </span>
+                  </div>
                 </cdk-virtual-scroll-viewport>
               </ng-scrollbar>
             }

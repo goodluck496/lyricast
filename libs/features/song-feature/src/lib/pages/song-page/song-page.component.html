@@ -40,7 +40,7 @@
           ></p-select>
         </div>
 
-        <div tourAnchor="songs:song">
+        <div class="song-list-host" tourAnchor="songs:song">
           <lyri-list-box [items]="(songsList$ | async) || []" [formControl]="songControl" [tabIndex]="0"
                        [loading]="isLoading()">
             <ng-template [pTemplate]="ListBoxTemplates.ITEM" let-data let-search="search">

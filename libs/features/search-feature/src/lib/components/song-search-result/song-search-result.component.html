@@ -44,6 +44,13 @@
                         <div class="song-search-result__item-text"
                              [innerHTML]="item.inlineContent | highliter: data.search: 100"></div>
                       </div>
+                      <button
+                        pButton
+                        type="button"
+                        icon="pi pi-play"
+                        class="song-search-result__play-button"
+                        (click)="onPlaySearchElement($event, item)"
+                      ></button>
                     </div>
 
                   </div>

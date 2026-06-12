@@ -171,27 +171,12 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
   firstLoad = false;
   private suppressSongAppearanceSave = false;
-
-  songsBySelectedBook$: Observable<SongListItem[]> =
-    this.selectedBook.valueChanges.pipe(
-      filterEmpty(),
-      switchMap((value) => {
-        this.isLoading.set(true);
-        return this.songsApiService.getAllSongsByBook(value.baseEntity);
-      }),
-      map((data) => this.buildSongList(data, this.usageSummaries$.value)),
-      tap((songs) => {
-        this.isLoading.set(false);
-        if (!this.firstLoad) {
-          this.firstLoad = true;
-          this.songControl.setValue(songs[0]);
-        }
-      }),
-      shareReplay(1)
-    );
+  private pendingAutoStartCasting:
+    | { number: number; bookKey: string }
+    | null = null;
 
   songsList$: Observable<SongListItem[]> = combineLatest([
-    this.songsBySelectedBook$,
+    this.currentSongsList$,
     this.usageSummaries$,
     this.songListMode.valueChanges.pipe(startWith(this.songListMode.value)),
   ]).pipe(
@@ -200,7 +185,6 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       return this.applySongListMode(enrichedSongs, mode);
     }),
     tap((songs) => {
-      this.currentSongsList$.next(songs);
       const selected = this.songControl.value;
       if (selected && !songs.some((song) => song.searchKey === selected.searchKey)) {
         this.songControl.setValue(songs[0] ?? null);
@@ -246,21 +230,38 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
   selectSongByNumber$ = this.actions$.pipe(
     ofType(SongActions[SongActionsEnum.selectSongByNumber]),
-    switchMap((payload) => {
-      return combineLatest([
-        of(payload.data.number),
+    switchMap((payload) =>
+      combineLatest([
+        of(payload.data),
         this.currentSongsList$.asObservable(),
-      ]);
-    }),
-    map(([number, songs]) => {
+        this.selectedBook.valueChanges.pipe(startWith(this.selectedBook.value)),
+      ]).pipe(
+        filter(([data, songs, selectedBook]) => {
+          if (!selectedBook) {
+            return false;
+          }
+
+          if (data.bookKey && selectedBook.searchKey !== data.bookKey) {
+            return false;
+          }
+
+          return songs.some((song) => song.baseEntity.number === data.number);
+        }),
+        take(1)
+      )
+    ),
+    map(([data, songs, selectedBook]) => {
+      const number = data.number;
       const song = songs.find((el) => el.baseEntity.number === number);
       if (!song) {
         return { type: SongActionsEnum.selectSong };
       }
 
-      if (
-        song.baseEntity.bookName.fileKey !== this.selectedBook.value?.searchKey
-      ) {
+      if (!selectedBook) {
+        return { type: SongActionsEnum.selectSong };
+      }
+
+      if (song.baseEntity.bookName.fileKey !== selectedBook.searchKey) {
         return { type: SongActionsEnum.selectSong };
       }
 
@@ -289,13 +290,62 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       });
 
     this.selectedBook.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        startWith(this.selectedBook.value),
+        filterEmpty()
+      )
       .subscribe(() => {
         if (!this.isActivePage()) {
           return;
         }
 
         this.songOnboarding.tryNext('songs:dict');
+      });
+
+    this.selectedBook.valueChanges
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        startWith(this.selectedBook.value),
+        filterEmpty(),
+        tap(() => this.isLoading.set(true)),
+        switchMap((value) =>
+          this.songsApiService.getAllSongsByBook(value.baseEntity).pipe(
+            catchError(() => of<IShortSong[]>([]))
+          )
+        ),
+        map((songs) => this.buildSongList(songs, this.usageSummaries$.value))
+      )
+      .subscribe((songs) => {
+        this.currentSongsList$.next(songs);
+        this.isLoading.set(false);
+
+        if (!songs.length) {
+          this.songControl.setValue(null);
+          return;
+        }
+
+        const selectedSong = this.songControl.value;
+        const hasSelectedSong = !!selectedSong &&
+          songs.some((song) => song.searchKey === selectedSong.searchKey);
+
+        const pendingSong =
+          this.pendingAutoStartCasting &&
+          this.selectedBook.value?.searchKey === this.pendingAutoStartCasting.bookKey
+            ? songs.find(
+                (song) =>
+                  song.baseEntity.number === this.pendingAutoStartCasting?.number
+              ) ?? null
+            : null;
+
+        if (pendingSong) {
+          this.songControl.setValue(pendingSong);
+          return;
+        }
+
+        if (!hasSelectedSong) {
+          this.songControl.setValue(songs[0]);
+        }
       });
 
     this.selectedSong$
@@ -363,6 +413,11 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
         ///////// todo сделать отдельной функцией
         this.songPageSelectSrv.selectSong(newSong);
+        const firstLyric = this.songPageSelectSrv.selectedLyricsForCasting()[0];
+        const firstLine = firstLyric?.lines[0];
+        if (firstLyric && firstLine) {
+          this.songPageSelectSrv.showPreview(true, firstLyric, firstLine);
+        }
 
         this.store.dispatch(SongActions[SongActionsEnum.pauseCasting]());
 
@@ -374,17 +429,26 @@ export class SongPageComponent implements OnInit, AfterViewInit {
             if (!settings) {
               this.appearanceService.set(DEFAULT_CASTING_APPEARANCE);
               this.suppressSongAppearanceSave = false;
-              return;
+            } else {
+              this.appearanceService.set(settings.appearance);
+
+              if (typeof settings.splitPartsCount === 'number') {
+                this.splitCount.set(settings.splitPartsCount);
+                this.songPageSelectSrv.setSplitCountValue(settings.splitPartsCount);
+              }
+
+              this.suppressSongAppearanceSave = false;
             }
 
-            this.appearanceService.set(settings.appearance);
-
-            if (typeof settings.splitPartsCount === 'number') {
-              this.splitCount.set(settings.splitPartsCount);
-              this.songPageSelectSrv.setSplitCountValue(settings.splitPartsCount);
+            if (
+              this.pendingAutoStartCasting?.bookKey === newSong.bookName.fileKey &&
+              this.pendingAutoStartCasting.number === newSong.number &&
+              firstLyric &&
+              firstLine
+            ) {
+              this.pendingAutoStartCasting = null;
+              this.onStartCasting(true);
             }
-
-            this.suppressSongAppearanceSave = false;
           },
           error: () => {
             this.suppressSongAppearanceSave = false;
@@ -407,14 +471,31 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     this.selectedBook$
       .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
       .subscribe((book) => {
-        this.selectedBook.setValue(
-          {
+        const nextBook =
+          this.songBooksDict.find((item) => item.searchKey === book.fileKey) ?? {
             title: book.humanName,
             searchKey: book.fileKey,
             baseEntity: book,
-          },
-          { emitEvent: false }
-        );
+          };
+
+        const currentBook = this.selectedBook.value;
+        if (currentBook?.searchKey === nextBook.searchKey) {
+          if (currentBook !== nextBook) {
+            this.selectedBook.setValue(nextBook, { emitEvent: false });
+          }
+          return;
+        }
+
+        this.selectedBook.setValue(nextBook);
+      });
+
+    this.actions$
+      .pipe(
+        ofType(SongActions[SongActionsEnum.requestAutoStartCasting]),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ data }) => {
+        this.pendingAutoStartCasting = data;
       });
 
     this.selectBookInStore$
@@ -480,7 +561,19 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         return;
       }
       this.songBooksDict = [...data];
-      const book = data.find((el) => el.searchKey.includes('pesn'));
+      const selectedBook = this.selectedBook.value;
+      if (selectedBook) {
+        const matchedBook = data.find(
+          (item) => item.searchKey === selectedBook.searchKey
+        );
+        if (matchedBook && matchedBook !== selectedBook) {
+          this.selectedBook.setValue(matchedBook, { emitEvent: false });
+        }
+      }
+      const book =
+        this.selectedBook.value ??
+        data.find((el) => el.searchKey.includes('pesn')) ??
+        data[0];
       if (!book) {
         return;
       }

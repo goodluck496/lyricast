@@ -7,9 +7,9 @@
          (keydown)="onKeydown($event)" (focus)="onFocusInput()" (mousedown)="$event.stopPropagation()" (click)="onClickInput($event)" />
 </p-iconField>
 
-<p-popover #searchOverlay (onShow)="onOverlayShow()">
+<p-popover #searchOverlay [dismissable]="false" (onShow)="onOverlayShow()">
 
-  <div class="search__wrapper">
+  <div class="search__wrapper" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
     <lyri-bible-quick-reference
       [active]="activeTab.value === SearchTypeTabs.BIBLE && searchOverlay.overlayVisible"
       [query]="searchControl.value || ''"
@@ -19,21 +19,25 @@
     />
 
     <div class="search-feature-row">
-      <div class="search__tabs">
+      <div class="search__tabs" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
         <p-selectButton
           [options]="tabOptions"
           [formControl]="activeTab"
           (onChange)="onSelectTab($event)"
+          (mousedown)="$event.stopPropagation()"
+          (click)="$event.stopPropagation()"
           optionLabel="label"
           optionValue="value" />
       </div>
-      <div class="search__additional-controls">
+      <div class="search__additional-controls" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
         @if (activeTab.value === SearchTypeTabs.BIBLE) {
           <p-select [options]="(bibleTranslates$ | async) || []"
                       optionLabel="title"
                       placeholder="Выберите перевод"
                       [(ngModel)]="selectedTranslate"
                       (ngModelChange)="onTranslateSelect($event)"
+                      (mousedown)="$event.stopPropagation()"
+                      (click)="$event.stopPropagation()"
                       
           >
             <ng-template pTemplate="selectedItem" let-data>
@@ -48,6 +52,8 @@
                       placeholder="Выберите сборник"
                       [(ngModel)]="selectedSongBook"
                       (ngModelChange)="onSongBookSelect($event)"
+                      (mousedown)="$event.stopPropagation()"
+                      (click)="$event.stopPropagation()"
                       
           >
             <ng-template pTemplate="selectedItem" let-data>

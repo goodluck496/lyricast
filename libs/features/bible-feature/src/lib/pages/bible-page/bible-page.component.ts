@@ -223,6 +223,7 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   private readonly onboardingHelpService = inject(OnboardingHelpService);
   private readonly bibleOnboarding = inject(BibleOnboardingService);
   private readonly appearanceService = inject(CastingAppearanceService);
+  private pendingAutoStartPath: string[] | null = null;
 
   constructor() {
     this.bibleFormGroup.controls.translate.valueChanges
@@ -304,6 +305,15 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
             content: value?.content || [],
           },
         });
+      });
+
+    this.actions$
+      .pipe(
+        ofType(BibleActions.requestAutoStartCasting),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ path }) => {
+        this.pendingAutoStartPath = path;
       });
   }
 
@@ -394,6 +404,28 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
         if (event.key === 'Escape') {
           this.onPauseCasting();
         }
+      });
+
+    combineLatest([
+      this.store.select(selectSelectedPath),
+      this.store.select(selectSelectedBibleVerse),
+    ])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([path, verse]) => {
+        if (!this.pendingAutoStartPath || !verse) {
+          return;
+        }
+
+        if (path.join(':') !== this.pendingAutoStartPath.join(':')) {
+          return;
+        }
+
+        if (verse.path.join(':') !== this.pendingAutoStartPath.join(':')) {
+          return;
+        }
+
+        this.pendingAutoStartPath = null;
+        this.onStartCasting(verse);
       });
   }
 

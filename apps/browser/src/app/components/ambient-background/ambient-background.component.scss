@@ -39,7 +39,6 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  background: transparent;
 
   &__wash,
   &__veil {
@@ -50,17 +49,16 @@
 
   &__wash {
     background:
-      radial-gradient(circle at 22% 18%, rgb(72 128 255 / 0.09), transparent 22%),
-      radial-gradient(circle at 80% 20%, rgb(72 224 184 / 0.08), transparent 20%),
-      radial-gradient(circle at 50% 62%, rgb(95 92 255 / 0.06), transparent 26%);
+      radial-gradient(circle at 22% 18%, rgb(74 122 255 / 0.16), transparent 22%),
+      radial-gradient(circle at 80% 20%, rgb(61 198 168 / 0.14), transparent 20%),
+      radial-gradient(circle at 50% 62%, rgb(98 76 255 / 0.12), transparent 26%);
     filter: blur(84px);
-    opacity: 1;
   }
 
   &__veil {
     background:
-      radial-gradient(circle at 50% 48%, rgb(7 11 18 / 0.08), transparent 52%),
-      linear-gradient(180deg, rgb(5 8 14 / 0.04), rgb(5 8 14 / 0.16));
+      radial-gradient(circle at 50% 48%, rgb(2 5 9 / 0.16), transparent 54%),
+      linear-gradient(180deg, rgb(2 5 9 / 0.08), rgb(2 5 9 / 0.24));
     opacity: 0.9;
   }
 
@@ -69,7 +67,6 @@
     border-radius: 47% 53% 58% 42% / 42% 45% 55% 58%;
     pointer-events: none;
     filter: blur(56px);
-    opacity: 1;
     will-change: transform, opacity;
     background:
       radial-gradient(circle at 30% 38%, hsl(var(--drifter-hue, 200) var(--drifter-saturation, 40%) var(--drifter-lightness, 42%) / var(--drifter-alpha, 0.2)), transparent 34%),
@@ -142,7 +139,6 @@
     position: absolute;
     inset: 0;
     border-radius: 40% 60% 54% 46% / 49% 42% 58% 51%;
-    transform-origin: center;
 
     &--cursor {
       background:
@@ -188,21 +184,6 @@
   }
 }
 
-:host-context(html.my-app-dark) .ambient-shell {
-  &__wash {
-    background:
-      radial-gradient(circle at 22% 18%, rgb(74 122 255 / 0.16), transparent 22%),
-      radial-gradient(circle at 80% 20%, rgb(61 198 168 / 0.14), transparent 20%),
-      radial-gradient(circle at 50% 62%, rgb(98 76 255 / 0.12), transparent 26%);
-  }
-
-  &__veil {
-    background:
-      radial-gradient(circle at 50% 48%, rgb(2 5 9 / 0.16), transparent 54%),
-      linear-gradient(180deg, rgb(2 5 9 / 0.08), rgb(2 5 9 / 0.24));
-  }
-}
-
 :host-context(html:not(.my-app-dark)) .ambient-shell {
   &__wash {
     background:
@@ -220,15 +201,12 @@
   }
 
   &__drifter {
-    filter: blur(52px);
     background:
       radial-gradient(circle at 30% 38%, hsl(var(--drifter-hue, 200) calc(var(--drifter-saturation, 40%) + 10%) calc(var(--drifter-lightness, 42%) + 14%) / calc(var(--drifter-alpha, 0.2) * 1.42)), transparent 34%),
       radial-gradient(circle at 66% 52%, hsl(calc(var(--drifter-hue, 200) + 24) calc(var(--drifter-saturation, 40%) + 4%) calc(var(--drifter-lightness, 42%) + 10%) / calc(var(--drifter-alpha, 0.2) * 1.22)), transparent 46%);
   }
 
   &__cluster {
-    opacity: 0.6;
-
     &--cursor {
       opacity: calc(0.34 + var(--cursor-flow) * 0.14);
     }

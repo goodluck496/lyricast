@@ -77,6 +77,7 @@ import { TourAnchorPrimeNgDirective, TourPrimeNgModule } from 'ngx-ui-tour-prime
 import { SongOnboardingService } from '../../services/song-onboarding.service';
 import { SongDisplaySettingsService } from '../../services/song-display-settings.service';
 import { SongUsageTrackingService } from '../../services/song-usage-tracking.service';
+import { SongTextLayoutService } from '../../services/song-text-layout.service';
 import {
   SongUsageApiService,
   SongUsageSummaryDto,
@@ -136,7 +137,11 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   private readonly songDisplaySettings = inject(SongDisplaySettingsService);
   private readonly songUsageTracking = inject(SongUsageTrackingService);
   private readonly songUsageApi = inject(SongUsageApiService);
+  private readonly songTextLayout = inject(SongTextLayoutService);
   private readonly appearance$ = toObservable(this.appearanceService.appearance);
+  private readonly fitTextAutoWrapEnabled$ = toObservable(
+    this.songTextLayout.fitTextAutoWrapEnabled
+  );
 
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
   // chorusAfterCouplet = signal(true);
@@ -366,13 +371,19 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     combineLatest([
       this.selectedSong$.pipe(filterEmpty()),
       this.appearance$,
+      this.fitTextAutoWrapEnabled$,
     ])
       .pipe(
         debounceTime(300),
         filter(() => !this.suppressSongAppearanceSave),
-        switchMap(([song, appearance]) =>
+        switchMap(([song, appearance, fitTextAutoWrapEnabled]) =>
           this.songDisplaySettings
-            .save(song, appearance, this.splitCount())
+            .save(
+              song,
+              appearance,
+              this.splitCount(),
+              fitTextAutoWrapEnabled
+            )
             .pipe(catchError(() => of(null)))
         ),
         takeUntilDestroyed(this.destroyRef)
@@ -428,20 +439,28 @@ export class SongPageComponent implements OnInit, AfterViewInit {
           next: (settings) => {
             if (!settings) {
               this.appearanceService.set(DEFAULT_CASTING_APPEARANCE);
+              this.songTextLayout.setFitTextAutoWrapEnabled(false);
               this.suppressSongAppearanceSave = false;
             } else {
               this.appearanceService.set(settings.appearance);
 
               if (typeof settings.splitPartsCount === 'number') {
                 this.splitCount.set(settings.splitPartsCount);
-                this.songPageSelectSrv.setSplitCountValue(settings.splitPartsCount);
+                this.songPageSelectSrv.setSplitCountValue(
+                  settings.splitPartsCount
+                );
               }
+
+              this.songTextLayout.setFitTextAutoWrapEnabled(
+                settings.fitTextAutoWrapEnabled
+              );
 
               this.suppressSongAppearanceSave = false;
             }
 
             if (
-              this.pendingAutoStartCasting?.bookKey === newSong.bookName.fileKey &&
+              this.pendingAutoStartCasting?.bookKey ===
+                newSong.bookName.fileKey &&
               this.pendingAutoStartCasting.number === newSong.number &&
               firstLyric &&
               firstLine
@@ -712,7 +731,12 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     }
 
     this.songDisplaySettings
-      .save(song, this.appearanceService.appearance(), this.splitCount())
+      .save(
+        song,
+        this.appearanceService.appearance(),
+        this.splitCount(),
+        this.songTextLayout.fitTextAutoWrapEnabled()
+      )
       .pipe(take(1), catchError(() => of(null)))
       .subscribe();
   }

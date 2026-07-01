@@ -1,4 +1,4 @@
-<div class="casting-surface" [ngStyle]="appearanceService.getBackgroundStyles(appearance())">
+<div class="casting-surface" [ngStyle]="appearanceService.getBackgroundStyles(displayAppearance())">
   <div class="info-block" [class.hide]="!showingContent()">
     <div class="info-block__type" [class.hide]="!selectedSong()">{{ selectedLyric()?.sectionTitle }}</div>
     <div class="info-block__number" [class.hide]="!selectedSong()">{{ selectedSong()?.number }}</div>
@@ -11,7 +11,7 @@
           <section class="slides__section">
             <div
               [fittext]="true"
-              [maxFontSize]="115"
+              [maxFontSize]="appearance().maxFontSize"
               [minFontSize]="appearance().minFontSize"
               [activateOnResize]="true"
             >
@@ -28,15 +28,14 @@
                   class="slides__section">
                   <div
                     [fittext]="true"
-                    [maxFontSize]="140"
+                    [maxFontSize]="appearance().maxFontSize"
                     [minFontSize]="appearance().minFontSize"
                     [activateOnResize]="true"
                   >
-                    <div
-                      [innerHTML]="sanitizer.bypassSecurityTrustHtml(line.text)"
-                      [ngStyle]="appearanceService.getTextStyles(appearance())"
-                      [class.single-line]="lyric.lines.length === 1"
-                      class="slides__content"></div>
+              <div
+                [innerHTML]="sanitizer.bypassSecurityTrustHtml(line.text)"
+                [ngStyle]="appearanceService.getTextStyles(displayAppearance())"
+                class="slides__content"></div>
                   </div>
 
                 </section>

@@ -27,6 +27,10 @@ import {
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { MenuItem } from 'primeng/api';
 import { CastingAppearanceControlsComponent } from '@lyri-cast/asset-management';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { FormsModule } from '@angular/forms';
+import { SongTextLayoutService } from '../../services/song-text-layout.service';
+import { snapshot } from '@lyri-cast/common';
 
 @Component({
   selector: 'lyri-song-sidebar',
@@ -39,6 +43,8 @@ import { CastingAppearanceControlsComponent } from '@lyri-cast/asset-management'
     TourPrimeNgModule,
     SplitButtonModule,
     CastingAppearanceControlsComponent,
+    ToggleSwitchModule,
+    FormsModule,
   ],
   templateUrl: './song-sidebar.component.html',
   styleUrl: './song-sidebar.component.scss',
@@ -63,6 +69,7 @@ export class SongSidebarComponent {
   private readonly settingsSrv = inject(SettingsService);
   private readonly bridge = inject(BridgeService);
   private readonly appearanceService = inject(CastingAppearanceService);
+  readonly textLayout = inject(SongTextLayoutService);
 
   isOpeningWindow = new BehaviorSubject<boolean>(false);
 
@@ -156,5 +163,15 @@ export class SongSidebarComponent {
       return;
     }
     this.castingSrv.navigateSlide(navigatePayload);
+  }
+
+  onFitTextAutoWrapToggle(enabled: boolean): void {
+    this.textLayout.setFitTextAutoWrapEnabled(enabled);
+
+    if (snapshot(this.castingIsPaused$)) {
+      return;
+    }
+
+    this.onStartCasting(true);
   }
 }

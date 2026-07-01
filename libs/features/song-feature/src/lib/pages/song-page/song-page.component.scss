@@ -54,6 +54,51 @@
       font-weight: 500;
     }
   }
+
+  .song-list-host {
+    .list-item {
+      &__wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-width: 0;
+      }
+
+      &__number {
+        flex: 0 0 auto;
+        width: 40px;
+        opacity: 0.7;
+        white-space: nowrap;
+      }
+
+      &__title {
+        display: flex;
+        align-items: center;
+        flex: 1 1 auto;
+        min-width: 0;
+        gap: 6px;
+        overflow: hidden;
+      }
+
+      &__title-content {
+        display: block;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      &__usage {
+        flex: 0 0 auto;
+        margin-left: auto;
+        font-size: 10px;
+        opacity: 0.54;
+        white-space: nowrap;
+      }
+    }
+  }
 }
 
 .song-list-toolbar {
@@ -65,33 +110,18 @@
 .song-list-host {
   display: flex;
   flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 0;
+  overflow-x: hidden;
 }
 
 .song-list-host lyri-list-box {
   flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 0;
-}
-
-.list-item {
-  &__title {
-    flex: 1 1 auto;
-    min-width: 0;
-    gap: 6px;
-  }
-
-  &__title-content {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__usage {
-    flex: 0 0 auto;
-    margin-left: auto;
-    font-size: 10px;
-    opacity: 0.54;
-    white-space: nowrap;
-  }
+  overflow-x: hidden;
 }

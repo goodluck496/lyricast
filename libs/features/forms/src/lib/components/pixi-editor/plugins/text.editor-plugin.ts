@@ -124,18 +124,38 @@ export class TextPlugin implements EditorPlugin {
 
       const applyPatchToNode = (node: NodeBase) => {
         if (node instanceof TextNode) {
-          if (patch.font) node.style.font = patch.font;
-          if (patch.weight) node.style.weight = patch.weight as UiTextStyles['weight'];
-          if (typeof patch.min === 'number') node.style.min = patch.min;
-          if (typeof patch.max === 'number') node.style.max = patch.max;
-          if (patch.align) node.style.align = patch.align as Align;
-          if (typeof patch.lineHeight === 'number') node.style.lineHeight = patch.lineHeight;
+          let requiresRefit = false;
+          if (patch.font) {
+            node.style.font = patch.font;
+            requiresRefit = true;
+          }
+          if (patch.weight) {
+            node.style.weight = patch.weight as UiTextStyles['weight'];
+            requiresRefit = true;
+          }
+          if (typeof patch.min === 'number') {
+            node.style.min = patch.min;
+            requiresRefit = true;
+          }
+          if (typeof patch.max === 'number') {
+            node.style.max = patch.max;
+            requiresRefit = true;
+          }
+          if (patch.align) {
+            node.style.align = patch.align as Align;
+            requiresRefit = true;
+          }
+          if (typeof patch.lineHeight === 'number') {
+            node.style.lineHeight = patch.lineHeight;
+            requiresRefit = true;
+          }
           if (typeof patch.actualFontSize === 'number') {
             const fontSize = Math.max(1, patch.actualFontSize);
             node.style.actualFontSize = fontSize;
             node.style.min = fontSize;
             node.style.max = fontSize;
             node.applyFixedSize(fontSize);
+            requiresRefit = false;
           }
           // if (patch.list != null) node.style.list = !!patch.list;
           if (patch.colorHex) {
@@ -154,7 +174,11 @@ export class TextPlugin implements EditorPlugin {
           if (typeof patch.shadowBlur === 'number') {
             node.style.shadowBlur = Math.max(0, patch.shadowBlur);
           }
-          node.requestFit();
+          if (requiresRefit) {
+            node.requestFit();
+          } else {
+            node.applyFixedSize(node.currentFontSize);
+          }
           node.drawHandles();
         } else if (node instanceof BrushNode) {
           const brushColor = patch.colorHex ? ctx.utils.colorToNumber(patch.colorHex) : node.stroke;

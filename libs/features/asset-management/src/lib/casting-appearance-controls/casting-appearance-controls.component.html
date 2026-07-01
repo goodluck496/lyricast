@@ -39,6 +39,19 @@
       ></p-inputNumber>
     </div>
 
+    <div class="casting-appearance__field">
+      <label for="castingMaxFont">Макс. размер fit-text</label>
+      <p-inputNumber
+        inputId="castingMaxFont"
+        [ngModel]="appearance().maxFontSize"
+        (ngModelChange)="update({ maxFontSize: $event })"
+        [min]="8"
+        [max]="200"
+        suffix=" px"
+        [showButtons]="true"
+      ></p-inputNumber>
+    </div>
+
     <div class="casting-appearance__field casting-appearance__field--inline">
       <span>Жирный шрифт</span>
       <p-toggleButton
@@ -48,6 +61,8 @@
         offLabel="Нет"
       ></p-toggleButton>
     </div>
+
+    <ng-content select="[casting-appearance-font-extra]" />
 
     <div class="casting-appearance__field">
       <label for="castingTextColor">Цвет текста</label>

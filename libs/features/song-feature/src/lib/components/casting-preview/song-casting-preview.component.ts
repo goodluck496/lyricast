@@ -3,8 +3,10 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
+  effect,
   inject,
   OnDestroy,
   signal,
@@ -19,6 +21,11 @@ import { Ng2FittextModule } from 'ng2-fittext';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DomSanitizer } from '@angular/platform-browser';
 import { CastingAppearanceService } from '@lyri-cast/common-browser';
+import { SongTextLayoutService } from '../../services/song-text-layout.service';
+
+const PREVIEW_CONTENT_HEIGHT = 220;
+const CASTING_CONTENT_HEIGHT_BASELINE = 1080 - 64;
+const PREVIEW_FONT_SCALE = PREVIEW_CONTENT_HEIGHT / CASTING_CONTENT_HEIGHT_BASELINE;
 
 @Component({
   selector: 'lyri-song-casting-preview',
@@ -35,6 +42,16 @@ export class SongCastingPreviewComponent implements OnDestroy, AfterViewInit {
   private destroyRef = inject(DestroyRef);
   protected readonly appearanceService = inject(CastingAppearanceService);
   protected readonly appearance = this.appearanceService.appearance;
+  protected readonly previewMinFontSize = computed(() =>
+    Math.max(8, Math.round(this.appearance().minFontSize * PREVIEW_FONT_SCALE))
+  );
+  protected readonly previewMaxFontSize = computed(() =>
+    Math.max(
+      this.previewMinFontSize(),
+      Math.round(this.appearance().maxFontSize * PREVIEW_FONT_SCALE)
+    )
+  );
+  private readonly textLayout = inject(SongTextLayoutService);
   sanitizer: DomSanitizer = inject(DomSanitizer);
 
   deckRef?: Reveal.Api;
@@ -47,10 +64,25 @@ export class SongCastingPreviewComponent implements OnDestroy, AfterViewInit {
   public selectedLyricLine = signal<LyricLine | null>(null);
   public selectedLyric = signal<LyricForCasting | null>(null);
 
-  constructor() {}
+  constructor() {
+    effect(() => {
+      this.textLayout.fitTextAutoWrapEnabled();
+
+      const selectedLine = this.songPageSelectSrv.selectedLyricLine();
+      this.slideText = this.textLayout.formatHtmlForDisplay(
+        selectedLine?.text || ''
+      );
+
+      this.cdr.markForCheck();
+      this.deckRef?.layout();
+      this.deckRef?.sync();
+    });
+  }
 
   async initReveal(): Promise<void> {
-    this.slideText = this.songPageSelectSrv.selectedLyricLine()?.text || '';
+    this.slideText = this.textLayout.formatHtmlForDisplay(
+      this.songPageSelectSrv.selectedLyricLine()?.text || ''
+    );
 
     this.cdr.detectChanges();
     this.deckRef?.layout();
@@ -99,7 +131,9 @@ export class SongCastingPreviewComponent implements OnDestroy, AfterViewInit {
         }
         this.selectedLyricLine = this.songPageSelectSrv.selectedLyricLine;
         this.selectedLyric = this.songPageSelectSrv.selectedLyric;
-        this.slideText = this.songPageSelectSrv.selectedLyricLine()?.text || '';
+        this.slideText = this.textLayout.formatHtmlForDisplay(
+          this.songPageSelectSrv.selectedLyricLine()?.text || ''
+        );
         this.deckRef?.sync();
 
         if (isShowPreview) {

@@ -4,6 +4,7 @@ import { WindowService } from './window.service';
 export interface CastingAppearance {
   fontFamily: string;
   minFontSize: number;
+  maxFontSize: number;
   fontWeight: '400' | '700';
   textColor: string;
   shadowColor: string;
@@ -21,6 +22,7 @@ export type CastingAppearanceScope = 'songs' | 'bible';
 export const DEFAULT_CASTING_APPEARANCE: CastingAppearance = {
   fontFamily: 'sans-serif',
   minFontSize: 28,
+  maxFontSize: 140,
   fontWeight: '700',
   textColor: '#ffdd00',
   shadowColor: '#000000',
@@ -198,9 +200,17 @@ export class CastingAppearanceService {
   }
 
   private normalize(appearance: CastingAppearance): CastingAppearance {
+    const minFontSize = this.clampNumber(appearance.minFontSize, 8, 140);
+    const maxFontSize = this.clampNumber(
+      Math.max(appearance.maxFontSize, minFontSize),
+      8,
+      200
+    );
+
     return {
       ...appearance,
-      minFontSize: this.clampNumber(appearance.minFontSize, 8, 140),
+      minFontSize,
+      maxFontSize,
       shadowBlur: this.clampNumber(appearance.shadowBlur, 0, 40),
       shadowOffsetX: this.clampNumber(appearance.shadowOffsetX, -40, 40),
       shadowOffsetY: this.clampNumber(appearance.shadowOffsetY, -40, 40),

@@ -24,6 +24,7 @@ import {
   tap,
 } from 'rxjs';
 import { SongDisplaySettingsService } from './song-display-settings.service';
+import { SongTextLayoutService } from './song-text-layout.service';
 
 @Injectable({ providedIn: 'root' })
 export class SongUsageTrackingService {
@@ -31,6 +32,7 @@ export class SongUsageTrackingService {
   private readonly api = inject(SongUsageApiService);
   private readonly appearanceService = inject(CastingAppearanceService);
   private readonly displaySettings = inject(SongDisplaySettingsService);
+  private readonly textLayout = inject(SongTextLayoutService);
 
   private readonly subscription = new Subscription();
   private connected = false;
@@ -90,7 +92,12 @@ export class SongUsageTrackingService {
             }
 
             return this.displaySettings
-              .save(payload.song, appearance, payload.splitPartsCount ?? null)
+              .save(
+                payload.song,
+                appearance,
+                payload.splitPartsCount ?? null,
+                this.textLayout.fitTextAutoWrapEnabled()
+              )
               .pipe(catchError(() => of(null)));
           })
         )
@@ -119,7 +126,12 @@ export class SongUsageTrackingService {
         appearanceSnapshot: appearance,
       }),
       settings: this.displaySettings
-        .save(payload.song, appearance, payload.splitPartsCount ?? null)
+        .save(
+          payload.song,
+          appearance,
+          payload.splitPartsCount ?? null,
+          this.textLayout.fitTextAutoWrapEnabled()
+        )
         .pipe(catchError(() => of(null))),
     }).pipe(
       tap(({ session }) => {

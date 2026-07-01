@@ -1,10 +1,11 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { ISong, Lyric, LyricForCasting, LyricLine } from '@lyri-cast/entities';
 import { Subject } from 'rxjs';
 import {
   SongPresentationNavigatePayload,
   SongStartCastingPayload,
 } from '@lyri-cast/song-store';
+import { SongTextLayoutService } from '../../services/song-text-layout.service';
 
 export const SPLIT_PARTS_COUNT = {
   NONE: -1,
@@ -19,6 +20,7 @@ export type SplitPartsCount =
 
 @Injectable()
 export class SongPageSelectService {
+  private readonly textLayout = inject(SongTextLayoutService);
   public splitPartsCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
   public selectedSong = signal<ISong | null>(null);
   public selectedLyricLine = signal<LyricLine | null>(null);
@@ -39,16 +41,21 @@ export class SongPageSelectService {
 
     // важный момент: НЕ пересчитываем по-старому,
     // а берём точно те же разбиения и globalSongIndex, что и в selectedLyricsForCasting
-    const lyrics = this.buildLyricsForCasting(song);
+    const lyrics = this.buildLyricsForCasting(song).map((lyric) =>
+      this.textLayout.mapLyricForCasting(lyric)
+    );
 
     const selectedLyric = this.selectedLyric();
     const fromIndex = fromSelectedBlock ? this.selectedLyricLine()?.globalSongIndex : undefined;
+    const currentLyric = selectedLyric
+      ? lyrics.find((lyric) => lyric.uniqId === selectedLyric.uniqId) ?? lyrics[0]
+      : lyrics[0];
 
     return {
       song,
       lyrics,
       fromIndex,
-      currentLyric: selectedLyric ?? lyrics[0],
+      currentLyric,
       splitPartsCount: this.splitPartsCount(),
     };
   }
@@ -102,7 +109,7 @@ export class SongPageSelectService {
 
     return {
       direction: dir,
-      currentLyric: nextLyric,
+      currentLyric: this.textLayout.mapLyricForCasting(nextLyric),
       index: nextGlobalIndex,
     };
   }

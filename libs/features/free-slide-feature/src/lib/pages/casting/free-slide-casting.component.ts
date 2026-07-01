@@ -177,7 +177,7 @@ export class FreeSlideCastingComponent
     await this.initPixiApp();
     this.nodeFactory.app = this.app;
     this.bridge.windowSrv.electronContext.send({
-      event: 'OPENED_PAGE',
+      event: APP_COMMON_ACTIONS.openedPage,
       payload: { state: 'after-view-init', page: Pages.CASTING },
     });
   }

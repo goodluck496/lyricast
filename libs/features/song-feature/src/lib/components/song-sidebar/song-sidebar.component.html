@@ -28,6 +28,15 @@
   </div>
 
   <lyri-navigator-feature class="control-sidebar__navigator" feature="songs">
-    <lyri-casting-appearance-controls navigator-appearance />
+    <lyri-casting-appearance-controls navigator-appearance>
+      <div class="song-sidebar__fit-text-toggle" casting-appearance-font-extra>
+        <label for="songFitTextAutoWrap">Автоперенос для fit-text</label>
+        <p-toggleswitch
+          inputId="songFitTextAutoWrap"
+          [ngModel]="textLayout.fitTextAutoWrapEnabled()"
+          (ngModelChange)="onFitTextAutoWrapToggle($event)"
+        />
+      </div>
+    </lyri-casting-appearance-controls>
   </lyri-navigator-feature>
 </div>

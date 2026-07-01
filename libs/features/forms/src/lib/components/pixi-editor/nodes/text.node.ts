@@ -50,6 +50,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
 
   private fitScheduled = false;
   private editingActive = false;
+  private lastLayoutSignature = '';
   public readonly textDisplay: HTMLText; // <-- Объявить тип без инициализации
   private readonly shadowDisplay: HTMLText;
   private readonly bgG = new Graphics(); // Keep for solid fill drawing
@@ -121,6 +122,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
    */
   applyFixedSize(size: number) {
     this.lastCalculatedFontSize = size;
+    this.lastLayoutSignature = this.createLayoutSignature();
     this.textDisplay.text = this.textHtml;
 
     this.textDisplay.style = new HTMLTextStyle({
@@ -361,6 +363,15 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
    * Uses TextFitService.fitBinary to compute an optimal font size, then positions the Pixi Text.
    */
   async layout() {
+    const nextLayoutSignature = this.createLayoutSignature();
+    if (
+      nextLayoutSignature === this.lastLayoutSignature &&
+      this.lastCalculatedFontSize > 0
+    ) {
+      this.applyFixedSize(this.lastCalculatedFontSize);
+      return;
+    }
+
     this.textDisplay.text = this.textHtml;
 
     const size = await this.fitter.fitBinary({
@@ -384,6 +395,7 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
     });
 
     this.lastCalculatedFontSize = size;
+    this.lastLayoutSignature = nextLayoutSignature;
 
     this.textDisplay.style = new HTMLTextStyle({
       fontFamily: this.style.font,
@@ -401,6 +413,28 @@ export class TextNode extends NodeBase implements BackgroundHostNode {
     this.applyShadowDisplayStyle(size);
 
     this.updateTextPosition();
+  }
+
+  private createLayoutSignature(): string {
+    return JSON.stringify({
+      textHtml: this.textHtml,
+      width: this.w,
+      height: this.h,
+      padding: this.padding,
+      font: this.style.font,
+      weight: this.style.weight,
+      align: this.style.align,
+      valign: this.style.valign,
+      lineHeight: this.style.lineHeight,
+      min: this.style.min,
+      max: this.style.max,
+      color: this.style.color,
+      colorHex: this.style.colorHex,
+      shadowColor: this.style.shadowColor,
+      shadowColorHex: this.style.shadowColorHex,
+      shadowSize: this.style.shadowSize,
+      shadowBlur: this.style.shadowBlur,
+    });
   }
 
   private applyShadowDisplayStyle(size: number): void {

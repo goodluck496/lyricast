@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   DestroyRef,
+  ElementRef,
   effect,
   inject,
   input,
@@ -75,6 +76,7 @@ export enum SearchTypeTabs {
 export class SearchFeatureComponent implements OnInit, AfterViewInit {
   destroyRef = inject(DestroyRef);
   router = inject(Router);
+  hostRef = inject(ElementRef<HTMLElement>);
 
   store = inject(Store);
 
@@ -238,10 +240,32 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     fromEvent<KeyboardEvent>(window, 'keydown')
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .pipe(filter((event) => event.ctrlKey && event.code === 'KeyF'))
       .subscribe((event) => {
         this.focusSearchInput();
         this.searchOverlay().show(event, this.input().el.nativeElement);
+      });
+
+    fromEvent<MouseEvent>(document, 'mousedown')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        const overlay = this.searchOverlay();
+        const target = event.target;
+
+        if (!overlay.overlayVisible || !(target instanceof Node)) {
+          return;
+        }
+
+        const clickedInsideInput = this.hostRef.nativeElement.contains(target);
+        const clickedInsideOverlay = overlay.container?.contains(target) ?? false;
+
+        if (clickedInsideInput || clickedInsideOverlay) {
+          return;
+        }
+
+        overlay.hide();
+        this.input().el.nativeElement.blur();
       });
   }
 

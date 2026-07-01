@@ -33,3 +33,16 @@
   margin-top: 8px;
   overflow: hidden;
 }
+
+.song-sidebar__fit-text-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.song-sidebar__fit-text-toggle label {
+  font-size: 14px;
+  line-height: 1.3;
+}

@@ -16,6 +16,7 @@ import { map, Observable, of } from 'rxjs';
 export interface SongDisplaySettingsSnapshot {
   appearance: CastingAppearance;
   splitPartsCount: number | null;
+  fitTextAutoWrapEnabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -25,12 +26,18 @@ export class SongDisplaySettingsService {
   save(
     song: ISong,
     appearance: CastingAppearance,
-    splitPartsCount: number | null
+    splitPartsCount: number | null,
+    fitTextAutoWrapEnabled: boolean
   ): Observable<SongDisplaySettingsDto> {
+    const appearancePayload = {
+      ...appearance,
+      fitTextAutoWrapEnabled,
+    };
+
     const payload: SaveSongDisplaySettingsDto = {
       ...this.getIdentity(song),
       appearanceSchemaVersion: SONG_APPEARANCE_SCHEMA_VERSION,
-      appearance,
+      appearance: appearancePayload,
       splitPartsCount,
     };
 
@@ -55,6 +62,9 @@ export class SongDisplaySettingsService {
         return {
           appearance: this.normalizeAppearance(settings.appearance),
           splitPartsCount: settings.splitPartsCount,
+          fitTextAutoWrapEnabled: this.readFitTextAutoWrapEnabled(
+            settings.appearance
+          ),
         };
       })
     );
@@ -90,6 +100,8 @@ export class SongDisplaySettingsService {
     return (
       typeof value['fontFamily'] === 'string' &&
       typeof value['minFontSize'] === 'number' &&
+      (value['maxFontSize'] === undefined ||
+        typeof value['maxFontSize'] === 'number') &&
       (value['fontWeight'] === '400' || value['fontWeight'] === '700') &&
       this.isHexColor(value['textColor']) &&
       this.isHexColor(value['shadowColor']) &&
@@ -112,5 +124,13 @@ export class SongDisplaySettingsService {
 
   private isHexColor(value: unknown): boolean {
     return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
+  }
+
+  private readFitTextAutoWrapEnabled(value: unknown): boolean {
+    if (!this.isRecord(value)) {
+      return false;
+    }
+
+    return value['fitTextAutoWrapEnabled'] === true;
   }
 }

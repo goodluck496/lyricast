@@ -4,8 +4,10 @@
   flex-direction: column;
 
   width: 100%;
+  max-width: 100%;
   height: 100%;
   min-height: 0; // allow inner scroll container to shrink
+  overflow-x: hidden;
 
   --list-box-item-h: 42px;
 
@@ -14,6 +16,21 @@
   --list-box-item-hover-bg: #92cdff;
   --list-box-item-selected-text-color: white;
   --list-box-item-hover-text-color: black;
+
+  ::ng-deep {
+    .ng-scroll-content {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      --scrollbar-content-width: 100%;
+    }
+
+    .cdk-virtual-scroll-content-wrapper {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+    }
+  }
 }
 
 
@@ -44,14 +61,28 @@
   &__container {
     display: flex;
     flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     min-height: 0; // critical for nested ng-scrollbar to work
+    overflow-x: hidden;
+  }
+
+  &__list {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
   }
 
   &__viewport {
     display: flex;
 
     width: 100%;
+    max-width: 100%;
     height: 100%;
+    min-width: 0;
+    overflow-x: hidden;
   }
 
   &__item {
@@ -61,6 +92,7 @@
     max-height: var(--list-box-item-h);
     min-height: var(--list-box-item-h);
     width: 100%;
+    min-width: 0;
     cursor: pointer;
     transition: .3s;
 

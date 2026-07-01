@@ -7,7 +7,7 @@
          (keydown)="onKeydown($event)" (focus)="onFocusInput()" (mousedown)="$event.stopPropagation()" (click)="onClickInput($event)" />
 </p-iconField>
 
-<p-popover #searchOverlay [dismissable]="false" (onShow)="onOverlayShow()">
+<p-popover #searchOverlay [dismissable]="true" (onShow)="onOverlayShow()">
 
   <div class="search__wrapper" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
     <lyri-bible-quick-reference

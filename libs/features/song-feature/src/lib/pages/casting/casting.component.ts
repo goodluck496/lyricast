@@ -19,7 +19,13 @@ import { Ng2FittextDirective, Ng2FittextModule } from 'ng2-fittext';
 import Reveal, { Api } from 'reveal.js';
 
 import { Store } from '@ngrx/store';
-import { BridgeService, CastingAppearanceService, Pages, SnowfallManager } from '@lyri-cast/common-browser';
+import {
+  BridgeService,
+  CastingAppearanceService,
+  DEFAULT_CASTING_APPEARANCE,
+  Pages,
+  SnowfallManager,
+} from '@lyri-cast/common-browser';
 import {
   selectCastingAppearance,
   selectCastingPaused,
@@ -51,6 +57,7 @@ export class CastingComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly appearanceService = inject(CastingAppearanceService);
   sanitizer: DomSanitizer = inject(DomSanitizer);
   protected readonly appearance = this.appearanceService.appearance;
+  protected readonly displayAppearance = signal(DEFAULT_CASTING_APPEARANCE);
 
   deckRef?: Reveal.Api;
 
@@ -84,6 +91,7 @@ export class CastingComponent implements OnInit, AfterViewInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => {
       this.showingContent.set(!value);
+      this.displayAppearance.set(!value ? this.appearance() : DEFAULT_CASTING_APPEARANCE);
 
       if (value) {
         // Кастинг на паузе или завершён — убираем снежинки
@@ -125,6 +133,9 @@ export class CastingComponent implements OnInit, AfterViewInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((appearance) => {
       this.appearanceService.set(appearance);
+      if (this.showingContent()) {
+        this.displayAppearance.set(appearance);
+      }
       this.cdr.detectChanges();
       this.updateTextSize();
     });
@@ -151,6 +162,7 @@ export class CastingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.appearanceService.set(
       wasShowingContent ? this.appearance() : payload.appearance ?? this.appearance()
     );
+    this.displayAppearance.set(this.appearance());
 
     this.selectedSong.set(payload.song);
     this.selectedLyrics.set(payload.lyrics);
@@ -255,6 +267,7 @@ export class CastingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.deckRef?.destroy();
 
     this.showingContent.set(false);
+    this.displayAppearance.set(DEFAULT_CASTING_APPEARANCE);
     this.hideContent = true;
   }
 

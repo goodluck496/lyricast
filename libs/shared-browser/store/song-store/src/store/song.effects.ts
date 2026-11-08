@@ -17,7 +17,11 @@ import {
   SongActions,
   SongActionsEnum,
 } from './song.actions';
-import { selectCastingProcess } from './song.selectors';
+import {
+  selectCastingFrozen,
+  selectCastingProcess,
+  selectNavigateState,
+} from './song.selectors';
 import { filter, map } from 'rxjs';
 
 @Injectable()
@@ -37,7 +41,9 @@ export class SongsPageEffects {
     pauseCastingAction: SongActions[SongActionsEnum.pauseCasting],
     stopCastingAction: SongActions[SongActionsEnum.stopCasting],
     slideNavigateAction: SongActions[SongActionsEnum.slideNavigate],
+    selectNavigateState,
     selectCastingProcess,
+    selectCastingFrozen,
     selectOpenedWindow,
     getDisplayForCasting: () => this.settingsSrv.getDisplayForCasting(),
     store: this.store,
@@ -53,6 +59,7 @@ export class SongsPageEffects {
   pauseCasting$ = this.base.pauseCasting$;
   stopCasting$ = this.base.stopCasting$;
   slideNavigate$ = this.base.slideNavigate$;
+  syncOnUnfreeze$ = this.base.syncOnUnfreeze$;
 
   closeCastingWindow$ = createEffect(() =>
     this.actions$.pipe(

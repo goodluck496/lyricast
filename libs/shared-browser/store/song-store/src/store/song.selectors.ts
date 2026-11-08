@@ -13,6 +13,7 @@ export const {
   selectSongState,
   selectNavigateState,
   selectCastingPaused,
+  selectCastingFrozen,
   selectCastingAppearance,
   selectSelectedBook,
   selectSelectedSong,

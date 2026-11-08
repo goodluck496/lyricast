@@ -77,6 +77,7 @@ export const BibleActionsEnum = {
   startCasting: 'startCasting',
   stopCasting: 'stopCasting',
   pauseCasting: 'pauseCasting',
+  setFreezeCasting: 'setFreezeCasting',
   castingProcessChange: 'castingProcessChange',
   updateCastingAppearance: 'updateCastingAppearance',
   updateSecondaryTranslationSettings: 'updateSecondaryTranslationSettings',
@@ -120,6 +121,7 @@ export const BibleActions = createActionGroup({
     [BibleActionsEnum.startCasting]: props<BibleStartCastingPayload>(),
     [BibleActionsEnum.stopCasting]: emptyProps(),
     [BibleActionsEnum.pauseCasting]: emptyProps(),
+    [BibleActionsEnum.setFreezeCasting]: props<{ frozen: boolean }>(),
     [BibleActionsEnum.castingProcessChange]:
       props<BiblePresentationNavigatePayload>(),
     [BibleActionsEnum.updateCastingAppearance]: props<CastingAppearance>(),

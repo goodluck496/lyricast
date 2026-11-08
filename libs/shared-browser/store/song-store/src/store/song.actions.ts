@@ -9,6 +9,7 @@ export const SongActionsEnum = {
   castingStarted: '[SONG]castingStarted',
   stopCasting: '[SONG]stopCasting',
   pauseCasting: '[SONG]pauseCasting',
+  setFreezeCasting: '[SONG]setFreezeCasting',
   slideNavigate: '[SONG]slideNavigate',
   updateCastingAppearance: '[SONG]updateCastingAppearance',
   requestAutoStartCasting: '[SONG]requestAutoStartCasting',
@@ -54,6 +55,7 @@ export const SongActions = createActionGroup({
     [SongActionsEnum.castingStarted]: emptyProps(),
     [SongActionsEnum.stopCasting]: emptyProps(),
     [SongActionsEnum.pauseCasting]: emptyProps(),
+    [SongActionsEnum.setFreezeCasting]: props<{ frozen: boolean }>(),
     [SongActionsEnum.slideNavigate]: props<SongPresentationNavigatePayload>(),
     [SongActionsEnum.updateCastingAppearance]: props<CastingAppearance>(),
     [SongActionsEnum.requestAutoStartCasting]: props<{

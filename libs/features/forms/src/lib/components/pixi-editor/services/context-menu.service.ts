@@ -77,7 +77,7 @@ export class ContextMenuService {
 
     const hasSelection = (this.store.snapshot(s => s.selectedIds)?.length || 0) > 0;
     if (!hasSelection) {
-      addItem('Add Text', () => this.bus.emit({ t: 'ADD_TEXT', x: 100, y: 80 }));
+      addItem('Add Text', () => this.bus.emit({ t: 'ADD_TEXT', x: 0, y: 0 }));
       addItem('Add Image (URL)', async () => { const url = await this.askUrl('Image URL'); if (url) this.bus.emit({ t: 'ADD_IMAGE', url }); });
       addItem('Add Video (URL)', async () => { const url = await this.askUrl('Video URL'); if (url) this.bus.emit({ t: 'ADD_VIDEO', url }); });
       addItem('Add Iframe (URL)', async () => { const url = await this.askUrl('URL'); if (url) this.bus.emit({ t: 'ADD_IFRAME', url }); });

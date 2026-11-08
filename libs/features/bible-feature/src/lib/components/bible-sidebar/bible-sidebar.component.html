@@ -25,6 +25,18 @@
         styleClass="w-full"
       ></p-splitbutton>
     }
+    <div class="bible-sidebar__switch-row">
+      <label class="bible-sidebar__switch-label" for="bible-freeze">
+        <i class="pi pi-pause-circle"></i>
+        <span>Freeze</span>
+      </label>
+      <p-toggleswitch
+        inputId="bible-freeze"
+        [disabled]="(openedCastingWindow$ | async) === false"
+        [ngModel]="castingIsFrozen$ | async"
+        (ngModelChange)="onFreezeToggle($event)"
+      ></p-toggleswitch>
+    </div>
   </div>
 
   @if (secondarySettings$ | async; as secondarySettings) {

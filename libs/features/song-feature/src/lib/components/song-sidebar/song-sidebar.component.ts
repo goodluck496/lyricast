@@ -9,7 +9,12 @@ import {
 import { CommonModule } from '@angular/common';
 import { SongCastingPreviewComponent } from '../casting-preview/song-casting-preview.component';
 import { NavigatorFeatureComponent } from '@lyri-cast/navigator-feature';
-import { selectCastingPaused, SongActions, SongActionsEnum } from '@lyri-cast/song-store';
+import {
+  selectCastingFrozen,
+  selectCastingPaused,
+  SongActions,
+  SongActionsEnum,
+} from '@lyri-cast/song-store';
 import { SongPageSelectService } from '../../pages/song-page/song-page-select.service';
 import { AppActions, selectOpenedWindow, SidebarService, WindowService, SettingsService, BridgeService, Pages, DEFAULT_CASTING_PAGE_CONFIG, CastingAppearanceService } from '@lyri-cast/common-browser';
 import { AppWindowTypes, APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
@@ -59,6 +64,7 @@ export class SongSidebarComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly store = inject(Store);
   castingIsPaused$ = this.store.select(selectCastingPaused);
+  castingIsFrozen$ = this.store.select(selectCastingFrozen);
   openedCastingWindow$ = this.store
     .select(selectOpenedWindow)
     .pipe(map((e) => !!e));
@@ -114,6 +120,10 @@ export class SongSidebarComponent {
 
   onPauseCasting(): void {
     this.castingSrv.pauseCasting();
+  }
+
+  onFreezeToggle(frozen: boolean): void {
+    this.store.dispatch(SongActions[SongActionsEnum.setFreezeCasting]({ frozen }));
   }
 
   onCloseCasting(): void {

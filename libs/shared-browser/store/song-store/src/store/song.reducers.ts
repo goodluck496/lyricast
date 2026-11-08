@@ -13,6 +13,7 @@ export type SongPageState = {
   selectedSong: ISong | null;
 
   castingPaused: boolean;
+  castingFrozen: boolean;
   castingProcess: SongStartCastingPayload | null;
   navigateState: SongPresentationNavigatePayload | null;
   castingAppearance: CastingAppearance;
@@ -22,6 +23,7 @@ export const initState: SongPageState = {
   selectedBook: null,
   selectedSong: null,
   castingPaused: true,
+  castingFrozen: false,
   castingProcess: null,
   navigateState: null,
   castingAppearance: DEFAULT_CASTING_APPEARANCE,
@@ -61,6 +63,12 @@ export const SongPageReducers = createReducer<SongPageState>(
       castingPaused: true,
       castingProcess: null,
       navigateState: null,
+    } satisfies SongPageState;
+  }),
+  on(SongActions[SongActionsEnum.setFreezeCasting], (state, { frozen }) => {
+    return {
+      ...state,
+      castingFrozen: frozen,
     } satisfies SongPageState;
   }),
   on(SongActions[SongActionsEnum.stopCasting], (state) => {

@@ -144,6 +144,12 @@ export const BibleReducers = createReducer<BibleState>(
       castingPaused: true,
     } satisfies BibleState;
   }),
+  on(BibleActions.setFreezeCasting, (state, { frozen }) => {
+    return {
+      ...state,
+      castingFrozen: frozen,
+    } satisfies BibleState;
+  }),
   on(BibleActions.castingProcessChange, (state, data) => {
     return {
       ...state,

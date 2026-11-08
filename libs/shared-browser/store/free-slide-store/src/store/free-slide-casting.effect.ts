@@ -19,7 +19,13 @@ import {
   FreeSlideActionSource,
 } from './free-slide.actions';
 import { EventData } from '@lyri-cast/common-electron';
-import { selectFreeSlideCastingProcess, selectFreeSlideCastingFrozen, selectGlobalTransition, selectSlideTransitions } from './free-slide.selectors';
+import {
+  selectFreeSlideCastingFrozen,
+  selectFreeSlideCastingProcess,
+  selectFreeSlideNavigateState,
+  selectGlobalTransition,
+  selectSlideTransitions,
+} from './free-slide.selectors';
 import { AppWindowTypes } from '@lyri-cast/common-electron';
 import { filter, map } from 'rxjs';
 
@@ -66,6 +72,7 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
       FreeSlideActions[FreeSlideActionsEnum.updateTransitionSettings],
     selectGlobalTransition,
     selectSlideTransitions,
+    selectNavigateState: selectFreeSlideNavigateState,
     selectCastingProcess: selectFreeSlideCastingProcess,
     selectCastingFrozen: selectFreeSlideCastingFrozen,
     selectOpenedWindow,
@@ -85,6 +92,7 @@ export class FreeSlideCastingEffects implements BaseEffectsWithBridgeInterface {
   castingStarted$ = this.base.castingStarted$;
   slideNavigate$ = this.base.slideNavigate$;
   liveUpdateSlide$ = this.base.liveUpdateSlide$;
+  syncOnUnfreeze$ = this.base.syncOnUnfreeze$;
   setGlobalTransition$ = this.base.setGlobalTransition$;
   setSlideTransition$ = this.base.setSlideTransition$;
   updateTransitionSettings$ = this.base.updateTransitionSettings$;

@@ -77,6 +77,7 @@ export class AppEffects {
             console.log('open page finished, result:', r);
             this.bridge.send(APP_COMMON_ACTIONS.openedPage, {
               state: 'navigation-ended',
+              result: r,
               path: data.path,
             });
           });

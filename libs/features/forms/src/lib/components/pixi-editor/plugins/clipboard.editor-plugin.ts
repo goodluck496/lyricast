@@ -100,7 +100,7 @@ export class ClipboardPlugin implements EditorPlugin {
               } else if (ctx.utils.isVideoUrl(str)) ctx.bus.emit({ t: 'ADD_VIDEO', url: str });
               else ctx.bus.emit({ t: 'ADD_IFRAME', url: str });
             } else {
-              ctx.bus.emit({ t: 'ADD_TEXT', x: 120, y: 120, text: str });
+              ctx.bus.emit({ t: 'ADD_TEXT', x: 0, y: 0, text: str });
             }
           });
         }

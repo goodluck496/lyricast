@@ -268,6 +268,9 @@ importers:
       '@angular/language-service':
         specifier: 20.3.13
         version: 20.3.13
+      '@colbymchenry/codegraph':
+        specifier: ^1.1.6
+        version: 1.1.6
       '@electron-forge/cli':
         specifier: ^7.7.0
         version: 7.10.2(@swc/core@1.5.29(@swc/helpers@0.5.17))(encoding@0.1.13)(esbuild@0.19.12)(webpack-cli@5.1.4)
@@ -421,6 +424,9 @@ importers:
       jest-util:
         specifier: ^29.7.0
         version: 29.7.0
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       node-gyp:
         specifier: ^12.1.0
         version: 12.1.0
@@ -1524,6 +1530,40 @@ packages:
 
   '@bufbuild/protobuf@2.10.1':
     resolution: {integrity: sha512-ckS3+vyJb5qGpEYv/s1OebUHDi/xSNtfgw1wqKZo7MR9F2z+qXr0q5XagafAG/9O0QPVIUfST0smluYSTpYFkg==}
+
+  '@colbymchenry/codegraph-darwin-arm64@1.1.6':
+    resolution: {integrity: sha512-i8+KRb+q5jJ8nvMM/2ox9n79OSVEcK5xk2Dli7MpE6WACmQEejITH4X9d0dYkNlVob3kIvj1iuEJtyy7outjTQ==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@colbymchenry/codegraph-darwin-x64@1.1.6':
+    resolution: {integrity: sha512-BgrWRhjscwgOFPh/sN38Fgvi8GtcxrRuz9nPEf4QgyA34T1lR+Qu1QOKn7iMQilZho4pNPLSA3ieYgrsa7koOw==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@colbymchenry/codegraph-linux-arm64@1.1.6':
+    resolution: {integrity: sha512-iQVmgMWLU87mz2C3Ez+Qkp2c372rk6pG1qFXJp6ZG2yKWGXBSeRucq6AJjInYK7PpAYrAb6d+1nmMS9ajkOJzw==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@colbymchenry/codegraph-linux-x64@1.1.6':
+    resolution: {integrity: sha512-JfEBbdTsBxfDLGHBUk7uzV4fsNYT4k12F7ZaxUuorMQkwtTGWdCaSt/too8ok79SDNRkUqPPVmswR9Ka77W0qw==}
+    cpu: [x64]
+    os: [linux]
+
+  '@colbymchenry/codegraph-win32-arm64@1.1.6':
+    resolution: {integrity: sha512-BdqswrdfdWhbLc9mI2YRC7UBcXLJN8IEBqg9QqM5olsiK1pHGFXKvRSpbXhRKE2FclMped4dNQ1mG6udkYvNlQ==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@colbymchenry/codegraph-win32-x64@1.1.6':
+    resolution: {integrity: sha512-yNn/oyTLbFmoa5XsQH4YukPljLgrgYUA3vEFszRTCyavKpLK4fQokIRlJL9p1DrxBeaBdmoyh2YTFvFRLtmEJw==}
+    cpu: [x64]
+    os: [win32]
+
+  '@colbymchenry/codegraph@1.1.6':
+    resolution: {integrity: sha512-oVpB1yaDYEYPuoRfVRC4sBPWQZRQhOgVCEmBmiKmTx1EKtJrJiOKJs/l5D5iKM7QizU5Fhu0PaWoi2QHPW8bTA==}
+    hasBin: true
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -4570,6 +4610,7 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@unrs/resolver-binding-android-arm-eabi@1.11.1':
     resolution: {integrity: sha512-ppLRUgHVaGRWUx0R0Ut06Mjo9gBaBkg3v/8AxusGLhsIotbBLuRk51rAzqLC8gq6NyyAojEXglNjzf6R948DNw==}
@@ -4815,6 +4856,7 @@ packages:
   '@xmldom/xmldom@0.8.11':
     resolution: {integrity: sha512-cQzWCtO6C8TQiYl1ruKNn2U6Ao4o4WBBcbL61yJl84x+j5sOWWFU9X7DpND8XZG3daDppSsigMdfAIl2upQBRw==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
@@ -5279,6 +5321,7 @@ packages:
   basic-ftp@5.1.0:
     resolution: {integrity: sha512-RkaJzeJKDbaDWTIPiJwubyljaEPwpVWkm9Rt5h9Nd6h7tEXTJ3VB4qxdZBioV7JO5yLUaOKwz7vDOzlncUsegw==}
     engines: {node: '>=10.0.0'}
+    deprecated: Security vulnerability fixed in 5.2.1, please upgrade
 
   batch@0.6.1:
     resolution: {integrity: sha512-x+VAiMRL6UPkx+kudNvxTl6hB2XNNCG2r+7wixVfIYwu/2HKRXimwQyaumLjMveWvT2Hkd/cAJw+QBMfJ/EKVw==}
@@ -11715,10 +11758,12 @@ packages:
   whatwg-encoding@2.0.0:
     resolution: {integrity: sha512-p41ogyeMUrw3jWclHWTQg1k05DSVXPLcVxRTYsXUk+ZooOCZLcoYgPZ/HL/D/N+uQPOtcp1me1WhBEaX02mhWg==}
     engines: {node: '>=12'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@3.0.0:
     resolution: {integrity: sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==}
@@ -13930,6 +13975,33 @@ snapshots:
   '@borewit/text-codec@0.1.1': {}
 
   '@bufbuild/protobuf@2.10.1': {}
+
+  '@colbymchenry/codegraph-darwin-arm64@1.1.6':
+    optional: true
+
+  '@colbymchenry/codegraph-darwin-x64@1.1.6':
+    optional: true
+
+  '@colbymchenry/codegraph-linux-arm64@1.1.6':
+    optional: true
+
+  '@colbymchenry/codegraph-linux-x64@1.1.6':
+    optional: true
+
+  '@colbymchenry/codegraph-win32-arm64@1.1.6':
+    optional: true
+
+  '@colbymchenry/codegraph-win32-x64@1.1.6':
+    optional: true
+
+  '@colbymchenry/codegraph@1.1.6':
+    optionalDependencies:
+      '@colbymchenry/codegraph-darwin-arm64': 1.1.6
+      '@colbymchenry/codegraph-darwin-x64': 1.1.6
+      '@colbymchenry/codegraph-linux-arm64': 1.1.6
+      '@colbymchenry/codegraph-linux-x64': 1.1.6
+      '@colbymchenry/codegraph-win32-arm64': 1.1.6
+      '@colbymchenry/codegraph-win32-x64': 1.1.6
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:

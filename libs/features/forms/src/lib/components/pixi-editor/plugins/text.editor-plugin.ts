@@ -34,9 +34,10 @@ export class TextPlugin implements EditorPlugin {
     // ADD_TEXT: create and select a new text node
     ctx.bus.commands$.pipe(filter((command) => command.t === 'ADD_TEXT'), takeUntil(this.destroy$)).subscribe((cmd) => {
       const addText = cmd as Extract<EditorCommand, { t: 'ADD_TEXT' }>;
+      const sceneBounds = ctx.getSceneBounds();
       const textNode = new TextNode(ctx.app, this.fitter, this.assetStorage);
-      textNode.x = addText.x ?? 80;
-      textNode.y = addText.y ?? 80;
+      textNode.x = addText.x ?? 0;
+      textNode.y = addText.y ?? 0;
       textNode.style = { ...ctx.store.snapshot((state) => state.ui) };
 
       // Применяем стили и текст ДО вызова applyBoxSize и layout
@@ -69,7 +70,10 @@ export class TextPlugin implements EditorPlugin {
         textNode.style.max = fontSize;
       }
 
-      textNode.applyBoxSize(addText.options?.width ?? 600, addText.options?.height ?? 240);
+      textNode.applyBoxSize(
+        addText.options?.width ?? sceneBounds.width,
+        addText.options?.height ?? sceneBounds.height
+      );
 
       // layout() вызываем только если узел создается с нуля, а не восстанавливается
       if (!hasFixedFontSize) {

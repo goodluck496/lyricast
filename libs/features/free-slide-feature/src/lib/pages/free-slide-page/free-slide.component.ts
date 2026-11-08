@@ -605,18 +605,27 @@ export class FreeSlideComponent implements AfterViewInit {
   async onSaveSlide(
     options: { isNavigatingAway?: boolean; slideId?: string } = {}
   ) {
+    const completeSaveRequest = () => {
+      this.slideService.saveCompleted$.next();
+    };
+
     if (!this.pixiEditor) {
       console.warn('[FreeSlide] Cannot save: pixiEditor is not ready');
+      completeSaveRequest();
       return;
     }
 
     const targetSlideId =
       options.slideId || this.loadedSlideId || this.currentSlideId;
-    if (!targetSlideId) return;
+    if (!targetSlideId) {
+      completeSaveRequest();
+      return;
+    }
 
     // Никогда не сохраняем состояние редактора в слайд, который не загружен в Pixi.
     // Иначе при быстром переключении можно перезаписать контент другого слайда.
     if (this.loadedSlideId && targetSlideId !== this.loadedSlideId) {
+      completeSaveRequest();
       return;
     }
 
@@ -731,7 +740,7 @@ export class FreeSlideComponent implements AfterViewInit {
     }
 
     // Notify that save is complete
-    this.slideService.saveCompleted$.next();
+    completeSaveRequest();
   }
 
   async onDuplicateSlide() {

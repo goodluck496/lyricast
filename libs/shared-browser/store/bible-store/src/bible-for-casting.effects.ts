@@ -15,7 +15,11 @@ import {
   BibleActionsEnum,
 } from './bible.actions';
 import { BibleState } from './bible.store';
-import { selectCastingProcess } from './bible.selectors';
+import {
+  selectCastingFrozen,
+  selectCastingProcess,
+  selectCastingProcessNavigate,
+} from './bible.selectors';
 import { map, tap } from 'rxjs';
 
 @Injectable()
@@ -35,7 +39,9 @@ export class BibleForCastingEffects {
     pauseCastingAction: BibleActions[BibleActionsEnum.pauseCasting],
     stopCastingAction: BibleActions[BibleActionsEnum.stopCasting],
     slideNavigateAction: BibleActions[BibleActionsEnum.castingProcessChange],
+    selectNavigateState: selectCastingProcessNavigate,
     selectCastingProcess,
+    selectCastingFrozen,
     selectOpenedWindow,
     getDisplayForCasting: () => this.settingsSrv.getDisplayForCasting(),
     store: this.store,
@@ -51,6 +57,7 @@ export class BibleForCastingEffects {
   pauseCasting$ = this.base.pauseCasting$;
   stopCasting$ = this.base.stopCasting$;
   slideNavigate$ = this.base.slideNavigate$;
+  syncOnUnfreeze$ = this.base.syncOnUnfreeze$;
   updateSecondaryTranslationSettings$ = createEffect(() =>
     this.actions$.pipe(
       ofType(BibleActions.updateSecondaryTranslationSettings),

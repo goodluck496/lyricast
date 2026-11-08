@@ -365,7 +365,7 @@ export class PixiSlideEditorV2Component
         takeUntil(this.destroy$)
       )
       .subscribe(() => {
-        this.overlay.commitAndCloseTextarea();
+        void this.overlay.commitAndCloseTextarea();
         this.bus.emit({ t: 'SELECT', ids: [] });
       });
 

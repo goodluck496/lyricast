@@ -1,6 +1,18 @@
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concat, EMPTY, from, Observable, of } from 'rxjs';
-import { filter, map, switchMap, tap, withLatestFrom, startWith, shareReplay, skip, take } from 'rxjs/operators';
+import {
+  distinctUntilChanged,
+  filter,
+  map,
+  pairwise,
+  shareReplay,
+  skip,
+  startWith,
+  switchMap,
+  take,
+  tap,
+  withLatestFrom,
+} from 'rxjs/operators';
 import {
   APP_COMMON_ACTIONS,
   AppDisplay,
@@ -58,6 +70,9 @@ export interface CastingFlowOptions<State> {
   // Опциональный селектор для блокировки проброса событий, когда включена "заморозка" (freeze)
   selectCastingFrozen?: (state: State) => unknown;
 
+  // Опциональный селектор текущей навигации, чтобы догнать casting после разморозки
+  selectNavigateState?: (state: State) => unknown;
+
   selectCastingProcess: (state: State) => unknown;
 
   selectOpenedWindow: (state: State) => unknown;
@@ -106,6 +121,7 @@ function createOpenCastingEffect<State>({
   openCastingAction,
   openPageAction,
   selectOpenedWindow,
+  selectCastingFrozen,
   getDisplayForCasting,
   window,
   bridge,
@@ -113,13 +129,23 @@ function createOpenCastingEffect<State>({
   featureName,
 }: CastingFlowOptions<State>) {
   const castingPath = { path: [featureName, 'casting'] };
+  const castingFrozen$ = selectCastingFrozen
+    ? store.select(selectCastingFrozen as never).pipe(
+        map((value: unknown) => !!value),
+        distinctUntilChanged()
+      )
+    : of(false);
 
   return createEffect(() =>
     actions$.pipe(
       ofType(openCastingAction),
-      withLatestFrom(store.select(selectOpenedWindow)),
-      switchMap(([, windowData]) => {
+      withLatestFrom(store.select(selectOpenedWindow), castingFrozen$),
+      switchMap(([, windowData, frozen]) => {
         if (windowData) {
+          if (frozen) {
+            return EMPTY;
+          }
+
           return of(openPageAction(castingPath) as Action);
         }
 
@@ -173,7 +199,16 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     selectGlobalTransition,
     selectSlideTransitions,
     selectCastingFrozen,
+    selectNavigateState,
   } = options;
+
+  const castingFrozen$ = selectCastingFrozen
+    ? store.select(selectCastingFrozen as any).pipe(
+        startWith(false),
+        map((value: unknown) => !!value),
+        distinctUntilChanged()
+      )
+    : of(false);
 
   const openCasting$ = createOpenCastingEffect(options);
 
@@ -191,11 +226,28 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
   const onOpenedPage$ = createEffect(() =>
     actions$.pipe(
       ofType(openPageAction),
-      switchMap(() => bridge.queueEvents.pipe(
-        skip(1),
-        filter((event) => !!event && event.event === APP_COMMON_ACTIONS.openedPage),
-        take(1)
-      )),
+      switchMap(() =>
+        bridge.queueEvents.pipe(
+          skip(1),
+          filter((event) => {
+            if (!event || event.event !== APP_COMMON_ACTIONS.openedPage) {
+              return false;
+            }
+
+            const payload =
+              typeof event.payload === 'object' && event.payload !== null
+                ? (event.payload as Record<string, unknown>)
+                : null;
+
+            return (
+              payload?.['state'] === 'after-view-init' ||
+              (payload?.['state'] === 'navigation-ended' &&
+                payload?.['result'] === false)
+            );
+          }),
+          take(1)
+        )
+      ),
       withLatestFrom(
         store.select(selectCastingProcess),
         selectGlobalTransition ? store.select(selectGlobalTransition as any) : of(null),
@@ -236,7 +288,7 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     bridge,
     label: 'startCasting',
     bridgeEventNameExtractorCb: extractEventName,
-    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
+    blocked$: castingFrozen$
   });
 
   const pauseCasting$ = createBridgeEffect({
@@ -245,18 +297,14 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     bridge,
     label: 'pauseCasting',
     bridgeEventNameExtractorCb: extractEventName,
-    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
+    blocked$: castingFrozen$
   });
 
   const stopCasting$ = createEffect(() =>
     actions$.pipe(
       ofType(stopCastingAction),
       withLatestFrom(
-        selectCastingFrozen
-          ? store
-              .select(selectCastingFrozen as any)
-              .pipe(startWith(false), map((v: any) => !!v))
-          : of(false)
+        castingFrozen$
       ),
       filter(([, frozen]) => !frozen),
       tap(([data]) => {
@@ -274,7 +322,7 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
         bridge,
         label: 'castingStarted',
         bridgeEventNameExtractorCb: extractEventName,
-        blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
+        blocked$: castingFrozen$
       })
     : (undefined as unknown as ReturnType<typeof createEffect>);
 
@@ -284,7 +332,7 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     bridge,
     label: 'slideNavigate',
     bridgeEventNameExtractorCb: extractEventName,
-    blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
+    blocked$: castingFrozen$
   });
 
   const liveUpdateSlide$ = liveUpdateSlideAction
@@ -294,7 +342,7 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
         bridge,
         label: 'liveUpdateSlide',
         bridgeEventNameExtractorCb: extractEventName,
-        blocked$: selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
+        blocked$: castingFrozen$
       })
     : (undefined as unknown as ReturnType<typeof createEffect>);
 
@@ -314,7 +362,7 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
         ofType(cfg.action),
         withLatestFrom(
           castingReady$,
-          selectCastingFrozen ? store.select(selectCastingFrozen as any).pipe(startWith(false), map((v: any) => !!v)) : of(false)
+          castingFrozen$
         ),
         filter(([, ready, frozen]) => !!ready && !frozen),
         tap(([data]) => {
@@ -337,6 +385,21 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     ? forwardWhenReady({ action: updateTransitionSettingsAction, label: 'updateTransitionSettings' })
     : (undefined as unknown as ReturnType<typeof createEffect>);
 
+  const syncOnUnfreeze$ = selectCastingFrozen
+    ? createEffect(() =>
+        castingFrozen$.pipe(
+          pairwise(),
+          filter(([previousFrozen, frozen]) => previousFrozen && !frozen),
+          withLatestFrom(
+            store.select(selectCastingProcess),
+            store.select(options.selectOpenedWindow)
+          ),
+          filter(([, process, openedWindow]) => !!process && !!openedWindow),
+          map(() => openPageAction({ path: [options.featureName, 'casting'] }) as Action)
+        )
+      )
+    : (undefined as unknown as ReturnType<typeof createEffect>);
+
   
 
   return {
@@ -349,6 +412,7 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     ...(castingStartedAction ? { castingStarted$ } : {}),
     slideNavigate$,
     ...(liveUpdateSlideAction ? { liveUpdateSlide$ } : {}),
+    ...(selectCastingFrozen ? { syncOnUnfreeze$ } : {}),
     // опциональные эффекты возвращаем, если были заданы
     ...(setGlobalTransitionAction ? { setGlobalTransition$ } : {}),
     ...(setSlideTransitionAction ? { setSlideTransition$ } : {}),

@@ -21,6 +21,34 @@
   margin-top: 8px;
 }
 
+.bible-sidebar__switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  margin-top: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  background: var(--surface-card);
+}
+
+.bible-sidebar__switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.bible-sidebar__switch-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .control-sidebar__secondary-translation {
   flex: 0 0 auto;
   margin-top: 8px;

@@ -12,6 +12,7 @@ export const {
   selectSelectedBook,
   selectSelectedChapterSections,
   selectCastingPaused,
+  selectCastingFrozen,
   selectCastingProcess,
   selectCastingProcessNavigate,
   selectCastingAppearance,

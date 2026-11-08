@@ -93,7 +93,7 @@ export class OverlayService {
       return;
     }
 
-    this.commitAndCloseTextarea();
+    void this.commitAndCloseTextarea();
     node.setEditingActive(true);
 
     // 1) контейнер под редактор
@@ -272,7 +272,7 @@ export class OverlayService {
     this.originalHTML = undefined;
   }
 
-  commitAndCloseTextarea() {
+  async commitAndCloseTextarea(): Promise<void> {
     // совместимость с текущими вызовами
     if (!this.editorRef) return;
     // имитируем «commit: true»
@@ -285,8 +285,7 @@ export class OverlayService {
 
       const normalizedHTML = newHTML.replace(/&nbsp;/g, ' ');
 
-      node.textHtml = normalizedHTML;
-      void node.layout();
+      await this.flushLiveTextSync(node, normalizedHTML);
 
       if (originalHTML !== undefined && newHTML !== originalHTML) {
         const cmd = new ChangeTextCommand(node, originalHTML, normalizedHTML);

@@ -2,8 +2,9 @@ import { BaseEffectsWithBridgeInterface } from '../interfaces/index';
 import { Action, Store } from '@ngrx/store';
 import { EventData } from '@lyri-cast/common-electron';
 import { BridgeService } from '../services/index';
-import { inject } from '@angular/core';
+import { DestroyRef, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 /**
  * Декоратор принимает Record c названием actions которые нужно dispatch'ить в store
@@ -21,6 +22,7 @@ export function BridgeProcessForEffectsDecorator(
     return class extends constructor implements BaseEffectsWithBridgeInterface {
       override bridge = inject(BridgeService);
       override store = inject(Store);
+      private destroyRef = inject(DestroyRef);
       private router = inject(Router, { optional: true });
 
       override actionMapper(eventData: EventData): Action | null {
@@ -32,23 +34,25 @@ export function BridgeProcessForEffectsDecorator(
       }
 
       override initSubscribeByBridge(): void {
-        this.bridge.queueEvents.subscribe((data) => {
-          if (!data) {
-            return;
-          }
+        this.bridge.queueEvents
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe((data) => {
+            if (!data) {
+              return;
+            }
 
-          // Проверяем, что событие предназначено для текущего активного роута
-          if (urlSegment && this.router && !this.router.url.includes(urlSegment)) {
-            return;
-          }
+            // Проверяем, что событие предназначено для текущего активного роута
+            if (urlSegment && this.router && !this.router.url.includes(urlSegment)) {
+              return;
+            }
 
-          const action = this.actionMapper(data);
+            const action = this.actionMapper(data);
 
-          if (!action) {
-            return;
-          }
-          this.store.dispatch(action);
-        });
+            if (!action) {
+              return;
+            }
+            this.store.dispatch(action);
+          });
       }
 
       constructor(...args: any[]) {
@@ -58,4 +62,3 @@ export function BridgeProcessForEffectsDecorator(
     };
   };
 }
-

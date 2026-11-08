@@ -13,6 +13,7 @@ import {
   BibleSecondaryCastingLayout,
   BibleState,
   createBibleSecondaryTranslationCacheKey,
+  selectCastingFrozen,
   selectCastingPaused,
   selectSecondaryTranslationCache,
   selectSecondaryTranslationSettings,
@@ -98,6 +99,7 @@ export class BibleSidebarComponent {
     .select(selectOpenedWindow)
     .pipe(map((e) => !!e));
   castingIsPaused$ = this.store.select(selectCastingPaused);
+  castingIsFrozen$ = this.store.select(selectCastingFrozen);
   closeMenuItems$: Observable<MenuItem[]> = combineLatest([
     this.openedCastingWindow$,
     this.isOpeningWindow,
@@ -278,6 +280,10 @@ export class BibleSidebarComponent {
     }
 
     this.store.dispatch(BibleActions.pauseCasting());
+  }
+
+  onFreezeToggle(frozen: boolean): void {
+    this.store.dispatch(BibleActions.setFreezeCasting({ frozen }));
   }
 
   onCloseCasting() {

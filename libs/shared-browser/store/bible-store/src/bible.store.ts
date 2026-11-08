@@ -45,6 +45,7 @@ export type BibleState = {
   secondaryTranslationCache: Record<string, BibleChapterSection[]>;
 
   castingPaused: boolean;
+  castingFrozen: boolean;
 };
 
 export const bibleInitialState: BibleState = {
@@ -68,6 +69,7 @@ export const bibleInitialState: BibleState = {
   castingProcessNavigate: null,
 
   castingPaused: true,
+  castingFrozen: false,
   castingProcess: null,
   castingAppearance: DEFAULT_CASTING_APPEARANCE,
   secondaryTranslationSettings: {

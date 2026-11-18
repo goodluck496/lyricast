@@ -1,5 +1,8 @@
 
 :host {
+  position: relative;
+  display: block;
+  height: 100%;
   width: 100%;
 
   &:focus {
@@ -7,9 +10,164 @@
   }
 }
 
+.bible-chapter-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.bible-chapter-search-floating {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  padding: 4px 8px;
+  color: #fff;
+
+  &:focus-within {
+    border-color: #0D99FF;
+    box-shadow: 0 0 0 1px #0D99FF, 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  &--visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  &__bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__input {
+    width: 260px;
+    height: 34px;
+    font-size: 13px;
+    border-radius: 6px;
+    padding-left: 32px;
+    padding-right: 28px;
+    background: transparent;
+    border: none;
+    color: #fff;
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: none;
+    }
+  }
+
+  &__clear-icon {
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &__nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-left: 6px;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  &__counter {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.85);
+    white-space: nowrap;
+    padding: 0 4px;
+    min-width: 48px;
+    text-align: center;
+  }
+
+  &__nav-btn {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    border-radius: 6px !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      color: #fff !important;
+    }
+  }
+}
+
+html:not(.my-app-dark) .bible-chapter-search-floating {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #d1d5db;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  color: #1f2937;
+
+  &:focus-within {
+    border-color: #0D99FF;
+    box-shadow: 0 0 0 1px #0D99FF, 0 4px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  .bible-chapter-search-floating__input {
+    color: #1f2937;
+
+    &::placeholder {
+      color: rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  .bible-chapter-search-floating__clear-icon {
+    color: rgba(0, 0, 0, 0.55);
+
+    &:hover {
+      color: #000;
+    }
+  }
+
+  .bible-chapter-search-floating__nav {
+    border-left: 1px solid rgba(0, 0, 0, 0.12);
+  }
+
+  .bible-chapter-search-floating__counter {
+    color: rgba(0, 0, 0, 0.7);
+  }
+
+  .bible-chapter-search-floating__nav-btn {
+    color: rgba(0, 0, 0, 0.7) !important;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.06) !important;
+      color: #000 !important;
+    }
+  }
+}
+
 .bible-chapter-section {
   display: flex;
   flex-direction: column;
+
+  &:first-child {
+    padding-top: 56px;
+  }
 
   &__header {
   }

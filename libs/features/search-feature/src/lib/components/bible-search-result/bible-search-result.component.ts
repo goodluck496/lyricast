@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { map, Observable, tap } from 'rxjs';
+import { combineLatest, map, Observable, tap } from 'rxjs';
 import { BibleSearchDto, BibleSearchSectionDto } from '@lyri-cast/entities';
 import { BibleSearchService } from '../../bible-search.service';
 import { NgScrollbarExt } from 'ngx-scrollbar';
@@ -19,7 +19,12 @@ import {
 } from '@angular/cdk/scrolling';
 import { CdkListbox, CdkOption } from '@angular/cdk/listbox';
 import { HighlighterPipe } from '@lyri-cast/ui-lib';
-import { BibleActions } from '@lyri-cast/bible-store';
+import {
+  BibleActions,
+  selectSelectedBook,
+  selectSelectedChapter,
+  selectSelectedPath,
+} from '@lyri-cast/bible-store';
 import { Store } from '@ngrx/store';
 import { Pages } from '@lyri-cast/common-browser';
 import { Router } from '@angular/router';
@@ -72,10 +77,27 @@ export class BibleSearchResultComponent {
 
   searchResult$: Observable<BibleSearchDto> = this.searchSrv.searchResult$
     .asObservable()
-    .pipe(tap(() => this.cdr.detectChanges()));
+    .pipe(
+      tap(() => {
+        this.selectedTabIndex = 0;
+        this.cdr.detectChanges();
+      })
+    );
 
-  groupedResult$ = this.searchResult$.pipe(
-    map((dto) => {
+  groupedResult$ = combineLatest([
+    this.searchResult$,
+    this.store.select(selectSelectedBook),
+    this.store.select(selectSelectedChapter),
+    this.store.select(selectSelectedPath),
+  ]).pipe(
+    map(([dto, selectedBook, selectedChapter, selectedPath]) => {
+      const currentBookId =
+        selectedBook?.number ??
+        (selectedPath?.[0] ? Number(selectedPath[0]) : null);
+      const currentChapterId =
+        selectedChapter?.number ??
+        (selectedPath?.[1] ? Number(selectedPath[1]) : null);
+
       const grouped = new Map<
         number,
         {
@@ -84,6 +106,7 @@ export class BibleSearchResultComponent {
           sections: BibleSearchSectionDto[];
           matchCount: number;
           bestRank: number;
+          isCurrentScope?: boolean;
         }
       >();
 
@@ -104,7 +127,26 @@ export class BibleSearchResultComponent {
         }
       }
 
+      for (const group of grouped.values()) {
+        if (currentBookId !== null && group.bookId === currentBookId) {
+          group.isCurrentScope = true;
+          if (currentChapterId !== null) {
+            group.sections.sort((a, b) => {
+              const aInChapter = a.chapterId === currentChapterId ? 0 : 1;
+              const bInChapter = b.chapterId === currentChapterId ? 0 : 1;
+              return aInChapter - bInChapter;
+            });
+          }
+        }
+      }
+
       const groups = Array.from(grouped.values()).sort((a, b) => {
+        if (a.isCurrentScope && !b.isCurrentScope) {
+          return -1;
+        }
+        if (!a.isCurrentScope && b.isCurrentScope) {
+          return 1;
+        }
         if (a.bestRank !== b.bestRank) {
           return a.bestRank - b.bestRank;
         }

@@ -61,6 +61,18 @@
   white-space: nowrap;
 }
 
+.highlighted-text {
+  background-color: #fef08a;
+  color: #1a1a1a;
+  border-radius: 2px;
+  padding: 1px 2px;
+}
+
+html.my-app-dark .highlighted-text {
+  background-color: #ca8a04;
+  color: #ffffff;
+}
+
 html.my-app-dark {
   .ql-snow.ql-toolbar button,
   .ql-snow .ql-toolbar button,

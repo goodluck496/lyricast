@@ -5,10 +5,13 @@
     <p-tabs [value]="selectedTabIndex" (valueChange)="onChangeTab($event)">
       <p-tablist>
         @for (group of searchResultDto.groups; track group.bookId; let idx = $index) {
-          <p-tab [value]="idx">
+          <p-tab [value]="idx" [class.bible-search-result__tab--current]="group.isCurrentScope">
             <span class="bible-search-result__tab-title">
               <span class="bible-search-result__tab-book">{{ group.bookShortName }}</span>
-              <span class="bible-search-result__tab-badge">{{ group.matchCount }}</span>
+              <span
+                class="bible-search-result__tab-badge"
+                [class.bible-search-result__tab-badge--current]="group.isCurrentScope"
+              >{{ group.matchCount }}</span>
             </span>
           </p-tab>
         }

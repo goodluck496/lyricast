@@ -1,50 +1,123 @@
-<ng-scrollbar style="width: 100%; border-radius: 8px 8px 0 0;">
-  @for (section of sections(); track section.heading) {
-    <div class="bible-chapter-section">
-      @if (section.heading) {
-        <div class="bible-chapter-section__header">
-          {{ section.heading }}
+<div
+  class="bible-chapter-container"
+  (mouseenter)="isHovered.set(true)"
+  (mouseleave)="isHovered.set(false)"
+>
+  <div
+    class="bible-chapter-search-floating"
+    [class.bible-chapter-search-floating--visible]="isFloatingBarVisible()"
+  >
+    <div class="bible-chapter-search-floating__bar">
+      <p-iconField iconPosition="left">
+        <p-inputIcon styleClass="pi pi-search" />
+        <input
+          #searchInput
+          pInputText
+          type="text"
+          placeholder="Поиск по тексту или номер стиха..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="onSearchInput($event)"
+          (focus)="isSearchFocused.set(true)"
+          (blur)="isSearchFocused.set(false)"
+          (keydown)="onSearchKeydown($event)"
+          class="bible-chapter-search-floating__input"
+        />
+        @if (searchQuery()) {
+          <p-inputIcon
+            styleClass="pi pi-times"
+            class="bible-chapter-search-floating__clear-icon"
+            (click)="clearSearch()"
+          />
+        }
+      </p-iconField>
+
+      @if (!isNumberQuery() && textMatches().length > 0) {
+        <div class="bible-chapter-search-floating__nav">
+          <span class="bible-chapter-search-floating__counter">
+            {{ currentMatchDisplayIndex() }} / {{ textMatches().length }}
+          </span>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-chevron-up"
+            [text]="true"
+            severity="secondary"
+            class="bible-chapter-search-floating__nav-btn"
+            (click)="prevMatch()"
+            title="Предыдущее совпадение (Shift+Enter)"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-chevron-down"
+            [text]="true"
+            severity="secondary"
+            class="bible-chapter-search-floating__nav-btn"
+            (click)="nextMatch()"
+            title="Следующее совпадение (Enter)"
+          ></button>
         </div>
       }
-      <div class="list-item__wrapper bible-chapter-section__content">
-        @for (verse of section.content; track verse.number) {
-          @if (verse.number === 1) {
-            <div
-              tourAnchor="bible:verse"
-              #verseItem class="bible-chapter-section__verse list-item"
-              [class.bible-chapter-section__verse--selected]="selectedVerse()?.number === verse.number"
-              [class.bible-chapter-section__verse--in-range]="isInRange(verse.number)"
-              (dblclick)="onSelectVerse(verse, $event, true)"
-              (click)="onSelectVerse(verse, $event)">
-              <div class="bible-chapter-section__verse-number">
-                <div class="list-item__number">{{ verse.number }}</div>
-              </div>
-              <div class="list-item__title bible-chapter-section__verse-content"
-                   [innerHTML]="sanitizeHtml(verse.text)"></div>
-
-              <div class="bible-chapter-section__shift-badge" tourAnchor="bible:shift">
-                + shift
-              </div>
-            </div>
-          } @else {
-            <div #verseItem class="bible-chapter-section__verse list-item"
-                 [class.bible-chapter-section__verse--selected]="selectedVerse()?.number === verse.number"
-                 [class.bible-chapter-section__verse--in-range]="isInRange(verse.number)"
-                 (dblclick)="onSelectVerse(verse, $event, true)"
-                 (click)="onSelectVerse(verse, $event)">
-              <div class="bible-chapter-section__verse-number">
-                <div class="list-item__number">{{ verse.number }}</div>
-              </div>
-              <div class="list-item__title bible-chapter-section__verse-content"
-                   [innerHTML]="sanitizeHtml(verse.text)"></div>
-
-              <div class="bible-chapter-section__shift-badge">
-                + shift
-              </div>
-            </div>
-          }
-        }
-      </div>
     </div>
-  }
-</ng-scrollbar>
+  </div>
+
+  <ng-scrollbar style="width: 100%; height: 100%; border-radius: 8px 8px 0 0;">
+    @for (section of sections(); track section.heading) {
+      <div class="bible-chapter-section">
+        @if (section.heading) {
+          <div class="bible-chapter-section__header">
+            {{ section.heading }}
+          </div>
+        }
+        <div class="list-item__wrapper bible-chapter-section__content">
+          @for (verse of section.content; track verse.number) {
+            @if (verse.number === 1) {
+              <div
+                tourAnchor="bible:verse"
+                #verseItem
+                class="bible-chapter-section__verse list-item"
+                [attr.data-verse-number]="verse.number"
+                [class.bible-chapter-section__verse--selected]="selectedVerse()?.number === verse.number"
+                [class.bible-chapter-section__verse--in-range]="isInRange(verse.number)"
+                (dblclick)="onSelectVerse(verse, $event, true)"
+                (click)="onSelectVerse(verse, $event)">
+                <div class="bible-chapter-section__verse-number">
+                  <div class="list-item__number">{{ verse.number }}</div>
+                </div>
+                <div
+                  class="list-item__title bible-chapter-section__verse-content"
+                  [innerHTML]="sanitizeHtml(verse.text | highliter: (isNumberQuery() ? '' : searchQuery()))"
+                ></div>
+
+                <div class="bible-chapter-section__shift-badge" tourAnchor="bible:shift">
+                  + shift
+                </div>
+              </div>
+            } @else {
+              <div
+                #verseItem
+                class="bible-chapter-section__verse list-item"
+                [attr.data-verse-number]="verse.number"
+                [class.bible-chapter-section__verse--selected]="selectedVerse()?.number === verse.number"
+                [class.bible-chapter-section__verse--in-range]="isInRange(verse.number)"
+                (dblclick)="onSelectVerse(verse, $event, true)"
+                (click)="onSelectVerse(verse, $event)">
+                <div class="bible-chapter-section__verse-number">
+                  <div class="list-item__number">{{ verse.number }}</div>
+                </div>
+                <div
+                  class="list-item__title bible-chapter-section__verse-content"
+                  [innerHTML]="sanitizeHtml(verse.text | highliter: (isNumberQuery() ? '' : searchQuery()))"
+                ></div>
+
+                <div class="bible-chapter-section__shift-badge">
+                  + shift
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+  </ng-scrollbar>
+</div>

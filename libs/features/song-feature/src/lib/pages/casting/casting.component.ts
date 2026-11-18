@@ -157,6 +157,31 @@ export class CastingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   async startCastingHandler(payload: SongStartCastingPayload) {
     const wasShowingContent = this.showingContent();
+    const isSameSong =
+      this.selectedSong()?.key === payload.song?.key &&
+      this.selectedSong()?.number === payload.song?.number;
+    const canLiveUpdate = wasShowingContent && !!this.deckRef && isSameSong;
+
+    if (canLiveUpdate) {
+      if (payload.appearance) {
+        this.appearanceService.set(payload.appearance);
+        this.displayAppearance.set(payload.appearance);
+      }
+      this.selectedSong.set(payload.song);
+      this.selectedLyrics.set(payload.lyrics);
+      this.selectedLyric.set(payload.currentLyric);
+      this.cdr.detectChanges();
+
+      this.deckRef?.sync();
+      this.deckRef?.layout();
+
+      const targetSlide = (payload.fromIndex ?? 0) + 1;
+      this.deckRef?.slide(undefined, targetSlide);
+
+      this.updateTextSize();
+      return;
+    }
+
     this.clearSlides();
     const version = ++this.revealInitVersion;
     this.appearanceService.set(

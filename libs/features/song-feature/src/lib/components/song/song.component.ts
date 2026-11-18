@@ -19,6 +19,7 @@ import { DblClickDirective } from '@lyri-cast/ui-lib';
 import { DomHandler } from 'primeng/dom';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
 import { TourAnchorPrimeNgDirective } from 'ngx-ui-tour-primeng';
@@ -31,6 +32,7 @@ import { TourAnchorPrimeNgDirective } from 'ngx-ui-tour-primeng';
     DblClickDirective,
     ButtonModule,
     TooltipModule,
+    ToggleSwitchModule,
     FormsModule,
     TourAnchorPrimeNgDirective,
   ],
@@ -101,6 +103,22 @@ export class SongComponent {
     this.scrollToSelected();
 
     this.selectLyricLine.emit([lyric, line, startPresentation]);
+  }
+
+  isLyricSplit(lyric: LyricForCasting): boolean {
+    return this.songPageSelectSrv.isLyricSplit(lyric);
+  }
+
+  onToggleLyricSplit(lyric: LyricForCasting, split: boolean): void {
+    this.songPageSelectSrv.setLyricSplitOverride(lyric.uniqId, split);
+  }
+
+  getLyricLinesCount(lyric: LyricForCasting): number {
+    const flattened = lyric.lines
+      .map((l) => (typeof l === 'string' ? l : l.text).split(/<br\s*\/?>/i))
+      .flat()
+      .filter((t) => t.trim().length > 0);
+    return flattened.length;
   }
 
   private scrollTimeout: any;

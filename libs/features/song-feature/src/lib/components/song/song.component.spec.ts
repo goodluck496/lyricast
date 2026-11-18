@@ -173,4 +173,33 @@ describe('SongComponent', () => {
     component.onEditorKeydown(ctrlEnterEvent, 0);
     expect(saveSpy).toHaveBeenCalledWith(0, ctrlEnterEvent);
   });
+
+  it('should reflect lyric split state and allow overriding split per section', () => {
+    const selectSrv = TestBed.inject(SongPageSelectService);
+    selectSrv.selectSong(mockSong);
+    const lyric = component.lyrics()[0];
+
+    // По умолчанию global parts = NONE, деление выключено
+    expect(component.isLyricSplit(lyric)).toBe(false);
+
+    // Включаем деление для блока
+    component.onToggleLyricSplit(lyric, true);
+    expect(selectSrv.getLyricSplitOverride(lyric.uniqId)).toBe(true);
+    expect(component.isLyricSplit(lyric)).toBe(true);
+
+    // Устанавливаем глобальное деление на 2
+    selectSrv.setSplitCountValue(2);
+    // Отключаем локально
+    component.onToggleLyricSplit(lyric, false);
+    expect(selectSrv.getLyricSplitOverride(lyric.uniqId)).toBe(false);
+    expect(component.isLyricSplit(lyric)).toBe(false);
+  });
+
+  it('should disable toggle switch when lyric has <= 1 line', () => {
+    const singleLineLyric = {
+      ...component.lyrics()[0],
+      lines: [{ index: 0, rangeIndex: '0', globalSongIndex: 0, text: 'Одна строка' }],
+    };
+    expect(component.getLyricLinesCount(singleLineLyric)).toBe(1);
+  });
 });

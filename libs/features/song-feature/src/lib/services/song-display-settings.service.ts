@@ -17,6 +17,7 @@ export interface SongDisplaySettingsSnapshot {
   appearance: CastingAppearance;
   splitPartsCount: number | null;
   fitTextAutoWrapEnabled: boolean;
+  lyricSplitOverrides?: Record<string, boolean>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -27,11 +28,13 @@ export class SongDisplaySettingsService {
     song: ISong,
     appearance: CastingAppearance,
     splitPartsCount: number | null,
-    fitTextAutoWrapEnabled: boolean
+    fitTextAutoWrapEnabled: boolean,
+    lyricSplitOverrides?: Record<string, boolean>
   ): Observable<SongDisplaySettingsDto> {
     const appearancePayload = {
       ...appearance,
       fitTextAutoWrapEnabled,
+      lyricSplitOverrides: lyricSplitOverrides ?? {},
     };
 
     const payload: SaveSongDisplaySettingsDto = {
@@ -65,6 +68,7 @@ export class SongDisplaySettingsService {
           fitTextAutoWrapEnabled: this.readFitTextAutoWrapEnabled(
             settings.appearance
           ),
+          lyricSplitOverrides: this.readLyricSplitOverrides(settings.appearance),
         };
       })
     );
@@ -132,5 +136,24 @@ export class SongDisplaySettingsService {
     }
 
     return value['fitTextAutoWrapEnabled'] === true;
+  }
+
+  private readLyricSplitOverrides(value: unknown): Record<string, boolean> {
+    if (!this.isRecord(value)) {
+      return {};
+    }
+
+    const raw = value['lyricSplitOverrides'];
+    if (!this.isRecord(raw)) {
+      return {};
+    }
+
+    const overrides: Record<string, boolean> = {};
+    for (const [key, val] of Object.entries(raw)) {
+      if (typeof val === 'boolean') {
+        overrides[key] = val;
+      }
+    }
+    return overrides;
   }
 }

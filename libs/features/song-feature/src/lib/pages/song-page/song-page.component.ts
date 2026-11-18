@@ -316,6 +316,15 @@ export class SongPageComponent implements OnInit, AfterViewInit {
     this.songUsageTracking.connect();
     this.refreshUsageSummaries();
 
+    this.songPageSelectSrv.splitChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (!snapshot(this.castingSrv.castingPaused$)) {
+          this.onStartCasting(true);
+        }
+        this.saveCurrentSongDisplaySettings();
+      });
+
     this.onboardingHelpService.helpRequested$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((context) => {
@@ -433,7 +442,8 @@ export class SongPageComponent implements OnInit, AfterViewInit {
               song,
               appearance,
               this.splitCount(),
-              fitTextAutoWrapEnabled
+              fitTextAutoWrapEnabled,
+              this.songPageSelectSrv.lyricSplitOverrides()
             )
             .pipe(catchError(() => of(null)))
         ),
@@ -470,6 +480,9 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       this._selectedSong$
       .pipe(takeUntilDestroyed(this.destroyRef), filterEmpty())
       .subscribe((newSong) => {
+        this.suppressSongAppearanceSave = true;
+        this.selectedSong$.next(newSong);
+        this.songPageSelectSrv.clearLyricSplitOverrides();
         const splitCount =
           newSong.lyrics[0]?.splitLinesCount || SPLIT_PARTS_COUNT.NONE;
         
@@ -486,9 +499,6 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
         this.store.dispatch(SongActions[SongActionsEnum.pauseCasting]());
 
-        this.selectedSong$.next(newSong);
-
-        this.suppressSongAppearanceSave = true;
         this.songDisplaySettings.restore(newSong).pipe(take(1)).subscribe({
           next: (settings) => {
             if (!settings) {
@@ -502,6 +512,12 @@ export class SongPageComponent implements OnInit, AfterViewInit {
                 this.splitCount.set(settings.splitPartsCount);
                 this.songPageSelectSrv.setSplitCountValue(
                   settings.splitPartsCount
+                );
+              }
+
+              if (settings.lyricSplitOverrides) {
+                this.songPageSelectSrv.setLyricSplitOverrides(
+                  settings.lyricSplitOverrides
                 );
               }
 
@@ -708,7 +724,6 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   onSelectSplitValue(value: SplitPartsCount) {
     this.splitCount.set(value);
     this.songPageSelectSrv.setSplitCountValue(value);
-    this.saveCurrentSongDisplaySettings();
   }
 
   onNavigateSlide(dir: 'prev' | 'next', index?: number) {
@@ -779,6 +794,9 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   }
 
   private saveCurrentSongDisplaySettings(): void {
+    if (this.suppressSongAppearanceSave) {
+      return;
+    }
     const song = this.selectedSong$.value;
     if (!song) {
       return;
@@ -789,7 +807,8 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         song,
         this.appearanceService.appearance(),
         this.splitCount(),
-        this.songTextLayout.fitTextAutoWrapEnabled()
+        this.songTextLayout.fitTextAutoWrapEnabled(),
+        this.songPageSelectSrv.lyricSplitOverrides()
       )
       .pipe(take(1), catchError(() => of(null)))
       .subscribe();

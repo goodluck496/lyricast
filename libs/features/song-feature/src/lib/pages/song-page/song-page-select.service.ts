@@ -22,15 +22,20 @@ export type SplitPartsCount =
 export class SongPageSelectService {
   private readonly textLayout = inject(SongTextLayoutService);
   public splitPartsCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
+  public lyricSplitOverrides = signal<Record<string, boolean>>({});
   public selectedSong = signal<ISong | null>(null);
   public selectedLyricLine = signal<LyricLine | null>(null);
   public selectedLyric = signal<LyricForCasting | null>(null);
   public selectedLyricsForCasting = computed(() => {
     const song = this.selectedSong();
     this.splitPartsCount();
+    this.lyricSplitOverrides();
     if (!song) return [];
     return this.buildLyricsForCasting(song);
   });
+
+  private readonly _splitChanged = new Subject<void>();
+  public readonly splitChanged$ = this._splitChanged.asObservable();
 
   private _isShowPreview = new Subject();
   public isShowPreview = this._isShowPreview.asObservable();
@@ -116,6 +121,79 @@ export class SongPageSelectService {
 
   public setSplitCountValue(value: SplitPartsCount) {
     this.splitPartsCount.set(value);
+    this.syncSelectedLyricAfterSplitChange();
+    this._splitChanged.next();
+  }
+
+  public getLyricBaseId(uniqId: string): string {
+    return uniqId.replace(/_split_\d+.*$/, '');
+  }
+
+  public setLyricSplitOverride(uniqId: string, shouldSplit: boolean): void {
+    const baseId = this.getLyricBaseId(uniqId);
+    this.lyricSplitOverrides.update((current) => ({
+      ...current,
+      [baseId]: shouldSplit,
+    }));
+    this.syncSelectedLyricAfterSplitChange();
+    this._splitChanged.next();
+  }
+
+  public getLyricSplitOverride(uniqId: string): boolean | undefined {
+    return this.lyricSplitOverrides()[this.getLyricBaseId(uniqId)];
+  }
+
+  public clearLyricSplitOverrides(): void {
+    this.lyricSplitOverrides.set({});
+    this.syncSelectedLyricAfterSplitChange();
+  }
+
+  public setLyricSplitOverrides(overrides: Record<string, boolean> | undefined): void {
+    this.lyricSplitOverrides.set(overrides ?? {});
+    this.syncSelectedLyricAfterSplitChange();
+    this._splitChanged.next();
+  }
+
+  public isLyricSplit(lyric: Lyric): boolean {
+    const linesArr = this.getFlattenedLines(lyric);
+    if (linesArr.length <= 1) {
+      return false;
+    }
+    const parts = this.decideParts(lyric, this.splitPartsCount(), linesArr.length);
+    return parts > 1;
+  }
+
+  private syncSelectedLyricAfterSplitChange(): void {
+    const currentLyric = this.selectedLyric();
+    const currentLine = this.selectedLyricLine();
+    const song = this.selectedSong();
+    if (!song || !currentLyric || !currentLine) {
+      return;
+    }
+
+    const targetBaseId = this.getLyricBaseId(currentLyric.uniqId);
+
+    const rawIndex = parseInt(currentLine.rangeIndex.split('-')[0], 10);
+    const updatedLyrics = this.buildLyricsForCasting(song);
+    const newLyric = updatedLyrics.find(
+      (l) => this.getLyricBaseId(l.uniqId) === targetBaseId
+    );
+    if (!newLyric) {
+      return;
+    }
+
+    const newLine =
+      newLyric.lines.find((line) => {
+        const parts = line.rangeIndex.split('-').map(Number);
+        const min = parts[0];
+        const max = parts.length > 1 ? parts[1] : parts[0];
+        return rawIndex >= min && rawIndex <= max;
+      }) ?? newLyric.lines[0];
+
+    if (newLine) {
+      this.selectedLyric.set(newLyric);
+      this.selectedLyricLine.set(newLine);
+    }
   }
 
   public selectSong(song: ISong | null) {
@@ -132,6 +210,18 @@ export class SongPageSelectService {
   }
 
   private decideParts(lyric: Lyric, globalParts: SplitPartsCount, arrLen: number): number {
+    const baseId = this.getLyricBaseId(lyric.uniqId);
+    const override = this.lyricSplitOverrides()[baseId];
+
+    if (override === false) {
+      return 1;
+    }
+
+    if (override === true) {
+      const parts = typeof globalParts === 'number' && globalParts > 1 ? globalParts : 2;
+      return Math.max(1, Math.min(parts, arrLen));
+    }
+
     // Если пользователь выбрал "Не делить", строго возвращаем 1 блок для любой секции
     if (globalParts === SPLIT_PARTS_COUNT.NONE) {
       return 1;
@@ -168,7 +258,7 @@ export class SongPageSelectService {
       acc += counts[i];
     }
 
-    return song.lyrics.map((lyric, i) => {
+    return song.lyrics.map((lyric, i): LyricForCasting => {
       const lines = this.splitArrayIntoParts(lyric, i, offsets[i], globalParts);
       // Create a fresh unique ID based on the payload so Angular's @for track detects deep changes 
       // when we change split configuration for the same lyric chunk.
@@ -177,7 +267,7 @@ export class SongPageSelectService {
         ...lyric, 
         uniqId: `${lyric.uniqId}_split_${lines.length}`,
         lines 
-      } as LyricForCasting;
+      };
     });
   }
 

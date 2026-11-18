@@ -4,6 +4,15 @@
       <div class="lyric-item" [class.lyric-item--editing]="editingLyricIndex() === index">
         <div class="lyric-item__header">
           <span class="lyric-item__title">{{ lyric.sectionTitle }}</span>
+          <div class="lyric-item__split-control" (click)="$event.stopPropagation()">
+            <label class="lyric-item__split-label" [for]="'split-' + index">Делить</label>
+            <p-toggleswitch
+              [inputId]="'split-' + index"
+              [ngModel]="isLyricSplit(lyric)"
+              (ngModelChange)="onToggleLyricSplit(lyric, $event)"
+              [disabled]="getLyricLinesCount(lyric) <= 1"
+            />
+          </div>
           <div class="lyric-item__actions">
             @if (editingLyricIndex() === index) {
               <p-button

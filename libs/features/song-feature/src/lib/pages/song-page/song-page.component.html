@@ -48,6 +48,11 @@
                 <div class="list-item__number" [innerHTML]="data.searchKey  | highliter: search"></div>
                 <div class="list-item__title">
                   <span class="list-item__title-content" [innerHTML]="data.title | highliter: search"></span>
+                  @if (overriddenSongNumbers().has(data.baseEntity.number)) {
+                    <span class="list-item__override-badge" pTooltip="Изменена локально" tooltipPosition="top">
+                      <i class="pi pi-pencil"></i>
+                    </span>
+                  }
                   @if (data.usageSummary) {
                     <span
                       class="list-item__usage"
@@ -65,9 +70,26 @@
 
     @if (selectedSong$ | async; as song) {
       @if (song) {
-        <lyri-song [song]="song" (selectLyricLine)="onSelectLyricLine($event)" [tabIndex]="1"></lyri-song>
+        <div class="song-view-container">
+          @if (hasOverride()) {
+            <div class="song-override-banner">
+              <div class="song-override-banner__info">
+                <i class="pi pi-pencil song-override-banner__icon"></i>
+                <span class="song-override-banner__badge">Изменена локально</span>
+              </div>
+              <p-button
+                label="Сбросить к оригиналу из справочника"
+                icon="pi pi-refresh"
+                [text]="true"
+                severity="warn"
+                size="small"
+                (onClick)="onResetSongOverride(song)"
+              ></p-button>
+            </div>
+          }
+          <lyri-song [song]="song" (songUpdated)="onSongUpdated($event)" (selectLyricLine)="onSelectLyricLine($event)" [tabIndex]="1"></lyri-song>
+        </div>
       }
-
     }
 
   </ng-container>

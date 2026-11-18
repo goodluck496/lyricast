@@ -106,8 +106,12 @@ export class UserSettingsService {
     ambientBackgroundPreset: AmbientBackgroundPresetId;
   }): Promise<void> {
     try {
+      const existingRaw =
+        (await this.windowSrv.electronContext.loadUserSettings());
       const existing =
-        (await this.windowSrv.electronContext.loadUserSettings()) ?? {};
+        typeof existingRaw === 'object' && existingRaw !== null
+          ? existingRaw
+          : {};
       await this.windowSrv.electronContext.saveUserSettings({
         ...existing,
         ...settings,

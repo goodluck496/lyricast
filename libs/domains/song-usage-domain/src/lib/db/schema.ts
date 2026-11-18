@@ -23,7 +23,17 @@ export const songDisplaySettings = sqliteTable('song_display_settings', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const songOverrides = sqliteTable('song_overrides', {
+  songKey: text('song_key').primaryKey(),
+  songBookKey: text('song_book_key').notNull(),
+  songNumber: integer('song_number').notNull(),
+  lyricsJson: text('lyrics_json').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 export type SongUsageEvent = typeof songUsageEvents.$inferSelect;
 export type NewSongUsageEvent = typeof songUsageEvents.$inferInsert;
 export type SongDisplaySettings = typeof songDisplaySettings.$inferSelect;
 export type NewSongDisplaySettings = typeof songDisplaySettings.$inferInsert;
+export type SongOverride = typeof songOverrides.$inferSelect;
+export type NewSongOverride = typeof songOverrides.$inferInsert;

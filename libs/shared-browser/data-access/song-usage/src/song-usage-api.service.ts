@@ -35,6 +35,16 @@ export interface SongDisplaySettingsDto extends SongIdentityDto {
   updatedAt: string;
 }
 
+export interface SongOverrideDto extends SongIdentityDto {
+  songKey: string;
+  lyrics: unknown[];
+  updatedAt: string;
+}
+
+export interface SaveSongOverrideDto extends SongIdentityDto {
+  lyrics: unknown[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class SongUsageApiService {
   private readonly http = inject(HttpClient);
@@ -74,6 +84,28 @@ export class SongUsageApiService {
       `${this.baseUrl}/settings`,
       payload
     );
+  }
+
+  getOverride(identity: SongIdentityDto): Observable<SongOverrideDto | null> {
+    return this.http.get<SongOverrideDto | null>(`${this.baseUrl}/override`, {
+      params: this.getIdentityParams(identity),
+    });
+  }
+
+  saveOverride(payload: SaveSongOverrideDto): Observable<SongOverrideDto> {
+    return this.http.post<SongOverrideDto>(`${this.baseUrl}/override`, payload);
+  }
+
+  deleteOverride(identity: SongIdentityDto): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(`${this.baseUrl}/override`, {
+      params: this.getIdentityParams(identity),
+    });
+  }
+
+  getBookOverrides(songBookKey: string): Observable<number[]> {
+    return this.http.get<number[]>(`${this.baseUrl}/overrides`, {
+      params: new HttpParams({ fromObject: { songBookKey } }),
+    });
   }
 
   private getIdentityParams(identity: SongIdentityDto): HttpParams {

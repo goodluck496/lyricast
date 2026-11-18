@@ -1,21 +1,69 @@
 <ng-scrollbar>
   <div class="song-container" tourAnchor="songs:lyric">
     @for (lyric of lyrics(); track lyric.uniqId; let index = $index) {
-      <div class="lyric-item">
-        <div class="lyric-item__header">{{ lyric.sectionTitle }}</div>
+      <div class="lyric-item" [class.lyric-item--editing]="editingLyricIndex() === index">
+        <div class="lyric-item__header">
+          <span class="lyric-item__title">{{ lyric.sectionTitle }}</span>
+          <div class="lyric-item__actions">
+            @if (editingLyricIndex() === index) {
+              <p-button
+                icon="pi pi-check"
+                severity="success"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                pTooltip="Сохранить (Ctrl+Enter)"
+                tooltipPosition="left"
+                (onClick)="saveEditing(index, $event)"
+              ></p-button>
+              <p-button
+                icon="pi pi-times"
+                severity="danger"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                pTooltip="Отмена (Esc)"
+                tooltipPosition="left"
+                (onClick)="cancelEditing($event)"
+              ></p-button>
+            } @else {
+              <p-button
+                icon="pi pi-pencil"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                pTooltip="Редактировать куплет"
+                tooltipPosition="left"
+                (onClick)="startEditing(index, lyric, $event)"
+              ></p-button>
+            }
+          </div>
+        </div>
         <div class="lyric-item__content">
-          @for (line of lyric.lines; track line.rangeIndex; let lineIndex = $index) {
-            <div class="lyric-item__line"
-                 [tourAnchor]="index === 0 && lineIndex === 0 ? 'songs:lyric-index-0' : ''"
-                 #lyricItem
-                 [class.lyric-item__line--selected]="selectedLyricLine()?.rangeIndex === line.rangeIndex
-                 && lyric.uniqId === selectedLyric()?.uniqId"
-                 [innerHTML]="sanitizer.bypassSecurityTrustHtml(line.text)"
-                 lyriDblClick
-                 (dblClick)="onLineClick(lyric, line, true)"
-                 (click)="onLineClick(lyric, line)"
-            ></div>
-<!--            <p-editor [(ngModel)]="line.text" (keydown)="$event.stopPropagation()" (onTextChange)="onTextChange($event)"></p-editor>-->
+          @if (editingLyricIndex() === index) {
+            <div
+              #editableBlock
+              class="lyric-item__editor"
+              contenteditable="true"
+              spellcheck="false"
+              (keydown)="onEditorKeydown($event, index)"
+              (click)="$event.stopPropagation()"
+              (dblclick)="$event.stopPropagation()"
+            >{{ editingLyricText() }}</div>
+          } @else {
+            @for (line of lyric.lines; track line.rangeIndex; let lineIndex = $index) {
+              <div
+                class="lyric-item__line"
+                [tourAnchor]="index === 0 && lineIndex === 0 ? 'songs:lyric-index-0' : ''"
+                #lyricItem
+                [class.lyric-item__line--selected]="selectedLyricLine()?.rangeIndex === line.rangeIndex
+                && lyric.uniqId === selectedLyric()?.uniqId"
+                [innerHTML]="sanitizer.bypassSecurityTrustHtml(line.text)"
+                lyriDblClick
+                (dblClick)="onLineClick(lyric, line, true)"
+                (click)="onLineClick(lyric, line)"
+              ></div>
+            }
           }
         </div>
       </div>

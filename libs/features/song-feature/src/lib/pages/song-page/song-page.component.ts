@@ -40,6 +40,7 @@ import { filterEmpty, snapshot } from '@lyri-cast/common';
 import { SelectModule } from 'primeng/select';
 import { ListboxModule } from 'primeng/listbox';
 import { TooltipModule } from 'primeng/tooltip';
+import { ButtonModule } from 'primeng/button';
 import { CastingService } from '../../services/casting.service';
 import { InputTextModule } from 'primeng/inputtext';
 import {
@@ -78,6 +79,7 @@ import { SongOnboardingService } from '../../services/song-onboarding.service';
 import { SongDisplaySettingsService } from '../../services/song-display-settings.service';
 import { SongUsageTrackingService } from '../../services/song-usage-tracking.service';
 import { SongTextLayoutService } from '../../services/song-text-layout.service';
+import { SongOverrideService } from '../../services/song-override.service';
 import {
   SongUsageApiService,
   SongUsageSummaryDto,
@@ -108,6 +110,7 @@ interface SongListItem extends IUiLyriItemInList<IShortSong> {
     ListboxModule,
     ListBoxComponent,
     SongComponent,
+    ButtonModule,
     HighlighterPipe,
     InputTextModule,
     FormsModule,
@@ -138,12 +141,15 @@ export class SongPageComponent implements OnInit, AfterViewInit {
   private readonly songUsageTracking = inject(SongUsageTrackingService);
   private readonly songUsageApi = inject(SongUsageApiService);
   private readonly songTextLayout = inject(SongTextLayoutService);
+  private readonly songOverrideService = inject(SongOverrideService);
   private readonly appearance$ = toObservable(this.appearanceService.appearance);
   private readonly fitTextAutoWrapEnabled$ = toObservable(
     this.songTextLayout.fitTextAutoWrapEnabled
   );
 
   splitCount = signal<SplitPartsCount>(SPLIT_PARTS_COUNT.NONE);
+  hasOverride = signal<boolean>(false);
+  overriddenSongNumbers = signal<Set<number>>(new Set());
   // chorusAfterCouplet = signal(true);
 
   songBooksDict: IUiLyriListItem<ISongBookName>[] = [];
@@ -209,13 +215,43 @@ export class SongPageComponent implements OnInit, AfterViewInit {
       }
 
       if (!data) {
+        this.hasOverride.set(false);
         this.songPageSelectSrv.selectSong(null);
         return of(null);
       }
-      return this.songsApiService.getSong(
-        selectedBook.baseEntity,
-        data.baseEntity.number
-      );
+      return this.songsApiService
+        .getSong(selectedBook.baseEntity, data.baseEntity.number)
+        .pipe(
+          switchMap((song) => {
+            if (!song) {
+              this.hasOverride.set(false);
+              return of(null);
+            }
+            const songWithBook: ISong = {
+              ...song,
+              bookName: song.bookName || selectedBook.baseEntity,
+            };
+            return this.songOverrideService
+              .getOverride(selectedBook.searchKey, songWithBook.number)
+              .pipe(
+                map((overrideLyrics) => {
+                  if (overrideLyrics && overrideLyrics.length > 0) {
+                    this.hasOverride.set(true);
+                    return {
+                      ...songWithBook,
+                      lyrics: overrideLyrics,
+                    };
+                  }
+                  this.hasOverride.set(false);
+                  return songWithBook;
+                }),
+                catchError(() => {
+                  this.hasOverride.set(false);
+                  return of(songWithBook);
+                })
+              );
+          })
+        );
     }),
     tap(() => {
       this.isLoading.set(false);
@@ -313,6 +349,21 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         takeUntilDestroyed(this.destroyRef),
         startWith(this.selectedBook.value),
         filterEmpty(),
+        switchMap((book) =>
+          this.songOverrideService
+            .getBookOverrides(book.searchKey)
+            .pipe(catchError(() => of([])))
+        )
+      )
+      .subscribe((overrides) => {
+        this.overriddenSongNumbers.set(new Set(overrides));
+      });
+
+    this.selectedBook.valueChanges
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        startWith(this.selectedBook.value),
+        filterEmpty(),
         tap(() => this.isLoading.set(true)),
         switchMap((value) =>
           this.songsApiService.getAllSongsByBook(value.baseEntity).pipe(
@@ -396,6 +447,9 @@ export class SongPageComponent implements OnInit, AfterViewInit {
         filter(() => this.isActivePage())
       )
       .subscribe((event: KeyboardEvent) => {
+        if (event.target instanceof HTMLElement && event.target.isContentEditable) {
+          return;
+        }
         console.log('event',event);
         const selectedLyric = this.songPageSelectSrv.selectedLyric();
         if (selectedLyric) {
@@ -806,5 +860,72 @@ export class SongPageComponent implements OnInit, AfterViewInit {
 
   private getSummaryKey(summary: SongUsageSummaryDto): string {
     return `${summary.songBookKey}:${summary.songNumber}`;
+  }
+
+  onSongUpdated(updatedSong: ISong): void {
+    const book = this.selectedBook.value;
+    if (!book) return;
+
+    const bookKey = book.searchKey || updatedSong.bookName?.fileKey;
+    const songWithBook: ISong = {
+      ...updatedSong,
+      bookName: updatedSong.bookName || book.baseEntity,
+    };
+
+    this.hasOverride.set(true);
+    const set = new Set(this.overriddenSongNumbers());
+    set.add(songWithBook.number);
+    this.overriddenSongNumbers.set(set);
+    this.selectedSong$.next(songWithBook);
+    this.songPageSelectSrv.selectSong(songWithBook);
+
+    this.store.dispatch(
+      SongActions[SongActionsEnum.selectSong]({
+        song: songWithBook,
+        bookName: book.baseEntity,
+      })
+    );
+
+    this.songOverrideService
+      .saveOverride(songWithBook, songWithBook.lyrics, bookKey)
+      .pipe(take(1), catchError(() => of(null)))
+      .subscribe();
+  }
+
+  onResetSongOverride(song: ISong): void {
+    const book = this.selectedBook.value;
+    if (!book) return;
+
+    this.songOverrideService
+      .deleteOverride(book.searchKey, song.number)
+      .pipe(
+        take(1),
+        catchError(() => of({ success: false })),
+        switchMap(() =>
+          this.songsApiService
+            .getSong(book.baseEntity, song.number)
+            .pipe(take(1), catchError(() => of(null)))
+        )
+      )
+      .subscribe((originalSong) => {
+        if (originalSong) {
+          const songWithBook: ISong = {
+            ...originalSong,
+            bookName: originalSong.bookName || book.baseEntity,
+          };
+          this.hasOverride.set(false);
+          const set = new Set(this.overriddenSongNumbers());
+          set.delete(song.number);
+          this.overriddenSongNumbers.set(set);
+          this.selectedSong$.next(songWithBook);
+          this.songPageSelectSrv.selectSong(songWithBook);
+          this.store.dispatch(
+            SongActions[SongActionsEnum.selectSong]({
+              song: songWithBook,
+              bookName: book.baseEntity,
+            })
+          );
+        }
+      });
   }
 }

@@ -807,6 +807,8 @@ export class SongsService {
     }
 
     const updatedSong = updateSong(foundSong);
+    updatedSong.bookName =
+      updatedSong.bookName || this.convertBookToShortBook(book);
 
     this.songCache[keyInCache] = updatedSong;
 

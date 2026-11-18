@@ -5,7 +5,8 @@
 
   gap: 8px;
   width: 100%;
-
+  height: 100%;
+  min-height: 0;
 
   --list-box-item-selected-bg: #0D99FF;
   --list-box-item-hover-bg: #92cdff;
@@ -15,41 +16,80 @@
     outline: none;
   }
 
-  // Theme-specific overrides for list-style items
-  html:not(.my-app-dark) lyri-list-box .list-box__item {
-    background-color: #ffffff;
-    color: #222222;
-    border-bottom: 1px solid #e0e0e0;
+  ng-scrollbar {
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
   }
+}
 
-  html.my-app-dark lyri-list-box .list-box__item {
-    background-color: #191919;
-    color: #ffffff;
-    border-bottom: 1px solid #414141;
-  }
-
-  html:not(.my-app-dark) .lyric-item {
+:host-context(html:not(.my-app-dark)) {
+  .lyric-item {
     background: #ffffff;
-  }
 
-  html.my-app-dark .lyric-item {
+    &__line:not(:last-child) {
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    &__header {
+      border-bottom: 1px solid #e0e0e0;
+      color: #222222;
+    }
+
+    &--editing {
+      border-color: var(--p-primary-color, #0D99FF);
+      box-shadow: 0 0 0 2px rgba(13, 153, 255, 0.15);
+    }
+
+    &__editor {
+      color: #222222;
+    }
+
+    &__actions {
+      .p-button:not(.p-button-success):not(.p-button-danger) {
+        color: #555555;
+
+        &:hover {
+          color: #111111;
+          background: rgba(0, 0, 0, 0.06);
+        }
+      }
+    }
+  }
+}
+
+:host-context(html.my-app-dark) {
+  .lyric-item {
     background: #191919;
-  }
 
-  html:not(.my-app-dark) .lyric-item__line:not(:last-child) {
-    border-bottom: 1px solid #e0e0e0;
-  }
+    &__line:not(:last-child) {
+      border-bottom: 1px solid #414141;
+    }
 
-  html.my-app-dark .lyric-item__line:not(:last-child) {
-    border-bottom: 1px solid #414141;
-  }
+    &__header {
+      border-bottom: 1px solid #414141;
+      color: #ffffff;
+    }
 
-  html:not(.my-app-dark) .lyric-item__header {
-    border-bottom: 1px solid #e0e0e0;
-  }
+    &--editing {
+      border-color: var(--p-primary-color, #0D99FF);
+      box-shadow: 0 0 0 2px rgba(13, 153, 255, 0.25);
+    }
 
-  html.my-app-dark .lyric-item__header {
-    border-bottom: 1px solid #414141;
+    &__editor {
+      color: #ffffff;
+    }
+
+    &__actions {
+      .p-button:not(.p-button-success):not(.p-button-danger) {
+        color: #b0b0b0;
+
+        &:hover {
+          color: #ffffff;
+          background: rgba(255, 255, 255, 0.08);
+        }
+      }
+    }
   }
 }
 
@@ -64,29 +104,58 @@
 .lyric-item {
   width: 100%;
   border-radius: 8px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  transition: border-color 0.2s, box-shadow 0.2s;
 
   $self: &;
 
   &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-weight: bold;
+    padding: 8px 15px;
+    min-height: 44px;
+  }
+
+  &__title {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  &__editor {
+    min-height: 52px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    cursor: text;
+    user-select: text;
     padding: 10px 15px;
+    margin: 0;
+    border: none;
+    outline: none;
+    line-height: 1.6;
+    font-size: 1rem;
+    font-family: inherit;
+    box-sizing: border-box;
+    background: transparent;
   }
 
   &__content {
-    //padding: 10px 15px;
-
     cursor: pointer;
     transition: background-color .3s;
-
-    //&:hover {
-    //  background-color: var(--list-box-item-selected-bg);
-    //  color: var(--list-box-item-selected-text-color);
-    //  text-shadow: 1px 1px 10px black;
-    //}
   }
 
   &__line {
     padding: 10px 15px;
+    line-height: 1.6;
+    font-size: 1rem;
 
     transition: background-color .3s;
 

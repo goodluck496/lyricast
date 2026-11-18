@@ -13,7 +13,7 @@ export interface DbPathResult {
 export function getDbPath(options: DbPathOptions): DbPathResult {
   const { dbName } = options;
 
-  const userDataPath = process.env.USER_DATA_PATH;
+  const userDataPath = process.env['USER_DATA_PATH'];
 
   if (!userDataPath) {
     throw new Error('Database paths are not configured. Required environment variables are missing.');

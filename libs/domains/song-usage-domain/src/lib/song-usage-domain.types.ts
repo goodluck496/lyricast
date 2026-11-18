@@ -34,3 +34,13 @@ export interface SongDisplaySettingsDto extends SongIdentityDto {
   splitPartsCount: number | null;
   updatedAt: string;
 }
+
+export interface SongOverrideDto extends SongIdentityDto {
+  songKey: string;
+  lyrics: unknown[];
+  updatedAt: string;
+}
+
+export interface SaveSongOverrideDto extends SongIdentityDto {
+  lyrics: unknown[];
+}

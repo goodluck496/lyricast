@@ -6,8 +6,10 @@ import { DB_PROVIDER_TOKEN } from './db/database.provider';
 import * as schema from './db/schema';
 import {
   SaveSongDisplaySettingsDto,
+  SaveSongOverrideDto,
   SongDisplaySettingsDto,
   SongIdentityDto,
+  SongOverrideDto,
   SongUsageSummaryDto,
   StartSongUsageSessionDto,
   SONG_APPEARANCE_SCHEMA_VERSION,
@@ -237,6 +239,69 @@ export class SongUsageDomainService {
       appearance: this.parseJson(row.appearanceJson),
       splitPartsCount: row.splitPartsCount,
       updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  saveOverride(dto: SaveSongOverrideDto): SongOverrideDto {
+    const now = new Date();
+    const songNumber = Number(dto.songNumber);
+    const songKey = `${dto.songBookKey}:${songNumber}`;
+    const row = {
+      songKey,
+      songBookKey: dto.songBookKey,
+      songNumber,
+      lyricsJson: JSON.stringify(dto.lyrics),
+      updatedAt: now,
+    };
+
+    this.db
+      .insert(schema.songOverrides)
+      .values(row)
+      .onConflictDoUpdate({
+        target: schema.songOverrides.songKey,
+        set: row,
+      })
+      .run();
+
+    return this.mapOverride(row);
+  }
+
+  getOverride(identity: SongIdentityDto): SongOverrideDto | null {
+    const row = this.db
+      .select()
+      .from(schema.songOverrides)
+      .where(eq(schema.songOverrides.songKey, this.getSongKey(identity)))
+      .get();
+
+    return row ? this.mapOverride(row) : null;
+  }
+
+  deleteOverride(identity: SongIdentityDto): { success: boolean } {
+    this.db
+      .delete(schema.songOverrides)
+      .where(eq(schema.songOverrides.songKey, this.getSongKey(identity)))
+      .run();
+
+    return { success: true };
+  }
+
+  getBookOverrides(songBookKey: string): number[] {
+    const rows = this.db
+      .select({ songNumber: schema.songOverrides.songNumber })
+      .from(schema.songOverrides)
+      .where(eq(schema.songOverrides.songBookKey, songBookKey))
+      .all();
+
+    return rows.map((r) => r.songNumber);
+  }
+
+  private mapOverride(row: schema.SongOverride): SongOverrideDto {
+    return {
+      songBookKey: row.songBookKey,
+      songNumber: row.songNumber,
+      songKey: row.songKey,
+      lyrics: (this.parseJson(row.lyricsJson) as unknown[]) || [],
+      updatedAt: this.toIsoString(row.updatedAt) || new Date().toISOString(),
     };
   }
 

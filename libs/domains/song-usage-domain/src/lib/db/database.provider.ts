@@ -51,5 +51,16 @@ function ensureSchema(sqlite: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS song_display_settings_song_idx
       ON song_display_settings(song_book_key, song_number);
+
+    CREATE TABLE IF NOT EXISTS song_overrides (
+      song_key TEXT PRIMARY KEY,
+      song_book_key TEXT NOT NULL,
+      song_number INTEGER NOT NULL,
+      lyrics_json TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS song_overrides_song_idx
+      ON song_overrides(song_book_key, song_number);
   `);
 }

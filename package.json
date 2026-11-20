@@ -1,6 +1,6 @@
 {
   "name": "LyriCast",
-  "version": "2.9.0",
+  "version": "2.9.1",
   "main": "./dist/apps/electron/main.js",
   "description": "Casting bible, songs and other to projector",
   "author": "goodluck496 <nikita.a.kalinin@gmail.com>",
@@ -91,7 +91,7 @@
     "db:generate-dictionary": "dotenv -e environments/.env.dictionary -- drizzle-kit generate --config=drizzle.config.dictionary.ts",
     "db:push-dictionary": "dotenv -e environments/.env.dictionary -- drizzle-kit push --config=drizzle.config.dictionary.ts",
     "noop6": "---   build bible translates  ---",
-    "bible-translates:build": "ts-node tools\\bible-from-sqllite.parser.ts",
+    "bible-translates:build": "ts-node -r tsconfig-paths/register --project tsconfig.base.json -O \"{\\\"module\\\":\\\"commonjs\\\"}\" tools/bible-from-sqllite.parser.ts",
     "noop7": "---   DEPRECATED, not using  ---",
     "forge:start": "electron-forge start",
     "forge:package": "electron-forge package",

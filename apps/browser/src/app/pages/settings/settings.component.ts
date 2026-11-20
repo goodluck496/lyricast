@@ -32,6 +32,7 @@ import { SnowfallManager } from '../../../services/common/snowfall.service';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { Card } from 'primeng/card';
 import { SongDictionariesManagerComponent } from '../../components/song-dictionaries-manager/song-dictionaries-manager.component';
+import { BibleDictionariesManagerComponent } from '../../components/bible-dictionaries-manager/bible-dictionaries-manager.component';
 
 @Component({
   selector: 'lyri-settings',
@@ -49,6 +50,7 @@ import { SongDictionariesManagerComponent } from '../../components/song-dictiona
     ToggleSwitch,
     Card,
     SongDictionariesManagerComponent,
+    BibleDictionariesManagerComponent,
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',

@@ -21,6 +21,20 @@ export const appRoutes: Route[] = [
           ),
       },
       {
+        path: 'bibles',
+        loadComponent: () =>
+          import('./pages/bibles/components/bible-cards/bible-cards-page.component').then(
+            (c) => c.BibleCardsPageComponent
+          ),
+      },
+      {
+        path: 'bibles/:bibleId',
+        loadComponent: () =>
+          import('./pages/bibles/bible-viewer-page.component').then(
+            (c) => c.BibleViewerPageComponent
+          ),
+      },
+      {
         path: '**',
         redirectTo: 'songs',
         pathMatch: 'full',

@@ -1,0 +1,111 @@
+<div class="import-bible-dialog">
+  <div class="import-bible-dialog__upload-area">
+    <input
+      #fileInput
+      type="file"
+      accept=".sqlite,.sqlite3,.json"
+      style="display: none"
+      (change)="onFileChange($event)"
+    />
+
+    <div
+      class="upload-dropzone"
+      role="button"
+      tabindex="0"
+      [class.upload-dropzone--has-file]="!!selectedFile"
+      (click)="fileInput.click()"
+      (keydown.enter)="fileInput.click()"
+    >
+      @if (isParsing) {
+        <p-progressSpinner [style]="{ width: '40px', height: '40px' }" strokeWidth="4"></p-progressSpinner>
+        <span>Чтение и разбор файла перевода...</span>
+      } @else if (selectedFile) {
+        <span class="upload-dropzone__icon">📄</span>
+        <span class="upload-dropzone__filename">{{ selectedFile.name }}</span>
+        <span class="upload-dropzone__hint">Нажмите, чтобы выбрать другой файл</span>
+      } @else {
+        <span class="upload-dropzone__icon">📥</span>
+        <span class="upload-dropzone__text">Выберите файл myBible (.sqlite/.sqlite3) или .json</span>
+        <span class="upload-dropzone__hint">Поддерживается прямой разбор баз данных myBible</span>
+      }
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <p-message severity="error" [text]="errorMessage" styleClass="w-full mt-3"></p-message>
+  }
+
+  @if (parsedBible) {
+    <div class="import-bible-dialog__preview">
+      <div class="preview-stats">
+        <div class="stat-item">
+          <span class="stat-label">Книг:</span>
+          <span class="stat-value">{{ parsedBible.books.length }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Всего стихов:</span>
+          <span class="stat-value">{{ totalVersesCount }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Оригинальный ключ:</span>
+          <span class="stat-value">{{ parsedBible.keyForSearch }}</span>
+        </div>
+      </div>
+
+      <div class="form-fields">
+        <p-floatlabel class="w-full">
+          <input
+            id="bibleTitle"
+            type="text"
+            pInputText
+            [(ngModel)]="title"
+            [disabled]="isSaving"
+            class="w-full"
+            placeholder=" "
+          />
+          <label for="bibleTitle">Название перевода</label>
+        </p-floatlabel>
+
+        <p-floatlabel class="w-full">
+          <input
+            id="bibleLang"
+            type="text"
+            pInputText
+            [(ngModel)]="language"
+            [disabled]="isSaving"
+            class="w-full"
+            placeholder=" "
+          />
+          <label for="bibleLang">Язык (ru, en, ky...)</label>
+        </p-floatlabel>
+      </div>
+    </div>
+  }
+
+  @if (isSaving) {
+    <div class="saving-progress flex flex-column gap-2 p-3 my-3 surface-100 border-round">
+      <div class="flex align-items-center justify-content-between">
+        <span class="font-semibold text-sm">{{ uploadStatusText || 'Сохранение перевода...' }}</span>
+        <span class="text-xs font-bold text-primary">{{ uploadProgress }}%</span>
+      </div>
+      <p-progressBar [value]="uploadProgress" [showValue]="false" [style]="{ height: '8px' }"></p-progressBar>
+    </div>
+  }
+
+  <div class="import-bible-dialog__actions">
+    <p-button
+      label="Отмена"
+      severity="secondary"
+      [disabled]="isSaving"
+      (onClick)="onCancel()"
+    ></p-button>
+
+    <p-button
+      label="Импортировать"
+      icon="pi pi-check"
+      [disabled]="!parsedBible || isSaving || !title?.trim()"
+      [loading]="isSaving"
+      (onClick)="onSubmit()"
+    ></p-button>
+  </div>
+</div>

@@ -6,6 +6,7 @@ import {
   BibleChapter,
   BibleChapterSection,
   BibleChapterShort,
+  BibleDictionaryCardDto,
   BibleSearchDto,
   BibleTranslateShort,
 } from '@lyri-cast/entities';
@@ -107,6 +108,33 @@ export class BibleApiService {
       {
         params,
       }
+    );
+  }
+
+  getDictionaries(): Observable<BibleDictionaryCardDto[]> {
+    return this.http.get<BibleDictionaryCardDto[]>(
+      `${this.BASE_API_TOKEN}/dictionaries`
+    );
+  }
+
+  installDictionary(payload: { fileKey: string; downloadUrl?: string }): Observable<{ ok: boolean }> {
+    return this.http.post<{ ok: boolean }>(
+      `${this.BASE_API_TOKEN}/dictionaries/install`,
+      payload
+    );
+  }
+
+  deleteDictionary(payload: { fileKey: string }): Observable<{ ok: boolean }> {
+    return this.http.post<{ ok: boolean }>(
+      `${this.BASE_API_TOKEN}/dictionaries/delete`,
+      payload
+    );
+  }
+
+  clearDictionaries(): Observable<{ ok: boolean }> {
+    return this.http.post<{ ok: boolean }>(
+      `${this.BASE_API_TOKEN}/dictionaries/clear`,
+      {}
     );
   }
 }

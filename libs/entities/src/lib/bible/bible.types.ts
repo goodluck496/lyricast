@@ -4,6 +4,7 @@ export type PrevOrNextVerse = Omit<BibleVerse, 'text' | 'prev' | 'next'> & {
 };
 
 export type BibleVerse = {
+  id?: number;
   contentType: 'line';
   number: number;
   text: string;
@@ -58,6 +59,7 @@ export type BibleBook = {
 export type BibleTranslate = {
   keyForSearch: string;
   title: string;
+  humanName?: string;
   sourceTitle: string;
   lang: string;
   version: string;

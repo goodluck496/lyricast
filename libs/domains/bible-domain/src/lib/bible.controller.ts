@@ -1,6 +1,7 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Post, Body } from '@nestjs/common';
+import { ApiOperation } from '@nestjs/swagger';
 import { BibleByFilesService } from './bible-by-files.service';
-import { BibleChapter, BibleSearchDto } from '@lyri-cast/entities';
+import { BibleChapter, BibleSearchDto, BibleDictionaryCardDto } from '@lyri-cast/entities';
 
 @Controller('bible')
 export class BibleController {
@@ -77,5 +78,34 @@ export class BibleController {
       Number(book),
       Number(chapter)
     );
+  }
+
+  // === Управление справочниками (для воркеров) ===
+
+  @Get('dictionaries')
+  @ApiOperation({ summary: 'Статус установленных переводов Библии' })
+  async getDictionaries(): Promise<BibleDictionaryCardDto[]> {
+    return this.bibleService.getDictionariesStatus();
+  }
+
+  @Post('dictionaries/install')
+  @ApiOperation({ summary: 'Установить перевод Библии (скачать и сохранить)' })
+  async installDictionary(@Body() body: { fileKey: string; downloadUrl?: string }): Promise<{ ok: boolean }> {
+    await this.bibleService.installDictionary(body.fileKey, body.downloadUrl);
+    return { ok: true };
+  }
+
+  @Post('dictionaries/delete')
+  @ApiOperation({ summary: 'Удалить локальный перевод Библии' })
+  async deleteDictionary(@Body() body: { fileKey: string }): Promise<{ ok: boolean }> {
+    await this.bibleService.deleteDictionary(body.fileKey);
+    return { ok: true };
+  }
+
+  @Post('dictionaries/clear')
+  @ApiOperation({ summary: 'Очистить все пользовательские переводы (кроме дефолтных)' })
+  async clearDictionaries(): Promise<{ ok: boolean }> {
+    await this.bibleService.clearDictionaries();
+    return { ok: true };
   }
 }

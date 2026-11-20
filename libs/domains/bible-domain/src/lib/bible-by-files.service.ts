@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import path from 'path';
+import axios from 'axios';
 import {
   BibleBook,
   BibleBookShort,
@@ -9,6 +10,7 @@ import {
   BibleSearchDto,
   BibleTranslate,
   BibleTranslateShort,
+  BibleDictionaryCardDto,
   BOOK_NAMES,
 } from '@lyri-cast/entities';
 import fs from 'fs';
@@ -46,6 +48,13 @@ export class BibleByFilesService {
     }
 
     // private readonly bibleTranslateRepo: Repository<BibleTranslateEntity> // @InjectRepository(BibleTranslateEntity)
+  }
+
+  // Сброс кэша после изменений (установка/удаление словарей)
+  clearCache(): void {
+    this.biblesCache = {};
+    this.shortTranslatesCache = [];
+    this.readedTranslates = false;
   }
 
   getAllBibles(): BibleTranslate[] {
@@ -393,5 +402,194 @@ export class BibleByFilesService {
     });
     ////////////////// fesf es
     return result;
+  }
+
+  private getRemoteApiUrl(): string {
+    const envBase = process.env?.['DICTIONARY_API_URL']?.trim();
+    const fallbackBase =
+      process.env?.['NODE_ENV'] === 'production'
+        ? 'https://lyricast-dictionary-api.onrender.com'
+        : 'http://localhost:3000';
+    return (envBase || fallbackBase).replace(/\/+$/, '');
+  }
+
+  /**
+   * Для воркера: получение статуса переводов (локальные файлы vs серверные данные).
+   * Возвращает BibleDictionaryCardDto[] для UI менеджера справочников.
+   */
+  async getDictionariesStatus(): Promise<BibleDictionaryCardDto[]> {
+    const shortBibles = this.getAllShortBibles();
+    const localByKey = new Map<string, BibleTranslateShort>();
+    for (const b of shortBibles) {
+      localByKey.set(b.keyForSearch.toLowerCase().trim(), b);
+    }
+
+    const cards: BibleDictionaryCardDto[] = [];
+    const processedKeys = new Set<string>();
+
+    // 1. Попытка запросить серверный реестр dictionary-api
+    try {
+      const remoteUrl = `${this.getRemoteApiUrl()}/api/bibles/registry`;
+      const res = await axios.get<{ items: any[]; totalCount: number }>(remoteUrl, { timeout: 3000 });
+      const registryItems = res.data?.items ?? [];
+
+      for (const item of registryItems) {
+        const fileKey = item.fileKey;
+        const normKey = fileKey.toLowerCase().trim();
+        processedKeys.add(normKey);
+
+        const local = localByKey.get(normKey);
+        const isInstalled = !!local;
+        const remoteVer = item.meta?.version ?? 1;
+        const localVer = isInstalled ? (Number(local?.version) || 1) : 0;
+        const needsUpdate = isInstalled && remoteVer > localVer;
+
+        let sizeBytes = 0;
+        if (isInstalled) {
+          const filePath = this.findBibleFilePath(local.keyForSearch);
+          if (filePath && fs.existsSync(filePath)) {
+            sizeBytes = fs.statSync(filePath).size;
+          }
+        }
+
+        cards.push({
+          fileKey: item.fileKey,
+          title: item.meta?.title || item.humanName || item.fileKey,
+          language: item.meta?.language || 'ru',
+          localVersion: localVer,
+          remoteVersion: remoteVer,
+          isInstalled,
+          needsUpdate,
+          sizeBytes,
+          bookCount: item.meta?.bookCount ?? 66,
+          verseCount: item.meta?.verseCount ?? 0,
+          sourceTitle: item.meta?.sourceTitle || item.humanName || '',
+          isDefault: !!item.meta?.isDefault,
+        });
+      }
+    } catch (e) {
+      console.warn('[BibleByFilesService] Failed to fetch remote bible registry, falling back to local files:', (e as Error)?.message);
+    }
+
+    // 2. Добавляем локальные переводы, которых не было в реестре (например синодальный или оффлайн)
+    for (const short of shortBibles) {
+      const normKey = short.keyForSearch.toLowerCase().trim();
+      if (processedKeys.has(normKey)) continue;
+
+      const fullBible = this.loadBible(short.keyForSearch);
+      const verseCount = fullBible
+        ? fullBible.books.reduce(
+            (sum, book) => sum + book.chapters.reduce((s, ch) => s + (ch.subsections?.[0]?.content?.length ?? 0), 0),
+            0
+          )
+        : 0;
+
+      const filePath = this.findBibleFilePath(short.keyForSearch);
+      let sizeBytes = 0;
+      if (filePath && fs.existsSync(filePath)) {
+        sizeBytes = fs.statSync(filePath).size;
+      }
+
+      cards.push({
+        fileKey: short.keyForSearch,
+        title: short.title,
+        language: short.lang,
+        localVersion: Number(short.version) || 1,
+        remoteVersion: Number(short.version) || 1,
+        isInstalled: true,
+        needsUpdate: false,
+        sizeBytes,
+        bookCount: fullBible ? fullBible.books.length : 66,
+        verseCount,
+        sourceTitle: short.sourceTitle,
+        isDefault: short.isDefault,
+      });
+    }
+
+    return cards.sort((a, b) => a.title.localeCompare(b.title));
+  }
+
+  /**
+   * Установка перевода: скачивание JSON с сервера и сохранение в USER_ASSETS.
+   */
+  async installDictionary(fileKey: string, downloadUrl?: string): Promise<void> {
+    let url = downloadUrl;
+    if (!url) {
+      // Ищем ID в registry
+      const remoteUrl = `${this.getRemoteApiUrl()}/api/bibles/registry`;
+      const res = await axios.get<{ items: any[] }>(remoteUrl, { timeout: 5000 });
+      const item = res.data?.items?.find((i: any) => i.fileKey?.toLowerCase() === fileKey.toLowerCase());
+      if (item) {
+        url = `${this.getRemoteApiUrl()}/api/bibles/${item.id}/export`;
+      } else {
+        throw new Error(`Bible with fileKey "${fileKey}" not found in registry`);
+      }
+    }
+
+    const res = await axios.get<string | object>(url, { responseType: 'text', timeout: 30000 });
+    const content = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+
+    const targetDir = this.assetsPathNew || this.assetsPath;
+    fs.mkdirSync(targetDir, { recursive: true });
+
+    const fileName = fileKey.toLowerCase().endsWith('.bible.json') ? fileKey : `${fileKey}.bible.json`;
+    const targetPath = path.resolve(targetDir, fileName);
+    fs.writeFileSync(targetPath, content, 'utf-8');
+
+    this.clearCache();
+    console.log(`[BibleByFilesService] installDictionary success for ${fileKey} -> ${targetPath}`);
+  }
+
+  /**
+   * Удаление локального перевода.
+   */
+  async deleteDictionary(fileKey: string): Promise<void> {
+    const filePath = this.findBibleFilePath(fileKey);
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    this.clearCache();
+    console.log(`[BibleByFilesService] deleteDictionary called for ${fileKey}`);
+  }
+
+  /**
+   * Очистка всех пользовательских переводов (кроме синодального/дефолтных).
+   */
+  async clearDictionaries(): Promise<void> {
+    const shortBibles = this.getAllShortBibles();
+    for (const short of shortBibles) {
+      if (!short.isDefault && !short.keyForSearch.toLowerCase().includes('rus_synodal')) {
+        const filePath = this.findBibleFilePath(short.keyForSearch);
+        if (filePath && fs.existsSync(filePath)) {
+          try {
+            fs.unlinkSync(filePath);
+          } catch (e) {
+            console.error('[BibleByFilesService] Error deleting file', filePath, e);
+          }
+        }
+      }
+    }
+    this.clearCache();
+    console.log('[BibleByFilesService] clearDictionaries called');
+  }
+
+  private findBibleFilePath(keyForSearch: string): string | null {
+    const dirs = [this.assetsPath, this.assetsPathNew]
+      .filter(Boolean)
+      .filter((dir, idx, arr) => arr.indexOf(dir) === idx)
+      .filter((dir) => fs.existsSync(dir));
+
+    for (const dir of dirs) {
+      const files = fs.readdirSync(dir).filter((f) => f.toLowerCase().endsWith('.bible.json'));
+      for (const file of files) {
+        const filePath = path.resolve(dir, file);
+        const content = fs.readFileSync(filePath, 'utf8');
+        const keyMatch = content.match(/"keyForSearch"\s*:\s*"([^"]+)"/);
+        if (keyMatch && keyMatch[1] === keyForSearch) {
+          return filePath;
+        }
+      }
+    }
+    return null;
   }
 }

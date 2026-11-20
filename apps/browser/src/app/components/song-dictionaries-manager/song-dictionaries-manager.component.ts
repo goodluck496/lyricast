@@ -272,6 +272,7 @@ export class SongDictionariesManagerComponent implements OnInit, OnDestroy {
     acceptAction: () => void
   ): void {
     this.confirmationService.confirm({
+      key: 'song-dicts',
       target: event.target as any,
       message,
       acceptLabel: 'Да',

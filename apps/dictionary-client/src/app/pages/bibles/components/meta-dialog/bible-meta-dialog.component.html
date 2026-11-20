@@ -1,0 +1,92 @@
+<div class="bible-meta-dialog">
+  @if (errorMessage) {
+    <p-message severity="error" [text]="errorMessage" styleClass="w-full mb-3"></p-message>
+  }
+
+  <div class="form-fields">
+    <div class="form-field">
+      <label for="metaTitle" class="form-label">Название перевода (title)</label>
+      <input
+        id="metaTitle"
+        type="text"
+        pInputText
+        [(ngModel)]="title"
+        [disabled]="isSaving"
+        class="w-full"
+      />
+    </div>
+
+    <div class="form-field">
+      <label for="metaSourceTitle" class="form-label">Исходное название (sourceTitle)</label>
+      <input
+        id="metaSourceTitle"
+        type="text"
+        pInputText
+        [(ngModel)]="sourceTitle"
+        [disabled]="isSaving"
+        class="w-full"
+      />
+    </div>
+
+    <div class="form-field">
+      <label for="metaLang" class="form-label">Язык (lang)</label>
+      <input
+        id="metaLang"
+        type="text"
+        pInputText
+        [(ngModel)]="language"
+        [disabled]="isSaving"
+        class="w-full"
+      />
+    </div>
+
+    <div class="form-field">
+      <label for="metaVersion" class="form-label">Версия (строка версии, напр. 1.0)</label>
+      <input
+        id="metaVersion"
+        type="text"
+        pInputText
+        [(ngModel)]="version"
+        [disabled]="isSaving"
+        class="w-full"
+      />
+    </div>
+
+    <div class="checkbox-row">
+      <p-checkbox
+        [(ngModel)]="isDefault"
+        [binary]="true"
+        inputId="metaIsDefault"
+        [disabled]="isSaving"
+      ></p-checkbox>
+      <label for="metaIsDefault">Перевод по умолчанию (дефолтный)</label>
+    </div>
+
+    <div class="checkbox-row">
+      <p-checkbox
+        [(ngModel)]="isClassicBookOrder"
+        [binary]="true"
+        inputId="metaIsClassicOrder"
+        [disabled]="isSaving"
+      ></p-checkbox>
+      <label for="metaIsClassicOrder">Классический порядок книг</label>
+    </div>
+  </div>
+
+  <div class="dialog-actions">
+    <p-button
+      label="Отмена"
+      severity="secondary"
+      [disabled]="isSaving"
+      (onClick)="onCancel()"
+    ></p-button>
+
+    <p-button
+      label="Сохранить"
+      icon="pi pi-check"
+      [disabled]="isSaving || !title?.trim()"
+      [loading]="isSaving"
+      (onClick)="onSubmit()"
+    ></p-button>
+  </div>
+</div>

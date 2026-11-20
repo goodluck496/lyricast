@@ -23,6 +23,74 @@ export type BibleBookShort = Omit<BibleBook, 'chapters'> & {
 
 export type BibleTranslateShort = Omit<BibleTranslate, 'books'>;
 
+// Карточка справочника Библии (аналог SongDictionaryCardDto)
+export type BibleDictionaryCardDto = {
+  fileKey: string;
+  title: string;
+  language: string;
+  localVersion: number;     // bible_version из БД
+  remoteVersion: number;    // версия на сервере (из meta.version)
+  isInstalled: boolean;
+  needsUpdate: boolean;
+  sizeBytes: number;
+  bookCount: number;
+  verseCount: number;
+  sourceTitle: string;
+  isDefault: boolean;
+};
+
+// Для реестра (аналог RegistryItemDto)
+export type BibleRegistryItemMetaDto = {
+  fileKey: string | null;
+  language: string | null;
+  title: string | null;
+  sourceTitle: string | null;
+  version: number;
+  updatedBy: string | null;
+  updatedAt: string | null;
+  bookCount: number;
+  verseCount: number;
+  isDefault: boolean;
+  isClassicBookOrder: boolean;
+};
+
+export type BibleRegistryItemDto = {
+  id: number;
+  fileKey: string;
+  humanName: string;
+  catalogId: number;
+  meta?: BibleRegistryItemMetaDto;
+};
+
+export type BibleRegistryResponseDto = {
+  items: BibleRegistryItemDto[];
+  totalCount: number;
+};
+
+// Для проверки версий
+export type BibleVersionItemDto = {
+  fileKey: string;
+  version: number; // bible_version
+};
+
+export type BibleVersionsCheckRequestDto = {
+  bibles?: BibleVersionItemDto[];
+};
+
+export type BibleVersionsCheckResponseItemDto = {
+  fileKey: string;
+  version: number;
+  downloadUrl: string; // /bibles/:id/export
+};
+
+export type BibleVersionsCheckResponseDto = {
+  updates: BibleVersionsCheckResponseItemDto[];
+  totalCount: number;
+};
+
+// Импорт/Экспорт
+export type BibleExportDto = BibleTranslate; // полный JSON перевода
+
 export const BOOK_NAMES: Record<number, {short: string, full: string}> = {
   1: { short: 'Быт', full: 'Бытие' },
   2: { short: 'Исх', full: 'Исход' },

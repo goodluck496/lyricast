@@ -30,6 +30,118 @@ export const catalogs = pgTable(
   }),
 );
 
+// Библии (аналог song_books)
+export const bibles = pgTable(
+  'bibles',
+  {
+    id: serial('id').primaryKey(),
+    catalogId: integer('catalog_id')
+      .notNull()
+      .references(() => catalogs.id, { onDelete: 'cascade' }),
+    fileKey: text('file_key').notNull().unique('bibles_file_key_unique'),
+    humanName: text('human_name').notNull(),
+
+    // Метаданные из BibleTranslate
+    sourceTitle: text('source_title').notNull(),
+    lang: text('lang').notNull(),
+    version: text('version').notNull().default(''),
+    isDefault: boolean('is_default').notNull().default(false),
+    isClassicBookOrder: boolean('is_classic_book_order').notNull().default(false),
+
+    bibleVersion: integer('bible_version').notNull().default(1), // версия перевода (инкремент при правках)
+    updatedBy: text('updated_by'),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    catalogFileKeyUnique: uniqueIndex('bibles_catalog_file_key_unique').on(
+      table.catalogId,
+      table.fileKey,
+    ),
+  }),
+);
+
+// Книги Библии (аналог songs, но книга — это контейнер глав)
+export const bibleBooks = pgTable(
+  'bible_books',
+  {
+    id: serial('id').primaryKey(),
+    bibleId: integer('bible_id')
+      .notNull()
+      .references(() => bibles.id, { onDelete: 'cascade' }),
+    number: integer('number').notNull(), // 1..66
+    shortTitle: text('short_title').notNull(),
+    fullTitle: text('full_title').notNull(),
+    type: text('type').notNull(), // BibleBookType enum
+    chapterCount: integer('chapter_count').notNull().default(0),
+    verseCount: integer('verse_count').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    bibleNumberUnique: uniqueIndex('bible_books_bible_number_unique').on(
+      table.bibleId,
+      table.number,
+    ),
+  }),
+);
+
+// Главы Библии
+export const bibleChapters = pgTable(
+  'bible_chapters',
+  {
+    id: serial('id').primaryKey(),
+    bibleBookId: integer('bible_book_id')
+      .notNull()
+      .references(() => bibleBooks.id, { onDelete: 'cascade' }),
+    number: integer('number').notNull(),
+    title: text('title').notNull(), // обычно = number, но может быть заголовок
+    verseCount: integer('verse_count').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    bookNumberUnique: uniqueIndex('bible_chapters_book_number_unique').on(
+      table.bibleBookId,
+      table.number,
+    ),
+  }),
+);
+
+// Стихи Библии (аналог lyric_lines, но плоская структура)
+export const bibleVerses = pgTable(
+  'bible_verses',
+  {
+    id: serial('id').primaryKey(),
+    bibleChapterId: integer('bible_chapter_id')
+      .notNull()
+      .references(() => bibleChapters.id, { onDelete: 'cascade' }),
+    number: integer('number').notNull(),
+    text: text('text').notNull(), // HTML с поддержкой <span style="font-style: italic;">
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    chapterNumberUnique: uniqueIndex('bible_verses_chapter_number_unique').on(
+      table.bibleChapterId,
+      table.number,
+    ),
+  }),
+);
+
+// Метаданные Библии (аналог song_book_meta)
+export const bibleMeta = pgTable(
+  'bible_meta',
+  {
+    fileKey: text('file_key')
+      .notNull()
+      .references(() => bibles.fileKey, { onDelete: 'cascade' }),
+    metaKey: text('meta_key').notNull(),
+    metaValue: text('meta_value').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ name: 'bible_meta_pk', columns: [table.fileKey, table.metaKey] }),
+  }),
+);
+
 export const catalogMeta = pgTable(
   'catalog_meta',
   {

@@ -25,5 +25,11 @@ export class DictMainComponent {
       icon: 'song_lyrics',
       visible: true,
     },
+    {
+      routerLink: ['./', 'bibles'],
+      label: 'Библия',
+      icon: 'bible',
+      visible: true,
+    },
   ];
 }

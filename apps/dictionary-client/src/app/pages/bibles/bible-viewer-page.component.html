@@ -1,0 +1,247 @@
+<div class="bible-viewer">
+  <!-- Верхняя панель -->
+  <header class="bible-viewer__header">
+    <div class="bible-viewer__header-left">
+      <p-button
+        icon="pi pi-arrow-left"
+        label="К переводам"
+        severity="secondary"
+        [text]="true"
+        (onClick)="goBack()"
+      ></p-button>
+
+      <div class="bible-viewer__title-block">
+        <h2 class="bible-viewer__title">{{ bibleTitle }}</h2>
+        @if (bible?.lang) {
+          <p-badge [value]="bible!.lang | uppercase" severity="info"></p-badge>
+        }
+        @if (bible?.version) {
+          <p-badge [value]="'v' + bible!.version" severity="contrast"></p-badge>
+        }
+        @if (bible?.isDefault) {
+          <p-badge value="Основной" severity="success"></p-badge>
+        }
+        @if (bible?.books) {
+          <span class="bible-viewer__count">({{ bible!.books.length }} книг)</span>
+        }
+      </div>
+    </div>
+
+    <div class="bible-viewer__header-right">
+      @if (isExporting && exportProgress !== null) {
+        <div class="export-progress">
+          <span class="export-progress__label">Экспорт: {{ exportProgress }}%</span>
+          <p-progressBar [value]="exportProgress" [showValue]="false" [style]="{ width: '100px', height: '6px' }"></p-progressBar>
+        </div>
+      }
+
+      <p-button
+        icon="pi pi-cog"
+        label="Свойства"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="!bible"
+        (onClick)="openMetaDialog()"
+      ></p-button>
+
+      <p-button
+        icon="pi pi-download"
+        label="Экспорт JSON"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="!bible || isExporting"
+        [loading]="isExporting"
+        (onClick)="exportJson()"
+      ></p-button>
+    </div>
+  </header>
+
+  @if (isLoading) {
+    <div class="bible-viewer__loading">
+      <p-progressSpinner [style]="{ width: '50px', height: '50px' }"></p-progressSpinner>
+      <span>Загрузка перевода...</span>
+    </div>
+  } @else if (bible) {
+    <div class="bible-viewer__body">
+      <!-- Левая панель: Книги -->
+      <aside class="books-sidebar">
+        <div class="books-sidebar__search">
+          <p-iconfield class="w-full">
+            <p-inputicon class="pi pi-search" />
+            <input
+              type="text"
+              pInputText
+              placeholder="Поиск книги..."
+              [(ngModel)]="searchBookQuery"
+              class="w-full"
+            />
+          </p-iconfield>
+        </div>
+
+        <div class="books-sidebar__list">
+          @for (book of filteredBooks; track book.number) {
+            <button
+              type="button"
+              class="book-item"
+              [class.book-item--active]="selectedBook?.number === book.number"
+              (click)="selectBook(book)"
+            >
+              <div class="book-item__left">
+                <span class="book-item__num">{{ book.number }}</span>
+                <span class="book-item__name">{{ book.title.full }}</span>
+              </div>
+              <span class="book-item__count">{{ book.chapters.length }} гл.</span>
+            </button>
+          }
+        </div>
+      </aside>
+
+      <!-- Средняя панель: Главы (столбец возле названия книги) -->
+      @if (selectedBook) {
+        <aside class="chapters-sidebar">
+          <div class="chapters-sidebar__header">
+            <span class="chapters-sidebar__title">Главы</span>
+            <span class="chapters-sidebar__count">{{ selectedBook.chapters.length }}</span>
+          </div>
+
+          <div class="chapters-sidebar__list">
+            @for (ch of selectedBook.chapters; track ch.number) {
+              <button
+                type="button"
+                class="chapter-item"
+                [class.chapter-item--active]="selectedChapter?.number === ch.number"
+                (click)="selectChapter(ch)"
+              >
+                {{ ch.number }}
+              </button>
+            }
+          </div>
+        </aside>
+      }
+
+      <!-- Правая панель: Стихи с поиском по главе -->
+      <main class="content-pane">
+        @if (selectedBook && selectedChapter) {
+          <!-- Верхняя панель главы: название и поиск по стихам -->
+          <div class="chapter-header-bar">
+            <h3 class="current-chapter-title">
+              {{ selectedBook.title.full }}, Глава {{ selectedChapter.number }}
+            </h3>
+
+            <div class="chapter-search-box">
+              <p-iconfield class="w-full">
+                <p-inputicon class="pi pi-search" />
+                <input
+                  type="text"
+                  pInputText
+                  placeholder="Поиск по стихам главы..."
+                  [(ngModel)]="searchVerseQuery"
+                  class="w-full"
+                />
+              </p-iconfield>
+              @if (searchVerseQuery.trim()) {
+                <span class="search-match-count">
+                  Найдено: {{ filteredVerses.length }}
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- Список стихов -->
+          <div class="verses-list">
+            @if (isLoadingVerses) {
+              <div class="flex flex-column gap-2 p-3">
+                <p-skeleton height="24px" width="100%"></p-skeleton>
+                <p-skeleton height="24px" width="90%"></p-skeleton>
+                <p-skeleton height="24px" width="95%"></p-skeleton>
+              </div>
+            } @else if (filteredVerses.length) {
+              @for (verse of filteredVerses; track verse.number) {
+                <div class="verse-item" [class.verse-item--editing]="editingVerseId === verse.id">
+                  @if (editingVerseId === verse.id) {
+                    <div class="verse-edit">
+                      <span class="verse-edit__num">{{ verse.number }}</span>
+                      <textarea
+                        [(ngModel)]="editingVerseText"
+                        class="verse-edit__input"
+                        rows="3"
+                        [disabled]="isSavingVerse"
+                      ></textarea>
+                      <div class="verse-edit__actions">
+                        <p-button
+                          icon="pi pi-check"
+                          size="small"
+                          severity="success"
+                          [loading]="isSavingVerse"
+                          (onClick)="saveVerse(verse)"
+                          pTooltip="Сохранить (Enter)"
+                        ></p-button>
+                        <p-button
+                          icon="pi pi-times"
+                          size="small"
+                          severity="secondary"
+                          [disabled]="isSavingVerse"
+                          (onClick)="cancelEditVerse()"
+                          pTooltip="Отмена (Esc)"
+                        ></p-button>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="verse-view">
+                      <span class="verse-num">{{ verse.number }}</span>
+                      <span class="verse-text" (dblclick)="startEditVerse(verse)">
+                        {{ verse.text }}
+                      </span>
+                      <button
+                        type="button"
+                        class="verse-edit-btn"
+                        title="Редактировать стих"
+                        (click)="startEditVerse(verse)"
+                      >
+                        <i class="pi pi-pencil"></i>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            } @else {
+              <div class="no-selection">
+                @if (searchVerseQuery.trim()) {
+                  По запросу «{{ searchVerseQuery }}» ничего не найдено в этой главе
+                } @else {
+                  В этой главе пока нет стихов
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="no-selection">Выберите книгу и главу</div>
+        }
+      </main>
+    </div>
+  }
+</div>
+
+@if (bible && metaDialogVisible) {
+  <p-dialog
+    header="Свойства перевода Библии"
+    [(visible)]="metaDialogVisible"
+    [modal]="true"
+    [style]="{ width: '600px', maxWidth: '95vw' }"
+    [draggable]="false"
+    (onHide)="closeMetaDialog()"
+  >
+    <lyri-bible-meta-dialog
+      [bibleId]="bibleId"
+      [initialTitle]="bibleTitle"
+      [initialHumanName]="bibleTitle"
+      [initialSourceTitle]="bible.sourceTitle || ''"
+      [initialLanguage]="bible.lang || 'ru'"
+      [initialVersion]="bible.version || ''"
+      [initialIsDefault]="!!bible.isDefault"
+      [initialIsClassicBookOrder]="!!bible.isClassicBookOrder"
+      (completed)="handleMetaCompleted($event)"
+      (cancelled)="closeMetaDialog()"
+    />
+  </p-dialog>
+}

@@ -51,10 +51,22 @@ export async function ensureBiblesUnpacked(): Promise<void> {
 
   try {
     const zip = new AdmZip(zipPath);
-    zip.extractAllTo(targetDir, true);
+    // В базовую поставку входит только синодальный перевод.
+    // Остальные переводы загружаются через реестр справочников.
+    const synodalEntry = zip
+      .getEntries()
+      .find((entry: any) =>
+        entry.entryName.toLowerCase().includes('rus_synodal.bible.json')
+      );
+
+    if (synodalEntry) {
+      zip.extractEntryTo(synodalEntry, targetDir, false, true);
+    } else {
+      zip.extractAllTo(targetDir, true);
+    }
 
     const extracted = readdirSync(targetDir);
-    console.log('[BiblesAssets] Extracted bibles.zip to', targetDir, {
+    console.log('[BiblesAssets] Extracted synodal bible to', targetDir, {
       files: extracted,
     });
   } catch (e) {

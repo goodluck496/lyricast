@@ -1,0 +1,114 @@
+.import-bible-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.5rem 0;
+
+  &__upload-area {
+    width: 100%;
+  }
+
+  .upload-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    border: 2px dashed var(--p-surface-300, #cbd5e1);
+    border-radius: 1rem;
+    background-color: var(--p-surface-50, #f8fafc);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    text-align: center;
+    gap: 0.5rem;
+
+    &:hover {
+      border-color: var(--p-primary-color, #3b82f6);
+      background-color: var(--p-surface-100, #f1f5f9);
+    }
+
+    &--has-file {
+      border-style: solid;
+      border-color: var(--p-primary-color, #3b82f6);
+      background-color: var(--p-primary-50, rgba(59, 130, 246, 0.05));
+    }
+
+    &__icon {
+      font-size: 2.25rem;
+    }
+
+    &__text {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--p-surface-900, #0f172a);
+    }
+
+    &__filename {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--p-primary-color, #3b82f6);
+    }
+
+    &__hint {
+      font-size: 0.85rem;
+      color: var(--p-surface-500, #64748b);
+    }
+  }
+
+  &__preview {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+
+    .preview-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--p-surface-100, #f1f5f9);
+      border-radius: 0.5rem;
+
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+
+        .stat-label {
+          color: var(--p-surface-600, #475569);
+        }
+
+        .stat-value {
+          font-weight: 600;
+          color: var(--p-surface-900, #0f172a);
+        }
+      }
+    }
+
+    .form-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      margin-top: 0.5rem;
+
+      p-floatlabel,
+      p-float-label {
+        width: 100%;
+        display: block;
+
+        input {
+          width: 100%;
+        }
+      }
+    }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--p-surface-200, #e2e8f0);
+  }
+}

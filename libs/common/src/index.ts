@@ -3,4 +3,5 @@
 export * from './lib/tokens'
 
 export * from './lib/rxjs.helpers'
+export * from './lib/bible';
 

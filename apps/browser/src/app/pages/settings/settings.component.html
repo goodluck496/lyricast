@@ -178,10 +178,18 @@
 
     <p-tabpanel [value]="4">
       @if (activeTab === 4) {
-        <lyri-song-dictionaries-manager
-          [autoLoad]="true"
-          (authCancelled)="activeTab = 0"
-        ></lyri-song-dictionaries-manager>
+        <div class="settings__dictionaries">
+          <lyri-song-dictionaries-manager
+            [autoLoad]="true"
+            (authCancelled)="activeTab = 0"
+          ></lyri-song-dictionaries-manager>
+
+          <div style="margin-top: 24px;">
+            <lyri-bible-dictionaries-manager
+              [autoLoad]="true"
+            ></lyri-bible-dictionaries-manager>
+          </div>
+        </div>
       }
     </p-tabpanel>
   </p-tabpanels>

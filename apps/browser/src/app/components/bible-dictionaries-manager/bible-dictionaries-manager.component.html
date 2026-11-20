@@ -1,0 +1,147 @@
+<p-accordion [multiple]="false">
+  <p-accordion-panel value="bibles">
+    <p-accordion-header>
+      <div class="bible-dicts__accordion-header">
+        <span>{{ title }}</span>
+        <div class="bible-dicts__accordion-actions">
+          <p-button
+            severity="secondary"
+            [disabled]="bibleDictionariesLoading"
+            (onClick)="onReloadBibleDictionaries($event)"
+            title="Обновить список переводов"
+            ariaLabel="Обновить список переводов"
+          >
+            @if (bibleDictionariesLoading) {
+              <p-progress-spinner
+                strokeWidth="5"
+                [style]="{ width: '20px', height: '20px' }"
+              ></p-progress-spinner>
+            } @else {
+              <i class="pi pi-refresh" pButtonIcon></i>
+              <span pButtonLabel>Обновить</span>
+            }
+          </p-button>
+
+          <p-button
+            severity="danger"
+            [loading]="bibleDictionariesClearBusy"
+            [disabled]="bibleDictionariesLoading || bibleDictionariesClearBusy"
+            (onClick)="onClearBibleDictionaries($event)"
+            title="Очистить загруженные переводы"
+            ariaLabel="Очистить загруженные переводы"
+          >
+            <span pButtonLabel>Очистить</span>
+          </p-button>
+        </div>
+      </div>
+    </p-accordion-header>
+    <p-accordion-content>
+      @if (bibleDictionaries.length > 3) {
+        <div class="bible-dicts__filter mb-3">
+          <p-iconfield class="w-full">
+            <p-inputicon class="pi pi-search" />
+            <input
+              type="text"
+              pInputText
+              [(ngModel)]="searchQuery"
+              placeholder="Поиск по названию, языку или коду..."
+              class="w-full"
+            />
+          </p-iconfield>
+        </div>
+      }
+
+      @if (bibleDictionariesLoading && !bibleDictionaries.length) {
+        <div class="bible-dicts__grid bible-dicts__grid--skeleton">
+          @for (item of skeletonItems; track item) {
+            <div class="bible-dicts__card">
+              <p-skeleton height="150px" width="150px" class="bible-dicts__skeleton-card"></p-skeleton>
+            </div>
+          }
+        </div>
+      }
+
+      @if (filteredDictionaries.length) {
+        <div class="bible-dicts__grid">
+          @for (card of filteredDictionaries; track card.fileKey) {
+            @let isBusy = bibleDictionaryBusyByKey[card.fileKey];
+            <div
+              class="bible-dicts__card"
+              [class.bible-dicts__card--missing]="!card.isInstalled"
+            >
+              <lyri-song-dictionary-card [db]="toDatabaseInfo(card)" [size]="'sm'">
+                <div cardActions class="bible-dicts__actions">
+                  @if (card.needsUpdate) {
+                    <p-button
+                      class="bible-dicts__badge"
+                      severity="warn"
+                      [disabled]="isBusy"
+                      (onClick)="onInstallOrUpdateDictionary($event, card)"
+                      title="Обновить перевод"
+                      ariaLabel="Обновить перевод"
+                    >
+                      <i class="pi pi-refresh" pButtonIcon></i>
+                    </p-button>
+                  }
+
+                  @if (card.isInstalled && !card.fileKey.includes('rus_synodal')) {
+                    <p-button
+                      class="bible-dicts__badge"
+                      severity="danger"
+                      [disabled]="isBusy"
+                      (onClick)="onDeleteDictionary($event, card)"
+                      title="Удалить перевод"
+                      ariaLabel="Удалить перевод"
+                    >
+                      <i class="pi pi-trash" pButtonIcon></i>
+                    </p-button>
+                  }
+
+                  @if (!card.isInstalled) {
+                    <p-button
+                      severity="primary"
+                      [disabled]="isBusy"
+                      (onClick)="onInstallOrUpdateDictionary($event, card)"
+                      title="Установить перевод"
+                      ariaLabel="Установить перевод"
+                    >
+                      <i class="pi pi-plus" pButtonIcon></i>
+                    </p-button>
+                  }
+                </div>
+              </lyri-song-dictionary-card>
+
+              @if (isBusy) {
+                <div class="bible-dicts__overlay bible-dicts__overlay--progress">
+                  <div class="bible-dicts__progress">
+                    <div class="bible-dicts__progress-header">
+                      <span class="bible-dicts__progress-title">
+                        {{ card.title }}
+                      </span>
+                      <span class="bible-dicts__progress-status">
+                        {{ downloadProgressByKey[card.fileKey] ?? 0 }}%
+                      </span>
+                    </div>
+                    <p-progressbar [value]="downloadProgressByKey[card.fileKey] ?? 0" [showValue]="false" [style]="{ height: '6px' }"></p-progressbar>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (!bibleDictionariesLoading && !filteredDictionaries.length) {
+        <p class="bible-dicts__empty">Доступных переводов не найдено</p>
+      }
+    </p-accordion-content>
+  </p-accordion-panel>
+</p-accordion>
+
+<p-confirmpopup key="bible-dicts">
+  <ng-template #content let-data>
+    @if (data) {
+      <div [innerHTML]="data.message"></div>
+    }
+  </ng-template>
+</p-confirmpopup>

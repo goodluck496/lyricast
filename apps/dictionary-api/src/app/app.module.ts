@@ -6,6 +6,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { CatalogsModule } from './catalogs/catalogs.module';
 import { SongsModule } from './songs/songs.module';
+import { BiblesModule } from './bibles/bibles.module';
 import { DraftModule } from './draft/draft.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { DraftModule } from './draft/draft.module';
     AuthModule,
     CatalogsModule,
     SongsModule,
+    BiblesModule,
     DraftModule,
   ],
   controllers: [AppController],

@@ -33,4 +33,37 @@
       <lyri-song-dictionaries-manager [autoLoad]="true"></lyri-song-dictionaries-manager>
     }
   </div>
+
+  <div class="dict-page__section">
+    <h3>Библия</h3>
+
+    @if (localBiblesCount$ | async; as cnt) {
+      @if (cnt > 0) {
+        <p class="dict-page__hint">Локальные переводы: {{ cnt }}</p>
+      } @else {
+        <p class="dict-page__hint">
+          Установлен только базовый перевод. Нажмите «Управлять переводами», чтобы
+          загрузить/обновить другие переводы.
+        </p>
+      }
+    }
+
+    <div class="dict-page__actions">
+      <button
+        pButton
+        severity="primary"
+        (click)="showBiblesManager.set(!showBiblesManager())"
+      >
+        @if (showBiblesManager()) {
+          Скрыть
+        } @else {
+          Управлять переводами
+        }
+      </button>
+    </div>
+
+    @if (showBiblesManager()) {
+      <lyri-bible-dictionaries-manager [autoLoad]="true"></lyri-bible-dictionaries-manager>
+    }
+  </div>
 </div>

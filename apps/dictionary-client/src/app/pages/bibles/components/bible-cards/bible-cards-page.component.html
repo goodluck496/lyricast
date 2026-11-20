@@ -1,0 +1,81 @@
+<div class="db-cards">
+  <button class="db-card db-card--md db-card--action" type="button" (click)="openImportDialog()">
+    <span class="db-card--action__icon">+</span>
+    <span class="db-card--action__label">
+      <span>Добавить перевод</span>
+    </span>
+  </button>
+
+  @if (isLoading) {
+    <div class="db-card db-card--md db-card--skeleton">
+      <p-skeleton width="100%" height="100%" borderRadius="24px"></p-skeleton>
+    </div>
+    <div class="db-card db-card--md db-card--skeleton">
+      <p-skeleton width="100%" height="100%" borderRadius="24px"></p-skeleton>
+    </div>
+  } @else {
+    @for (item of bibles; track item.id) {
+      <div
+        class="db-card db-card--md db-card--bible"
+        role="button"
+        tabindex="0"
+        (click)="openBible(item)"
+        (keydown.enter)="openBible(item)"
+      >
+        <div class="bible-card__header">
+          <div class="bible-card__icon-badge">📖</div>
+          <div class="bible-card__badges">
+            @if (item.meta?.language) {
+              <span class="bible-badge bible-badge--lang">{{ item.meta?.language | uppercase }}</span>
+            }
+            @if (item.meta?.version) {
+              <span class="bible-badge bible-badge--ver">v{{ item.meta?.version }}</span>
+            }
+            @if (item.meta?.isDefault) {
+              <span class="bible-badge bible-badge--default">Основной</span>
+            }
+          </div>
+        </div>
+
+        <div class="bible-card__body">
+          <h3 class="bible-card__title" [pTooltip]="item.humanName" tooltipPosition="top">
+            {{ item.humanName }}
+          </h3>
+          <p class="bible-card__key">{{ item.fileKey }}</p>
+        </div>
+
+        <div class="bible-card__footer">
+          <div class="bible-card__stats">
+            <span class="bible-card__stat">
+              <strong>{{ item.meta?.bookCount ?? 0 }}</strong> книг
+            </span>
+            <span class="bible-card__bullet">•</span>
+            <span class="bible-card__stat">
+              <strong>{{ item.meta?.verseCount ?? 0 }}</strong> стихов
+            </span>
+          </div>
+
+          @if (item.meta?.updatedAt) {
+            <span class="bible-card__date">{{ formatDate(item.meta?.updatedAt) }}</span>
+          }
+        </div>
+      </div>
+    }
+  }
+</div>
+
+<p-dialog
+  header="Импорт перевода Библии"
+  [(visible)]="importDialogVisible"
+  [modal]="true"
+  [style]="{ width: '700px', maxWidth: '95vw' }"
+  [draggable]="false"
+  [dismissableMask]="false"
+  [closeOnEscape]="false"
+  (onHide)="closeImportDialog()"
+>
+  <lyri-import-bible-dialog
+    (completed)="handleImportCompleted()"
+    (cancelled)="closeImportDialog()"
+  />
+</p-dialog>

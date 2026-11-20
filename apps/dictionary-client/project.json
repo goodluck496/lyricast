@@ -30,6 +30,11 @@
           {
             "glob": "**/*",
             "input": "apps/dictionary-client/public"
+          },
+          {
+            "glob": "sql-wasm.*",
+            "input": "node_modules/sql.js/dist",
+            "output": "assets"
           }
         ],
         "styles": [

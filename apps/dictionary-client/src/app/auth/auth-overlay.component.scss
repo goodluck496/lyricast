@@ -10,11 +10,67 @@
 
 .auth-dialog {
   background: #ffffff;
-  padding: 24px;
-  border-radius: 8px;
-  min-width: 320px;
+  padding: 28px 24px;
+  border-radius: 12px;
+  min-width: 340px;
+  max-width: 420px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   color: black;
+}
+
+.auth-subtitle {
+  font-size: 13px;
+  color: #666;
+  margin: 6px 0 20px;
+  line-height: 1.4;
+}
+
+.oauth-section {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 18px;
+}
+
+.google-login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #3c4043;
+  background-color: #ffffff;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    background-color: #f8f9fa;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.2);
+  }
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 16px 0;
+  color: #999;
+  font-size: 12px;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #eee;
+  }
+
+  span {
+    padding: 0 10px;
+  }
 }
 
 .auth-label {

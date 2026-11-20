@@ -17,6 +17,10 @@ export class AuthOverlayComponent {
 
   readonly isVisible$ = this.authOverlayService.isVisible$;
 
+  loginWithGoogle(): void {
+    this.authOverlayService.loginWithGoogle();
+  }
+
   onSubmit(): void {
     void this.authOverlayService.submitEmail(this.email);
   }

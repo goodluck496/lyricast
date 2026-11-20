@@ -179,6 +179,42 @@
     <p-tabpanel [value]="4">
       @if (activeTab === 4) {
         <div class="settings__dictionaries">
+          <!-- Блок авторизации Google -->
+          <div class="settings__auth-bar">
+            @if (authStorage.authData$ | async; as authData) {
+              @if (authData.token) {
+                <div class="auth-bar__status">
+                  <i class="pi pi-check-circle" style="color: #10b981; font-size: 1.2rem;"></i>
+                  <span>Вы вошли через Google: <strong>{{ authData.email || 'Авторизован' }}</strong></span>
+                </div>
+                <button
+                  pButton
+                  label="Выйти"
+                  severity="secondary"
+                  (click)="logout()"
+                ></button>
+              } @else {
+                <div class="auth-bar__info">
+                  <div class="auth-bar__text">
+                    <i class="pi pi-info-circle" style="color: #3b82f6;"></i>
+                    <span>Войдите через Google для загрузки и обновления серверных переводов Библии и сборников</span>
+                  </div>
+                  @if (googleAuthError) {
+                    <small class="auth-bar__error">{{ googleAuthError }}</small>
+                  }
+                </div>
+                <button
+                  pButton
+                  label="Войти через Google"
+                  icon="pi pi-google"
+                  severity="primary"
+                  [disabled]="isLoggingInGoogle"
+                  (click)="loginGoogle()"
+                ></button>
+              }
+            }
+          </div>
+
           <lyri-song-dictionaries-manager
             [autoLoad]="true"
             (authCancelled)="activeTab = 0"

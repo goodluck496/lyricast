@@ -13,6 +13,7 @@ import { NavigationStart, RouteReuseStrategy, Router } from '@angular/router';
 import {
   AmbientBackgroundManager,
   AmbientBackgroundPresetId,
+  AuthStorageService,
   SettingsService,
   UserSettingsService,
   WindowService,
@@ -67,8 +68,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
   routeReuse = inject(RouteReuseStrategy);
   router = inject(Router);
   confirmSrv = inject(ConfirmationService);
+  readonly authStorage = inject(AuthStorageService);
 
   activeTab = 0;
+  isLoggingInGoogle = false;
+  googleAuthError = '';
 
   displays: AppDisplay[] = [];
 
@@ -336,6 +340,37 @@ export class SettingsComponent implements OnInit, OnDestroy {
       ambientBackgroundEnabled: this.ambientBackgroundEnabled,
       ambientBackgroundPreset: this.ambientBackgroundPreset,
     });
+    this.cdr.detectChanges();
+  }
+
+  async loginGoogle(): Promise<void> {
+    const electron = (window as any).electron;
+    if (electron?.loginGoogle) {
+      this.isLoggingInGoogle = true;
+      this.googleAuthError = '';
+      this.cdr.detectChanges();
+      try {
+        const res = await electron.loginGoogle();
+        if (res.ok && res.token) {
+          await this.authStorage.saveToken(res.token);
+          if (res.email) await this.authStorage.saveEmail(res.email);
+        } else {
+          this.googleAuthError =
+            res.error === 'blocked'
+              ? 'Пользователь заблокирован администратором'
+              : (res.error || 'Ошибка входа через Google');
+        }
+      } catch (e: any) {
+        this.googleAuthError = e?.message || 'Не удалось выполнить вход';
+      } finally {
+        this.isLoggingInGoogle = false;
+        this.cdr.detectChanges();
+      }
+    }
+  }
+
+  async logout(): Promise<void> {
+    await this.authStorage.clearAuth();
     this.cdr.detectChanges();
   }
 

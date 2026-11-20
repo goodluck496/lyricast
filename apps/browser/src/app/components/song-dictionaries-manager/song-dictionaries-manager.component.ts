@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { firstValueFrom, Subject, takeUntil } from 'rxjs';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, SharedModule } from 'primeng/api';
 import { AccordionModule } from 'primeng/accordion';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -47,6 +47,7 @@ import {
     ButtonIcon,
     ProgressBarModule,
     SongDictionaryCardComponent,
+    SharedModule,
   ],
   templateUrl: './song-dictionaries-manager.component.html',
   styleUrl: './song-dictionaries-manager.component.scss',
@@ -271,6 +272,7 @@ export class SongDictionariesManagerComponent implements OnInit, OnDestroy {
     message: string,
     acceptAction: () => void
   ): void {
+    this.confirmationService.close();
     this.confirmationService.confirm({
       key: 'song-dicts',
       target: event.target as any,
@@ -307,6 +309,7 @@ export class SongDictionariesManagerComponent implements OnInit, OnDestroy {
   }
 
   onInstallOrUpdateDictionary(event: Event, card: SongDictionaryCardDto): void {
+    event.stopPropagation();
     const actionLabel = card.isInstalled ? 'обновить' : 'установить';
     this.showConfirmation(
       event,

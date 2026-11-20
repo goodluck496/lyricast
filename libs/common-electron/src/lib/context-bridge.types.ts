@@ -53,6 +53,8 @@ export type Context = {
   loadUserSettings: () => Promise<unknown | null>;
   saveUserSettings: (settings: unknown) => Promise<void>;
 
+  loginGoogle?: () => Promise<{ ok: boolean; token?: string; email?: string; name?: string; error?: string }>;
+
   // Legacy quiz entrypoints (Electron IPC).
   // После миграции квизов на HTTP API через svc://quiz эти методы могут отсутствовать.
   loadQuizState?: () => Promise<unknown | null>;

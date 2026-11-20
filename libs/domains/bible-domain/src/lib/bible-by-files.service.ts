@@ -413,6 +413,41 @@ export class BibleByFilesService {
     return (envBase || fallbackBase).replace(/\/+$/, '');
   }
 
+  private getAuthHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {};
+    const token = this.getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      headers['X-Auth-Token'] = token;
+    }
+    return headers;
+  }
+
+  private getAuthToken(): string | null {
+    if (process.env?.['AUTH_TOKEN']) return process.env['AUTH_TOKEN'];
+
+    const candidates = [
+      path.join(process.env?.['USER_DATA_PATH'] || '', '..', 'settings.json'),
+      path.join(process.env?.['USER_DATA_PATH'] || '', 'settings.json'),
+      path.join(process.env?.['APPDATA'] || '', 'LyriCast', 'settings.json'),
+      path.join(process.env?.['HOME'] || process.env?.['USERPROFILE'] || '', '.lyricast', 'settings.json'),
+    ];
+
+    for (const f of candidates) {
+      if (fs.existsSync(f)) {
+        try {
+          const raw = fs.readFileSync(f, 'utf-8');
+          const data = JSON.parse(raw);
+          const token = data?.auth?.token;
+          if (token) return token;
+        } catch {
+          // continue
+        }
+      }
+    }
+    return null;
+  }
+
   /**
    * Для воркера: получение статуса переводов (локальные файлы vs серверные данные).
    * Возвращает BibleDictionaryCardDto[] для UI менеджера справочников.
@@ -430,7 +465,10 @@ export class BibleByFilesService {
     // 1. Попытка запросить серверный реестр dictionary-api
     try {
       const remoteUrl = `${this.getRemoteApiUrl()}/api/bibles/registry`;
-      const res = await axios.get<{ items: any[]; totalCount: number }>(remoteUrl, { timeout: 3000 });
+      const res = await axios.get<{ items: any[]; totalCount: number }>(remoteUrl, {
+        headers: this.getAuthHeaders(),
+        timeout: 5000,
+      });
       const registryItems = res.data?.items ?? [];
 
       for (const item of registryItems) {
@@ -517,7 +555,10 @@ export class BibleByFilesService {
     if (!url) {
       // Ищем ID в registry
       const remoteUrl = `${this.getRemoteApiUrl()}/api/bibles/registry`;
-      const res = await axios.get<{ items: any[] }>(remoteUrl, { timeout: 5000 });
+      const res = await axios.get<{ items: any[] }>(remoteUrl, {
+        headers: this.getAuthHeaders(),
+        timeout: 5000,
+      });
       const item = res.data?.items?.find((i: any) => i.fileKey?.toLowerCase() === fileKey.toLowerCase());
       if (item) {
         url = `${this.getRemoteApiUrl()}/api/bibles/${item.id}/export`;
@@ -526,7 +567,11 @@ export class BibleByFilesService {
       }
     }
 
-    const res = await axios.get<string | object>(url, { responseType: 'text', timeout: 30000 });
+    const res = await axios.get<string | object>(url, {
+      headers: this.getAuthHeaders(),
+      responseType: 'text',
+      timeout: 30000,
+    });
     const content = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
 
     const targetDir = this.assetsPathNew || this.assetsPath;

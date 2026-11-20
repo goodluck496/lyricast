@@ -3,6 +3,11 @@ import { DictMainComponent } from './layout/dict-main.component';
 
 export const appRoutes: Route[] = [
   {
+    path: 'auth/callback',
+    loadComponent: () =>
+      import('./auth/auth-callback.component').then((c) => c.AuthCallbackComponent),
+  },
+  {
     path: '',
     component: DictMainComponent,
     children: [

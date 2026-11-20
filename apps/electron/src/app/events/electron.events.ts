@@ -3,7 +3,8 @@
  * between the frontend to the electron backend.
  */
 
-import { app, ipcMain, screen } from 'electron';
+import { app, ipcMain, screen, shell } from 'electron';
+import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import { environment } from '../../environments/environment';
@@ -158,6 +159,103 @@ ipcMain.handle(ElectronActionEvents.SAVE_SETTINGS, async (_event, settings) => {
   const file = path.join(app.getPath('userData'), 'settings.json');
   await fs.promises.mkdir(path.dirname(file), { recursive: true });
   await fs.promises.writeFile(file, JSON.stringify(settings, null, 2), 'utf-8');
+});
+
+ipcMain.handle(ElectronActionEvents.LOGIN_GOOGLE, async () => {
+  return new Promise<{ ok: boolean; token?: string; email?: string; name?: string; error?: string }>((resolve) => {
+    let server: http.Server | null = null;
+    let resolved = false;
+
+    const cleanup = () => {
+      if (server) {
+        try {
+          server.close();
+        } catch {
+          // ignore
+        }
+        server = null;
+      }
+    };
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        resolve({ ok: false, error: 'auth_timeout' });
+      }
+    }, 5 * 60 * 1000);
+
+    server = http.createServer((req, res) => {
+      const u = new URL(req.url || '/', 'http://127.0.0.1');
+      if (u.pathname === '/callback') {
+        const token = u.searchParams.get('token');
+        const email = u.searchParams.get('email');
+        const name = u.searchParams.get('name');
+        const error = u.searchParams.get('error');
+
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        if (token) {
+          res.end(`
+            <!DOCTYPE html>
+            <html>
+              <head><title>LyriCast Вход</title><meta charset="utf-8"/></head>
+              <body style="font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 80vh; background: #f8fafc; margin: 0;">
+                <div style="background: #ffffff; padding: 36px 32px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); text-align: center; max-width: 420px; width: 90%;">
+                  <div style="font-size: 48px; margin-bottom: 12px;">✓</div>
+                  <h2 style="color: #16a34a; margin: 0 0 10px; font-size: 22px;">Вход выполнен успешно!</h2>
+                  <p style="color: #64748b; font-size: 15px; line-height: 1.5; margin: 0 0 16px;">Вы можете закрыть эту вкладку браузера и вернуться в приложение LyriCast.</p>
+                  <div style="font-size: 13px; color: #94a3b8;">${email || ''}</div>
+                </div>
+              </body>
+            </html>
+          `);
+        } else {
+          res.end(`
+            <!DOCTYPE html>
+            <html>
+              <head><title>LyriCast Ошибка</title><meta charset="utf-8"/></head>
+              <body style="font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 80vh; background: #fef2f2; margin: 0;">
+                <div style="background: #ffffff; padding: 36px 32px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); text-align: center; max-width: 420px; width: 90%;">
+                  <div style="font-size: 48px; color: #dc2626; margin-bottom: 12px;">✕</div>
+                  <h2 style="color: #dc2626; margin: 0 0 10px; font-size: 22px;">Ошибка входа</h2>
+                  <p style="color: #64748b; font-size: 15px; line-height: 1.5; margin: 0;">${error === 'blocked' ? 'Пользователь заблокирован администратором' : (error || 'Не удалось выполнить вход')}</p>
+                </div>
+              </body>
+            </html>
+          `);
+        }
+
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeout);
+          setTimeout(() => cleanup(), 1000);
+
+          if (token) {
+            resolve({ ok: true, token, email: email || undefined, name: name || undefined });
+          } else {
+            resolve({ ok: false, error: error || 'unknown_error' });
+          }
+        }
+      }
+    });
+
+    server.listen(0, '127.0.0.1', () => {
+      const addr = server?.address();
+      if (!addr || typeof addr === 'string') {
+        cleanup();
+        resolve({ ok: false, error: 'failed_to_bind_loopback' });
+        return;
+      }
+      const port = addr.port;
+      const apiBase =
+        process.env['DICTIONARY_API_URL'] ||
+        (process.env['NODE_ENV'] === 'production'
+          ? 'https://lyricast-dictionary-api.onrender.com'
+          : 'http://localhost:3000');
+      const authUrl = `${apiBase.replace(/\/+$/, '')}/api/auth/google?source=desktop&redirect_port=${port}`;
+      shell.openExternal(authUrl);
+    });
+  });
 });
 
 //

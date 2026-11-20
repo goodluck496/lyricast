@@ -6,6 +6,7 @@ export const ElectronActionEvents = {
   PING: 'PING',
   LOAD_SETTINGS: 'LOAD_SETTINGS',
   SAVE_SETTINGS: 'SAVE_SETTINGS',
+  LOGIN_GOOGLE: 'LOGIN_GOOGLE',
 } as const;
 
 export const ElectronCommonEvents = {

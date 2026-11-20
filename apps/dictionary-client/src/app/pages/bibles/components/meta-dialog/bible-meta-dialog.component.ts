@@ -79,7 +79,7 @@ export class BibleMetaDialogComponent implements OnInit, OnChanges {
   }
 
   private syncFromInputs(): void {
-    this.title = this.initialTitle || this.initialHumanName || '';
+    this.title = this.initialTitle || this.initialHumanName || this.initialSourceTitle || '';
     this.sourceTitle = this.initialSourceTitle || '';
     this.language = this.initialLanguage || 'ru';
     this.version = this.initialVersion || '';

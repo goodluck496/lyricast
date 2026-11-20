@@ -80,7 +80,7 @@ export class BibleViewerPageComponent implements OnInit {
   metaDialogVisible = false;
 
   get bibleTitle(): string {
-    return this.bible?.title || this.bible?.humanName || '';
+    return this.bible?.title || (this.bible as any)?.humanName || this.bible?.sourceTitle || '';
   }
 
   get filteredVerses(): BibleVerse[] {

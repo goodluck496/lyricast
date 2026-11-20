@@ -139,7 +139,7 @@
 </p-accordion>
 
 <p-confirmpopup key="bible-dicts">
-  <ng-template #content let-data>
+  <ng-template pTemplate="content" let-data>
     @if (data) {
       <div [innerHTML]="data.message"></div>
     }

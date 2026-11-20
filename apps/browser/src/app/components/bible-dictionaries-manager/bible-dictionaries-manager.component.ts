@@ -12,7 +12,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom, Subject } from 'rxjs';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, SharedModule } from 'primeng/api';
 import { AccordionModule } from 'primeng/accordion';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -46,6 +46,7 @@ import { BibleApiService } from '@lyri-cast/data-access-bible';
     InputIconModule,
     InputTextModule,
     SongDictionaryCardComponent,
+    SharedModule,
   ],
   templateUrl: './bible-dictionaries-manager.component.html',
   styleUrl: './bible-dictionaries-manager.component.scss',

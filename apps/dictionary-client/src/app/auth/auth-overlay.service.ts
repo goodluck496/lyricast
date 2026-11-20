@@ -26,6 +26,10 @@ export class AuthOverlayService implements AuthOverlayPort {
     return this.authStorage.getStoredEmail() ?? '';
   }
 
+  loginWithGoogle(): void {
+    window.location.href = this.authApi.getGoogleAuthUrl('web');
+  }
+
   async submitEmail(email: string): Promise<void> {
     const trimmedEmail = email.trim();
     await this.authStorage.saveEmail(trimmedEmail);

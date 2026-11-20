@@ -42,4 +42,6 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke(ElectronActionEvents.LOAD_SETTINGS),
   saveUserSettings: (settings: unknown) =>
     ipcRenderer.invoke(ElectronActionEvents.SAVE_SETTINGS, settings),
+  loginGoogle: () =>
+    ipcRenderer.invoke(ElectronActionEvents.LOGIN_GOOGLE),
 } satisfies Context);

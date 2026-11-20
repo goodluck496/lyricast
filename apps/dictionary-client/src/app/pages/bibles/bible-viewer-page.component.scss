@@ -1,7 +1,9 @@
 .bible-viewer {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
   background: var(--p-surface-50, #f8fafc);
 
   &__header {

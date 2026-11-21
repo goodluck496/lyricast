@@ -37,14 +37,15 @@
 
   <!-- Unified, fixed-size preview container -->
   <div class="sidebar-preview-frame">
-    <!-- Snowflake Freeze overlay in top-left -->
+    <!-- Snowflake Freeze overlay in bottom-left -->
     <button
       type="button"
       class="sidebar-freeze-btn"
       [class.sidebar-freeze-btn--active]="castingIsFrozen$ | async"
       [disabled]="(openedCastingWindow$ | async) === false"
       (click)="onToggleFreeze()"
-      [title]="(castingIsFrozen$ | async) ? 'Кадр заморожен (нажмите для разморозки)' : 'Заморозить кадр (Freeze)'"
+      [pTooltip]="(castingIsFrozen$ | async) ? 'Экран заморожен (Freeze). Нажмите, чтобы разморозить' : 'Заморозить экран (Freeze): удерживает текущий слайд для зала, пока вы переключаете главы или стихи'"
+      tooltipPosition="top"
     >
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="12" y1="2" x2="12" y2="22"></line>

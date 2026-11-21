@@ -35,6 +35,7 @@ import { SplitButtonModule } from 'primeng/splitbutton';
 import { MenuItem } from 'primeng/api';
 import { CastingAppearanceControlsComponent } from '@lyri-cast/asset-management';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { TooltipModule } from 'primeng/tooltip';
 import { FormsModule } from '@angular/forms';
 import { SongTextLayoutService } from '../../services/song-text-layout.service';
 import { snapshot } from '@lyri-cast/common';
@@ -51,6 +52,7 @@ import { snapshot } from '@lyri-cast/common';
     SplitButtonModule,
     CastingAppearanceControlsComponent,
     ToggleSwitchModule,
+    TooltipModule,
     FormsModule,
   ],
   templateUrl: './song-sidebar.component.html',

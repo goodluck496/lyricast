@@ -68,6 +68,7 @@ import { CastingAppearanceControlsComponent } from '@lyri-cast/asset-management'
 import { BibleApiService } from '@lyri-cast/data-access-bible';
 import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { TooltipModule } from 'primeng/tooltip';
 import { FormsModule } from '@angular/forms';
 import { MatSliderModule } from '@angular/material/slider';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -84,6 +85,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     CastingAppearanceControlsComponent,
     SelectModule,
     ToggleSwitchModule,
+    TooltipModule,
     FormsModule,
     MatSliderModule,
   ],

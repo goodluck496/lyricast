@@ -123,11 +123,12 @@
   }
 }
 
-/* Snowflake Freeze overlay button */
+/* Snowflake Freeze overlay button in bottom-left */
 .sidebar-freeze-btn {
   position: absolute;
-  top: 8px;
+  bottom: 8px;
   left: 8px;
+  top: auto;
   z-index: 10;
   display: flex;
   align-items: center;

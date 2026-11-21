@@ -91,6 +91,30 @@
   &__search {
     padding: 0.75rem;
     border-bottom: 1px solid var(--p-surface-100, #f1f5f9);
+
+    p-iconfield {
+      display: block;
+      width: 100%;
+      position: relative;
+    }
+
+    input {
+      width: 100%;
+      padding-left: 2.25rem !important;
+    }
+
+    p-inputicon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+      pointer-events: none;
+      color: var(--p-surface-400, #94a3b8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   }
 
   &__list {
@@ -270,6 +294,30 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
+
+      p-iconfield {
+        display: block;
+        width: 100%;
+        position: relative;
+      }
+
+      input {
+        width: 100%;
+        padding-left: 2.25rem !important;
+      }
+
+      p-inputicon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
+        pointer-events: none;
+        color: var(--p-surface-400, #94a3b8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
 
       .search-match-count {
         font-size: 0.8rem;

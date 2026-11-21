@@ -11,8 +11,8 @@ export type BibleVerse = {
   chapterId: number;
   bookId: number;
   path: string[];
-  next: PrevOrNextVerse;
-  prev: PrevOrNextVerse;
+  next?: PrevOrNextVerse;
+  prev?: PrevOrNextVerse;
 };
 
 export type BibleVerseForCasting = Omit<BibleVerse, 'text'> & {
@@ -66,4 +66,5 @@ export type BibleTranslate = {
   books: BibleBook[];
   isDefault: boolean;
   isClassicBookOrder: boolean;
+  coverImage?: string;
 };

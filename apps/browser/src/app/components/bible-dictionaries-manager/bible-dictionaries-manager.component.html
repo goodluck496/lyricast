@@ -69,7 +69,7 @@
               class="bible-dicts__card"
               [class.bible-dicts__card--missing]="!card.isInstalled"
             >
-              <lyri-song-dictionary-card [db]="toDatabaseInfo(card)" [size]="'sm'">
+              <lyri-song-dictionary-card [db]="toDatabaseInfo(card)" [size]="'sm'" countLabel="книг">
                 <div cardActions class="bible-dicts__actions">
                   @if (card.needsUpdate) {
                     <p-button
@@ -111,19 +111,34 @@
                 </div>
               </lyri-song-dictionary-card>
 
-              @if (isBusy) {
+              @let downloadProgress = downloadProgressByKey[card.fileKey];
+              @if (downloadProgress !== undefined) {
                 <div class="bible-dicts__overlay bible-dicts__overlay--progress">
                   <div class="bible-dicts__progress">
                     <div class="bible-dicts__progress-header">
                       <span class="bible-dicts__progress-title">
-                        {{ card.title }}
+                        {{ card.title || card.fileKey }}
                       </span>
                       <span class="bible-dicts__progress-status">
-                        {{ downloadProgressByKey[card.fileKey] ?? 0 }}%
+                        @if (downloadProgress < 100) {
+                          <i class="pi pi-spinner pi-spin" aria-label="loading"></i>
+                        } @else {
+                          <i class="pi pi-check bible-dicts__status-done" aria-label="done"></i>
+                        }
                       </span>
                     </div>
-                    <p-progressbar [value]="downloadProgressByKey[card.fileKey] ?? 0" [showValue]="false" [style]="{ height: '6px' }"></p-progressbar>
+                    <p-progressBar
+                      [value]="downloadProgress"
+                      [showValue]="false"
+                    ></p-progressBar>
+                    <div class="bible-dicts__progress-meta">
+                      <span>{{ downloadProgress }}%</span>
+                    </div>
                   </div>
+                </div>
+              } @else if (isBusy) {
+                <div class="bible-dicts__overlay">
+                  <p-progressSpinner></p-progressSpinner>
                 </div>
               }
             </div>
@@ -138,10 +153,4 @@
   </p-accordion-panel>
 </p-accordion>
 
-<p-confirmpopup key="bible-dicts">
-  <ng-template pTemplate="content" let-data>
-    @if (data) {
-      <div [innerHTML]="data.message"></div>
-    }
-  </ng-template>
-</p-confirmpopup>
+<p-confirmpopup key="bible-dicts"></p-confirmpopup>

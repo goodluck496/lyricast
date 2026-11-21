@@ -2,7 +2,7 @@
   <div class="auth-dialog">
     <h2>Вход в справочники</h2>
     <p class="auth-subtitle">
-      Управление справочниками доступно только для администратора (nikita.a.kalinin&#64;gmail.com).
+      Для создания, редактирования и синхронизации справочников песен и Библии войдите через аккаунт Google.
     </p>
 
     <div class="oauth-section">
@@ -17,26 +17,8 @@
       </button>
     </div>
 
-    <div class="auth-divider">
-      <span>или email разработчика</span>
+    <div class="auth-actions">
+      <button type="button" class="cancel-btn" (click)="onCancel()">Отмена</button>
     </div>
-
-    <form (ngSubmit)="onSubmit()">
-      <label class="auth-label">
-        Email
-        <input
-          [(ngModel)]="email"
-          name="email"
-          type="email"
-          required
-          autocomplete="email"
-        />
-      </label>
-
-      <div class="auth-actions">
-        <button type="submit">Войти по email</button>
-        <button type="button" (click)="onCancel()">Отмена</button>
-      </div>
-    </form>
   </div>
 </div>

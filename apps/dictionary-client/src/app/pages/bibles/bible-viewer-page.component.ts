@@ -80,7 +80,8 @@ export class BibleViewerPageComponent implements OnInit {
   metaDialogVisible = false;
 
   get bibleTitle(): string {
-    return this.bible?.title || (this.bible as any)?.humanName || this.bible?.sourceTitle || '';
+    const t = this.bible?.title?.trim() || this.bible?.humanName?.trim() || this.bible?.sourceTitle?.trim();
+    return t || '';
   }
 
   get filteredVerses(): BibleVerse[] {
@@ -131,8 +132,10 @@ export class BibleViewerPageComponent implements OnInit {
     this.isLoading = true;
     this.api.getBibleStructure(this.bibleId).subscribe({
       next: (bible) => {
-        if (!bible.title && (bible as any).humanName) {
-          bible.title = (bible as any).humanName;
+        if (!bible.title && bible.humanName) {
+          bible.title = bible.humanName;
+        } else if (!bible.title && bible.sourceTitle) {
+          bible.title = bible.sourceTitle;
         }
         this.bible = bible;
         this.isLoading = false;
@@ -190,8 +193,6 @@ export class BibleViewerPageComponent implements OnInit {
               bookId: this.selectedBook?.number ?? 1,
               chapterId: chapter.number,
               path: [this.selectedBook?.number ?? 1, chapter.number, v.number].map(String),
-              next: null as any,
-              prev: null as any,
             })),
           },
         ];
@@ -260,13 +261,14 @@ export class BibleViewerPageComponent implements OnInit {
       const newTitle = meta.title || meta.humanName;
       if (newTitle) {
         this.bible.title = newTitle;
-        (this.bible as any).humanName = newTitle;
+        this.bible.humanName = newTitle;
       }
       if (meta.language) this.bible.lang = meta.language;
       if (meta.sourceTitle) this.bible.sourceTitle = meta.sourceTitle;
       if (meta.version !== undefined) this.bible.version = meta.version;
       if (meta.isDefault !== undefined) this.bible.isDefault = meta.isDefault;
       if (meta.isClassicBookOrder !== undefined) this.bible.isClassicBookOrder = meta.isClassicBookOrder;
+      if (meta.coverImage !== undefined) this.bible.coverImage = meta.coverImage;
     }
     this.messageService.add({
       severity: 'success',
@@ -289,8 +291,12 @@ export class BibleViewerPageComponent implements OnInit {
     this.api.getBibleWithProgress(this.bibleId).subscribe({
       next: (event) => {
         if (event.type === HttpEventType.DownloadProgress) {
-          const total = event.total ?? 9000000;
-          this.exportProgress = Math.min(99, Math.round((event.loaded * 100) / total));
+          if (event.total && event.total > 0) {
+            this.exportProgress = Math.min(99, Math.round((event.loaded * 100) / event.total));
+          } else {
+            const estimatedTotal = 6 * 1024 * 1024;
+            this.exportProgress = Math.min(95, Math.round((event.loaded * 100) / estimatedTotal));
+          }
         } else if (event.type === HttpEventType.Response) {
           this.exportProgress = 100;
           const fullBible = event.body;

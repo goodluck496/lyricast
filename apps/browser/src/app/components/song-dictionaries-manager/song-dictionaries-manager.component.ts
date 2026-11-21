@@ -273,9 +273,10 @@ export class SongDictionariesManagerComponent implements OnInit, OnDestroy {
     acceptAction: () => void
   ): void {
     this.confirmationService.close();
+    const targetElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
     this.confirmationService.confirm({
       key: 'song-dicts',
-      target: event.target as any,
+      target: targetElement,
       message,
       acceptLabel: 'Да',
       rejectLabel: 'Нет',
@@ -294,7 +295,7 @@ export class SongDictionariesManagerComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     this.showConfirmation(
       event,
-      'Удалить все скачанные справочники?<br>Встроенные справочники удалены не будут.',
+      'Удалить все скачанные справочники? Встроенные справочники удалены не будут.',
       () => void this.clearSongDictionaries()
     );
   }
@@ -313,7 +314,7 @@ export class SongDictionariesManagerComponent implements OnInit, OnDestroy {
     const actionLabel = card.isInstalled ? 'обновить' : 'установить';
     this.showConfirmation(
       event,
-      `Вы уверены, что хотите ${actionLabel} справочник? <br> Загрузка может занять некоторое время.`,
+      `Вы уверены, что хотите ${actionLabel} справочник? Загрузка может занять некоторое время.`,
       () => void this.installOrUpdateDictionary(card)
     );
   }

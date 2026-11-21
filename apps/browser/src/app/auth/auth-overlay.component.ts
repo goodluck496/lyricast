@@ -13,12 +13,13 @@ import { AuthOverlayService } from './auth-overlay.service';
 })
 export class AuthOverlayComponent {
   private readonly authOverlayService = inject(AuthOverlayService);
-  email = this.authOverlayService.getStoredEmail();
 
   readonly isVisible$ = this.authOverlayService.isVisible$;
+  readonly isLoading$ = this.authOverlayService.isLoading$;
+  readonly error$ = this.authOverlayService.error$;
 
-  onSubmit(): void {
-    void this.authOverlayService.submitEmail(this.email);
+  loginWithGoogle(): void {
+    void this.authOverlayService.loginWithGoogle();
   }
 
   onCancel(): void {

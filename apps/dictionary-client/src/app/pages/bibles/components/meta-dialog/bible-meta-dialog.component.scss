@@ -6,11 +6,17 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 0.75rem 0 0.25rem;
+  padding: 0.25rem 0;
 
   .form-fields {
     display: flex;
     flex-direction: column;
+    gap: 1rem;
+  }
+
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
   }
 
@@ -30,18 +36,115 @@
     }
   }
 
+  .checkboxes-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+  }
+
   .checkbox-row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     cursor: pointer;
-    padding-top: 0.25rem;
 
     label {
       font-size: 0.95rem;
       cursor: pointer;
       user-select: none;
       color: var(--p-surface-800, #1e293b);
+    }
+  }
+
+  .field-header-row,
+  .flag-select-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .form-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--p-surface-700, #334155);
+    }
+
+    .upload-link-btn,
+    .switch-mode-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+      color: var(--p-primary-color, #3b82f6);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .flag-option-selected,
+  .flag-option-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .flag-icon {
+    width: 24px;
+    height: 18px;
+    object-fit: cover;
+    border-radius: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    flex-shrink: 0;
+  }
+
+  .flag-code {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--p-primary-color, #3b82f6);
+    width: 24px;
+    flex-shrink: 0;
+  }
+
+  .flag-name {
+    font-size: 0.875rem;
+  }
+
+  .flag-name-en {
+    font-size: 0.75rem;
+    color: var(--p-surface-400, #94a3b8);
+    margin-left: auto;
+  }
+
+  .card-preview-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--p-surface-50, #f8fafc);
+    border: 1px solid var(--p-surface-200, #e2e8f0);
+    border-radius: 0.75rem;
+
+    .card-preview-title {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--p-surface-500, #64748b);
+    }
+
+    .card-preview-box {
+      width: 150px;
+      height: 150px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
   }
 

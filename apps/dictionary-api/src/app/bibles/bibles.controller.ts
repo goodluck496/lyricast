@@ -7,8 +7,10 @@ import {
   Patch,
   Post,
   Put,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
 import { BiblesService } from './bibles.service';
@@ -74,8 +76,15 @@ export class BiblesController {
   @Get(':id/export')
   @ApiOperation({ summary: 'Экспортирует перевод Библии в JSON' })
   @ApiOkResponse({ description: 'BibleTranslate' })
-  exportBible(@Param('id', ParseIntPipe) id: number) {
-    return this.service.exportBible(id);
+  async exportBible(
+    @Param('id', ParseIntPipe) id: number,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const data = await this.service.exportBible(id);
+    const jsonStr = JSON.stringify(data);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Length', Buffer.byteLength(jsonStr));
+    return data;
   }
 
   /**

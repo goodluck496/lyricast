@@ -6,10 +6,15 @@
 }
 
 .db-card {
+  position: relative;
+  overflow: hidden;
   width: 320px;
   min-height: 200px;
   border-radius: 20px;
-  background: var(--p-surface-0, #ffffff);
+  background-color: var(--p-surface-0, #ffffff);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   border: 1px solid var(--p-surface-200, #e2e8f0);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   display: flex;
@@ -18,6 +23,55 @@
   padding: 1.25rem;
   transition: all 0.2s ease-in-out;
   cursor: pointer;
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.4),
+      rgba(0, 0, 0, 0.75)
+    );
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  &--has-cover {
+    border-color: rgba(255, 255, 255, 0.15);
+
+    .bible-card__title {
+      color: #ffffff !important;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .bible-card__key {
+      color: rgba(255, 255, 255, 0.75) !important;
+    }
+
+    .bible-card__icon-badge {
+      background: rgba(0, 0, 0, 0.45) !important;
+    }
+
+    .bible-card__stat {
+      color: rgba(255, 255, 255, 0.9) !important;
+
+      strong {
+        color: #ffffff !important;
+      }
+    }
+
+    .bible-card__bullet,
+    .bible-card__date {
+      color: rgba(255, 255, 255, 0.7) !important;
+    }
+  }
+
+  .bible-card__header,
+  .bible-card__body,
+  .bible-card__footer {
+    position: relative;
+    z-index: 2;
+  }
 
   &:hover {
     transform: translateY(-2px);

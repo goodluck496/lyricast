@@ -4,7 +4,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE } from '../database/database.providers';
 import * as schema from '../../lib/db/schema';
@@ -117,6 +117,7 @@ export class BiblesService {
           verseCount: verseCountMap.get(b.id) ?? 0,
           isDefault: b.isDefault,
           isClassicBookOrder: b.isClassicBookOrder,
+          coverImage: metaMap.get(b.fileKey)?.coverImage || metaMap.get(b.fileKey)?.['cover_image'] || null,
         } satisfies BibleRegistryItemMetaDto,
       };
     });
@@ -191,18 +192,26 @@ export class BiblesService {
       .where(eq(schema.bibleBooks.bibleId, bibleId))
       .orderBy(schema.bibleBooks.number);
 
+    const metaRows = await this.db
+      .select({ key: schema.bibleMeta.metaKey, value: schema.bibleMeta.metaValue })
+      .from(schema.bibleMeta)
+      .where(eq(schema.bibleMeta.fileKey, bible.fileKey));
+    const metaMap: Record<string, string> = {};
+    for (const row of metaRows) metaMap[row.key] = row.value;
+
     if (books.length === 0) {
       return {
         id: bible.id,
         fileKey: bible.fileKey,
-        humanName: bible.humanName,
-        title: bible.humanName,
-        sourceTitle: bible.sourceTitle,
+        humanName: bible.humanName || bible.sourceTitle || bible.fileKey,
+        title: bible.humanName || bible.sourceTitle || bible.fileKey,
+        sourceTitle: bible.sourceTitle || bible.humanName || bible.fileKey,
         lang: bible.lang,
         version: bible.version,
         bibleVersion: bible.bibleVersion,
         isDefault: bible.isDefault,
         isClassicBookOrder: bible.isClassicBookOrder,
+        coverImage: metaMap['coverImage'] || metaMap['cover_image'] || undefined,
         books: [],
       };
     }
@@ -228,19 +237,20 @@ export class BiblesService {
     return {
       id: bible.id,
       fileKey: bible.fileKey,
-      humanName: bible.humanName,
-      title: bible.humanName,
-      sourceTitle: bible.sourceTitle,
+      humanName: bible.humanName || bible.sourceTitle || bible.fileKey,
+      title: bible.humanName || bible.sourceTitle || bible.fileKey,
+      sourceTitle: bible.sourceTitle || bible.humanName || bible.fileKey,
       lang: bible.lang,
       version: bible.version,
       bibleVersion: bible.bibleVersion,
       isDefault: bible.isDefault,
       isClassicBookOrder: bible.isClassicBookOrder,
+      coverImage: metaMap['coverImage'] || metaMap['cover_image'] || undefined,
       books: books.map((b) => ({
         id: b.id,
         number: b.number,
         title: { short: b.shortTitle, full: b.fullTitle },
-        type: b.type as any,
+        type: b.type,
         chapterCount: b.chapterCount,
         verseCount: b.verseCount,
         chapters: (chaptersByBookId.get(b.id) ?? []).map((ch) => ({
@@ -414,6 +424,12 @@ export class BiblesService {
       };
     });
 
+    const [coverRow] = await this.db
+      .select({ value: schema.bibleMeta.metaValue })
+      .from(schema.bibleMeta)
+      .where(and(eq(schema.bibleMeta.fileKey, bible.fileKey), eq(schema.bibleMeta.metaKey, 'coverImage')))
+      .limit(1);
+
     return {
       keyForSearch: bible.fileKey,
       title: bible.humanName,
@@ -423,6 +439,7 @@ export class BiblesService {
       books: resultBooks,
       isDefault: bible.isDefault,
       isClassicBookOrder: bible.isClassicBookOrder,
+      coverImage: coverRow?.value || undefined,
     };
   }
 
@@ -586,6 +603,22 @@ export class BiblesService {
         .set({ version: sql`${schema.catalogs.version} + 1`, updatedAt: now })
         .where(eq(schema.catalogs.id, catalogId));
 
+      const coverImage = dto.coverImage || data.coverImage;
+      if (coverImage) {
+        await trx
+          .insert(schema.bibleMeta)
+          .values({
+            fileKey,
+            metaKey: 'coverImage',
+            metaValue: coverImage,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: [schema.bibleMeta.fileKey, schema.bibleMeta.metaKey],
+            set: { metaValue: coverImage, updatedAt: now },
+          });
+      }
+
       await this.bumpDatasetVersion(trx);
 
       const elapsedMs = Date.now() - startTime;
@@ -613,11 +646,15 @@ export class BiblesService {
       if (!existing) throw new NotFoundException('Bible not found');
 
       const updates: Partial<typeof schema.bibles.$inferInsert> = {};
-      const newTitle = dto.title ?? dto.humanName;
-      if (newTitle !== undefined) updates.humanName = newTitle;
-      if (dto.sourceTitle !== undefined) updates.sourceTitle = dto.sourceTitle;
-      if (dto.language !== undefined) updates.lang = dto.language;
-      if (dto.version !== undefined) updates.version = dto.version;
+      const newTitle = (dto.title ?? dto.humanName)?.trim();
+      if (newTitle !== undefined && newTitle !== '') updates.humanName = newTitle;
+      if (dto.sourceTitle !== undefined && dto.sourceTitle.trim() !== '') {
+        updates.sourceTitle = dto.sourceTitle.trim();
+      }
+      if (dto.language !== undefined && dto.language.trim() !== '') {
+        updates.lang = dto.language.trim();
+      }
+      if (dto.version !== undefined) updates.version = dto.version.trim();
       if (dto.isDefault !== undefined) updates.isDefault = dto.isDefault;
       if (dto.isClassicBookOrder !== undefined) updates.isClassicBookOrder = dto.isClassicBookOrder;
       if (updatedBy) updates.updatedBy = updatedBy;
@@ -640,6 +677,13 @@ export class BiblesService {
         { metaKey: 'updated_at', metaValue: now.toISOString() },
         { metaKey: 'updated_by', metaValue: updatedBy ?? 'system' },
       ];
+
+      if (dto.coverImage !== undefined) {
+        metaEntries.push({
+          metaKey: 'coverImage',
+          metaValue: dto.coverImage || '',
+        });
+      }
 
       for (const entry of metaEntries) {
         await trx
@@ -753,7 +797,13 @@ export class BiblesService {
     const meta: Record<string, string> = {};
     for (const row of metaRows) meta[row.key] = row.value;
 
-    return { ...bible, title: bible.humanName, meta };
+    return {
+      ...bible,
+      humanName: bible.humanName || bible.sourceTitle || bible.fileKey,
+      title: bible.humanName || bible.sourceTitle || bible.fileKey,
+      coverImage: meta['coverImage'] || meta['cover_image'] || undefined,
+      meta,
+    };
   }
 
   /**
@@ -826,6 +876,7 @@ export class BiblesService {
         verseCount: verseCountMap.get(b.id) ?? 0,
         sourceTitle: b.sourceTitle,
         isDefault: b.isDefault,
+        coverImage: meta.coverImage || meta['cover_image'] || undefined,
       };
     });
   }

@@ -18,6 +18,9 @@ export interface RegistryItemDto {
     fileKey: string;
     humanName: string;
     catalogId: number;
+    ownerEmail?: string | null;
+    isOwner?: boolean;
+    canEdit?: boolean;
     meta?: RegistryItemMetaDto;
 }
 

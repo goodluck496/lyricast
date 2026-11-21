@@ -28,48 +28,173 @@
       />
     </div>
 
+    <div class="form-row-2">
+      <div class="form-field">
+        <div class="field-header-row">
+          <label for="metaLang" class="form-label">Язык (lang)</label>
+          <button
+            type="button"
+            class="switch-mode-btn"
+            (click)="toggleManualLanguage()"
+            [title]="isManualLanguage ? 'Выбрать язык из списка' : 'Ввести код языка вручную'"
+          >
+            @if (isManualLanguage) {
+              <i class="pi pi-list"></i>
+              <span>Из списка</span>
+            } @else {
+              <i class="pi pi-pencil"></i>
+              <span>Вручную</span>
+            }
+          </button>
+        </div>
+
+        @if (!isManualLanguage) {
+          <p-select
+            inputId="metaLangSelect"
+            [options]="languages"
+            [(ngModel)]="selectedLanguage"
+            (ngModelChange)="onLanguageSelect($event)"
+            optionLabel="nameRu"
+            [filter]="true"
+            filterBy="nameRu,nameEn,code"
+            placeholder="Выберите язык..."
+            [showClear]="true"
+            class="w-full"
+          >
+            <ng-template pTemplate="selectedItem" let-selected>
+              @if (selected) {
+                <div class="flag-option-selected">
+                  <img [src]="selected.flagUrl" [alt]="selected.nameRu" class="flag-icon" />
+                  <span class="flag-code">{{ selected.code }}</span>
+                  <span class="flag-name">{{ selected.nameRu }}</span>
+                </div>
+              }
+            </ng-template>
+
+            <ng-template pTemplate="item" let-lang>
+              <div class="flag-option-item">
+                <img [src]="lang.flagUrl" [alt]="lang.nameRu" class="flag-icon" loading="lazy" />
+                <span class="flag-code">{{ lang.code }}</span>
+                <span class="flag-name">{{ lang.nameRu }}</span>
+                @if (lang.nameNative && lang.nameNative !== lang.nameRu) {
+                  <span class="flag-name-en">({{ lang.nameNative }})</span>
+                }
+              </div>
+            </ng-template>
+          </p-select>
+        } @else {
+          <input
+            id="metaLang"
+            type="text"
+            pInputText
+            [(ngModel)]="language"
+            (ngModelChange)="onManualLanguageInput($event)"
+            placeholder="Код языка (напр. ru, kk, en, hbo...)"
+            [disabled]="isSaving"
+            class="w-full"
+          />
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="metaVersion" class="form-label">Версия (напр. 1.0)</label>
+        <input
+          id="metaVersion"
+          type="text"
+          pInputText
+          [(ngModel)]="version"
+          [disabled]="isSaving"
+          class="w-full"
+        />
+      </div>
+    </div>
+
+    <div class="checkboxes-group">
+      <div class="checkbox-row">
+        <p-checkbox
+          [(ngModel)]="isDefault"
+          [binary]="true"
+          inputId="metaIsDefault"
+          [disabled]="isSaving"
+        ></p-checkbox>
+        <label for="metaIsDefault">Перевод по умолчанию (дефолтный)</label>
+      </div>
+
+      <div class="checkbox-row">
+        <p-checkbox
+          [(ngModel)]="isClassicBookOrder"
+          [binary]="true"
+          inputId="metaIsClassicOrder"
+          [disabled]="isSaving"
+        ></p-checkbox>
+        <label for="metaIsClassicOrder">Классический порядок книг</label>
+      </div>
+    </div>
+
+    <!-- Выбор флага страны / фона карточки через p-select -->
     <div class="form-field">
-      <label for="metaLang" class="form-label">Язык (lang)</label>
-      <input
-        id="metaLang"
-        type="text"
-        pInputText
-        [(ngModel)]="language"
-        [disabled]="isSaving"
+      <div class="flag-select-header">
+        <label for="flagSelect" class="form-label">Фон карточки (флаг страны)</label>
+        <div class="flag-custom-link">
+          <input
+            #customFileInput
+            type="file"
+            accept="image/*"
+            style="display: none"
+            (change)="onCustomImageUpload($event)"
+          />
+          <button
+            type="button"
+            class="upload-link-btn"
+            (click)="customFileInput.click()"
+          >
+            <i class="pi pi-upload"></i>
+            <span>Своя картинка...</span>
+          </button>
+        </div>
+      </div>
+
+      <p-select
+        inputId="flagSelect"
+        [options]="countries"
+        [(ngModel)]="selectedCountry"
+        (ngModelChange)="onCountryChange($event)"
+        optionLabel="nameRu"
+        [filter]="true"
+        filterBy="nameRu,nameEn,code"
+        placeholder="Выберите флаг страны или начните поиск..."
+        [showClear]="true"
         class="w-full"
-      />
+      >
+        <ng-template pTemplate="selectedItem" let-selected>
+          @if (selected) {
+            <div class="flag-option-selected">
+              <img [src]="selected.flagUrl" [alt]="selected.nameRu" class="flag-icon" />
+              <span class="flag-code">{{ selected.code }}</span>
+              <span class="flag-name">{{ selected.nameRu }}</span>
+            </div>
+          }
+        </ng-template>
+
+        <ng-template pTemplate="item" let-country>
+          <div class="flag-option-item">
+            <img [src]="country.flagUrl" [alt]="country.nameRu" class="flag-icon" loading="lazy" />
+            <span class="flag-code">{{ country.code }}</span>
+            <span class="flag-name">{{ country.nameRu }}</span>
+            @if (country.nameEn !== country.nameRu) {
+              <span class="flag-name-en">({{ country.nameEn }})</span>
+            }
+          </div>
+        </ng-template>
+      </p-select>
     </div>
 
-    <div class="form-field">
-      <label for="metaVersion" class="form-label">Версия (строка версии, напр. 1.0)</label>
-      <input
-        id="metaVersion"
-        type="text"
-        pInputText
-        [(ngModel)]="version"
-        [disabled]="isSaving"
-        class="w-full"
-      />
-    </div>
-
-    <div class="checkbox-row">
-      <p-checkbox
-        [(ngModel)]="isDefault"
-        [binary]="true"
-        inputId="metaIsDefault"
-        [disabled]="isSaving"
-      ></p-checkbox>
-      <label for="metaIsDefault">Перевод по умолчанию (дефолтный)</label>
-    </div>
-
-    <div class="checkbox-row">
-      <p-checkbox
-        [(ngModel)]="isClassicBookOrder"
-        [binary]="true"
-        inputId="metaIsClassicOrder"
-        [disabled]="isSaving"
-      ></p-checkbox>
-      <label for="metaIsClassicOrder">Классический порядок книг</label>
+    <!-- Живой предпросмотр карточки -->
+    <div class="card-preview-container">
+      <span class="card-preview-title">Предпросмотр карточки в Lyricast:</span>
+      <div class="card-preview-box">
+        <lyri-song-dictionary-card [db]="previewDb" size="sm" [clickable]="false" countLabel="книг"></lyri-song-dictionary-card>
+      </div>
     </div>
   </div>
 
@@ -84,7 +209,7 @@
     <p-button
       label="Сохранить"
       icon="pi pi-check"
-      [disabled]="isSaving || !title?.trim()"
+      [disabled]="isSaving || !title.trim()"
       [loading]="isSaving"
       (onClick)="onSubmit()"
     ></p-button>

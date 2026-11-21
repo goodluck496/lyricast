@@ -67,7 +67,7 @@
       <aside class="books-sidebar">
         <div class="books-sidebar__search">
           <p-iconfield class="w-full">
-            <p-inputicon class="pi pi-search" />
+            <p-inputicon styleClass="pi pi-search" />
             <input
               type="text"
               pInputText
@@ -130,7 +130,7 @@
 
             <div class="chapter-search-box">
               <p-iconfield class="w-full">
-                <p-inputicon class="pi pi-search" />
+                <p-inputicon styleClass="pi pi-search" />
                 <input
                   type="text"
                   pInputText
@@ -228,6 +228,7 @@
     [(visible)]="metaDialogVisible"
     [modal]="true"
     [style]="{ width: '600px', maxWidth: '95vw' }"
+    [contentStyle]="{ 'padding-top': '1.25rem', 'overflow-y': 'auto', 'max-height': '80vh' }"
     [draggable]="false"
     (onHide)="closeMetaDialog()"
   >
@@ -240,6 +241,8 @@
       [initialVersion]="bible.version || ''"
       [initialIsDefault]="!!bible.isDefault"
       [initialIsClassicBookOrder]="!!bible.isClassicBookOrder"
+      [initialCoverImage]="bible.coverImage || ''"
+      [initialBookCount]="bible.books.length"
       (completed)="handleMetaCompleted($event)"
       (cancelled)="closeMetaDialog()"
     />

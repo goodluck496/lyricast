@@ -18,11 +18,13 @@ export interface UpdateBibleMetaDto {
   version?: string;
   isDefault?: boolean;
   isClassicBookOrder?: boolean;
+  coverImage?: string;
 }
 
 export interface ImportBibleRequestDto {
   catalogId: number;
   data: BibleTranslate;
+  coverImage?: string;
 }
 
 @Injectable({ providedIn: 'root' })

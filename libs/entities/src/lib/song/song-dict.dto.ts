@@ -25,6 +25,14 @@ export interface SongDatabaseInfoDto {
   updatedAt?: string;
   /** Локальная версия справочника */
   localVersion?: number;
+  /** Идентификатор сборника в БД */
+  songBookId?: number;
+  /** Email создателя/владельца сборника */
+  ownerEmail?: string;
+  /** Является ли текущий пользователь владельцем */
+  isOwner?: boolean;
+  /** Имеет ли текущий пользователь право на редактирование */
+  canEdit?: boolean;
 }
 
 /**

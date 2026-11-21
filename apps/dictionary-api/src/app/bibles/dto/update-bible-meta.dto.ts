@@ -39,4 +39,9 @@ export class UpdateBibleMetaDto {
   @ApiPropertyOptional({ description: 'Классический порядок книг' })
   @IsOptional()
   isClassicBookOrder?: boolean;
+
+  @ApiPropertyOptional({ description: 'Обложка / фоновое изображение (data:URL или URL)' })
+  @IsOptional()
+  @IsString()
+  coverImage?: string;
 }

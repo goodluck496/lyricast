@@ -17,11 +17,16 @@
     @for (item of bibles; track item.id) {
       <div
         class="db-card db-card--md db-card--bible"
+        [class.db-card--has-cover]="!!item.meta?.coverImage"
         role="button"
         tabindex="0"
         (click)="openBible(item)"
         (keydown.enter)="openBible(item)"
+        [style.background-image]="item.meta?.coverImage ? 'url(\'' + item.meta?.coverImage + '\')' : null"
       >
+        @if (item.meta?.coverImage) {
+          <div class="db-card__overlay"></div>
+        }
         <div class="bible-card__header">
           <div class="bible-card__icon-badge">📖</div>
           <div class="bible-card__badges">

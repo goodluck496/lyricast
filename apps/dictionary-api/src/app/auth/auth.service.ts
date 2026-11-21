@@ -17,6 +17,60 @@ export interface AuthUser {
   deviceId: number;
   email: string;
   token: string;
+  isAdmin: boolean;
+  name?: string;
+  picture?: string;
+  meta?: Record<string, string>;
+}
+
+export interface AuthRequestMeta {
+  ip?: string;
+  country?: string;
+  city?: string;
+  userAgent?: string;
+  reqHost?: string;
+}
+
+interface GoogleUserInfo {
+  email?: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+  locale?: string;
+  sub?: string;
+  email_verified?: boolean;
+}
+
+function parseGoogleUserInfo(data: unknown): GoogleUserInfo {
+  if (typeof data !== 'object' || data === null) {
+    return {};
+  }
+  const getString = (key: string): string | undefined => {
+    if (key in data) {
+      const val = Reflect.get(data, key);
+      return typeof val === 'string' ? val : undefined;
+    }
+    return undefined;
+  };
+  const getBoolean = (key: string): boolean | undefined => {
+    if (key in data) {
+      const val = Reflect.get(data, key);
+      return typeof val === 'boolean' ? val : undefined;
+    }
+    return undefined;
+  };
+
+  return {
+    email: getString('email'),
+    name: getString('name'),
+    given_name: getString('given_name'),
+    family_name: getString('family_name'),
+    picture: getString('picture'),
+    locale: getString('locale'),
+    sub: getString('sub'),
+    email_verified: getBoolean('email_verified'),
+  };
 }
 
 @Injectable()
@@ -86,8 +140,7 @@ export class AuthService {
   async handleGoogleCallback(
     code: string | undefined,
     stateRaw: string | undefined,
-    userAgent: string,
-    reqHost?: string
+    meta: AuthRequestMeta
   ): Promise<{ redirectUrl: string }> {
     let state: { source?: 'web' | 'desktop'; redirect_port?: number } = {};
     if (stateRaw) {
@@ -99,7 +152,7 @@ export class AuthService {
     }
     const isDesktop = state.source === 'desktop';
     const redirectPort = state.redirect_port;
-    const frontendUrl = this.resolveFrontendUrl(reqHost);
+    const frontendUrl = this.resolveFrontendUrl(meta.reqHost);
 
     if (!code) {
       const err = 'code_missing';
@@ -120,7 +173,7 @@ export class AuthService {
       return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
     }
 
-    const redirectUri = this.resolveCallbackUri(reqHost);
+    const redirectUri = this.resolveCallbackUri(meta.reqHost);
 
     // 1. Обмен кода на токены
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -145,11 +198,23 @@ export class AuthService {
       return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
     }
 
-    const tokenData = (await tokenRes.json()) as { access_token: string };
+    const tokenJson: unknown = await tokenRes.json();
+    const accessToken =
+      typeof tokenJson === 'object' && tokenJson !== null && 'access_token' in tokenJson
+        ? String(Reflect.get(tokenJson, 'access_token'))
+        : '';
+
+    if (!accessToken) {
+      const err = 'oauth_token_missing';
+      if (isDesktop && redirectPort) {
+        return { redirectUrl: `http://127.0.0.1:${redirectPort}/callback?error=${err}` };
+      }
+      return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
+    }
 
     // 2. Получение данных профиля Google
     const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     if (!userRes.ok) {
@@ -161,12 +226,8 @@ export class AuthService {
       return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
     }
 
-    const googleUser = (await userRes.json()) as {
-      email?: string;
-      name?: string;
-      picture?: string;
-      sub?: string;
-    };
+    const userData: unknown = await userRes.json();
+    const googleUser = parseGoogleUserInfo(userData);
 
     const email = (googleUser.email || '').trim().toLowerCase();
     if (!email) {
@@ -177,18 +238,7 @@ export class AuthService {
       return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
     }
 
-    // 3. Белый список администратора для веб-клиента dictionary-client
-    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
-    if (!isDesktop) {
-      if (email !== adminEmail) {
-        this.logger.warn(`[GoogleAuth] Access denied for web client: ${email} is not admin (${adminEmail})`);
-        return {
-          redirectUrl: `${frontendUrl}/auth/callback?error=forbidden&email=${encodeURIComponent(email)}`,
-        };
-      }
-    }
-
-    // 4. Поиск или регистрация пользователя в PostgreSQL
+    // 3. Поиск или регистрация пользователя в PostgreSQL
     const db = this.db.client;
     const [foundUser] = await db
       .select()
@@ -206,7 +256,54 @@ export class AuthService {
       this.logger.log(`[GoogleAuth] New user registered: ${email} (id: ${user.id}, source: ${state.source || 'web'})`);
     }
 
-    // 5. Проверка блокировки (allowed === false)
+    // 4. Запись метаданных в user_meta
+    const metaEntries: Array<{ metaKey: string; metaValue: string }> = [
+      { metaKey: 'source', metaValue: state.source || 'web' },
+      { metaKey: 'last_login_at', metaValue: new Date().toISOString() },
+    ];
+    if (meta.ip) metaEntries.push({ metaKey: 'ip', metaValue: meta.ip });
+    if (meta.country) metaEntries.push({ metaKey: 'country', metaValue: meta.country });
+    if (meta.city) metaEntries.push({ metaKey: 'city', metaValue: meta.city });
+    if (meta.userAgent) metaEntries.push({ metaKey: 'user_agent', metaValue: meta.userAgent });
+
+    if (googleUser.sub) metaEntries.push({ metaKey: 'google_sub', metaValue: googleUser.sub });
+    if (googleUser.name) metaEntries.push({ metaKey: 'name', metaValue: googleUser.name });
+    if (googleUser.given_name) metaEntries.push({ metaKey: 'given_name', metaValue: googleUser.given_name });
+    if (googleUser.family_name) metaEntries.push({ metaKey: 'family_name', metaValue: googleUser.family_name });
+    if (googleUser.picture) metaEntries.push({ metaKey: 'picture', metaValue: googleUser.picture });
+    if (googleUser.locale) metaEntries.push({ metaKey: 'locale', metaValue: googleUser.locale });
+    if (typeof googleUser.email_verified === 'boolean') {
+      metaEntries.push({ metaKey: 'email_verified', metaValue: String(googleUser.email_verified) });
+    }
+
+    for (const entry of metaEntries) {
+      await db
+        .insert(schema.userMeta)
+        .values({
+          userId: user.id,
+          metaKey: entry.metaKey,
+          metaValue: entry.metaValue,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [schema.userMeta.userId, schema.userMeta.metaKey],
+          set: {
+            metaValue: entry.metaValue,
+            updatedAt: new Date(),
+          },
+        });
+    }
+
+    // 5. Проверка доступа для web (dictionary-client: пока только admin)
+    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
+    if (!isDesktop && email !== adminEmail) {
+      this.logger.warn(`[GoogleAuth] Access to dictionary client forbidden for non-admin: ${email}`);
+      return {
+        redirectUrl: `${frontendUrl}/auth/callback?error=forbidden&email=${encodeURIComponent(email)}`,
+      };
+    }
+
+    // 6. Проверка блокировки пользователя (user.allowed === false)
     if (user.allowed === false) {
       this.logger.warn(`[GoogleAuth] User is blocked: ${email}`);
       const err = 'blocked';
@@ -216,8 +313,8 @@ export class AuthService {
       return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}&email=${encodeURIComponent(email)}` };
     }
 
-    // 6. Создание устройства и активной сессии
-    const uaHash = this.hashUserAgent(userAgent || `google-oauth-${state.source || 'web'}`);
+    // 7. Создание устройства и активной сессии
+    const uaHash = this.hashUserAgent(meta.userAgent || `google-oauth-${state.source || 'web'}`);
     const [foundDevice] = await db
       .select()
       .from(schema.devices)
@@ -252,7 +349,7 @@ export class AuthService {
       expiresAt,
     });
 
-    // 7. Успешный редирект с токеном
+    // 8. Успешный редирект с токеном
     const userName = googleUser.name || '';
     if (isDesktop && redirectPort) {
       return {
@@ -368,11 +465,31 @@ export class AuthService {
       throw new UnauthorizedException('Device blocked');
     }
 
+    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
+    const isAdmin = session.email.trim().toLowerCase() === adminEmail;
+
+    const userMetas = await db
+      .select({
+        metaKey: schema.userMeta.metaKey,
+        metaValue: schema.userMeta.metaValue,
+      })
+      .from(schema.userMeta)
+      .where(eq(schema.userMeta.userId, session.userId));
+
+    const metaMap: Record<string, string> = {};
+    for (const m of userMetas) {
+      metaMap[m.metaKey] = m.metaValue;
+    }
+
     return {
       userId: session.userId,
       deviceId: session.deviceId ?? 0,
       email: session.email,
       token,
+      isAdmin,
+      name: metaMap['name'] || undefined,
+      picture: metaMap['picture'] || undefined,
+      meta: metaMap,
     };
   }
 }

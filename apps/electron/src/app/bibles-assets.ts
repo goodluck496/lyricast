@@ -45,7 +45,8 @@ export async function ensureBiblesUnpacked(): Promise<void> {
   }
 
   // Ленивая загрузка, чтобы не тянуть adm-zip, если архива нет
-  const AdmZip = (await import('adm-zip')).default as any;
+  const AdmZipModule = await import('adm-zip');
+  const AdmZip = AdmZipModule.default;
 
   mkdirSync(targetDir, { recursive: true });
 
@@ -55,9 +56,14 @@ export async function ensureBiblesUnpacked(): Promise<void> {
     // Остальные переводы загружаются через реестр справочников.
     const synodalEntry = zip
       .getEntries()
-      .find((entry: any) =>
-        entry.entryName.toLowerCase().includes('rus_synodal.bible.json')
-      );
+      .find((entry) => {
+        const name = entry.entryName.toLowerCase();
+        return (
+          name.includes('rus_synodal') ||
+          name.includes('синодальный') ||
+          name.includes('synodal')
+        );
+      });
 
     if (synodalEntry) {
       zip.extractEntryTo(synodalEntry, targetDir, false, true);

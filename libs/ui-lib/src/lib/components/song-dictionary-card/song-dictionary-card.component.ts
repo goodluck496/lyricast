@@ -16,8 +16,11 @@ export class SongDictionaryCardComponent {
   @Input({ required: true }) db!: SongDatabaseInfoDto;
   @Input() clickable = false;
   @Input() size: 'sm' | 'md' = 'md';
+  @Input() countLabel = 'песен';
 
   @Output() cardClick = new EventEmitter<void>();
+
+  actionsHovered = false;
 
   onClick(): void {
     if (!this.clickable) return;

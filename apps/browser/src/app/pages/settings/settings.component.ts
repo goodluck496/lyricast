@@ -344,7 +344,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   async loginGoogle(): Promise<void> {
-    const electron = (window as any).electron;
+    const electron = this.windowSrv.electronContext;
     if (electron?.loginGoogle) {
       this.isLoggingInGoogle = true;
       this.googleAuthError = '';
@@ -360,8 +360,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
               ? 'Пользователь заблокирован администратором'
               : (res.error || 'Ошибка входа через Google');
         }
-      } catch (e: any) {
-        this.googleAuthError = e?.message || 'Не удалось выполнить вход';
+      } catch (e: unknown) {
+        this.googleAuthError = e instanceof Error ? e.message : 'Не удалось выполнить вход';
       } finally {
         this.isLoggingInGoogle = false;
         this.cdr.detectChanges();

@@ -15,6 +15,13 @@
       "when": 1795197363924,
       "tag": "0001_colorful_masked_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795251082591,
+      "tag": "0002_wise_grey_gargoyle",
+      "breakpoints": true
     }
   ]
 }

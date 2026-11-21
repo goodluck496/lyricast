@@ -238,6 +238,20 @@ export class SongsDictionaryApiService {
     return this.http.post<{ ok: boolean; songBookId: number }>(url, payload);
   }
 
+  copySongBook(songBookId: number): Observable<{ ok: boolean; songBookId: number; fileKey: string; title: string }> {
+    const rawBasePath = Array.isArray(this.basePath) ? this.basePath[0] : this.basePath;
+    const basePath = (rawBasePath ?? '').replace(/\/+$/, '');
+    const url = basePath ? `${basePath}/api/songs/song-books/${songBookId}/copy` : `/api/songs/song-books/${songBookId}/copy`;
+    return this.http.post<{ ok: boolean; songBookId: number; fileKey: string; title: string }>(url, {});
+  }
+
+  deleteSongBook(songBookId: number): Observable<{ ok: boolean }> {
+    const rawBasePath = Array.isArray(this.basePath) ? this.basePath[0] : this.basePath;
+    const basePath = (rawBasePath ?? '').replace(/\/+$/, '');
+    const url = basePath ? `${basePath}/api/songs/song-books/${songBookId}` : `/api/songs/song-books/${songBookId}`;
+    return this.http.delete<{ ok: boolean }>(url);
+  }
+
   createEmptySong(): ISong {
     return {
       number: 0,

@@ -8,9 +8,21 @@ import { FloatLabelModule } from 'primeng/floatlabel';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { MessageModule } from 'primeng/message';
-import { BibleTranslate } from '@lyri-cast/entities';
+import { SelectModule } from 'primeng/select';
+import { SharedModule } from 'primeng/api';
+import { BibleTranslate, SongDatabaseInfoDto } from '@lyri-cast/entities';
 import { parseMyBibleSqlite } from '@lyri-cast/common';
 import { BiblesDictionaryApiService } from '@lyri-cast/shared-browser/data-access/dictionaries';
+import { SongDictionaryCardComponent } from '@lyri-cast/ui-lib';
+import {
+  COUNTRIES_FLAGS,
+  CountryFlagItem,
+  findFlagByLanguage,
+  findLanguage,
+  LANGUAGES_OPTIONS,
+  LanguageOption,
+  svgFlagToDataUrl,
+} from '../../flags-data';
 
 let cachedWasmBinaryPromise: Promise<ArrayBuffer> | null = null;
 
@@ -74,6 +86,9 @@ async function loadSqlJsWasmBinary(): Promise<ArrayBuffer> {
     ProgressSpinnerModule,
     ProgressBarModule,
     MessageModule,
+    SelectModule,
+    SharedModule,
+    SongDictionaryCardComponent,
   ],
   templateUrl: './import-bible-dialog.component.html',
   styleUrl: './import-bible-dialog.component.scss',
@@ -89,12 +104,98 @@ export class ImportBibleDialogComponent {
   title = '';
   language = '';
   catalogId = 1;
+  coverImage: string | null = null;
+
+  readonly countries = COUNTRIES_FLAGS;
+  selectedCountry: CountryFlagItem | null = null;
+
+  readonly languages = LANGUAGES_OPTIONS;
+  selectedLanguage: LanguageOption | null = null;
+  isManualLanguage = false;
 
   isParsing = false;
   isSaving = false;
   uploadProgress = 0;
   uploadStatusText = '';
   errorMessage = '';
+
+  get previewDb(): SongDatabaseInfoDto {
+    return {
+      db: this.parsedBible?.keyForSearch || 'preview',
+      title: this.title || 'Название перевода',
+      language: this.language || 'ru',
+      coverImage: this.coverImage ?? undefined,
+      songCount: this.parsedBible?.books?.length ?? 66,
+      version: 1,
+      localVersion: 1,
+    };
+  }
+
+  async onCountryChange(country: CountryFlagItem | null): Promise<void> {
+    this.selectedCountry = country;
+    if (country) {
+      try {
+        this.coverImage = await svgFlagToDataUrl(country.flagUrl);
+      } catch (err) {
+        console.error('Failed to load flag', err);
+      }
+    } else {
+      this.coverImage = null;
+    }
+  }
+
+  onLanguageSelect(langItem: LanguageOption | null): void {
+    this.selectedLanguage = langItem;
+    this.language = langItem ? langItem.code : '';
+    if (langItem) {
+      const flagItem = findFlagByLanguage(langItem.code);
+      if (flagItem && (!this.selectedCountry || !this.coverImage)) {
+        void this.onCountryChange(flagItem);
+      }
+    }
+  }
+
+  onManualLanguageInput(val: string): void {
+    this.language = val;
+    const match = findLanguage(val);
+    if (match) {
+      this.selectedLanguage = match;
+      const flagItem = findFlagByLanguage(match.code);
+      if (flagItem && (!this.selectedCountry || !this.coverImage)) {
+        void this.onCountryChange(flagItem);
+      }
+    }
+  }
+
+  toggleManualLanguage(): void {
+    this.isManualLanguage = !this.isManualLanguage;
+    if (!this.isManualLanguage) {
+      this.selectedLanguage = findLanguage(this.language) ?? null;
+      if (this.selectedLanguage) {
+        this.language = this.selectedLanguage.code;
+      }
+    }
+  }
+
+  onCustomImageUpload(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        this.coverImage = reader.result;
+        this.selectedCountry = null;
+      }
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  clearCover(): void {
+    this.coverImage = null;
+    this.selectedCountry = null;
+  }
 
   get totalVersesCount(): number {
     if (!this.parsedBible?.books) return 0;
@@ -142,7 +243,30 @@ export class ImportBibleDialogComponent {
       }
 
       this.title = this.parsedBible.title || file.name.replace(/\.[^/.]+$/, '');
-      this.language = this.parsedBible.lang || 'ru';
+      const rawLang = this.parsedBible.lang?.trim() || '';
+      const matchedLang = findLanguage(rawLang);
+      if (matchedLang) {
+        this.selectedLanguage = matchedLang;
+        this.language = matchedLang.code;
+        this.isManualLanguage = false;
+      } else {
+        this.selectedLanguage = null;
+        this.language = rawLang;
+        this.isManualLanguage = true;
+      }
+
+      // Авто-предложение флага страны по коду языка (если фон еще не выбран)
+      if (!this.coverImage && this.language) {
+        const flagItem = findFlagByLanguage(this.language);
+        if (flagItem) {
+          this.selectedCountry = flagItem;
+          void svgFlagToDataUrl(flagItem.flagUrl).then((dataUrl) => {
+            if (!this.coverImage) {
+              this.coverImage = dataUrl;
+            }
+          });
+        }
+      }
     } catch (err: unknown) {
       this.errorMessage =
         err instanceof Error ? err.message : 'Не удалось разобрать файл перевода';
@@ -169,9 +293,16 @@ export class ImportBibleDialogComponent {
       title: this.title.trim(),
       sourceTitle: this.parsedBible.sourceTitle || this.title.trim(),
       lang: this.language.trim() || 'ru',
+      coverImage: this.coverImage || undefined,
     };
 
-    this.api.importBibleWithProgress({ catalogId: this.catalogId, data: payload }).subscribe({
+    this.api
+      .importBibleWithProgress({
+        catalogId: this.catalogId,
+        data: payload,
+        coverImage: this.coverImage || undefined,
+      })
+      .subscribe({
       next: (event) => {
         if (event.type === HttpEventType.UploadProgress && event.total) {
           this.uploadProgress = Math.round((100 * event.loaded) / event.total);

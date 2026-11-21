@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsInt, Min, ValidateNested } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsDefined, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BibleTranslate } from '@lyri-cast/entities';
 
@@ -14,4 +14,9 @@ export class ImportBibleDto {
   @ValidateNested()
   @Type(() => Object) // BibleTranslate — сложный тип, валидация в сервисе
   data!: BibleTranslate;
+
+  @ApiPropertyOptional({ description: 'Обложка / фоновое изображение (data:URL или URL)' })
+  @IsOptional()
+  @IsString()
+  coverImage?: string;
 }

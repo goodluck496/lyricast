@@ -4,10 +4,13 @@
   [class.db-card--clickable]="clickable"
   [class.db-card--sm]="size === 'sm'"
   [class.db-card--md]="size === 'md'"
-  [pTooltip]="size === 'sm' ? detailsTooltipTmpl : ''"
+  [pTooltip]="(size === 'sm' && !actionsHovered) ? detailsTooltipTmpl : ''"
   tooltipPosition="top"
+  [style.background-image]="
+    db.coverImage ? 'url(\'' + db.coverImage + '\')' : null
+  "
   [ngStyle]="
-    db.coverImage ? { 'background-image': 'url(' + db.coverImage + ')' } : null
+    db.coverImage ? { 'background-image': 'url(\'' + db.coverImage + '\')' } : null
   "
 >
   <div class="db-card__overlay"></div>
@@ -67,11 +70,11 @@
         }
 
         @if (db.songCount !== null) {
-          <span>· {{ db.songCount }} песен</span>
+          <span>· {{ db.songCount }} {{ countLabel }}</span>
         }
       } @else {
         @if (db.songCount !== null) {
-          <span>{{ db.songCount }} песен</span>
+          <span>{{ db.songCount }} {{ countLabel }}</span>
         } @else {
           <span>—</span>
         }
@@ -89,7 +92,12 @@
       </div>
     }
 
-    <div class="db-card__actions" (click)="$event.stopPropagation()">
+    <div
+      class="db-card__actions"
+      (click)="$event.stopPropagation()"
+      (mouseenter)="actionsHovered = true"
+      (mouseleave)="actionsHovered = false"
+    >
       <ng-content select="[cardActions]"></ng-content>
     </div>
   </div>
@@ -112,7 +120,7 @@
         <div class="version-tooltip-line">Версия: v{{ db.version }}</div>
       }
       @if (db.songCount !== null) {
-        <div class="version-tooltip-line">Песен: {{ db.songCount }}</div>
+        <div class="version-tooltip-line">{{ countLabel === 'книг' ? 'Книг' : 'Песен' }}: {{ db.songCount }}</div>
       }
       @if (db.updatedAt) {
         <div class="version-tooltip-line">Обновлено: {{ formatDate(db.updatedAt) }}</div>

@@ -21,6 +21,7 @@ export const catalogs = pgTable(
     type: catalogTypeEnum('type').notNull(),
     title: text('title').notNull(),
     version: integer('version').notNull().default(1),
+    ownerEmail: text('owner_email'),
     updatedBy: text('updated_by'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -49,6 +50,7 @@ export const bibles = pgTable(
     isClassicBookOrder: boolean('is_classic_book_order').notNull().default(false),
 
     bibleVersion: integer('bible_version').notNull().default(1), // версия перевода (инкремент при правках)
+    ownerEmail: text('owner_email'),
     updatedBy: text('updated_by'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -178,6 +180,21 @@ export const users = pgTable(
   }),
 );
 
+export const userMeta = pgTable(
+  'user_meta',
+  {
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    metaKey: text('meta_key').notNull(),
+    metaValue: text('meta_value').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ name: 'user_meta_pk', columns: [table.userId, table.metaKey] }),
+  }),
+);
+
 export const devices = pgTable(
   'devices',
   {
@@ -230,6 +247,7 @@ export const songBooks = pgTable(
     headerDisabled: boolean('header_disabled').notNull().default(false),
 
     version: integer('version').notNull().default(1),
+    ownerEmail: text('owner_email'),
     updatedBy: text('updated_by'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

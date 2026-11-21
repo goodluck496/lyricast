@@ -31,6 +31,7 @@ export function mapRegistryItemToSongDatabaseInfoDto(
 
   return {
     db: String(item.id),
+    songBookId: item.id,
     fileKey: typeof meta.fileKey === 'string' ? meta.fileKey : undefined,
     title: typeof meta.title === 'string' ? meta.title : undefined,
     description:
@@ -42,6 +43,9 @@ export function mapRegistryItemToSongDatabaseInfoDto(
     version: typeof meta.version === 'number' ? meta.version : undefined,
     updatedBy: typeof meta.updatedBy === 'string' ? meta.updatedBy : undefined,
     updatedAt: typeof meta.updatedAt === 'string' ? meta.updatedAt : undefined,
+    ownerEmail: item.ownerEmail ?? undefined,
+    isOwner: item.isOwner ?? false,
+    canEdit: item.canEdit ?? false,
   };
 }
 

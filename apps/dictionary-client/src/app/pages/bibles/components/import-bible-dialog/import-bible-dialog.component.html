@@ -66,18 +66,138 @@
           <label for="bibleTitle">Название перевода</label>
         </p-floatlabel>
 
-        <p-floatlabel class="w-full">
-          <input
-            id="bibleLang"
-            type="text"
-            pInputText
-            [(ngModel)]="language"
-            [disabled]="isSaving"
-            class="w-full"
-            placeholder=" "
-          />
-          <label for="bibleLang">Язык (ru, en, ky...)</label>
-        </p-floatlabel>
+        <div class="lang-select-section">
+          <div class="field-header-row">
+            <label for="importLangSelect" class="form-label">Язык перевода</label>
+            <button
+              type="button"
+              class="switch-mode-btn"
+              (click)="toggleManualLanguage()"
+              [title]="isManualLanguage ? 'Выбрать язык из списка' : 'Ввести код языка вручную'"
+            >
+              @if (isManualLanguage) {
+                <i class="pi pi-list"></i>
+                <span>Выбрать из списка</span>
+              } @else {
+                <i class="pi pi-pencil"></i>
+                <span>Ввести вручную</span>
+              }
+            </button>
+          </div>
+
+          @if (!isManualLanguage) {
+            <p-select
+              inputId="importLangSelect"
+              [options]="languages"
+              [(ngModel)]="selectedLanguage"
+              (ngModelChange)="onLanguageSelect($event)"
+              optionLabel="nameRu"
+              [filter]="true"
+              filterBy="nameRu,nameEn,code"
+              placeholder="Выберите язык перевода..."
+              [showClear]="true"
+              class="w-full"
+            >
+              <ng-template pTemplate="selectedItem" let-selected>
+                @if (selected) {
+                  <div class="flag-option-selected">
+                    <img [src]="selected.flagUrl" [alt]="selected.nameRu" class="flag-icon" />
+                    <span class="flag-code">{{ selected.code }}</span>
+                    <span class="flag-name">{{ selected.nameRu }}</span>
+                  </div>
+                }
+              </ng-template>
+
+              <ng-template pTemplate="item" let-lang>
+                <div class="flag-option-item">
+                  <img [src]="lang.flagUrl" [alt]="lang.nameRu" class="flag-icon" loading="lazy" />
+                  <span class="flag-code">{{ lang.code }}</span>
+                  <span class="flag-name">{{ lang.nameRu }}</span>
+                  @if (lang.nameNative && lang.nameNative !== lang.nameRu) {
+                    <span class="flag-name-en">({{ lang.nameNative }})</span>
+                  }
+                </div>
+              </ng-template>
+            </p-select>
+          } @else {
+            <input
+              id="bibleLang"
+              type="text"
+              pInputText
+              [(ngModel)]="language"
+              (ngModelChange)="onManualLanguageInput($event)"
+              placeholder="Код языка (напр. ru, kk, en, hbo...)"
+              [disabled]="isSaving"
+              class="w-full"
+            />
+          }
+        </div>
+      </div>
+
+      <!-- Выбор флага / фонового изображения через p-select -->
+      <div class="flag-select-section">
+        <div class="flag-select-header">
+          <label for="importFlagSelect" class="form-label">Фон карточки (флаг страны)</label>
+          <div class="flag-custom-link">
+            <input
+              #customFileInput
+              type="file"
+              accept="image/*"
+              style="display: none"
+              (change)="onCustomImageUpload($event)"
+            />
+            <button
+              type="button"
+              class="upload-link-btn"
+              (click)="customFileInput.click()"
+            >
+              <i class="pi pi-upload"></i>
+              <span>Своя картинка...</span>
+            </button>
+          </div>
+        </div>
+
+        <p-select
+          inputId="importFlagSelect"
+          [options]="countries"
+          [(ngModel)]="selectedCountry"
+          (ngModelChange)="onCountryChange($event)"
+          optionLabel="nameRu"
+          [filter]="true"
+          filterBy="nameRu,nameEn,code"
+          placeholder="Выберите флаг страны или начните поиск..."
+          [showClear]="true"
+          class="w-full"
+        >
+          <ng-template pTemplate="selectedItem" let-selected>
+            @if (selected) {
+              <div class="flag-option-selected">
+                <img [src]="selected.flagUrl" [alt]="selected.nameRu" class="flag-icon" />
+                <span class="flag-code">{{ selected.code }}</span>
+                <span class="flag-name">{{ selected.nameRu }}</span>
+              </div>
+            }
+          </ng-template>
+
+          <ng-template pTemplate="item" let-country>
+            <div class="flag-option-item">
+              <img [src]="country.flagUrl" [alt]="country.nameRu" class="flag-icon" loading="lazy" />
+              <span class="flag-code">{{ country.code }}</span>
+              <span class="flag-name">{{ country.nameRu }}</span>
+              @if (country.nameEn !== country.nameRu) {
+                <span class="flag-name-en">({{ country.nameEn }})</span>
+              }
+            </div>
+          </ng-template>
+        </p-select>
+      </div>
+
+      <!-- Предпросмотр карточки в Lyricast -->
+      <div class="card-preview-container">
+        <span class="card-preview-title">Предпросмотр карточки в Lyricast:</span>
+        <div class="card-preview-box">
+          <lyri-song-dictionary-card [db]="previewDb" size="sm" [clickable]="false" countLabel="книг"></lyri-song-dictionary-card>
+        </div>
       </div>
     </div>
   }
@@ -103,7 +223,7 @@
     <p-button
       label="Импортировать"
       icon="pi pi-check"
-      [disabled]="!parsedBible || isSaving || !title?.trim()"
+      [disabled]="!parsedBible || isSaving || !title.trim()"
       [loading]="isSaving"
       (onClick)="onSubmit()"
     ></p-button>

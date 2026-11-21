@@ -103,6 +103,7 @@ export class BibleDictionariesManagerComponent implements OnInit, OnDestroy {
       fileKey: card.fileKey,
       title: card.title,
       language: card.language,
+      coverImage: card.coverImage,
       sizeBytes: card.sizeBytes,
       songCount: card.bookCount ?? 66,
       version: card.remoteVersion ?? card.localVersion,
@@ -136,9 +137,10 @@ export class BibleDictionariesManagerComponent implements OnInit, OnDestroy {
 
   onClearBibleDictionaries(event: Event): void {
     event.stopPropagation();
+    const target = event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
     this.confirmationService.confirm({
       key: 'bible-dicts',
-      target: (event.target as HTMLElement) || undefined,
+      target,
       message: 'Удалить все установленные переводы Библии (кроме Синодального)?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Удалить',
@@ -204,9 +206,10 @@ export class BibleDictionariesManagerComponent implements OnInit, OnDestroy {
 
   onDeleteDictionary(event: Event, card: BibleDictionaryCardDto): void {
     event.stopPropagation();
+    const target = event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
     this.confirmationService.confirm({
       key: 'bible-dicts',
-      target: (event.target as HTMLElement) || undefined,
+      target,
       message: `Удалить перевод «${card.title}»?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Удалить',

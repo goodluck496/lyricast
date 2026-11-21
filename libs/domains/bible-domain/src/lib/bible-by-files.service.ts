@@ -503,6 +503,7 @@ export class BibleByFilesService {
           verseCount: item.meta?.verseCount ?? 0,
           sourceTitle: item.meta?.sourceTitle || item.humanName || '',
           isDefault: !!item.meta?.isDefault,
+          coverImage: item.meta?.coverImage || undefined,
         });
       }
     } catch (e) {
@@ -541,6 +542,7 @@ export class BibleByFilesService {
         verseCount,
         sourceTitle: short.sourceTitle,
         isDefault: short.isDefault,
+        coverImage: short.coverImage || fullBible?.coverImage || undefined,
       });
     }
 

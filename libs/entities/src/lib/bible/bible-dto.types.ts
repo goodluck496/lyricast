@@ -37,6 +37,7 @@ export type BibleDictionaryCardDto = {
   verseCount: number;
   sourceTitle: string;
   isDefault: boolean;
+  coverImage?: string;
 };
 
 // Для реестра (аналог RegistryItemDto)
@@ -52,6 +53,7 @@ export type BibleRegistryItemMetaDto = {
   verseCount: number;
   isDefault: boolean;
   isClassicBookOrder: boolean;
+  coverImage?: string | null;
 };
 
 export type BibleRegistryItemDto = {

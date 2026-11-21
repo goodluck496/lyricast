@@ -45,14 +45,38 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response
   ) {
-    const userAgent = (req.headers['user-agent'] as string | undefined) ?? '';
+    const userAgentHeader = req.headers['user-agent'];
+    const userAgent = typeof userAgentHeader === 'string' ? userAgentHeader : '';
+
+    const cfIp = req.headers['cf-connecting-ip'];
+    const xFwd = req.headers['x-forwarded-for'];
+    const ip =
+      (typeof cfIp === 'string'
+        ? cfIp
+        : typeof xFwd === 'string'
+        ? xFwd.split(',')[0].trim()
+        : req.ip) || '';
+
+    const cfCountry = req.headers['cf-ipcountry'];
+    const xCountry = req.headers['x-country'];
+    const country =
+      (typeof cfCountry === 'string'
+        ? cfCountry
+        : typeof xCountry === 'string'
+        ? xCountry
+        : '') || '';
+
+    const cfCity = req.headers['cf-ipcity'];
+    const city = typeof cfCity === 'string' ? cfCity : '';
+
     const reqHost = req.get('host');
-    const { redirectUrl } = await this.authService.handleGoogleCallback(
-      code,
-      state,
+    const { redirectUrl } = await this.authService.handleGoogleCallback(code, state, {
+      ip,
+      country,
+      city,
       userAgent,
-      reqHost
-    );
+      reqHost,
+    });
     return res.redirect(redirectUrl);
   }
 
@@ -81,7 +105,8 @@ export class AuthController {
     },
   })
   async login(@Body() dto: LoginDto, @Req() req: Request): Promise<LoginResponse> {
-    const userAgent = (req.headers['user-agent'] as string | undefined) ?? '';
+    const userAgentHeader = req.headers['user-agent'];
+    const userAgent = typeof userAgentHeader === 'string' ? userAgentHeader : '';
     return this.authService.login(dto.email, userAgent);
   }
 }

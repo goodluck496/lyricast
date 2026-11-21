@@ -61,3 +61,6 @@ sync_config.jsonc
 environments/*
 build/*
 
+
+.openai-api-token
+*.openai-api-token

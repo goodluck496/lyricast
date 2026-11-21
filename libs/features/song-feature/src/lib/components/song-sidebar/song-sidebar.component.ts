@@ -87,6 +87,23 @@ export class SongSidebarComponent {
     .getChannelsObservable()
     .pipe(map((channels) => channels.filter((c) => c.enabled)));
 
+  readonly isLive$ = combineLatest([
+    this.castingIsPaused$,
+    this.openedCastingWindow$,
+  ]).pipe(map(([paused, opened]) => !paused && opened));
+
+  readonly hasObsChannel$ = this.settingsSrv
+    .getChannelsObservable()
+    .pipe(
+      map((channels) =>
+        channels.some(
+          (c) =>
+            c.enabled &&
+            (c.role === 'lower_third' || c.targetType === 'obs_web')
+        )
+      )
+    );
+
   readonly currentLyricText = computed(() => {
     const line = this.songPageSelectSrv.selectedLyricLine();
     return line ? this.textLayout.formatHtmlForDisplay(line.text) : '';

@@ -1,67 +1,65 @@
 <div class="control-sidebar__wrapper">
-  <!-- Preview switcher tabs -->
-  <div class="sidebar-preview-tabs">
-    <button
-      type="button"
-      class="sidebar-preview-tab"
-      [class.sidebar-preview-tab--active]="activePreviewTab === 'main'"
-      (click)="activePreviewTab = 'main'"
-    >
-      <i class="pi pi-desktop"></i>
-      <span>Зал</span>
-    </button>
-    <button
-      type="button"
-      class="sidebar-preview-tab"
-      [class.sidebar-preview-tab--active]="activePreviewTab === 'stage'"
-      (click)="activePreviewTab = 'stage'"
-    >
-      <i class="pi pi-eye"></i>
-      <span>Сцена (Суфлер)</span>
-    </button>
+  <!-- Header with preview switcher tabs & live indicators -->
+  <div class="sidebar-header-bar">
+    <div class="sidebar-preview-tabs">
+      <button
+        type="button"
+        class="sidebar-preview-tab"
+        [class.sidebar-preview-tab--active]="activePreviewTab === 'main'"
+        (click)="activePreviewTab = 'main'"
+      >
+        <span class="live-dot" [class.live-dot--active]="isLive$ | async"></span>
+        <i class="pi pi-desktop"></i>
+        <span>Зал</span>
+      </button>
+      <button
+        type="button"
+        class="sidebar-preview-tab"
+        [class.sidebar-preview-tab--active]="activePreviewTab === 'stage'"
+        (click)="activePreviewTab = 'stage'"
+      >
+        <span class="live-dot" [class.live-dot--active]="isLive$ | async"></span>
+        <i class="pi pi-eye"></i>
+        <span>Сцена</span>
+      </button>
+    </div>
+    @if (hasObsChannel$ | async) {
+      <div
+        class="sidebar-obs-chip"
+        [class.sidebar-obs-chip--live]="isLive$ | async"
+        title="OBS Browser Source активен"
+      >
+        <span class="live-dot" [class.live-dot--active]="isLive$ | async"></span>
+        <span>OBS</span>
+      </div>
+    }
   </div>
 
-  @if (activePreviewTab === 'main') {
-    <lyri-song-casting-preview class="control-sidebar__preview" />
-  } @else {
-    <div class="sidebar-stage-preview control-sidebar__preview">
-      <div class="sidebar-stage-preview__header">
-        <span class="stage-tag"><i class="pi pi-desktop"></i> СЦЕНА</span>
-        <span class="stage-clock">{{ clockTime() }}</span>
-      </div>
-      <div class="sidebar-stage-preview__body">
-        <div
-          class="stage-current-line"
-          [innerHTML]="currentLyricText() || '— Нет текста —'"
-        ></div>
-      </div>
-      <div class="sidebar-stage-preview__footer">
-        <span class="next-label">СЛЕДУЮЩИЙ:</span>
-        <span class="next-text" [innerHTML]="nextLyricText() || '—'"></span>
-      </div>
-    </div>
-  }
-
-  <!-- Active Screen Indicators -->
-  <div class="sidebar-channels-bar">
-    <div class="sidebar-channels-bar__label">
-      <span>Экраны трансляции:</span>
-      <span class="sidebar-channels-bar__count">{{ (activeChannels$ | async)?.length || 0 }}</span>
-    </div>
-    <div class="sidebar-channels-bar__chips">
-      @for (ch of activeChannels$ | async; track ch.id) {
-        <div
-          class="sidebar-channel-chip"
-          [class.sidebar-channel-chip--live]="!(castingIsPaused$ | async) && (openedCastingWindow$ | async)"
-          [title]="ch.name + ' (' + ch.role + ')'"
-        >
-          <span class="status-dot"></span>
-          <span class="chip-name">{{ ch.name }}</span>
+  <!-- Unified, fixed-size preview container -->
+  <div class="sidebar-preview-frame">
+    @if (activePreviewTab === 'main') {
+      <lyri-song-casting-preview class="preview-content-fill" />
+    } @else {
+      <div class="sidebar-stage-preview preview-content-fill">
+        <div class="sidebar-stage-preview__header">
+          <span class="stage-tag"><i class="pi pi-desktop"></i> СЦЕНА</span>
+          <span class="stage-clock">{{ clockTime() }}</span>
         </div>
-      }
-    </div>
+        <div class="sidebar-stage-preview__body">
+          <div
+            class="stage-current-line"
+            [innerHTML]="currentLyricText() || '— Нет текста —'"
+          ></div>
+        </div>
+        <div class="sidebar-stage-preview__footer">
+          <span class="next-label">СЛЕДУЮЩИЙ:</span>
+          <span class="next-text" [innerHTML]="nextLyricText() || '—'"></span>
+        </div>
+      </div>
+    }
   </div>
 
+  <!-- Compact controls section -->
   <div class="control-sidebar__actions relative">
     @if (castingIsPaused$ | async) {
       <p-splitButton
@@ -72,7 +70,7 @@
         [model]="(closeMenuItems$ | async) || []"
         severity="success"
         tourAnchor="songs:cast-start"
-        styleClass="w-full"
+        styleClass="w-full p-button-sm"
       ></p-splitButton>
     } @else {
       <p-splitButton
@@ -83,32 +81,36 @@
         [model]="(closeMenuItems$ | async) || []"
         severity="danger"
         tourAnchor="songs:cast-stop"
-        styleClass="w-full"
+        styleClass="w-full p-button-sm"
       ></p-splitButton>
     }
-    <div class="song-sidebar__switch-row">
-      <label class="song-sidebar__switch-label" for="song-freeze">
-        <i class="pi pi-pause-circle"></i>
-        <span>Freeze</span>
-      </label>
-      <p-toggleswitch
-        inputId="song-freeze"
-        [disabled]="(openedCastingWindow$ | async) === false"
-        [ngModel]="castingIsFrozen$ | async"
-        (ngModelChange)="onFreezeToggle($event)"
-      />
-    </div>
-    <div class="song-sidebar__switch-row">
-      <label class="song-sidebar__switch-label" for="song-blackout">
-        <i class="pi pi-eye-slash"></i>
-        <span>Blackout All</span>
-      </label>
-      <p-toggleswitch
-        inputId="song-blackout"
-        [disabled]="(openedCastingWindow$ | async) === false"
-        [ngModel]="isBlackoutAll"
-        (ngModelChange)="onBlackoutAllToggle($event)"
-      />
+
+    <!-- Single compact horizontal row for Freeze and Blackout All -->
+    <div class="sidebar-quick-switches">
+      <div class="quick-switch">
+        <label class="quick-switch__label" for="song-freeze">
+          <i class="pi pi-pause-circle"></i>
+          <span>Freeze</span>
+        </label>
+        <p-toggleswitch
+          inputId="song-freeze"
+          [disabled]="(openedCastingWindow$ | async) === false"
+          [ngModel]="castingIsFrozen$ | async"
+          (ngModelChange)="onFreezeToggle($event)"
+        />
+      </div>
+      <div class="quick-switch">
+        <label class="quick-switch__label" for="song-blackout">
+          <i class="pi pi-eye-slash"></i>
+          <span>Blackout All</span>
+        </label>
+        <p-toggleswitch
+          inputId="song-blackout"
+          [disabled]="(openedCastingWindow$ | async) === false"
+          [ngModel]="isBlackoutAll"
+          (ngModelChange)="onBlackoutAllToggle($event)"
+        />
+      </div>
     </div>
   </div>
 

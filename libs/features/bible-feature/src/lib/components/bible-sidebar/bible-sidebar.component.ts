@@ -149,6 +149,23 @@ export class BibleSidebarComponent {
     .getChannelsObservable()
     .pipe(map((channels) => channels.filter((c) => c.enabled)));
 
+  readonly isLive$ = combineLatest([
+    this.castingIsPaused$,
+    this.openedCastingWindow$,
+  ]).pipe(map(([paused, opened]) => !paused && opened));
+
+  readonly hasObsChannel$ = this.settingsSrv
+    .getChannelsObservable()
+    .pipe(
+      map((channels) =>
+        channels.some(
+          (c) =>
+            c.enabled &&
+            (c.role === 'lower_third' || c.targetType === 'obs_web')
+        )
+      )
+    );
+
   isBlackoutAll = false;
 
   onBlackoutAllToggle(enabled: boolean): void {

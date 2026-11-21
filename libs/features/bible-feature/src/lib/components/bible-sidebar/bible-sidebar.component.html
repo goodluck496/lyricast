@@ -1,72 +1,70 @@
 <div class="control-sidebar__wrapper">
-  <!-- Preview switcher tabs -->
-  <div class="sidebar-preview-tabs">
-    <button
-      type="button"
-      class="sidebar-preview-tab"
-      [class.sidebar-preview-tab--active]="activePreviewTab === 'main'"
-      (click)="activePreviewTab = 'main'"
-    >
-      <i class="pi pi-desktop"></i>
-      <span>Зал (Основной)</span>
-    </button>
-    <button
-      type="button"
-      class="sidebar-preview-tab"
-      [class.sidebar-preview-tab--active]="activePreviewTab === 'secondary'"
-      (click)="activePreviewTab = 'secondary'"
-    >
-      <i class="pi pi-book"></i>
-      <span>2-й перевод</span>
-    </button>
+  <!-- Header with preview switcher tabs & live indicators -->
+  <div class="sidebar-header-bar">
+    <div class="sidebar-preview-tabs">
+      <button
+        type="button"
+        class="sidebar-preview-tab"
+        [class.sidebar-preview-tab--active]="activePreviewTab === 'main'"
+        (click)="activePreviewTab = 'main'"
+      >
+        <span class="live-dot" [class.live-dot--active]="isLive$ | async"></span>
+        <i class="pi pi-desktop"></i>
+        <span>Зал (Основной)</span>
+      </button>
+      <button
+        type="button"
+        class="sidebar-preview-tab"
+        [class.sidebar-preview-tab--active]="activePreviewTab === 'secondary'"
+        (click)="activePreviewTab = 'secondary'"
+      >
+        <span class="live-dot" [class.live-dot--active]="isLive$ | async"></span>
+        <i class="pi pi-book"></i>
+        <span>2-й перевод</span>
+      </button>
+    </div>
+    @if (hasObsChannel$ | async) {
+      <div
+        class="sidebar-obs-chip"
+        [class.sidebar-obs-chip--live]="isLive$ | async"
+        title="OBS Browser Source активен"
+      >
+        <span class="live-dot" [class.live-dot--active]="isLive$ | async"></span>
+        <span>OBS</span>
+      </div>
+    }
   </div>
 
-  @if (activePreviewTab === 'main') {
-    <lyri-bible-casting-preview class="control-sidebar__preview"></lyri-bible-casting-preview>
-  } @else {
-    <div
-      class="sidebar-secondary-preview control-sidebar__preview"
-      [ngStyle]="appearanceService.getBackgroundStyles(appearance())"
-    >
-      <div class="preview-header">
-        <div [ngStyle]="appearanceService.getReferenceStyles(appearance())">
-          {{ selectedVerseRef$ | async }}
-          <span class="translate-badge">{{ secondaryTranslateTitle$ | async }}</span>
+  <!-- Unified, fixed-size preview container -->
+  <div class="sidebar-preview-frame">
+    @if (activePreviewTab === 'main') {
+      <lyri-bible-casting-preview class="preview-content-fill"></lyri-bible-casting-preview>
+    } @else {
+      <div
+        class="sidebar-secondary-preview preview-content-fill"
+        [ngStyle]="appearanceService.getBackgroundStyles(appearance())"
+      >
+        <div class="preview-header">
+          <div [ngStyle]="appearanceService.getReferenceStyles(appearance())">
+            {{ selectedVerseRef$ | async }}
+            <span class="translate-badge">{{ secondaryTranslateTitle$ | async }}</span>
+          </div>
+        </div>
+        <div class="sidebar-secondary-preview__body">
+          <div
+            class="slide-content"
+            [innerHTML]="sanitizer.bypassSecurityTrustHtml((secondaryPreviewText$ | async) || '— Нет текста —')"
+            [ngStyle]="appearanceService.getTextStyles(appearance())"
+          ></div>
+        </div>
+        <div class="sidebar-secondary-preview__tag">
+          <span>Отдельный монитор • 100% размер</span>
         </div>
       </div>
-      <div class="sidebar-secondary-preview__body">
-        <div
-          class="slide-content"
-          [innerHTML]="sanitizer.bypassSecurityTrustHtml((secondaryPreviewText$ | async) || '— Нет текста —')"
-          [ngStyle]="appearanceService.getTextStyles(appearance())"
-        ></div>
-      </div>
-      <div class="sidebar-secondary-preview__tag">
-        <span>Отдельный монитор • 100% размер</span>
-      </div>
-    </div>
-  }
-
-  <!-- Active Screen Indicators -->
-  <div class="sidebar-channels-bar">
-    <div class="sidebar-channels-bar__label">
-      <span>Экраны трансляции:</span>
-      <span class="sidebar-channels-bar__count">{{ (activeChannels$ | async)?.length || 0 }}</span>
-    </div>
-    <div class="sidebar-channels-bar__chips">
-      @for (ch of activeChannels$ | async; track ch.id) {
-        <div
-          class="sidebar-channel-chip"
-          [class.sidebar-channel-chip--live]="!(castingIsPaused$ | async) && (openedCastingWindow$ | async)"
-          [title]="ch.name + ' (' + ch.role + ')'"
-        >
-          <span class="status-dot"></span>
-          <span class="chip-name">{{ ch.name }}</span>
-        </div>
-      }
-    </div>
+    }
   </div>
 
+  <!-- Compact controls section -->
   <div class="control-sidebar__actions">
     @if (castingIsPaused$ | async) {
       <p-splitbutton
@@ -77,7 +75,7 @@
         [model]="(closeMenuItems$ | async) || []"
         severity="success"
         tourAnchor="bible:cast-start"
-        styleClass="w-full"
+        styleClass="w-full p-button-sm"
       ></p-splitbutton>
     } @else {
       <p-splitbutton
@@ -88,39 +86,44 @@
         [model]="(closeMenuItems$ | async) || []"
         severity="danger"
         tourAnchor="bible:cast-stop"
-        styleClass="w-full"
+        styleClass="w-full p-button-sm"
       ></p-splitbutton>
     }
-    <div class="bible-sidebar__switch-row">
-      <label class="bible-sidebar__switch-label" for="bible-freeze">
-        <i class="pi pi-pause-circle"></i>
-        <span>Freeze</span>
-      </label>
-      <p-toggleswitch
-        inputId="bible-freeze"
-        [disabled]="(openedCastingWindow$ | async) === false"
-        [ngModel]="castingIsFrozen$ | async"
-        (ngModelChange)="onFreezeToggle($event)"
-      ></p-toggleswitch>
-    </div>
-    <div class="bible-sidebar__switch-row">
-      <label class="bible-sidebar__switch-label" for="bible-blackout">
-        <i class="pi pi-eye-slash"></i>
-        <span>Blackout All</span>
-      </label>
-      <p-toggleswitch
-        inputId="bible-blackout"
-        [disabled]="(openedCastingWindow$ | async) === false"
-        [ngModel]="isBlackoutAll"
-        (ngModelChange)="onBlackoutAllToggle($event)"
-      ></p-toggleswitch>
+
+    <!-- Single compact horizontal row for Freeze and Blackout All -->
+    <div class="sidebar-quick-switches">
+      <div class="quick-switch">
+        <label class="quick-switch__label" for="bible-freeze">
+          <i class="pi pi-pause-circle"></i>
+          <span>Freeze</span>
+        </label>
+        <p-toggleswitch
+          inputId="bible-freeze"
+          [disabled]="(openedCastingWindow$ | async) === false"
+          [ngModel]="castingIsFrozen$ | async"
+          (ngModelChange)="onFreezeToggle($event)"
+        ></p-toggleswitch>
+      </div>
+      <div class="quick-switch">
+        <label class="quick-switch__label" for="bible-blackout">
+          <i class="pi pi-eye-slash"></i>
+          <span>Blackout All</span>
+        </label>
+        <p-toggleswitch
+          inputId="bible-blackout"
+          [disabled]="(openedCastingWindow$ | async) === false"
+          [ngModel]="isBlackoutAll"
+          (ngModelChange)="onBlackoutAllToggle($event)"
+        ></p-toggleswitch>
+      </div>
     </div>
   </div>
 
+  <!-- Compact Secondary Translation section -->
   @if (secondarySettings$ | async; as secondarySettings) {
     <div class="control-sidebar__secondary-translation">
       <div class="control-sidebar__secondary-header">
-        <span>Доп. перевод</span>
+        <span class="text-xs font-semibold">Доп. перевод</span>
         <p-toggleswitch
           [ngModel]="secondarySettings.enabled"
           (ngModelChange)="onSecondaryEnabledChange($event)"
@@ -128,8 +131,7 @@
       </div>
 
       @if (secondarySettings.enabled) {
-        <div class="control-sidebar__secondary-field">
-          <label class="sidebar-field-label">Режим вывода:</label>
+        <div class="control-sidebar__secondary-controls">
           <div class="sidebar-destination-switch">
             <button
               type="button"
@@ -138,7 +140,7 @@
               (click)="onSecondaryDestinationChange('split')"
             >
               <i class="pi pi-table"></i>
-              <span>Сплит (50/50)</span>
+              <span>Сплит</span>
             </button>
             <button
               type="button"
@@ -147,12 +149,10 @@
               (click)="onSecondaryDestinationChange('dedicated')"
             >
               <i class="pi pi-desktop"></i>
-              <span>Отдельный монитор</span>
+              <span>Отд. монитор</span>
             </button>
           </div>
-        </div>
 
-        <div class="control-sidebar__secondary-field">
           <p-select
             [ngModel]="secondarySettings.translate"
             (ngModelChange)="onSecondaryTranslateChange($event)"
@@ -161,45 +161,41 @@
             optionValue="value"
             placeholder="Выберите перевод"
             appendTo="body"
-            styleClass="w-full"
+            styleClass="w-full p-select-sm"
           ></p-select>
+
+          @if (secondarySettings.destination === 'dedicated') {
+            <div class="sidebar-dedicated-hint">
+              <i class="pi pi-check-circle"></i>
+              <span>Во весь отдельный экран без сжатия</span>
+            </div>
+          } @else {
+            <div class="sidebar-split-row">
+              <p-select
+                [ngModel]="secondarySettings.layout"
+                (ngModelChange)="onSecondaryLayoutChange($event)"
+                [options]="layoutOptions"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
+                styleClass="p-select-sm flex-1"
+              ></p-select>
+              <div class="sidebar-size-badge">{{ secondarySettings.sizePercent }}%</div>
+            </div>
+            <mat-slider
+              class="control-sidebar__secondary-slider"
+              [min]="25"
+              [max]="70"
+              [step]="5"
+            >
+              <input
+                matSliderThumb
+                [value]="secondarySettings.sizePercent"
+                (valueChange)="onSecondarySizeChange($event)"
+              />
+            </mat-slider>
+          }
         </div>
-
-        @if (secondarySettings.destination === 'dedicated') {
-          <div class="sidebar-dedicated-hint">
-            <i class="pi pi-check-circle"></i>
-            <span>Транслируется во весь экран на отдельный монитор без деления и сжатия.</span>
-          </div>
-        } @else {
-          <div class="control-sidebar__secondary-field">
-            <p-select
-              [ngModel]="secondarySettings.layout"
-              (ngModelChange)="onSecondaryLayoutChange($event)"
-              [options]="layoutOptions"
-              optionLabel="label"
-              optionValue="value"
-              appendTo="body"
-              styleClass="w-full"
-            ></p-select>
-          </div>
-
-          <div class="control-sidebar__secondary-size">
-            <span>Размер</span>
-            <span>{{ secondarySettings.sizePercent }}%</span>
-          </div>
-          <mat-slider
-            class="control-sidebar__secondary-slider"
-            [min]="25"
-            [max]="70"
-            [step]="5"
-          >
-            <input
-              matSliderThumb
-              [value]="secondarySettings.sizePercent"
-              (valueChange)="onSecondarySizeChange($event)"
-            />
-          </mat-slider>
-        }
       }
     </div>
   }

@@ -526,4 +526,38 @@ export class AuthService {
       meta: metaMap,
     };
   }
+
+  async listUsers(): Promise<Array<{ id: number; email: string; name?: string }>> {
+    const db = this.db.client;
+    const allUsers = await db
+      .select({
+        id: schema.users.id,
+        email: schema.users.email,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.allowed, true))
+      .orderBy(schema.users.email);
+
+    if (allUsers.length === 0) return [];
+
+    const metaRows = await db
+      .select({
+        userId: schema.userMeta.userId,
+        key: schema.userMeta.metaKey,
+        value: schema.userMeta.metaValue,
+      })
+      .from(schema.userMeta)
+      .where(eq(schema.userMeta.metaKey, 'name'));
+
+    const nameMap = new Map<number, string>();
+    for (const m of metaRows) {
+      if (m.value) nameMap.set(m.userId, m.value);
+    }
+
+    return allUsers.map((u) => ({
+      id: u.id,
+      email: u.email,
+      name: nameMap.get(u.id),
+    }));
+  }
 }

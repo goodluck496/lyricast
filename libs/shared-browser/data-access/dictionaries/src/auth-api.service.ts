@@ -1,4 +1,5 @@
 import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   AuthControllerLogin200Response,
@@ -7,9 +8,16 @@ import {
 import { DICTIONARIES_API_BASE } from './export-jobs.service';
 import { BASE_PATH } from '@lyri-cast/openapi-songs-dictionary';
 
+export interface DictionaryUserDto {
+  id: number;
+  email: string;
+  name?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
   private readonly api = inject(AuthService);
+  private readonly http = inject(HttpClient);
   private readonly explicitBase = inject(DICTIONARIES_API_BASE, { optional: true });
   private readonly basePathToken = inject(BASE_PATH, { optional: true });
 
@@ -59,5 +67,11 @@ export class AuthApiService {
         email,
       },
     });
+  }
+
+  getUsers(): Observable<DictionaryUserDto[]> {
+    const base = this.resolveBaseUrl();
+    const url = `${base}/api/auth/users`;
+    return this.http.get<DictionaryUserDto[]>(url);
   }
 }

@@ -29,16 +29,39 @@
     </div>
 
     <div class="form-field">
-      <label for="metaOwnerEmail" class="form-label">Email владельца (доступен указанному пользователю и админу)</label>
-      <input
-        id="metaOwnerEmail"
-        type="email"
-        pInputText
-        [(ngModel)]="ownerEmail"
+      <label for="metaOwnerSelect" class="form-label">Кому доступен перевод</label>
+      <p-select
+        inputId="metaOwnerSelect"
+        [options]="userOptions"
+        [(ngModel)]="selectedUser"
+        (ngModelChange)="onUserSelect($event)"
+        optionLabel="label"
+        placeholder="Всем (публичный перевод)"
+        [showClear]="true"
+        [filter]="true"
+        filterBy="label,email"
         [disabled]="isSaving"
         class="w-full"
-        placeholder="user@example.com"
-      />
+      >
+        <ng-template pTemplate="selectedItem" let-selected>
+          @if (selected && selected.email) {
+            <div class="flex items-center gap-2">
+              <span>👤 {{ selected.label }}</span>
+            </div>
+          } @else {
+            <span>🌐 Всем (публичный перевод)</span>
+          }
+        </ng-template>
+        <ng-template pTemplate="item" let-item>
+          <div class="flex items-center gap-2">
+            @if (item.email) {
+              <span>👤 {{ item.label }}</span>
+            } @else {
+              <span>🌐 <strong>{{ item.label }}</strong></span>
+            }
+          </div>
+        </ng-template>
+      </p-select>
     </div>
 
     <div class="form-row-2">

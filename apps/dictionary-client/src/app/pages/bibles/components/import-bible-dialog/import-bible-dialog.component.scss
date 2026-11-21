@@ -91,6 +91,18 @@
       gap: 1.25rem;
       margin-top: 0.5rem;
 
+      .form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+
+        .form-label {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: var(--p-surface-700, #334155);
+        }
+      }
+
       p-floatlabel,
       p-float-label {
         width: 100%;

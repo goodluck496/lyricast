@@ -94,6 +94,14 @@ export class AuthController {
     return req.authUser!;
   }
 
+  @Get('users')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Получение списка пользователей для назначения доступа к справочникам' })
+  async getUsers(): Promise<Array<{ id: number; email: string; name?: string }>> {
+    return this.authService.listUsers();
+  }
+
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Авторизация по email (legacy/dev)' })

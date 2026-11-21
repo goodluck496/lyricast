@@ -18,6 +18,7 @@ import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { SharedModule } from 'primeng/api';
 import {
+  AuthApiService,
   BiblesDictionaryApiService,
   UpdateBibleMetaDto,
 } from '@lyri-cast/shared-browser/data-access/dictionaries';
@@ -32,6 +33,12 @@ import {
   LanguageOption,
   svgFlagToDataUrl,
 } from '../../flags-data';
+
+export interface UserOption {
+  label: string;
+  email: string;
+  name?: string;
+}
 
 @Component({
   standalone: true,
@@ -53,6 +60,7 @@ import {
 })
 export class BibleMetaDialogComponent implements OnInit, OnChanges {
   private readonly api = inject(BiblesDictionaryApiService);
+  private readonly authApi = inject(AuthApiService);
 
   @Input({ required: true }) bibleId!: number;
   @Input() initialTitle = '';
@@ -77,6 +85,9 @@ export class BibleMetaDialogComponent implements OnInit, OnChanges {
   isDefault = false;
   isClassicBookOrder = false;
   coverImage = '';
+
+  userOptions: UserOption[] = [];
+  selectedUser: UserOption | null = null;
 
   readonly countries = COUNTRIES_FLAGS;
   selectedCountry: CountryFlagItem | null = null;
@@ -170,6 +181,7 @@ export class BibleMetaDialogComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.syncFromInputs();
+    this.loadUsers();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -181,10 +193,54 @@ export class BibleMetaDialogComponent implements OnInit, OnChanges {
       changes['initialVersion'] ||
       changes['initialIsDefault'] ||
       changes['initialIsClassicBookOrder'] ||
-      changes['initialCoverImage']
+      changes['initialCoverImage'] ||
+      changes['initialOwnerEmail']
     ) {
       this.syncFromInputs();
+      this.syncSelectedUser();
     }
+  }
+
+  loadUsers(): void {
+    this.authApi.getUsers().subscribe({
+      next: (users) => {
+        const publicOption: UserOption = {
+          label: 'Всем (публичный перевод)',
+          email: '',
+        };
+        const mapped: UserOption[] = users.map((u) => ({
+          label: u.name ? `${u.name} (${u.email})` : u.email,
+          email: u.email,
+          name: u.name,
+        }));
+        this.userOptions = [publicOption, ...mapped];
+        this.syncSelectedUser();
+      },
+      error: (err) => {
+        console.warn('[BibleMetaDialog] Failed to load users', err);
+        this.userOptions = [{ label: 'Всем (публичный перевод)', email: '' }];
+        this.syncSelectedUser();
+      },
+    });
+  }
+
+  syncSelectedUser(): void {
+    const email = this.ownerEmail?.trim().toLowerCase();
+    if (!email) {
+      this.selectedUser = this.userOptions[0] || null;
+      return;
+    }
+    let found = this.userOptions.find((u) => u.email.toLowerCase() === email);
+    if (!found) {
+      found = { label: email, email };
+      this.userOptions = [...this.userOptions, found];
+    }
+    this.selectedUser = found;
+  }
+
+  onUserSelect(option: UserOption | null): void {
+    this.selectedUser = option;
+    this.ownerEmail = option?.email || '';
   }
 
   private syncFromInputs(): void {

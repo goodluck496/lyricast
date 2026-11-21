@@ -63,9 +63,11 @@ export class BiblesService {
     if (allBibles.length === 0) return { items: [], totalCount: 0 };
 
     const bibles = allBibles.filter((b) => {
-      const bOwner = b.ownerEmail?.trim().toLowerCase();
-      const isPublic = b.isDefault || !bOwner || bOwner === adminEmail;
-      const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+      const owners = b.ownerEmail
+        ? b.ownerEmail.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+        : [];
+      const isPublic = b.isDefault || owners.length === 0 || owners.includes(adminEmail) || owners.includes('public') || owners.includes('*');
+      const isOwner = Boolean(userEmailLower && owners.includes(userEmailLower));
       return isAdmin || isPublic || isOwner;
     });
 
@@ -164,9 +166,11 @@ export class BiblesService {
     if (allBibles.length === 0) return { updates: [], totalCount: 0 };
 
     const bibles = allBibles.filter((b) => {
-      const bOwner = b.ownerEmail?.trim().toLowerCase();
-      const isPublic = b.isDefault || !bOwner || bOwner === adminEmail;
-      const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+      const owners = b.ownerEmail
+        ? b.ownerEmail.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+        : [];
+      const isPublic = b.isDefault || owners.length === 0 || owners.includes(adminEmail) || owners.includes('public') || owners.includes('*');
+      const isOwner = Boolean(userEmailLower && owners.includes(userEmailLower));
       return isAdmin || isPublic || isOwner;
     });
     if (bibles.length === 0) return { updates: [], totalCount: 0 };
@@ -219,9 +223,11 @@ export class BiblesService {
     const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
     const isAdmin = Boolean(user?.isAdmin || (user?.email && user.email.trim().toLowerCase() === adminEmail));
     const userEmailLower = user?.email?.trim().toLowerCase();
-    const bOwner = bible.ownerEmail?.trim().toLowerCase();
-    const isPublic = bible.isDefault || !bOwner || bOwner === adminEmail;
-    const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+    const owners = bible.ownerEmail
+      ? bible.ownerEmail.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+      : [];
+    const isPublic = bible.isDefault || owners.length === 0 || owners.includes(adminEmail) || owners.includes('public') || owners.includes('*');
+    const isOwner = Boolean(userEmailLower && owners.includes(userEmailLower));
     if (!isAdmin && !isPublic && !isOwner) {
       throw new ForbiddenException('Access to this Bible translation is forbidden');
     }
@@ -348,9 +354,11 @@ export class BiblesService {
     const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
     const isAdmin = Boolean(user?.isAdmin || (user?.email && user.email.trim().toLowerCase() === adminEmail));
     const userEmailLower = user?.email?.trim().toLowerCase();
-    const bOwner = bible.ownerEmail?.trim().toLowerCase();
-    const isPublic = bible.isDefault || !bOwner || bOwner === adminEmail;
-    const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+    const owners = bible.ownerEmail
+      ? bible.ownerEmail.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+      : [];
+    const isPublic = bible.isDefault || owners.length === 0 || owners.includes(adminEmail) || owners.includes('public') || owners.includes('*');
+    const isOwner = Boolean(userEmailLower && owners.includes(userEmailLower));
     if (!isAdmin && !isPublic && !isOwner) {
       throw new ForbiddenException('Access to this Bible translation is forbidden');
     }
@@ -570,9 +578,11 @@ export class BiblesService {
       });
 
       if (existing) {
-        const existingOwner = existing.ownerEmail?.trim().toLowerCase();
-        const isOwner = Boolean(userEmailLower && existingOwner === userEmailLower);
-        if (!isAdmin && existingOwner && !isOwner) {
+        const existingOwners = existing.ownerEmail
+          ? existing.ownerEmail.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+          : [];
+        const isExistingOwner = Boolean(userEmailLower && existingOwners.includes(userEmailLower));
+        if (!isAdmin && existingOwners.length > 0 && !isExistingOwner) {
           throw new ForbiddenException('You do not have permission to overwrite this Bible translation');
         }
       }
@@ -757,9 +767,11 @@ export class BiblesService {
       });
       if (!existing) throw new NotFoundException('Bible not found');
 
-      const existingOwner = existing.ownerEmail?.trim().toLowerCase();
-      const isOwner = Boolean(userEmailLower && existingOwner === userEmailLower);
-      if (!isAdmin && existingOwner && !isOwner) {
+      const existingOwners = existing.ownerEmail
+        ? existing.ownerEmail.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+        : [];
+      const isOwner = Boolean(userEmailLower && existingOwners.includes(userEmailLower));
+      if (!isAdmin && existingOwners.length > 0 && !isOwner) {
         throw new ForbiddenException('You do not have permission to edit this Bible translation');
       }
 
@@ -845,9 +857,11 @@ export class BiblesService {
       });
       if (!bible) throw new NotFoundException('Bible not found');
 
-      const existingOwner = bible.ownerEmail?.trim().toLowerCase();
-      const isOwner = Boolean(userEmailLower && existingOwner === userEmailLower);
-      if (!isAdmin && existingOwner && !isOwner) {
+      const existingOwners = bible.ownerEmail
+        ? bible.ownerEmail.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+        : [];
+      const isOwner = Boolean(userEmailLower && existingOwners.includes(userEmailLower));
+      if (!isAdmin && existingOwners.length > 0 && !isOwner) {
         throw new ForbiddenException('You do not have permission to edit verses in this Bible translation');
       }
 

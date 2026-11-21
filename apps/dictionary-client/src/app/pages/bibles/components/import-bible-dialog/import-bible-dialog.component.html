@@ -66,18 +66,41 @@
           <label for="bibleTitle">Название перевода</label>
         </p-floatlabel>
 
-        <p-floatlabel class="w-full">
-          <input
-            id="ownerEmail"
-            type="email"
-            pInputText
-            [(ngModel)]="ownerEmail"
+        <div class="form-field">
+          <label for="importOwnerSelect" class="form-label">Кому доступен перевод</label>
+          <p-select
+            inputId="importOwnerSelect"
+            [options]="userOptions"
+            [(ngModel)]="selectedUser"
+            (ngModelChange)="onUserSelect($event)"
+            optionLabel="label"
+            placeholder="Всем (публичный перевод)"
+            [showClear]="true"
+            [filter]="true"
+            filterBy="label,email"
             [disabled]="isSaving"
             class="w-full"
-            placeholder=" "
-          />
-          <label for="ownerEmail">Email владельца (кому доступен перевод)</label>
-        </p-floatlabel>
+          >
+            <ng-template pTemplate="selectedItem" let-selected>
+              @if (selected && selected.email) {
+                <div class="flex items-center gap-2">
+                  <span>👤 {{ selected.label }}</span>
+                </div>
+              } @else {
+                <span>🌐 Всем (публичный перевод)</span>
+              }
+            </ng-template>
+            <ng-template pTemplate="item" let-item>
+              <div class="flex items-center gap-2">
+                @if (item.email) {
+                  <span>👤 {{ item.label }}</span>
+                } @else {
+                  <span>🌐 <strong>{{ item.label }}</strong></span>
+                }
+              </div>
+            </ng-template>
+          </p-select>
+        </div>
 
         <div class="lang-select-section">
           <div class="field-header-row">

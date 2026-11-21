@@ -1384,9 +1384,11 @@ export class SongsService {
     if (allBooks.length === 0) return { items: [], totalCount: 0 };
 
     const books = allBooks.filter((b) => {
-      const bOwner = b.ownerEmail?.trim().toLowerCase();
-      const isPublic = !bOwner || bOwner === adminEmail;
-      const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+      const owners = b.ownerEmail
+        ? b.ownerEmail.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+        : [];
+      const isPublic = owners.length === 0 || owners.includes(adminEmail) || owners.includes('public') || owners.includes('*');
+      const isOwner = Boolean(userEmailLower && owners.includes(userEmailLower));
       return isAdmin || isPublic || isOwner;
     });
     if (books.length === 0) return { items: [], totalCount: 0 };
@@ -1461,9 +1463,11 @@ export class SongsService {
     if (allBooks.length === 0) return { updates: [], totalCount: 0 };
 
     const books = allBooks.filter((b) => {
-      const bOwner = b.ownerEmail?.trim().toLowerCase();
-      const isPublic = !bOwner || bOwner === adminEmail;
-      const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+      const owners = b.ownerEmail
+        ? b.ownerEmail.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+        : [];
+      const isPublic = owners.length === 0 || owners.includes(adminEmail) || owners.includes('public') || owners.includes('*');
+      const isOwner = Boolean(userEmailLower && owners.includes(userEmailLower));
       return isAdmin || isPublic || isOwner;
     });
     if (books.length === 0) return { updates: [], totalCount: 0 };

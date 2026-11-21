@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Output } from '@angular/core';
+import { Component, EventEmitter, inject, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpEventType } from '@angular/common/http';
@@ -12,7 +12,10 @@ import { SelectModule } from 'primeng/select';
 import { SharedModule } from 'primeng/api';
 import { BibleTranslate, SongDatabaseInfoDto } from '@lyri-cast/entities';
 import { parseMyBibleSqlite } from '@lyri-cast/common';
-import { BiblesDictionaryApiService } from '@lyri-cast/shared-browser/data-access/dictionaries';
+import {
+  AuthApiService,
+  BiblesDictionaryApiService,
+} from '@lyri-cast/shared-browser/data-access/dictionaries';
 import { SongDictionaryCardComponent } from '@lyri-cast/ui-lib';
 import {
   COUNTRIES_FLAGS,
@@ -23,6 +26,7 @@ import {
   LanguageOption,
   svgFlagToDataUrl,
 } from '../../flags-data';
+import { UserOption } from '../meta-dialog/bible-meta-dialog.component';
 
 let cachedWasmBinaryPromise: Promise<ArrayBuffer> | null = null;
 
@@ -93,8 +97,9 @@ async function loadSqlJsWasmBinary(): Promise<ArrayBuffer> {
   templateUrl: './import-bible-dialog.component.html',
   styleUrl: './import-bible-dialog.component.scss',
 })
-export class ImportBibleDialogComponent {
+export class ImportBibleDialogComponent implements OnInit {
   private readonly api = inject(BiblesDictionaryApiService);
+  private readonly authApi = inject(AuthApiService);
 
   @Output() completed = new EventEmitter<void>();
   @Output() cancelled = new EventEmitter<void>();
@@ -106,6 +111,9 @@ export class ImportBibleDialogComponent {
   catalogId = 1;
   coverImage: string | null = null;
   ownerEmail = '';
+
+  userOptions: UserOption[] = [];
+  selectedUser: UserOption | null = null;
 
   readonly countries = COUNTRIES_FLAGS;
   selectedCountry: CountryFlagItem | null = null;
@@ -131,6 +139,52 @@ export class ImportBibleDialogComponent {
       localVersion: 1,
       ownerEmail: this.ownerEmail.trim() || undefined,
     };
+  }
+
+  ngOnInit(): void {
+    this.loadUsers();
+  }
+
+  loadUsers(): void {
+    this.authApi.getUsers().subscribe({
+      next: (users) => {
+        const publicOption: UserOption = {
+          label: 'Всем (публичный перевод)',
+          email: '',
+        };
+        const mapped: UserOption[] = users.map((u) => ({
+          label: u.name ? `${u.name} (${u.email})` : u.email,
+          email: u.email,
+          name: u.name,
+        }));
+        this.userOptions = [publicOption, ...mapped];
+        this.syncSelectedUser();
+      },
+      error: (err) => {
+        console.warn('[ImportBibleDialog] Failed to load users', err);
+        this.userOptions = [{ label: 'Всем (публичный перевод)', email: '' }];
+        this.syncSelectedUser();
+      },
+    });
+  }
+
+  syncSelectedUser(): void {
+    const email = this.ownerEmail?.trim().toLowerCase();
+    if (!email) {
+      this.selectedUser = this.userOptions[0] || null;
+      return;
+    }
+    let found = this.userOptions.find((u) => u.email.toLowerCase() === email);
+    if (!found) {
+      found = { label: email, email };
+      this.userOptions = [...this.userOptions, found];
+    }
+    this.selectedUser = found;
+  }
+
+  onUserSelect(option: UserOption | null): void {
+    this.selectedUser = option;
+    this.ownerEmail = option?.email || '';
   }
 
   async onCountryChange(country: CountryFlagItem | null): Promise<void> {

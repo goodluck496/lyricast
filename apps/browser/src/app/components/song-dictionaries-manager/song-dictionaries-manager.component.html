@@ -36,7 +36,7 @@
     <p-accordion-content>
       @if (songDictionariesLoading && !songDictionaries.length) {
         <div class="song-dicts__grid song-dicts__grid--skeleton">
-          @for (item of skeletonItems; track item) {
+          @for (item of skeletonItems; track $index) {
             <div class="song-dicts__card">
               <p-skeleton height="150px" width="150px" class="song-dicts__skeleton-card"></p-skeleton>
             </div>

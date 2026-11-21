@@ -14,25 +14,43 @@ export class AuthApiService {
   private readonly basePathToken = inject(BASE_PATH, { optional: true });
 
   resolveBaseUrl(): string {
-    if (this.explicitBase) {
-      const trimmed = this.explicitBase.replace(/\/+$/, '');
-      if (trimmed.endsWith('/songs')) return trimmed.slice(0, -6);
-      if (trimmed.endsWith('/api')) return trimmed.slice(0, -4);
-      return trimmed;
+    let base = (this.explicitBase || this.basePathToken || '').trim().replace(/\/+$/, '');
+    if (base.startsWith('svc:')) {
+      base = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
+        : 'https://lyricast-dictionary-api.onrender.com';
     }
-    if (this.basePathToken) {
-      const trimmed = this.basePathToken.replace(/\/+$/, '');
-      if (trimmed.endsWith('/api')) return trimmed.slice(0, -4);
-      return trimmed;
+    while (
+      base.endsWith('/songs') ||
+      base.endsWith('/bibles') ||
+      base.endsWith('/dictionaries') ||
+      base.endsWith('/api')
+    ) {
+      if (base.endsWith('/songs')) {
+        base = base.slice(0, -6).replace(/\/+$/, '');
+      } else if (base.endsWith('/bibles')) {
+        base = base.slice(0, -7).replace(/\/+$/, '');
+      } else if (base.endsWith('/dictionaries')) {
+        base = base.slice(0, -13).replace(/\/+$/, '');
+      } else if (base.endsWith('/api')) {
+        base = base.slice(0, -4).replace(/\/+$/, '');
+      }
     }
-    return '';
+    return base;
   }
 
   getGoogleAuthUrl(source: 'web' | 'desktop' = 'web', redirectPort?: number): string {
     const base = this.resolveBaseUrl();
     const params = new URLSearchParams({ source });
     if (redirectPort) params.set('redirect_port', String(redirectPort));
-    return `${base}/api/auth/google?${params.toString()}`;
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      params.set('redirect_url', window.location.origin);
+      if (window.location.hash) {
+        params.set('return_path', window.location.hash);
+      }
+    }
+    const prefix = base ? `${base}/api/auth/google` : '/api/auth/google';
+    return `${prefix}?${params.toString()}`;
   }
 
   login(email: string): Observable<AuthControllerLogin200Response> {

@@ -38,6 +38,9 @@ export type BibleDictionaryCardDto = {
   sourceTitle: string;
   isDefault: boolean;
   coverImage?: string;
+  ownerEmail?: string;
+  isOwner?: boolean;
+  canEdit?: boolean;
 };
 
 // Для реестра (аналог RegistryItemDto)
@@ -54,6 +57,9 @@ export type BibleRegistryItemMetaDto = {
   isDefault: boolean;
   isClassicBookOrder: boolean;
   coverImage?: string | null;
+  ownerEmail?: string | null;
+  isOwner?: boolean;
+  canEdit?: boolean;
 };
 
 export type BibleRegistryItemDto = {
@@ -61,6 +67,9 @@ export type BibleRegistryItemDto = {
   fileKey: string;
   humanName: string;
   catalogId: number;
+  ownerEmail?: string | null;
+  isOwner?: boolean;
+  canEdit?: boolean;
   meta?: BibleRegistryItemMetaDto;
 };
 

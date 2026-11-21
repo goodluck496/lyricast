@@ -65,6 +65,15 @@ export class RegistryItemMetaDto {
 
   @ApiProperty()
   songCount!: number;
+
+  @ApiPropertyOptional()
+  ownerEmail?: string | null;
+
+  @ApiPropertyOptional()
+  isOwner?: boolean;
+
+  @ApiPropertyOptional()
+  canEdit?: boolean;
 }
 
 export class RegistryItemDto {
@@ -79,6 +88,15 @@ export class RegistryItemDto {
 
   @ApiProperty()
   catalogId!: number;
+
+  @ApiPropertyOptional()
+  ownerEmail?: string | null;
+
+  @ApiPropertyOptional()
+  isOwner?: boolean;
+
+  @ApiPropertyOptional()
+  canEdit?: boolean;
 
   @ApiProperty({ type: RegistryItemMetaDto, required: false })
   meta?: RegistryItemMetaDto;

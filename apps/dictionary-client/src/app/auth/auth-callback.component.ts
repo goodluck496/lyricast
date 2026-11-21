@@ -120,12 +120,38 @@ export class AuthCallbackComponent implements OnInit {
   userEmail = '';
 
   async ngOnInit(): Promise<void> {
-    // 1. Проверяем URL fragment (#token=...&email=...)
+    const queryParams = this.route.snapshot.queryParamMap;
     const fragment = this.route.snapshot.fragment || '';
     const fragParams = new URLSearchParams(fragment);
-    const token = fragParams.get('token');
-    const email = fragParams.get('email') || this.route.snapshot.queryParamMap.get('email') || '';
-    const error = this.route.snapshot.queryParamMap.get('error') || fragParams.get('error');
+
+    let rawParams: URLSearchParams | null = null;
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const qIndex = window.location.hash.indexOf('?');
+      if (qIndex !== -1) {
+        rawParams = new URLSearchParams(window.location.hash.slice(qIndex + 1));
+      }
+    }
+
+    const token =
+      fragParams.get('token') ||
+      queryParams.get('token') ||
+      rawParams?.get('token');
+
+    const email =
+      fragParams.get('email') ||
+      queryParams.get('email') ||
+      rawParams?.get('email') ||
+      '';
+
+    const error =
+      queryParams.get('error') ||
+      fragParams.get('error') ||
+      rawParams?.get('error');
+
+    const returnPath =
+      fragParams.get('return_path') ||
+      queryParams.get('return_path') ||
+      rawParams?.get('return_path');
 
     this.userEmail = email;
 
@@ -155,7 +181,12 @@ export class AuthCallbackComponent implements OnInit {
         await this.authStorage.saveEmail(email);
       }
       this.isLoading = false;
-      this.router.navigate(['/songs'], { replaceUrl: true });
+      if (returnPath) {
+        const cleanPath = returnPath.replace(/^#\/?/, '/');
+        this.router.navigateByUrl(cleanPath, { replaceUrl: true });
+      } else {
+        this.router.navigate(['/songs'], { replaceUrl: true });
+      }
       return;
     }
 

@@ -19,4 +19,9 @@ export class ImportBibleDto {
   @IsOptional()
   @IsString()
   coverImage?: string;
+
+  @ApiPropertyOptional({ description: 'Email владельца перевода' })
+  @IsOptional()
+  @IsString()
+  ownerEmail?: string;
 }

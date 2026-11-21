@@ -66,7 +66,7 @@ export class AuthOverlayService implements AuthOverlayPort {
         this.errorSubject.next(errMsg);
       }
     } else {
-      window.location.href = this.authApi.getGoogleAuthUrl('desktop');
+      window.location.href = this.authApi.getGoogleAuthUrl('web');
     }
   }
 

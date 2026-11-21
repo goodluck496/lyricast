@@ -73,6 +73,15 @@ function parseGoogleUserInfo(data: unknown): GoogleUserInfo {
   };
 }
 
+export interface OAuthStatePayload {
+  source?: 'web' | 'desktop';
+  redirect_port?: number;
+  frontend_url?: string;
+  return_path?: string;
+  use_hash?: boolean;
+  nonce?: string;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -94,7 +103,40 @@ export class AuthService {
       : 'http://localhost:3000/api/auth/google/callback';
   }
 
-  resolveFrontendUrl(reqHost?: string): string {
+  isAllowedFrontendOrigin(origin: string): boolean {
+    if (!origin) return false;
+    try {
+      const u = new URL(origin);
+      if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
+        return true;
+      }
+      if (u.hostname.endsWith('.onrender.com')) {
+        return true;
+      }
+      const frontendEnv = process.env['FRONTEND_URL'];
+      if (frontendEnv) {
+        try {
+          const fe = new URL(frontendEnv);
+          if (u.origin === fe.origin) return true;
+        } catch {
+          // ignore
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  resolveFrontendUrl(reqHost?: string, candidateUrl?: string): string {
+    if (candidateUrl && this.isAllowedFrontendOrigin(candidateUrl)) {
+      try {
+        const u = new URL(candidateUrl);
+        return u.origin;
+      } catch {
+        // ignore
+      }
+    }
     if (process.env['FRONTEND_URL']) {
       return process.env['FRONTEND_URL'].replace(/\/+$/, '');
     }
@@ -104,24 +146,38 @@ export class AuthService {
     return 'https://lyricast-dictionary-client.onrender.com';
   }
 
-  getGoogleAuthUrl(source: 'web' | 'desktop' = 'web', redirectPort?: number, reqHost?: string): string {
+  getGoogleAuthUrl(
+    source: 'web' | 'desktop' = 'web',
+    redirectPort?: number,
+    reqHost?: string,
+    redirectUrl?: string,
+    returnPath?: string
+  ): string {
     const clientId = process.env['GOOGLE_CLIENT_ID'];
     const redirectUri = this.resolveCallbackUri(reqHost);
+    const resolvedFrontend = this.resolveFrontendUrl(reqHost, redirectUrl);
+    const isHashRouter = Boolean(
+      (returnPath && returnPath.startsWith('#')) ||
+      (redirectUrl && redirectUrl.includes('#'))
+    );
 
-    const statePayload = {
+    const statePayload: OAuthStatePayload = {
       source,
       redirect_port: redirectPort,
+      frontend_url: resolvedFrontend,
+      return_path: returnPath || '',
+      use_hash: isHashRouter,
       nonce: randomUUID(),
     };
     const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
 
     if (!clientId) {
       this.logger.warn('GOOGLE_CLIENT_ID is not configured in environment!');
-      const frontendUrl = this.resolveFrontendUrl(reqHost);
       if (source === 'desktop' && redirectPort) {
         return `http://127.0.0.1:${redirectPort}/callback?error=google_oauth_not_configured`;
       }
-      return `${frontendUrl}/auth/callback?error=google_oauth_not_configured`;
+      const cbPath = isHashRouter ? '/#/auth/callback' : '/auth/callback';
+      return `${resolvedFrontend}${cbPath}?error=google_oauth_not_configured`;
     }
 
     const params = new URLSearchParams({
@@ -142,7 +198,7 @@ export class AuthService {
     stateRaw: string | undefined,
     meta: AuthRequestMeta
   ): Promise<{ redirectUrl: string }> {
-    let state: { source?: 'web' | 'desktop'; redirect_port?: number } = {};
+    let state: OAuthStatePayload = {};
     if (stateRaw) {
       try {
         state = JSON.parse(Buffer.from(stateRaw, 'base64url').toString('utf-8'));
@@ -152,25 +208,27 @@ export class AuthService {
     }
     const isDesktop = state.source === 'desktop';
     const redirectPort = state.redirect_port;
-    const frontendUrl = this.resolveFrontendUrl(meta.reqHost);
+    const frontendUrl = this.resolveFrontendUrl(meta.reqHost, state.frontend_url);
+    const callbackPath = state.use_hash ? '/#/auth/callback' : '/auth/callback';
+
+    const redirectWithError = (err: string, emailVal?: string) => {
+      if (isDesktop && redirectPort) {
+        const emailParam = emailVal ? `&email=${encodeURIComponent(emailVal)}` : '';
+        return { redirectUrl: `http://127.0.0.1:${redirectPort}/callback?error=${err}${emailParam}` };
+      }
+      const emailParam = emailVal ? `&email=${encodeURIComponent(emailVal)}` : '';
+      return { redirectUrl: `${frontendUrl}${callbackPath}?error=${err}${emailParam}` };
+    };
 
     if (!code) {
-      const err = 'code_missing';
-      if (isDesktop && redirectPort) {
-        return { redirectUrl: `http://127.0.0.1:${redirectPort}/callback?error=${err}` };
-      }
-      return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
+      return redirectWithError('code_missing');
     }
 
     const clientId = process.env['GOOGLE_CLIENT_ID'];
     const clientSecret = process.env['GOOGLE_CLIENT_SECRET'];
     if (!clientId || !clientSecret) {
       this.logger.error('GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing!');
-      const err = 'google_oauth_not_configured';
-      if (isDesktop && redirectPort) {
-        return { redirectUrl: `http://127.0.0.1:${redirectPort}/callback?error=${err}` };
-      }
-      return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
+      return redirectWithError('google_oauth_not_configured');
     }
 
     const redirectUri = this.resolveCallbackUri(meta.reqHost);
@@ -191,11 +249,7 @@ export class AuthService {
     if (!tokenRes.ok) {
       const errText = await tokenRes.text();
       this.logger.error(`Failed to exchange google code: ${errText}`);
-      const err = 'oauth_exchange_failed';
-      if (isDesktop && redirectPort) {
-        return { redirectUrl: `http://127.0.0.1:${redirectPort}/callback?error=${err}` };
-      }
-      return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
+      return redirectWithError('oauth_exchange_failed');
     }
 
     const tokenJson: unknown = await tokenRes.json();
@@ -205,11 +259,7 @@ export class AuthService {
         : '';
 
     if (!accessToken) {
-      const err = 'oauth_token_missing';
-      if (isDesktop && redirectPort) {
-        return { redirectUrl: `http://127.0.0.1:${redirectPort}/callback?error=${err}` };
-      }
-      return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
+      return redirectWithError('oauth_token_missing');
     }
 
     // 2. Получение данных профиля Google
@@ -219,11 +269,7 @@ export class AuthService {
 
     if (!userRes.ok) {
       this.logger.error('Failed to fetch google userinfo');
-      const err = 'oauth_userinfo_failed';
-      if (isDesktop && redirectPort) {
-        return { redirectUrl: `http://127.0.0.1:${redirectPort}/callback?error=${err}` };
-      }
-      return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
+      return redirectWithError('oauth_userinfo_failed');
     }
 
     const userData: unknown = await userRes.json();
@@ -231,11 +277,7 @@ export class AuthService {
 
     const email = (googleUser.email || '').trim().toLowerCase();
     if (!email) {
-      const err = 'email_missing';
-      if (isDesktop && redirectPort) {
-        return { redirectUrl: `http://127.0.0.1:${redirectPort}/callback?error=${err}` };
-      }
-      return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
+      return redirectWithError('email_missing');
     }
 
     // 3. Поиск или регистрация пользователя в PostgreSQL
@@ -294,23 +336,10 @@ export class AuthService {
         });
     }
 
-    // 5. Проверка доступа для web (dictionary-client: пока только admin)
-    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
-    if (!isDesktop && email !== adminEmail) {
-      this.logger.warn(`[GoogleAuth] Access to dictionary client forbidden for non-admin: ${email}`);
-      return {
-        redirectUrl: `${frontendUrl}/auth/callback?error=forbidden&email=${encodeURIComponent(email)}`,
-      };
-    }
-
-    // 6. Проверка блокировки пользователя (user.allowed === false)
+    // 5. Проверка блокировки пользователя (user.allowed === false)
     if (user.allowed === false) {
       this.logger.warn(`[GoogleAuth] User is blocked: ${email}`);
-      const err = 'blocked';
-      if (isDesktop && redirectPort) {
-        return { redirectUrl: `http://127.0.0.1:${redirectPort}/callback?error=${err}&email=${encodeURIComponent(email)}` };
-      }
-      return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}&email=${encodeURIComponent(email)}` };
+      return redirectWithError('blocked', email);
     }
 
     // 7. Создание устройства и активной сессии
@@ -331,11 +360,7 @@ export class AuthService {
       )[0].id;
 
     if (foundDevice?.isBlocked) {
-      const err = 'device_blocked';
-      if (isDesktop && redirectPort) {
-        return { redirectUrl: `http://127.0.0.1:${redirectPort}/callback?error=${err}` };
-      }
-      return { redirectUrl: `${frontendUrl}/auth/callback?error=${err}` };
+      return redirectWithError('device_blocked');
     }
 
     await db.delete(schema.sessions).where(eq(schema.sessions.deviceId, deviceId));
@@ -357,8 +382,17 @@ export class AuthService {
       };
     }
 
+    const queryParams = new URLSearchParams({
+      token,
+      email,
+      name: userName,
+    });
+    if (state.return_path) {
+      queryParams.set('return_path', state.return_path);
+    }
+
     return {
-      redirectUrl: `${frontendUrl}/auth/callback#token=${token}&email=${encodeURIComponent(email)}&name=${encodeURIComponent(userName)}`,
+      redirectUrl: `${frontendUrl}${callbackPath}?${queryParams.toString()}`,
     };
   }
 

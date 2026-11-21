@@ -66,6 +66,19 @@
           <label for="bibleTitle">Название перевода</label>
         </p-floatlabel>
 
+        <p-floatlabel class="w-full">
+          <input
+            id="ownerEmail"
+            type="email"
+            pInputText
+            [(ngModel)]="ownerEmail"
+            [disabled]="isSaving"
+            class="w-full"
+            placeholder=" "
+          />
+          <label for="ownerEmail">Email владельца (кому доступен перевод)</label>
+        </p-floatlabel>
+
         <div class="lang-select-section">
           <div class="field-header-row">
             <label for="importLangSelect" class="form-label">Язык перевода</label>

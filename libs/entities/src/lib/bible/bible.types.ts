@@ -67,4 +67,7 @@ export type BibleTranslate = {
   isDefault: boolean;
   isClassicBookOrder: boolean;
   coverImage?: string;
+  ownerEmail?: string;
+  isOwner?: boolean;
+  canEdit?: boolean;
 };

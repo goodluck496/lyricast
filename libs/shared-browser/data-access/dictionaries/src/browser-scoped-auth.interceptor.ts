@@ -34,6 +34,15 @@ export function browserScopedAuthInterceptor(
       '/songs/export-jobs',
       '/songs/dictionaries/song-books',
       '/songs/dictionaries/export-jobs',
+      // Bible dictionaries
+      '/bible/dictionaries',
+      '/bible/dictionaries/install',
+      '/bible/dictionaries/delete',
+      '/bible/dictionaries/clear',
+      // Direct dictionary-api calls if any
+      '/api/bibles/registry',
+      '/api/bibles/versions/check',
+      '/api/bibles',
     ];
 
     const normalizedPath = (() => {

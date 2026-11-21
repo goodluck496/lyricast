@@ -25,15 +25,21 @@ export class AuthController {
   @ApiOperation({ summary: 'Инициация Google OAuth 2.0 авторизации' })
   @ApiQuery({ name: 'source', required: false, enum: ['web', 'desktop'] })
   @ApiQuery({ name: 'redirect_port', required: false, type: Number })
+  @ApiQuery({ name: 'redirect_url', required: false, type: String })
+  @ApiQuery({ name: 'return_path', required: false, type: String })
   googleAuth(
     @Query('source') source: 'web' | 'desktop' = 'web',
     @Query('redirect_port') redirectPort: number | undefined,
+    @Query('redirect_url') redirectUrl: string | undefined,
+    @Query('return_path') returnPath: string | undefined,
     @Req() req: Request,
     @Res() res: Response
   ) {
     const reqHost = req.get('host');
     const port = redirectPort ? Number(redirectPort) : undefined;
-    const url = this.authService.getGoogleAuthUrl(source, port, reqHost);
+    const referer = req.headers['referer'] || req.headers['origin'];
+    const clientRedirect = redirectUrl || (typeof referer === 'string' ? referer : undefined);
+    const url = this.authService.getGoogleAuthUrl(source, port, reqHost, clientRedirect, returnPath);
     return res.redirect(url);
   }
 

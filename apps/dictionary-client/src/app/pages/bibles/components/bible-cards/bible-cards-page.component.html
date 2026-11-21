@@ -39,6 +39,11 @@
             @if (item.meta?.isDefault) {
               <span class="bible-badge bible-badge--default">Основной</span>
             }
+            @if (item.meta?.ownerEmail || item.ownerEmail) {
+              <span class="bible-badge bible-badge--owner" [pTooltip]="'Владелец: ' + (item.meta?.ownerEmail || item.ownerEmail)" tooltipPosition="top">
+                👤 {{ item.meta?.ownerEmail || item.ownerEmail }}
+              </span>
+            }
           </div>
         </div>
 

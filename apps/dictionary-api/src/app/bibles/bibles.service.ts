@@ -2,12 +2,14 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE } from '../database/database.providers';
 import * as schema from '../../lib/db/schema';
+import type { AuthUser } from '../auth/auth.service';
 import {
   BibleRegistryResponseDto,
   BibleRegistryItemDto,
@@ -34,8 +36,12 @@ export class BiblesService {
    * Реестр переводов Библии с агрегированной метой и количеством книг/стихов.
    * Аналог SongsService.registryList()
    */
-  async registryList(): Promise<BibleRegistryResponseDto> {
-    const bibles = await this.db
+  async registryList(user?: AuthUser): Promise<BibleRegistryResponseDto> {
+    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
+    const isAdmin = Boolean(user?.isAdmin || (user?.email && user.email.trim().toLowerCase() === adminEmail));
+    const userEmailLower = user?.email?.trim().toLowerCase();
+
+    const allBibles = await this.db
       .select({
         id: schema.bibles.id,
         fileKey: schema.bibles.fileKey,
@@ -47,11 +53,21 @@ export class BiblesService {
         isDefault: schema.bibles.isDefault,
         isClassicBookOrder: schema.bibles.isClassicBookOrder,
         bibleVersion: schema.bibles.bibleVersion,
+        ownerEmail: schema.bibles.ownerEmail,
         updatedBy: schema.bibles.updatedBy,
         updatedAt: schema.bibles.updatedAt,
       })
       .from(schema.bibles)
       .orderBy(schema.bibles.id);
+
+    if (allBibles.length === 0) return { items: [], totalCount: 0 };
+
+    const bibles = allBibles.filter((b) => {
+      const bOwner = b.ownerEmail?.trim().toLowerCase();
+      const isPublic = b.isDefault || !bOwner || bOwner === adminEmail;
+      const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+      return isAdmin || isPublic || isOwner;
+    });
 
     if (bibles.length === 0) return { items: [], totalCount: 0 };
 
@@ -100,11 +116,18 @@ export class BiblesService {
     }
 
     const items: BibleRegistryItemDto[] = bibles.map((b) => {
+      const bOwner = b.ownerEmail?.trim().toLowerCase();
+      const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+      const canEdit = Boolean(isAdmin || isOwner);
+
       return {
         id: b.id,
         fileKey: b.fileKey,
         humanName: b.humanName,
         catalogId: b.catalogId,
+        ownerEmail: b.ownerEmail ?? null,
+        isOwner,
+        canEdit,
         meta: {
           fileKey: b.fileKey,
           language: b.lang,
@@ -118,6 +141,9 @@ export class BiblesService {
           isDefault: b.isDefault,
           isClassicBookOrder: b.isClassicBookOrder,
           coverImage: metaMap.get(b.fileKey)?.coverImage || metaMap.get(b.fileKey)?.['cover_image'] || null,
+          ownerEmail: b.ownerEmail ?? null,
+          isOwner,
+          canEdit,
         } satisfies BibleRegistryItemMetaDto,
       };
     });
@@ -129,8 +155,20 @@ export class BiblesService {
    * Проверка версий переводов (book.versions.check аналог).
    * Возвращает список переводов, у которых серверная версия новее клиентской.
    */
-  async checkVersions(body: BibleVersionsCheckRequestDto): Promise<BibleVersionsCheckResponseDto> {
-    const bibles = await this.db.select().from(schema.bibles);
+  async checkVersions(body: BibleVersionsCheckRequestDto, user?: AuthUser): Promise<BibleVersionsCheckResponseDto> {
+    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
+    const isAdmin = Boolean(user?.isAdmin || (user?.email && user.email.trim().toLowerCase() === adminEmail));
+    const userEmailLower = user?.email?.trim().toLowerCase();
+
+    const allBibles = await this.db.select().from(schema.bibles);
+    if (allBibles.length === 0) return { updates: [], totalCount: 0 };
+
+    const bibles = allBibles.filter((b) => {
+      const bOwner = b.ownerEmail?.trim().toLowerCase();
+      const isPublic = b.isDefault || !bOwner || bOwner === adminEmail;
+      const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+      return isAdmin || isPublic || isOwner;
+    });
     if (bibles.length === 0) return { updates: [], totalCount: 0 };
 
     const requested = body.bibles ?? [];
@@ -172,11 +210,21 @@ export class BiblesService {
    * Получение облегченной структуры перевода (книги и список глав) без стихов.
    * Позволяет мгновенно открыть вьюер (30-50 мс вместо выгрузки 30 000 стихов).
    */
-  async getBibleStructure(bibleId: number) {
+  async getBibleStructure(bibleId: number, user?: AuthUser) {
     const bible = await this.db.query.bibles.findFirst({
       where: eq(schema.bibles.id, bibleId),
     });
     if (!bible) throw new NotFoundException('Bible not found');
+
+    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
+    const isAdmin = Boolean(user?.isAdmin || (user?.email && user.email.trim().toLowerCase() === adminEmail));
+    const userEmailLower = user?.email?.trim().toLowerCase();
+    const bOwner = bible.ownerEmail?.trim().toLowerCase();
+    const isPublic = bible.isDefault || !bOwner || bOwner === adminEmail;
+    const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+    if (!isAdmin && !isPublic && !isOwner) {
+      throw new ForbiddenException('Access to this Bible translation is forbidden');
+    }
 
     const books = await this.db
       .select({
@@ -212,6 +260,9 @@ export class BiblesService {
         isDefault: bible.isDefault,
         isClassicBookOrder: bible.isClassicBookOrder,
         coverImage: metaMap['coverImage'] || metaMap['cover_image'] || undefined,
+        ownerEmail: bible.ownerEmail ?? undefined,
+        isOwner,
+        canEdit: Boolean(isAdmin || isOwner),
         books: [],
       };
     }
@@ -246,6 +297,9 @@ export class BiblesService {
       isDefault: bible.isDefault,
       isClassicBookOrder: bible.isClassicBookOrder,
       coverImage: metaMap['coverImage'] || metaMap['cover_image'] || undefined,
+      ownerEmail: bible.ownerEmail ?? undefined,
+      isOwner,
+      canEdit: Boolean(isAdmin || isOwner),
       books: books.map((b) => ({
         id: b.id,
         number: b.number,
@@ -285,11 +339,21 @@ export class BiblesService {
    * Экспорт полного перевода в формате BibleTranslate (JSON).
    * Оптимизировано: загрузка в 3 пакетных SQL-запроса вместо 1250 последовательных.
    */
-  async exportBible(bibleId: number): Promise<BibleExportDto> {
+  async exportBible(bibleId: number, user?: AuthUser): Promise<BibleExportDto> {
     const bible = await this.db.query.bibles.findFirst({
       where: eq(schema.bibles.id, bibleId),
     });
     if (!bible) throw new NotFoundException('Bible not found');
+
+    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
+    const isAdmin = Boolean(user?.isAdmin || (user?.email && user.email.trim().toLowerCase() === adminEmail));
+    const userEmailLower = user?.email?.trim().toLowerCase();
+    const bOwner = bible.ownerEmail?.trim().toLowerCase();
+    const isPublic = bible.isDefault || !bOwner || bOwner === adminEmail;
+    const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+    if (!isAdmin && !isPublic && !isOwner) {
+      throw new ForbiddenException('Access to this Bible translation is forbidden');
+    }
 
     const books = await this.db
       .select()
@@ -307,23 +371,45 @@ export class BiblesService {
         books: [],
         isDefault: bible.isDefault,
         isClassicBookOrder: bible.isClassicBookOrder,
+        ownerEmail: bible.ownerEmail ?? undefined,
+        isOwner,
+        canEdit: Boolean(isAdmin || isOwner),
       };
     }
 
     const chapters = await this.db
-      .select()
+      .select({
+        id: schema.bibleChapters.id,
+        bibleBookId: schema.bibleChapters.bibleBookId,
+        number: schema.bibleChapters.number,
+        title: schema.bibleChapters.title,
+      })
       .from(schema.bibleChapters)
-      .where(inArray(schema.bibleChapters.bibleBookId, books.map((b) => b.id)))
+      .innerJoin(
+        schema.bibleBooks,
+        eq(schema.bibleChapters.bibleBookId, schema.bibleBooks.id)
+      )
+      .where(eq(schema.bibleBooks.bibleId, bibleId))
       .orderBy(schema.bibleChapters.number);
 
-    const verses =
-      chapters.length > 0
-        ? await this.db
-            .select()
-            .from(schema.bibleVerses)
-            .where(inArray(schema.bibleVerses.bibleChapterId, chapters.map((c) => c.id)))
-            .orderBy(schema.bibleVerses.number)
-        : [];
+    const verses = await this.db
+      .select({
+        id: schema.bibleVerses.id,
+        bibleChapterId: schema.bibleVerses.bibleChapterId,
+        number: schema.bibleVerses.number,
+        text: schema.bibleVerses.text,
+      })
+      .from(schema.bibleVerses)
+      .innerJoin(
+        schema.bibleChapters,
+        eq(schema.bibleVerses.bibleChapterId, schema.bibleChapters.id)
+      )
+      .innerJoin(
+        schema.bibleBooks,
+        eq(schema.bibleChapters.bibleBookId, schema.bibleBooks.id)
+      )
+      .where(eq(schema.bibleBooks.bibleId, bibleId))
+      .orderBy(schema.bibleVerses.number);
 
     const versesByChapterId = new Map<number, typeof verses>();
     for (const v of verses) {
@@ -349,8 +435,8 @@ export class BiblesService {
           bookId: book.number,
           chapterId: chapter.number,
           path: [book.number, chapter.number, v.number].map(String),
-          next: null as any,
-          prev: null as any,
+          next: undefined as { number: number; chapterId: number; bookId: number; path: string[]; contentType: 'line'; chapterChanged: boolean; bookChanged: boolean } | undefined,
+          prev: undefined as { number: number; chapterId: number; bookId: number; path: string[]; contentType: 'line'; chapterChanged: boolean; bookChanged: boolean } | undefined,
         }));
 
         for (let i = 0; i < content.length; i++) {
@@ -365,7 +451,7 @@ export class BiblesService {
                   chapterChanged: false,
                   bookChanged: false,
                 }
-              : null;
+              : undefined;
           content[i].next =
             i < content.length - 1
               ? {
@@ -377,7 +463,7 @@ export class BiblesService {
                   chapterChanged: false,
                   bookChanged: false,
                 }
-              : null;
+              : undefined;
         }
 
         if (content.length > 0) {
@@ -407,7 +493,7 @@ export class BiblesService {
           bookId: book.number,
           subsections: [
             {
-              heading: null,
+              heading: '',
               bookId: book.number,
               chapterId: chapter.number,
               content,
@@ -420,7 +506,7 @@ export class BiblesService {
         number: book.number,
         title: { short: book.shortTitle, full: book.fullTitle },
         chapters: resultChapters,
-        type: book.type as any,
+        type: book.type,
       };
     });
 
@@ -440,6 +526,9 @@ export class BiblesService {
       isDefault: bible.isDefault,
       isClassicBookOrder: bible.isClassicBookOrder,
       coverImage: coverRow?.value || undefined,
+      ownerEmail: bible.ownerEmail ?? undefined,
+      isOwner,
+      canEdit: Boolean(isAdmin || isOwner),
     };
   }
 
@@ -448,7 +537,7 @@ export class BiblesService {
    * Создаёт/обновляет запись в bibles, bible_books, bible_chapters, bible_verses.
    * Инкрементит версии bible, catalog, dataset_meta.
    */
-  async importBible(dto: ImportBibleDto) {
+  async importBible(dto: ImportBibleDto, user?: AuthUser) {
     const { catalogId, data } = dto;
     if (!data.books || data.books.length === 0) {
       throw new BadRequestException('Bible books list is empty');
@@ -458,6 +547,10 @@ export class BiblesService {
     if (!fileKey) {
       throw new BadRequestException('keyForSearch is required in import payload');
     }
+
+    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
+    const isAdmin = Boolean(user?.isAdmin || (user?.email && user.email.trim().toLowerCase() === adminEmail));
+    const userEmailLower = user?.email?.trim().toLowerCase();
 
     const startTime = Date.now();
     this.logger.log(`[importBible] start fileKey=${fileKey} catalogId=${catalogId} books=${data.books.length}`);
@@ -476,7 +569,20 @@ export class BiblesService {
         where: eq(schema.bibles.fileKey, fileKey),
       });
 
+      if (existing) {
+        const existingOwner = existing.ownerEmail?.trim().toLowerCase();
+        const isOwner = Boolean(userEmailLower && existingOwner === userEmailLower);
+        if (!isAdmin && existingOwner && !isOwner) {
+          throw new ForbiddenException('You do not have permission to overwrite this Bible translation');
+        }
+      }
+
       this.logger.log(`[importBible] bible ${existing ? 'update' : 'create'} fileKey=${fileKey}`);
+
+      const assignedOwnerEmail =
+        dto.ownerEmail?.trim().toLowerCase() ||
+        (existing?.ownerEmail ? existing.ownerEmail : user?.email) ||
+        null;
 
       const now = new Date();
       const bibleBase = {
@@ -488,7 +594,8 @@ export class BiblesService {
         version: data.version ?? '',
         isDefault: data.isDefault ?? false,
         isClassicBookOrder: data.isClassicBookOrder ?? false,
-        updatedBy: 'import',
+        ownerEmail: assignedOwnerEmail,
+        updatedBy: user?.email || 'import',
       };
 
       let bibleId: number;
@@ -636,7 +743,12 @@ export class BiblesService {
    * Обновление метаданных перевода (PATCH /bibles/:id/meta).
    * Инкрементит bibleVersion.
    */
-  async updateBibleMeta(bibleId: number, dto: UpdateBibleMetaDto, updatedBy?: string) {
+  async updateBibleMeta(bibleId: number, dto: UpdateBibleMetaDto, user?: AuthUser) {
+    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
+    const isAdmin = Boolean(user?.isAdmin || (user?.email && user.email.trim().toLowerCase() === adminEmail));
+    const userEmailLower = user?.email?.trim().toLowerCase();
+    const updatedBy = user?.email || 'admin';
+
     return this.db.transaction(async (trx) => {
       await this.ensureDatasetMeta(trx);
 
@@ -644,6 +756,12 @@ export class BiblesService {
         where: eq(schema.bibles.id, bibleId),
       });
       if (!existing) throw new NotFoundException('Bible not found');
+
+      const existingOwner = existing.ownerEmail?.trim().toLowerCase();
+      const isOwner = Boolean(userEmailLower && existingOwner === userEmailLower);
+      if (!isAdmin && existingOwner && !isOwner) {
+        throw new ForbiddenException('You do not have permission to edit this Bible translation');
+      }
 
       const updates: Partial<typeof schema.bibles.$inferInsert> = {};
       const newTitle = (dto.title ?? dto.humanName)?.trim();
@@ -657,6 +775,9 @@ export class BiblesService {
       if (dto.version !== undefined) updates.version = dto.version.trim();
       if (dto.isDefault !== undefined) updates.isDefault = dto.isDefault;
       if (dto.isClassicBookOrder !== undefined) updates.isClassicBookOrder = dto.isClassicBookOrder;
+      if (dto.ownerEmail !== undefined && (isAdmin || isOwner)) {
+        updates.ownerEmail = dto.ownerEmail ? dto.ownerEmail.trim().toLowerCase() : null;
+      }
       if (updatedBy) updates.updatedBy = updatedBy;
 
       if (Object.keys(updates).length > 0) {
@@ -675,7 +796,7 @@ export class BiblesService {
       const metaEntries = [
         { metaKey: 'version', metaValue: String(Number(existing.bibleVersion ?? 0) + 1) },
         { metaKey: 'updated_at', metaValue: now.toISOString() },
-        { metaKey: 'updated_by', metaValue: updatedBy ?? 'system' },
+        { metaKey: 'updated_by', metaValue: updatedBy },
       ];
 
       if (dto.coverImage !== undefined) {
@@ -710,7 +831,12 @@ export class BiblesService {
    * Обновление текста стиха (PUT /bibles/:id/verses/:verseId).
    * Инкрементит bibleVersion.
    */
-  async updateVerse(bibleId: number, verseId: number, dto: UpdateBibleVerseDto, updatedBy?: string) {
+  async updateVerse(bibleId: number, verseId: number, dto: UpdateBibleVerseDto, user?: AuthUser) {
+    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
+    const isAdmin = Boolean(user?.isAdmin || (user?.email && user.email.trim().toLowerCase() === adminEmail));
+    const userEmailLower = user?.email?.trim().toLowerCase();
+    const updatedBy = user?.email || 'verse-edit';
+
     return this.db.transaction(async (trx) => {
       await this.ensureDatasetMeta(trx);
 
@@ -718,6 +844,12 @@ export class BiblesService {
         where: eq(schema.bibles.id, bibleId),
       });
       if (!bible) throw new NotFoundException('Bible not found');
+
+      const existingOwner = bible.ownerEmail?.trim().toLowerCase();
+      const isOwner = Boolean(userEmailLower && existingOwner === userEmailLower);
+      if (!isAdmin && existingOwner && !isOwner) {
+        throw new ForbiddenException('You do not have permission to edit verses in this Bible translation');
+      }
 
       const verse = await trx.query.bibleVerses.findFirst({
         where: eq(schema.bibleVerses.id, verseId),
@@ -749,7 +881,7 @@ export class BiblesService {
       // Bump versions
       await trx
         .update(schema.bibles)
-        .set({ bibleVersion: sql`${schema.bibles.bibleVersion} + 1`, updatedAt: new Date(), updatedBy: updatedBy ?? 'verse-edit' })
+        .set({ bibleVersion: sql`${schema.bibles.bibleVersion} + 1`, updatedAt: new Date(), updatedBy })
         .where(eq(schema.bibles.id, bibleId));
 
       // Обновляем meta
@@ -757,7 +889,7 @@ export class BiblesService {
       const metaEntries = [
         { metaKey: 'version', metaValue: String(Number(bible.bibleVersion ?? 0) + 1) },
         { metaKey: 'updated_at', metaValue: now.toISOString() },
-        { metaKey: 'updated_by', metaValue: updatedBy ?? 'verse-edit' },
+        { metaKey: 'updated_by', metaValue: updatedBy },
       ];
 
       for (const entry of metaEntries) {
@@ -877,6 +1009,9 @@ export class BiblesService {
         sourceTitle: b.sourceTitle,
         isDefault: b.isDefault,
         coverImage: meta.coverImage || meta['cover_image'] || undefined,
+        ownerEmail: b.ownerEmail ?? undefined,
+        isOwner: false,
+        canEdit: false,
       };
     });
   }

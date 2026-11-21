@@ -175,10 +175,20 @@ export class SearchFeatureComponent implements OnInit, AfterViewInit {
         )
       ),
       tap((data) => {
-        const synodalTranslate = data.find((el) =>
-          el.searchKey.toLowerCase().includes('rst')
-        );
-        if (synodalTranslate) {
+        if (!data.length) return;
+
+        let synodalTranslate = data.find((el) => el.baseEntity.isDefault);
+        if (!synodalTranslate) {
+          synodalTranslate = data.find((el) => {
+            const k = (el.searchKey + ' ' + (el.title || '')).toLowerCase();
+            return k.includes('rst') || k.includes('synodal') || k.includes('синодальн');
+          });
+        }
+        if (!synodalTranslate) {
+          synodalTranslate = data[0];
+        }
+
+        if (synodalTranslate && (!this.selectedTranslate || this.selectedTranslate.baseEntity.keyForSearch !== synodalTranslate.baseEntity.keyForSearch)) {
           this.selectedTranslate = synodalTranslate;
 
           this.store.dispatch(

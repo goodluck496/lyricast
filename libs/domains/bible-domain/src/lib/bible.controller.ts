@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, Query, Post, Body, Headers } from '@nestjs/common';
 import { ApiOperation } from '@nestjs/swagger';
 import { BibleByFilesService } from './bible-by-files.service';
 import { BibleChapter, BibleSearchDto, BibleDictionaryCardDto } from '@lyri-cast/entities';
@@ -84,14 +84,31 @@ export class BibleController {
 
   @Get('dictionaries')
   @ApiOperation({ summary: 'Статус установленных переводов Библии' })
-  async getDictionaries(): Promise<BibleDictionaryCardDto[]> {
-    return this.bibleService.getDictionariesStatus();
+  async getDictionaries(
+    @Headers('authorization') authorization?: string,
+    @Headers('x-auth-token') xAuthToken?: string,
+    @Query('authToken') authToken?: string
+  ): Promise<BibleDictionaryCardDto[]> {
+    const auth =
+      authorization ??
+      (xAuthToken ? `Bearer ${xAuthToken}` : undefined) ??
+      (authToken ? `Bearer ${authToken}` : undefined);
+    return this.bibleService.getDictionariesStatus(auth);
   }
 
   @Post('dictionaries/install')
   @ApiOperation({ summary: 'Установить перевод Библии (скачать и сохранить)' })
-  async installDictionary(@Body() body: { fileKey: string; downloadUrl?: string }): Promise<{ ok: boolean }> {
-    await this.bibleService.installDictionary(body.fileKey, body.downloadUrl);
+  async installDictionary(
+    @Body() body: { fileKey: string; downloadUrl?: string },
+    @Headers('authorization') authorization?: string,
+    @Headers('x-auth-token') xAuthToken?: string,
+    @Query('authToken') authToken?: string
+  ): Promise<{ ok: boolean }> {
+    const auth =
+      authorization ??
+      (xAuthToken ? `Bearer ${xAuthToken}` : undefined) ??
+      (authToken ? `Bearer ${authToken}` : undefined);
+    await this.bibleService.installDictionary(body.fileKey, body.downloadUrl, auth);
     return { ok: true };
   }
 

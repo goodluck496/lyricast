@@ -52,7 +52,8 @@ import {
   selectSelectedBook,
   selectSelectedChapter,
   selectSelectedChapterSections,
-  selectSelectedPath
+  selectSelectedPath,
+  selectSelectedTranslate
 } from '@lyri-cast/bible-store';
 import { BibleChapterComponent } from '../../components/bible-chapter/bible-chapter.component';
 import {
@@ -431,19 +432,43 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     this.bibleTranslates$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((data) => {
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        withLatestFrom(this.store.select(selectSelectedTranslate))
+      )
+      .subscribe(([data, currentTranslate]) => {
         this.bibleTranslates = [...data];
-        const translate = data.find((el) =>
-          el.searchKey.toLowerCase().includes('rst')
-        );
-        if (!translate) {
+        if (!data.length) {
           return;
         }
-        this.bibleFormGroup.patchValue({
-          translate,
-          book: null,
-        });
+
+        const formTranslateKey = this.bibleFormGroup.controls.translate.value?.baseEntity?.keyForSearch;
+        const storeTranslateKey = currentTranslate?.keyForSearch;
+        const targetKey = formTranslateKey || storeTranslateKey;
+
+        let translate = targetKey ? data.find((el) => el.baseEntity.keyForSearch === targetKey) : null;
+
+        if (!translate) {
+          translate = data.find((el) => el.baseEntity.isDefault);
+        }
+
+        if (!translate) {
+          translate = data.find((el) => {
+            const k = (el.searchKey + ' ' + (el.title || '')).toLowerCase();
+            return k.includes('rst') || k.includes('synodal') || k.includes('синодальн');
+          });
+        }
+
+        if (!translate) {
+          translate = data[0];
+        }
+
+        if (translate && this.bibleFormGroup.controls.translate.value?.baseEntity?.keyForSearch !== translate.baseEntity.keyForSearch) {
+          this.bibleFormGroup.patchValue({
+            translate,
+            book: null,
+          });
+        }
       });
   }
 

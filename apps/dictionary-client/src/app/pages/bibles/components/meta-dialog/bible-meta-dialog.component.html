@@ -28,6 +28,19 @@
       />
     </div>
 
+    <div class="form-field">
+      <label for="metaOwnerEmail" class="form-label">Email владельца (доступен указанному пользователю и админу)</label>
+      <input
+        id="metaOwnerEmail"
+        type="email"
+        pInputText
+        [(ngModel)]="ownerEmail"
+        [disabled]="isSaving"
+        class="w-full"
+        placeholder="user@example.com"
+      />
+    </div>
+
     <div class="form-row-2">
       <div class="form-field">
         <div class="field-header-row">

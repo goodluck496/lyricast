@@ -242,6 +242,7 @@
       [initialIsDefault]="!!bible.isDefault"
       [initialIsClassicBookOrder]="!!bible.isClassicBookOrder"
       [initialCoverImage]="bible.coverImage || ''"
+      [initialOwnerEmail]="bible.ownerEmail || ''"
       [initialBookCount]="bible.books.length"
       (completed)="handleMetaCompleted($event)"
       (cancelled)="closeMetaDialog()"

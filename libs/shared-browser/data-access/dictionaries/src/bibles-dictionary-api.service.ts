@@ -19,12 +19,14 @@ export interface UpdateBibleMetaDto {
   isDefault?: boolean;
   isClassicBookOrder?: boolean;
   coverImage?: string;
+  ownerEmail?: string;
 }
 
 export interface ImportBibleRequestDto {
   catalogId: number;
   data: BibleTranslate;
   coverImage?: string;
+  ownerEmail?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -35,19 +37,28 @@ export class BiblesDictionaryApiService {
 
   private resolveBaseUrl(): string {
     if (this.explicitBase) {
-      const trimmed = this.explicitBase.replace(/\/+$/, '');
-      if (trimmed.endsWith('/songs')) {
-        return `${trimmed.slice(0, -6)}/bibles`;
+      let base = this.explicitBase.trim().replace(/\/+$/, '');
+      if (base.startsWith('svc:')) {
+        return 'svc://bible/dictionaries';
       }
-      if (trimmed.endsWith('/api')) {
-        return `${trimmed}/bibles`;
+      while (
+        base.endsWith('/songs') ||
+        base.endsWith('/dictionaries') ||
+        base.endsWith('/bibles') ||
+        base.endsWith('/api')
+      ) {
+        if (base.endsWith('/songs')) base = base.slice(0, -6).replace(/\/+$/, '');
+        else if (base.endsWith('/dictionaries')) base = base.slice(0, -13).replace(/\/+$/, '');
+        else if (base.endsWith('/bibles')) base = base.slice(0, -7).replace(/\/+$/, '');
+        else if (base.endsWith('/api')) base = base.slice(0, -4).replace(/\/+$/, '');
       }
-      return `${trimmed}/api/bibles`;
+      return `${base}/api/bibles`;
     }
 
     if (this.basePathToken) {
-      const trimmed = this.basePathToken.replace(/\/+$/, '');
-      return `${trimmed}/api/bibles`;
+      let base = this.basePathToken.trim().replace(/\/+$/, '');
+      if (base.endsWith('/api')) base = base.slice(0, -4).replace(/\/+$/, '');
+      return `${base}/api/bibles`;
     }
 
     return '/api/bibles';

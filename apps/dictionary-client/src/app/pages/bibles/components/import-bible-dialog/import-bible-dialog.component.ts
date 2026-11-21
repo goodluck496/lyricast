@@ -105,6 +105,7 @@ export class ImportBibleDialogComponent {
   language = '';
   catalogId = 1;
   coverImage: string | null = null;
+  ownerEmail = '';
 
   readonly countries = COUNTRIES_FLAGS;
   selectedCountry: CountryFlagItem | null = null;
@@ -128,6 +129,7 @@ export class ImportBibleDialogComponent {
       songCount: this.parsedBible?.books?.length ?? 66,
       version: 1,
       localVersion: 1,
+      ownerEmail: this.ownerEmail.trim() || undefined,
     };
   }
 
@@ -301,6 +303,7 @@ export class ImportBibleDialogComponent {
         catalogId: this.catalogId,
         data: payload,
         coverImage: this.coverImage || undefined,
+        ownerEmail: this.ownerEmail.trim() || undefined,
       })
       .subscribe({
       next: (event) => {

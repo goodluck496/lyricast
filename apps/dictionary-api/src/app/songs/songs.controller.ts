@@ -9,11 +9,13 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
   Res,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
+import { OptionalAuth } from '../auth/optional-auth.decorator';
 import { SongsService } from './songs.service';
 import { CreateSongDto, UpdateSongDto } from './dto/song.dto';
 import { SongBookExportDto } from './dto/song-book-export.dto';
@@ -25,7 +27,7 @@ import {
 import { ImportSongBookDto } from './dto/import-song-book.dto';
 import { UpdateSongBookMetaDto } from './dto/update-song-book-meta.dto';
 import { CreateSongBookDto } from './dto/create-song-book.dto';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 
 @ApiTags('songs')
 @ApiBearerAuth()
@@ -65,20 +67,22 @@ export class SongsController {
    * Список книг с агрегированной метой и количеством песен (registry.list).
    */
   @Get('registry')
+  @OptionalAuth()
   @ApiOperation({ summary: 'Реестр сборников (registry.list)' })
   @ApiOkResponse({ type: RegistryResponseDto })
-  registry() {
-    return this.service.registryList();
+  registry(@Req() req: Request) {
+    return this.service.registryList(req.authUser);
   }
 
   /**
    * Проверка версий книг (book.versions.check).
    */
   @Post('versions/check')
+  @OptionalAuth()
   @ApiOperation({ summary: 'Проверить, какие книги новее на сервере' })
   @ApiOkResponse({ type: VersionsCheckResponseDto })
-  checkVersions(@Body() body: VersionsCheckRequestDto) {
-    return this.service.checkVersions(body);
+  checkVersions(@Body() body: VersionsCheckRequestDto, @Req() req: Request) {
+    return this.service.checkVersions(body, req.authUser);
   }
 
   /**

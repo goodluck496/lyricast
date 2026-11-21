@@ -213,4 +213,13 @@
     background: #dcfce7;
     color: #15803d;
   }
+
+  &--owner {
+    background: #fef3c7;
+    color: #92400e;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }

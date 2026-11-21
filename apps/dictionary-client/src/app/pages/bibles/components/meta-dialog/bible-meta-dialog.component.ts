@@ -63,6 +63,7 @@ export class BibleMetaDialogComponent implements OnInit, OnChanges {
   @Input() initialIsDefault = false;
   @Input() initialIsClassicBookOrder = false;
   @Input() initialCoverImage = '';
+  @Input() initialOwnerEmail = '';
   @Input() initialBookCount = 66;
 
   @Output() completed = new EventEmitter<UpdateBibleMetaDto>();
@@ -72,6 +73,7 @@ export class BibleMetaDialogComponent implements OnInit, OnChanges {
   sourceTitle = '';
   language = '';
   version = '';
+  ownerEmail = '';
   isDefault = false;
   isClassicBookOrder = false;
   coverImage = '';
@@ -96,6 +98,7 @@ export class BibleMetaDialogComponent implements OnInit, OnChanges {
       songCount: this.initialBookCount ?? 66,
       version: Number(this.version) || 1,
       localVersion: Number(this.version) || 1,
+      ownerEmail: this.ownerEmail || undefined,
     };
   }
 
@@ -197,6 +200,7 @@ export class BibleMetaDialogComponent implements OnInit, OnChanges {
     this.sourceTitle = this.initialSourceTitle?.trim() || '';
     this.language = this.initialLanguage?.trim() || 'ru';
     this.version = this.initialVersion?.trim() || '';
+    this.ownerEmail = this.initialOwnerEmail?.trim() || '';
     this.isDefault = !!this.initialIsDefault;
     this.isClassicBookOrder = !!this.initialIsClassicBookOrder;
     this.coverImage = this.initialCoverImage || '';
@@ -237,6 +241,7 @@ export class BibleMetaDialogComponent implements OnInit, OnChanges {
       isDefault: this.isDefault,
       isClassicBookOrder: this.isClassicBookOrder,
       coverImage: this.coverImage,
+      ownerEmail: this.ownerEmail?.trim() || undefined,
     };
 
     this.api.updateMeta(this.bibleId, payload).subscribe({

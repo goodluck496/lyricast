@@ -11,6 +11,8 @@ import {
   BibleTranslate,
   BibleTranslateShort,
   BibleDictionaryCardDto,
+  BibleRegistryItemDto,
+  BibleRegistryResponseDto,
   BOOK_NAMES,
 } from '@lyri-cast/entities';
 import fs from 'fs';
@@ -98,6 +100,9 @@ export class BibleByFilesService {
           const isClassicBookOrderM = fileContent.match(
             /"isClassicBookOrder"\s*:\s*(true|false)/
           );
+          const isDefaultM = fileContent.match(
+            /"isDefault"\s*:\s*(true|false)/
+          );
 
           const key = keyForSearchM ? keyForSearchM[1] : '';
           if (!key) continue;
@@ -105,13 +110,17 @@ export class BibleByFilesService {
           if (seenKeys.has(key)) continue;
           seenKeys.add(key);
 
+          const isDefault = isDefaultM
+            ? isDefaultM[1] === 'true'
+            : (key.toLowerCase().includes('rus_synodal') || key.toLowerCase().includes('синодальн'));
+
           translates.push({
             title: titleM ? titleM[1] : '',
             sourceTitle: sourceTitleM ? sourceTitleM[1] : '',
             keyForSearch: key,
             lang: langM ? langM[1] : 'en',
             version: versionM ? versionM[1] : '',
-            isDefault: false,
+            isDefault,
             isClassicBookOrder: isClassicBookOrderM
               ? isClassicBookOrderM[1] === 'true'
               : false,
@@ -413,8 +422,14 @@ export class BibleByFilesService {
     return (envBase || fallbackBase).replace(/\/+$/, '');
   }
 
-  private getAuthHeaders(): Record<string, string> {
+  private getAuthHeaders(authHeader?: string): Record<string, string> {
     const headers: Record<string, string> = {};
+    if (authHeader) {
+      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+      headers['Authorization'] = authHeader.startsWith('Bearer ') ? authHeader : `Bearer ${authHeader}`;
+      headers['X-Auth-Token'] = token;
+      return headers;
+    }
     const token = this.getAuthToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -452,7 +467,7 @@ export class BibleByFilesService {
    * Для воркера: получение статуса переводов (локальные файлы vs серверные данные).
    * Возвращает BibleDictionaryCardDto[] для UI менеджера справочников.
    */
-  async getDictionariesStatus(): Promise<BibleDictionaryCardDto[]> {
+  async getDictionariesStatus(authHeader?: string): Promise<BibleDictionaryCardDto[]> {
     const shortBibles = this.getAllShortBibles();
     const localByKey = new Map<string, BibleTranslateShort>();
     for (const b of shortBibles) {
@@ -465,9 +480,9 @@ export class BibleByFilesService {
     // 1. Попытка запросить серверный реестр dictionary-api
     try {
       const remoteUrl = `${this.getRemoteApiUrl()}/api/bibles/registry`;
-      const res = await axios.get<{ items: any[]; totalCount: number }>(remoteUrl, {
-        headers: this.getAuthHeaders(),
-        timeout: 5000,
+      const res = await axios.get<BibleRegistryResponseDto>(remoteUrl, {
+        headers: this.getAuthHeaders(authHeader),
+        timeout: 15000,
       });
       const registryItems = res.data?.items ?? [];
 
@@ -504,6 +519,9 @@ export class BibleByFilesService {
           sourceTitle: item.meta?.sourceTitle || item.humanName || '',
           isDefault: !!item.meta?.isDefault,
           coverImage: item.meta?.coverImage || undefined,
+          ownerEmail: item.meta?.ownerEmail || item.ownerEmail || undefined,
+          isOwner: item.meta?.isOwner ?? item.isOwner ?? false,
+          canEdit: item.meta?.canEdit ?? item.canEdit ?? false,
         });
       }
     } catch (e) {
@@ -552,16 +570,16 @@ export class BibleByFilesService {
   /**
    * Установка перевода: скачивание JSON с сервера и сохранение в USER_ASSETS.
    */
-  async installDictionary(fileKey: string, downloadUrl?: string): Promise<void> {
+  async installDictionary(fileKey: string, downloadUrl?: string, authHeader?: string): Promise<void> {
     let url = downloadUrl;
     if (!url) {
       // Ищем ID в registry
       const remoteUrl = `${this.getRemoteApiUrl()}/api/bibles/registry`;
-      const res = await axios.get<{ items: any[] }>(remoteUrl, {
-        headers: this.getAuthHeaders(),
-        timeout: 5000,
+      const res = await axios.get<BibleRegistryResponseDto>(remoteUrl, {
+        headers: this.getAuthHeaders(authHeader),
+        timeout: 15000,
       });
-      const item = res.data?.items?.find((i: any) => i.fileKey?.toLowerCase() === fileKey.toLowerCase());
+      const item = res.data?.items?.find((i) => i.fileKey?.toLowerCase() === fileKey.toLowerCase());
       if (item) {
         url = `${this.getRemoteApiUrl()}/api/bibles/${item.id}/export`;
       } else {
@@ -570,9 +588,11 @@ export class BibleByFilesService {
     }
 
     const res = await axios.get<string | object>(url, {
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(authHeader),
       responseType: 'text',
-      timeout: 30000,
+      timeout: 180000,
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
     });
     const content = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
 

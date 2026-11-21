@@ -47,6 +47,11 @@ function ensureSongDictionariesGuard(
 
 export const appRoutes: Route[] = [
   {
+    path: 'auth/callback',
+    loadComponent: () =>
+      import('./auth/auth-callback.component').then((c) => c.AuthCallbackComponent),
+  },
+  {
     path: 'dictionaries',
     redirectTo: `${Pages.MAIN}/dictionaries`,
     pathMatch: 'full',

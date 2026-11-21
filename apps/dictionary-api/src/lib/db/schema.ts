@@ -9,6 +9,7 @@ import {
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
+import type { BibleBookType } from '@lyri-cast/entities';
 
 // Общие справочники
 export const catalogTypeEnum = pgEnum('catalog_type', ['songs', 'bible', 'program', 'generic']);
@@ -74,7 +75,7 @@ export const bibleBooks = pgTable(
     number: integer('number').notNull(), // 1..66
     shortTitle: text('short_title').notNull(),
     fullTitle: text('full_title').notNull(),
-    type: text('type').notNull(), // BibleBookType enum
+    type: text('type').$type<BibleBookType>().notNull(), // BibleBookType enum
     chapterCount: integer('chapter_count').notNull().default(0),
     verseCount: integer('verse_count').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

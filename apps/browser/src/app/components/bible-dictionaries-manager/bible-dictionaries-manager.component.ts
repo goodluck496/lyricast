@@ -110,6 +110,9 @@ export class BibleDictionariesManagerComponent implements OnInit, OnDestroy {
       localVersion: card.localVersion,
       updatedAt: undefined,
       updatedBy: undefined,
+      ownerEmail: card.ownerEmail,
+      isOwner: card.isOwner,
+      canEdit: card.canEdit,
     };
   }
 

@@ -10,6 +10,7 @@ import { and, eq, ilike, inArray, sql, or } from 'drizzle-orm';
 import { type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DRIZZLE } from '../database/database.providers';
 import * as schema from '../../lib/db/schema';
+import type { AuthUser } from '../auth/auth.service';
 import { CreateSongDto, UpdateSongDto } from './dto/song.dto';
 import { SongLyricDto } from './dto/song-lyrics.dto';
 import { SongBookExport } from './song-book-export.type';
@@ -1365,16 +1366,29 @@ export class SongsService {
   /**
    * Возвращает список книг с агрегированной метой и количеством песен (registry.list аналог).
    */
-  async registryList(): Promise<RegistryResponseDto> {
-    const books = await this.db
+  async registryList(user?: AuthUser): Promise<RegistryResponseDto> {
+    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
+    const isAdmin = Boolean(user?.isAdmin || (user?.email && user.email.trim().toLowerCase() === adminEmail));
+    const userEmailLower = user?.email?.trim().toLowerCase();
+
+    const allBooks = await this.db
       .select({
         id: schema.songBooks.id,
         fileKey: schema.songBooks.fileKey,
         humanName: schema.songBooks.humanName,
         catalogId: schema.songBooks.catalogId,
+        ownerEmail: schema.songBooks.ownerEmail,
       })
       .from(schema.songBooks)
       .orderBy(schema.songBooks.id);
+    if (allBooks.length === 0) return { items: [], totalCount: 0 };
+
+    const books = allBooks.filter((b) => {
+      const bOwner = b.ownerEmail?.trim().toLowerCase();
+      const isPublic = !bOwner || bOwner === adminEmail;
+      const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+      return isAdmin || isPublic || isOwner;
+    });
     if (books.length === 0) return { items: [], totalCount: 0 };
 
     const fileKeys = books.map((b) => b.fileKey);
@@ -1403,11 +1417,18 @@ export class SongsService {
 
     const items: RegistryItemDto[] = books.map((b) => {
       const meta = metaMap.get(b.fileKey) ?? {};
+      const bOwner = b.ownerEmail?.trim().toLowerCase();
+      const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+      const canEdit = Boolean(isAdmin || isOwner);
+
       return {
         id: b.id,
         fileKey: b.fileKey,
         humanName: b.humanName,
         catalogId: b.catalogId,
+        ownerEmail: b.ownerEmail ?? null,
+        isOwner,
+        canEdit,
         meta: {
           fileKey: b.fileKey,
           language: meta.language ?? null,
@@ -1418,6 +1439,9 @@ export class SongsService {
           updatedBy: meta.updated_by ?? null,
           updatedAt: meta.updated_at ?? null,
           songCount: countMap.get(b.id) ?? 0,
+          ownerEmail: b.ownerEmail ?? null,
+          isOwner,
+          canEdit,
         },
       };
     });
@@ -1428,8 +1452,20 @@ export class SongsService {
   /**
    * Возвращает список книг с версиями, которые новее клиента (book.versions.check).
    */
-  async checkVersions(body: VersionsCheckRequestDto): Promise<VersionsCheckResponseDto> {
-    const books = await this.db.select().from(schema.songBooks);
+  async checkVersions(body: VersionsCheckRequestDto, user?: AuthUser): Promise<VersionsCheckResponseDto> {
+    const adminEmail = (process.env['ADMIN_EMAIL'] || 'nikita.a.kalinin@gmail.com').trim().toLowerCase();
+    const isAdmin = Boolean(user?.isAdmin || (user?.email && user.email.trim().toLowerCase() === adminEmail));
+    const userEmailLower = user?.email?.trim().toLowerCase();
+
+    const allBooks = await this.db.select().from(schema.songBooks);
+    if (allBooks.length === 0) return { updates: [], totalCount: 0 };
+
+    const books = allBooks.filter((b) => {
+      const bOwner = b.ownerEmail?.trim().toLowerCase();
+      const isPublic = !bOwner || bOwner === adminEmail;
+      const isOwner = Boolean(userEmailLower && bOwner === userEmailLower);
+      return isAdmin || isPublic || isOwner;
+    });
     if (books.length === 0) return { updates: [], totalCount: 0 };
 
     const requested = body.books ?? [];

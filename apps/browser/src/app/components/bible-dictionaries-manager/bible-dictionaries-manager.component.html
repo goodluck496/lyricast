@@ -53,7 +53,7 @@
 
       @if (bibleDictionariesLoading && !bibleDictionaries.length) {
         <div class="bible-dicts__grid bible-dicts__grid--skeleton">
-          @for (item of skeletonItems; track item) {
+          @for (item of skeletonItems; track $index) {
             <div class="bible-dicts__card">
               <p-skeleton height="150px" width="150px" class="bible-dicts__skeleton-card"></p-skeleton>
             </div>

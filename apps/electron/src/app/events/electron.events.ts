@@ -1,3 +1,4 @@
+import { NdiBroadcasterService, NdiStreamConfig } from '../ndi/ndi.service';
 /**
  * This module is responsible on handling all the inter process communications
  * between the frontend to the electron backend.
@@ -303,3 +304,19 @@ ipcMain.handle(ElectronActionEvents.LOGIN_GOOGLE, async () => {
 // ipcMain.handle(ElectronBibleActionEvents.GET_TRANSLATES, (event, ...args) => {
 //   return pool.request({ action: 'getTranslates', payload: null });
 // });
+
+ipcMain.handle('GET_FILE_SERVER_PORT', () => {
+  return App.fileServerPort;
+});
+
+ipcMain.handle('GET_NDI_STATUS', () => {
+  return NdiBroadcasterService.getInstance().getStatus();
+});
+
+ipcMain.handle('START_NDI_BROADCAST', (_event, config: NdiStreamConfig) => {
+  return NdiBroadcasterService.getInstance().startBroadcast(config);
+});
+
+ipcMain.handle('STOP_NDI_BROADCAST', (_event, channelId: string) => {
+  return NdiBroadcasterService.getInstance().stopBroadcast(channelId);
+});

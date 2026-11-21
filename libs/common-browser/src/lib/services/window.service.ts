@@ -44,6 +44,10 @@ export class WindowService {
           saveUserSettings: () => Promise.resolve(void 0),
           loadQuizState: () => Promise.resolve(null),
           saveQuizState: () => Promise.resolve(void 0),
+          getFileServerPort: () => Promise.resolve(null),
+          getNdiStatus: () => Promise.resolve({ available: false, activeStreams: [] }),
+          startNdiBroadcast: () => Promise.resolve(false),
+          stopNdiBroadcast: () => Promise.resolve(void 0),
           platform: '',
         };
   }

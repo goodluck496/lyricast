@@ -53,4 +53,10 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke(ElectronActionEvents.SAVE_SETTINGS, settings),
   loginGoogle: () =>
     ipcRenderer.invoke(ElectronActionEvents.LOGIN_GOOGLE),
+  getFileServerPort: () => ipcRenderer.invoke('GET_FILE_SERVER_PORT'),
+  getNdiStatus: () => ipcRenderer.invoke('GET_NDI_STATUS'),
+  startNdiBroadcast: (config: any) =>
+    ipcRenderer.invoke('START_NDI_BROADCAST', config),
+  stopNdiBroadcast: (channelId: string) =>
+    ipcRenderer.invoke('STOP_NDI_BROADCAST', channelId),
 } satisfies Context);

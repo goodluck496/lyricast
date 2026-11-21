@@ -1,0 +1,18 @@
+<div class="obs-container">
+  <div
+    class="lower-third"
+    [class.lower-third--hidden]="!isVisible() || isBlackout()"
+  >
+    @if (badgeTitle()) {
+      <div class="lower-third__header">
+        <span class="lower-third__badge">{{ badgeTitle() }}</span>
+      </div>
+    }
+
+    <div class="lower-third__body">
+      @for (line of textLines(); track $index) {
+        <p class="lower-third__line">{{ line }}</p>
+      }
+    </div>
+  </div>
+</div>

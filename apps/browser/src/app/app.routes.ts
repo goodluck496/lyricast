@@ -177,6 +177,20 @@ export const appRoutes: Route[] = [
         (c) => c.StageDisplayComponent
       ),
   },
+  {
+    path: 'obs',
+    loadComponent: () =>
+      import('./pages/obs-stream/obs-stream.component').then(
+        (c) => c.ObsStreamComponent
+      ),
+  },
+  {
+    path: 'obs/:channelId',
+    loadComponent: () =>
+      import('./pages/obs-stream/obs-stream.component').then(
+        (c) => c.ObsStreamComponent
+      ),
+  },
 
   { path: 'EMPTY', component: EmptyPageComponent },
 ];

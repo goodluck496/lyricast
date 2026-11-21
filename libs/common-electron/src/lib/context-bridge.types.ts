@@ -63,6 +63,11 @@ export type Context = {
 
   loginGoogle?: () => Promise<{ ok: boolean; token?: string; email?: string; name?: string; error?: string }>;
 
+  getFileServerPort?: () => Promise<number | null>;
+  getNdiStatus?: () => Promise<{ available: boolean; activeStreams: string[]; version?: string; error?: string }>;
+  startNdiBroadcast?: (config: any) => Promise<boolean>;
+  stopNdiBroadcast?: (channelId: string) => Promise<void>;
+
   // Legacy quiz entrypoints (Electron IPC).
   // После миграции квизов на HTTP API через svc://quiz эти методы могут отсутствовать.
   loadQuizState?: () => Promise<unknown | null>;

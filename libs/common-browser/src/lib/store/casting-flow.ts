@@ -154,7 +154,8 @@ function createOpenCastingEffect<State>({
             from(
               window.electronContext.openWindow({
                 display,
-                title: '',
+                title: 'Main Casting',
+                channelId: 'main',
                 type: AppWindowTypes.CASTING,
               })
             ).pipe(

@@ -1,11 +1,13 @@
 import { inject, Injectable } from '@angular/core';
 import {
+  APP_COMMON_ACTIONS,
   AppDisplay,
+  AppWindowTypes,
   OutputChannelConfig,
   OutputRole,
   OutputTargetType,
 } from '@lyri-cast/common-electron';
-import { WindowService } from './window.service';
+import { DEFAULT_CASTING_PAGE_CONFIG, WindowService } from './window.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { filterEmpty } from '@lyri-cast/common';
 
@@ -144,6 +146,67 @@ export class SettingsService {
 
   getActiveChannels(): OutputChannelConfig[] {
     return this.getChannels().filter((c) => c.enabled);
+  }
+
+  async openActiveCastingWindows(options: {
+    featurePath: string[];
+    onMainWindowProcId?: (procId: number) => void;
+  }): Promise<void> {
+    const activeChannels = this.getActiveChannels();
+    const isEmulatedGlobal = this.getEmulationMode();
+
+    for (const channel of activeChannels) {
+      if (!channel.enabled) continue;
+      const targetDisplay =
+        this.getDisplayById(channel.displayId) || this.displays[0];
+      const isEmulated = isEmulatedGlobal || channel.targetType === 'emulated';
+
+      if (
+        channel.targetType === 'display' ||
+        channel.targetType === 'emulated'
+      ) {
+        const procId = await this.winSrv.electronContext.openWindow({
+          ...DEFAULT_CASTING_PAGE_CONFIG,
+          display: targetDisplay,
+          title: channel.name,
+          channelId: channel.id,
+          emulated: isEmulated,
+          type: AppWindowTypes.CASTING,
+        });
+
+        if (channel.id === 'main' && options.onMainWindowProcId) {
+          options.onMainWindowProcId(procId);
+        }
+
+        let path: string[] = options.featurePath;
+        let queryParams: Record<string, string> | undefined = undefined;
+
+        if (channel.role === 'stage') {
+          path = ['stage-display'];
+        } else if (channel.role === 'secondary_bible') {
+          path = options.featurePath;
+          queryParams = { role: 'secondary_bible' };
+        } else if (channel.role === 'lower_third') {
+          path = ['obs', channel.id];
+        }
+
+        await this.winSrv.electronContext.send({
+          event: APP_COMMON_ACTIONS.openPage,
+          payload: { path, queryParams },
+          targetChannelId: channel.id,
+        });
+      }
+    }
+  }
+
+  async closeAllCastingWindows(): Promise<void> {
+    if (this.winSrv.electronContext.closeAllCastingWindows) {
+      await this.winSrv.electronContext.closeAllCastingWindows();
+    } else {
+      await this.winSrv.electronContext.closeWindow({
+        type: AppWindowTypes.CASTING,
+      });
+    }
   }
 
   private async loadDisplays(): Promise<AppDisplay[]> {

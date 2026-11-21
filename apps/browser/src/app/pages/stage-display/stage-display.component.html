@@ -1,0 +1,58 @@
+<div class="stage-container" [class.stage-container--blackout]="isBlackout()">
+  <!-- Header Bar -->
+  <header class="stage-header">
+    <div class="stage-header__left">
+      <span class="stage-badge stage-badge--role">СУФЛЕР (STAGE)</span>
+      @if (headerTitle()) {
+        <span class="stage-badge stage-badge--title">{{ headerTitle() }}</span>
+      }
+    </div>
+
+    <div class="stage-header__center">
+      @if (slideIndicator()) {
+        <span class="stage-indicator">{{ slideIndicator() }}</span>
+      }
+    </div>
+
+    <div class="stage-header__right">
+      <span class="stage-clock">{{ currentTime() }}</span>
+    </div>
+  </header>
+
+  <!-- Main Body -->
+  <main class="stage-body">
+    <!-- Current Slide Section (65% height, large bold text) -->
+    <section class="stage-section stage-section--current">
+      <div class="stage-label">ТЕКУЩИЙ СЛАЙД</div>
+      <div class="stage-content stage-content--current">
+        @if (currentText().length > 0) {
+          @for (line of currentText(); track $index) {
+            <p class="stage-line stage-line--current">{{ line }}</p>
+          }
+        } @else {
+          <div class="stage-idle">Ожидание контента...</div>
+        }
+      </div>
+    </section>
+
+    <!-- Next Slide Section (35% height, muted preview text) -->
+    <section class="stage-section stage-section--next">
+      <div class="stage-label stage-label--next">СЛЕДУЮЩИЙ:</div>
+      <div class="stage-content stage-content--next">
+        @if (nextText().length > 0) {
+          @for (line of nextText(); track $index) {
+            <p class="stage-line stage-line--next">{{ line }}</p>
+          }
+        }
+      </div>
+    </section>
+  </main>
+
+  <!-- Operator Alert Banner -->
+  @if (operatorMessage()) {
+    <aside class="stage-alert-banner">
+      <span class="stage-alert-icon">⚠️</span>
+      <span class="stage-alert-text">{{ operatorMessage() }}</span>
+    </aside>
+  }
+</div>

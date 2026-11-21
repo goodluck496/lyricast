@@ -29,13 +29,13 @@
               [fontFamily]="appearance().fontFamily"
               [virtualWidth]="1920"
               [virtualHeight]="1080"
-              [textToWatch]="primaryLine()"
+              [textToWatch]="displayedLine()"
               class="slides__fit"
               lyriFitText
             >
               <div class="slides__content-wrapper">
                 <div
-                  [innerHTML]="sanitizeHtml(primaryLine())"
+                  [innerHTML]="sanitizeHtml(displayedLine())"
                   [ngStyle]="appearanceService.getTextStyles(appearance())"
                   class="slides__content">
                 </div>

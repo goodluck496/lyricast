@@ -189,32 +189,15 @@ export class FreeSlideSidebarComponent {
     this.isOpeningWindow.next(true);
     try {
       await this.settingsSrv.init();
-      const display = await firstValueFrom(this.settingsSrv.getDisplayForCasting());
-      if (!display) {
-        return;
-      }
-
       this.store.dispatch(FreeSlideActions[FreeSlideActionsEnum.stopCasting]());
 
-      const procId = await this.windowSrv.electronContext.openWindow({
-        ...DEFAULT_CASTING_PAGE_CONFIG,
-        display,
-        title: 'Casting Window',
-        type: AppWindowTypes.CASTING,
-      });
-
-      this.store.dispatch(AppActions.setProcId({ procId, pageType: AppWindowTypes.CASTING }));
-
-      await firstValueFrom(
-        this.bridge.queueEvents.pipe(
-          skip(1),
-          filter((event): event is { event: string; payload: unknown } => !!event && event.event === APP_COMMON_ACTIONS.appInit)
-        )
-      );
-
-      await this.windowSrv.electronContext.send({
-        event: APP_COMMON_ACTIONS.openPage,
-        payload: { path: [Pages.FREE_SLIDE_FEATURE, Pages.CASTING] },
+      await this.settingsSrv.openActiveCastingWindows({
+        featurePath: [Pages.FREE_SLIDE_FEATURE, Pages.CASTING],
+        onMainWindowProcId: (procId) => {
+          this.store.dispatch(
+            AppActions.setProcId({ procId, pageType: AppWindowTypes.CASTING })
+          );
+        },
       });
     } finally {
       this.isOpeningWindow.next(false);

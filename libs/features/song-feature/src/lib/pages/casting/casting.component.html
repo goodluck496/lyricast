@@ -1,4 +1,4 @@
-<div class="casting-surface" [ngStyle]="appearanceService.getBackgroundStyles(displayAppearance())">
+<div class="casting-surface" [class.casting-surface--blackout]="isBlackout()" [ngStyle]="appearanceService.getBackgroundStyles(displayAppearance())">
   <div class="info-block" [class.hide]="!showingContent()">
     <div class="info-block__type" [class.hide]="!selectedSong()">{{ selectedLyric()?.sectionTitle }}</div>
     <div class="info-block__number" [class.hide]="!selectedSong()">{{ selectedSong()?.number }}</div>

@@ -29,7 +29,9 @@ function ensureSongDictionariesGuard(
   if (
     state?.url?.includes(`/${Pages.MAIN}/dictionaries`) ||
     state?.url?.includes(`/${Pages.CASTING}`) ||
-    state?.url?.includes('/casting')
+    state?.url?.includes('/casting') ||
+    state?.url?.includes('/stage-display') ||
+    state?.url?.includes('/obs')
   ) {
     return of(true);
   }
@@ -165,6 +167,14 @@ export const appRoutes: Route[] = [
     loadChildren: () =>
       import('@lyri-cast/quiz-feature').then(
         (c) => c.quizFeatureRoutes,
+      ),
+  },
+
+  {
+    path: 'stage-display',
+    loadComponent: () =>
+      import('./pages/stage-display/stage-display.component').then(
+        (c) => c.StageDisplayComponent
       ),
   },
 

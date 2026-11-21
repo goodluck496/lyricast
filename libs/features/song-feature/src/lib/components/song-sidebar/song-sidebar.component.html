@@ -37,6 +37,18 @@
         (ngModelChange)="onFreezeToggle($event)"
       />
     </div>
+    <div class="song-sidebar__switch-row">
+      <label class="song-sidebar__switch-label" for="song-blackout">
+        <i class="pi pi-eye-slash"></i>
+        <span>Blackout All</span>
+      </label>
+      <p-toggleswitch
+        inputId="song-blackout"
+        [disabled]="(openedCastingWindow$ | async) === false"
+        [ngModel]="isBlackoutAll"
+        (ngModelChange)="onBlackoutAllToggle($event)"
+      />
+    </div>
   </div>
 
   <lyri-navigator-feature class="control-sidebar__navigator" feature="songs">

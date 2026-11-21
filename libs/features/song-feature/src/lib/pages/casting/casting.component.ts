@@ -71,6 +71,7 @@ export class CastingComponent implements OnInit, AfterViewInit, OnDestroy {
   fitTexts = viewChildren(Ng2FittextDirective);
 
   hideContent = true;
+  isBlackout = signal(false);
   private revealInitVersion = 0;
   private hideContentTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -139,6 +140,17 @@ export class CastingComponent implements OnInit, AfterViewInit, OnDestroy {
       this.cdr.detectChanges();
       this.updateTextSize();
     });
+
+    this.bridge.queueEvents
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((evt) => {
+        if (!evt) return;
+        if (evt.event === 'BLACKOUT_ALL') {
+          const payload = evt.payload as { active?: boolean } | undefined;
+          this.isBlackout.set(payload?.active ?? !this.isBlackout());
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   async ngAfterViewInit() {

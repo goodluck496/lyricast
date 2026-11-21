@@ -16,12 +16,19 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import Reveal, { Api } from 'reveal.js';
 
 import { BibleBookShort, BibleVerseForCasting } from '@lyri-cast/entities';
-import { BridgeService, CastingAppearanceService, LyriFitTextDirective, Pages } from '@lyri-cast/common-browser';
+import {
+  BridgeService,
+  CastingAppearanceService,
+  LyriFitTextDirective,
+  Pages,
+  SettingsService,
+} from '@lyri-cast/common-browser';
 import { APP_COMMON_ACTIONS } from '@lyri-cast/common-electron';
 import {
   BibleActions,
@@ -57,12 +64,20 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
   secondaryEnabled = signal(false);
   secondaryLayout = signal<BibleSecondaryCastingLayout>('right');
   secondarySizePercent = signal(50);
-  primaryLine = computed(() => {
-    console.log('PRIMARY LINE', this.selectedContents()[0]?.text[0] ?? '', this.showingContent());
+  private readonly route = inject(ActivatedRoute);
+  private readonly settingsSrv = inject(SettingsService);
+  readonly isSecondaryOnly = signal(false);
 
-    return this.selectedContents()[0]?.text[0] ?? ''
+  primaryLine = computed(() => {
+    return this.selectedContents()[0]?.text[0] ?? '';
   });
   secondaryLine = computed(() => this.secondaryContents()[0]?.text[0] ?? '');
+  displayedLine = computed(() => {
+    if (this.isSecondaryOnly()) {
+      return this.secondaryLine() || this.primaryLine();
+    }
+    return this.primaryLine();
+  });
   showingContent = signal(false);
   fitTexts = viewChildren(LyriFitTextDirective);
   protected readonly appearanceService = inject(CastingAppearanceService);
@@ -111,6 +126,12 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        this.isSecondaryOnly.set(params.get('role') === 'secondary_bible');
+      });
+
     this.castingPaused$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => {
@@ -293,6 +314,15 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   hasSecondaryContent(): boolean {
+    if (this.isSecondaryOnly()) {
+      return false;
+    }
+    const hasDedicatedScreen = this.settingsSrv
+      .getActiveChannels()
+      .some((c) => c.role === 'secondary_bible');
+    if (hasDedicatedScreen) {
+      return false;
+    }
     return this.secondaryEnabled() && this.secondaryContents().length > 0;
   }
 

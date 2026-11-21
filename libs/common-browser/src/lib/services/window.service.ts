@@ -32,6 +32,8 @@ export class WindowService {
           getAppVersion: () => Promise.resolve(''),
           getWindowType: () => Promise.resolve(AppWindowTypes.MAIN),
           closeWindow: () => Promise.resolve(void 0),
+          closeCastingWindow: () => Promise.resolve(void 0),
+          closeAllCastingWindows: () => Promise.resolve(void 0),
           openWindow: () => Promise.resolve(0),
           getDisplays: () => Promise.resolve([]),
           checkForAppUpdates: () => Promise.resolve(void 0),

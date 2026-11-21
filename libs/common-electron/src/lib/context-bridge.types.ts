@@ -5,11 +5,14 @@ import { BrowserWindowConstructorOptions } from 'electron';
 export type OpenWindowArgs = BrowserWindowConstructorOptions & {
   type: AppWindowTypes;
   title: string;
-  display: AppDisplay
+  display?: AppDisplay;
+  channelId?: string;
+  emulated?: boolean;
 };
 
 export type CloseWindowArgs = {
   type: AppWindowTypes;
+  channelId?: string;
 };
 
 export const APP_COMMON_ACTIONS = {
@@ -35,6 +38,7 @@ export type AppCommonActionKeys = keyof typeof APP_COMMON_ACTIONS;
 export type EventData = {
   event: string;
   payload: unknown;
+  targetChannelId?: string | string[];
 };
 
 export type Context = {
@@ -42,6 +46,8 @@ export type Context = {
   getAppVersion: () => Promise<string>;
   openWindow: (arg: OpenWindowArgs) => Promise<number>;
   closeWindow: (arg: CloseWindowArgs) => Promise<void>;
+  closeCastingWindow?: (channelId: string) => Promise<void>;
+  closeAllCastingWindows?: () => Promise<void>;
   getDisplays: () => Promise<AppDisplay[]>;
 
   send: (data: EventData) => void;

@@ -5,6 +5,7 @@ import {
   ElectronCommonEvents,
 } from '../events/events.types';
 import {
+  AppWindowTypes,
   CloseWindowArgs,
   Context,
   EventData,
@@ -19,6 +20,10 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke(ElectronActionEvents.OPEN_WINDOW, arg),
   closeWindow: (arg: CloseWindowArgs) =>
     ipcRenderer.invoke(ElectronActionEvents.CLOSE_WINDOW, arg),
+  closeCastingWindow: (channelId: string) =>
+    ipcRenderer.invoke(ElectronActionEvents.CLOSE_WINDOW, { type: AppWindowTypes.CASTING, channelId }),
+  closeAllCastingWindows: () =>
+    ipcRenderer.invoke(ElectronActionEvents.CLOSE_WINDOW, { type: AppWindowTypes.CASTING }),
   getDisplays: () => ipcRenderer.invoke(ElectronAppEvents.GET_DISPLAYS),
   send: (data: EventData) => {
     const str = JSON.stringify(data);

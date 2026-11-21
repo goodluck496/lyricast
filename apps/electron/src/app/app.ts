@@ -49,7 +49,34 @@ export default class App {
     Record<AppWindowTypes, Electron.BrowserWindow>
   > = {};
 
+  static castingWindows = new Map<string, Electron.BrowserWindow>();
+  static castingWindowProcessIds = new Map<number, string>();
+
   static openedWindowTypesByProcess: Record<number, AppWindowTypes> = {};
+
+  public static closeCastingWindow(channelId: string) {
+    const win = App.castingWindows.get(channelId);
+    if (win) {
+      if (!win.isDestroyed()) {
+        win.destroy();
+      }
+      App.castingWindows.delete(channelId);
+    }
+    if (App.castingWindows.size === 0) {
+      App.openedWindows[AppWindowTypes.CASTING] = null;
+    }
+  }
+
+  public static closeAllCastingWindows() {
+    App.castingWindows.forEach((win) => {
+      if (win && !win.isDestroyed()) {
+        win.destroy();
+      }
+    });
+    App.castingWindows.clear();
+    App.castingWindowProcessIds.clear();
+    App.openedWindows[AppWindowTypes.CASTING] = null;
+  }
 
   public static isDevelopmentMode() {
     const isEnvironmentSet: boolean = 'ELECTRON_IS_DEV' in process.env;
@@ -59,10 +86,16 @@ export default class App {
     return isEnvironmentSet ? getFromEnvironment : !environment.production;
   }
 
-  public static onClose(type: AppWindowTypes) {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
+  public static onClose(type: AppWindowTypes, channelId?: string) {
+    if (type === AppWindowTypes.CASTING) {
+      if (channelId) {
+        App.closeCastingWindow(channelId);
+      } else {
+        App.closeAllCastingWindows();
+      }
+      return;
+    }
+
     const openedWin = App.openedWindows[type];
 
     if (openedWin) {
@@ -77,52 +110,55 @@ export default class App {
 
   public static createWindow(
     type: AppWindowTypes,
-    options: BrowserWindowConstructorOptions
+    options: BrowserWindowConstructorOptions,
+    channelId?: string
   ): BrowserWindow {
-    //
     const win = new BrowserWindow(options);
     const processId = win.webContents.getProcessId();
-    App.openedWindows[type] = win;
+
+    if (type === AppWindowTypes.CASTING) {
+      const actualChannelId = channelId || 'main';
+      App.castingWindows.set(actualChannelId, win);
+      App.castingWindowProcessIds.set(processId, actualChannelId);
+      if (!App.openedWindows[AppWindowTypes.CASTING] || actualChannelId === 'main') {
+        App.openedWindows[AppWindowTypes.CASTING] = win;
+      }
+    } else {
+      App.openedWindows[type] = win;
+    }
+
     App.openedWindowTypesByProcess[processId] = type;
 
     const subs: Subscription[] = [];
 
     win.on(ElectronAppEvents.CLOSE, () => {
-      // Dereference the window object, usually you would store windows
-      // in an array if your app supports multi windows, this is the time
-      // when you should delete the corresponding element.
-
       if (type !== AppWindowTypes.MAIN) {
-        App.openedWindows[AppWindowTypes.MAIN].webContents.send(
-          ElectronCommonEvents.RECEIVE,
-          JSON.stringify({
-            event: APP_COMMON_ACTIONS.closeWindow,
-            payload: { processId },
-          })
-        );
-      } else {
-        Array.from(Object.entries(App.openedWindows)).forEach(
-          ([key, browserWindow]) => {
-            App.onClose(key as AppWindowTypes);
-
-            if (
-              browserWindow &&
-              !browserWindow.isDestroyed() &&
-              browserWindow.destroy
-            ) {
-              browserWindow?.destroy();
-            }
+        const associatedChannelId = App.castingWindowProcessIds.get(processId);
+        if (associatedChannelId) {
+          App.castingWindows.delete(associatedChannelId);
+          App.castingWindowProcessIds.delete(processId);
+          if (App.castingWindows.size === 0) {
+            App.openedWindows[AppWindowTypes.CASTING] = null;
           }
-        );
+        }
+        if (App.openedWindows[AppWindowTypes.MAIN] && !App.openedWindows[AppWindowTypes.MAIN].isDestroyed()) {
+          App.openedWindows[AppWindowTypes.MAIN].webContents.send(
+            ElectronCommonEvents.RECEIVE,
+            JSON.stringify({
+              event: APP_COMMON_ACTIONS.closeWindow,
+              payload: { processId, channelId: associatedChannelId },
+            })
+          );
+        }
+      } else {
+        App.closeAllCastingWindows();
       }
     });
 
     win.on(ElectronAppEvents.CLOSED, () => {
-      // Dereference the window object, usually you would store windows
-      // in an array if your app supports multi windows, this is the time
-      // when you should delete the corresponding element.
-
-      App.openedWindows[type] = null;
+      if (type === AppWindowTypes.MAIN) {
+        App.openedWindows[type] = null;
+      }
       subs.forEach((sub) => sub.unsubscribe());
     });
 
@@ -139,7 +175,7 @@ export default class App {
     return win;
   }
 
-  public static loadWindow(windowType: AppWindowTypes) {
+  public static loadWindow(windowType: AppWindowTypes, channelId?: string) {
     // load the index.html of the app.
     let urlObject: URL | null = null;
 
@@ -149,8 +185,17 @@ export default class App {
       urlObject = new URL(`http://localhost:${App.fileServerPort}`);
     }
 
+    let openedWindow: Electron.BrowserWindow | null | undefined = null;
+    if (windowType === AppWindowTypes.CASTING) {
+      openedWindow = channelId ? App.castingWindows.get(channelId) : App.openedWindows[AppWindowTypes.CASTING];
+    } else {
+      openedWindow = App.openedWindows[windowType];
+    }
 
-    const openedWindow = App.openedWindows[windowType];
+    if (!openedWindow) {
+      return;
+    }
+
     openedWindow.loadURL(urlObject.href).then(() => {
       if (windowType === AppWindowTypes.MAIN && !App.application.isPackaged) {
         App.BrowserWindow.getAllWindows()[0].webContents.openDevTools();

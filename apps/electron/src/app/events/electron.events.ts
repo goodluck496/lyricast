@@ -37,45 +37,66 @@ ipcMain.handle(
   ElectronActionEvents.OPEN_WINDOW,
   (event, args: OpenWindowArgs) => {
     console.log(`OpenWindow event: `, event, args);
-    if (App.openedWindows[args.type]) {
-      return;
-    }
 
-    /**
-     * todo можно оформить в отдельную функцию=
-     */
     if (args.type === AppWindowTypes.CASTING) {
-      const { x, y } = args.display.bounds;
-      App.createWindow(args.type, {
-        webPreferences: {
-          ...DEFAULT_WEB_PREF,
-        },
-        x,
-        y,
-        fullscreenable: true,
-        fullscreen: true,
-        alwaysOnTop: true,
-        ...args,
-        backgroundColor: '#000000',
-        show: true,
-        frame: false, // Нужно для правильной работы opacity на Windows
-        opacity: 0,   // Открываем окно полностью прозрачным
-      });
-      App.loadWindow(args.type);
+      const channelId = args.channelId || 'main';
+      const existing = App.castingWindows.get(channelId);
+      if (existing && !existing.isDestroyed()) {
+        existing.focus();
+        return existing.webContents.getProcessId();
+      }
 
-      App.openedWindows[args.type].once(ElectronAppEvents.READY_TO_SHOW, () => {
+      let winOptions: any;
+      if (args.emulated) {
+        winOptions = {
+          webPreferences: {
+            ...DEFAULT_WEB_PREF,
+          },
+          width: 1280,
+          height: 720,
+          fullscreenable: true,
+          fullscreen: false,
+          alwaysOnTop: false,
+          frame: true,
+          title: `[LyriCast Эмуляция] ${args.title || channelId}`,
+          backgroundColor: '#000000',
+          show: true,
+          opacity: 0,
+        };
+      } else {
+        const { x, y, width, height } = args.display?.bounds || { x: 0, y: 0, width: 1920, height: 1080 };
+        winOptions = {
+          webPreferences: {
+            ...DEFAULT_WEB_PREF,
+          },
+          x,
+          y,
+          width,
+          height,
+          fullscreenable: true,
+          fullscreen: true,
+          alwaysOnTop: true,
+          ...args,
+          backgroundColor: '#000000',
+          show: true,
+          frame: false,
+          opacity: 0,
+        };
+      }
+
+      const win = App.createWindow(args.type, winOptions, channelId);
+      App.loadWindow(args.type, channelId);
+
+      win.once(ElectronAppEvents.READY_TO_SHOW, () => {
         setTimeout(() => {
-          if (App.openedWindows[args.type]) {
-            // Делаем окно видимым (отменяем прозрачность) только когда оно 100% готово
-            App.openedWindows[args.type].setOpacity(1);
+          if (!win.isDestroyed()) {
+            win.setOpacity(1);
           }
-        }, 1000); // Дадим чуть больше времени на отрисовку Angular
+        }, 800);
       });
 
-      // App.openedWindows[args.type].menuBarVisible = true;
-      App.openedWindows[args.type].menuBarVisible = false;
-
-      return App.openedWindows[args.type].webContents.getProcessId();
+      win.menuBarVisible = false;
+      return win.webContents.getProcessId();
     }
   }
 );
@@ -83,11 +104,9 @@ ipcMain.handle(
 ipcMain.handle(
   ElectronActionEvents.CLOSE_WINDOW,
   (event, args: CloseWindowArgs) => {
-    console.log('close window ',event.processId , args);
-    if (!App.openedWindows[args.type]) {
-      return;
-    }
+    console.log('close window ', event.processId, args);
     if (args.type === AppWindowTypes.MAIN) {
+      App.closeAllCastingWindows();
       Array.from(Object.entries(App.openedWindows))
         .filter(([key, browserWindow]) => key !== AppWindowTypes.MAIN)
         .forEach(([key, browserWindow]) => {
@@ -97,6 +116,12 @@ ipcMain.handle(
             browserWindow?.destroy();
           }
         });
+    } else if (args.type === AppWindowTypes.CASTING) {
+      if (args.channelId) {
+        App.closeCastingWindow(args.channelId);
+      } else {
+        App.closeAllCastingWindows();
+      }
     } else {
       App.onClose(args.type);
     }
@@ -112,24 +137,37 @@ ipcMain.handle(ElectronActionEvents.GET_WINDOW_TYPE, (event) => {
   return App.openedWindowTypesByProcess[event.processId];
 });
 
-ipcMain.handle(ElectronCommonEvents.SEND, (event, payload) => {
-  Object.keys(App.openedWindows).forEach((key) => {
-    const targetWindow = App.openedWindows[key];
-    if (!targetWindow) {
-      console.log('!targetWindow');
-      return;
+ipcMain.handle(ElectronCommonEvents.SEND, (event, rawPayload) => {
+  let targetChannelId: string | string[] | undefined;
+
+  try {
+    const parsed = typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;
+    if (parsed && parsed.targetChannelId) {
+      targetChannelId = parsed.targetChannelId;
     }
-    if (targetWindow.webContents.id === event.sender.id) {
-      console.log(
-        '[CONTINUE] targetWindow.webContents.id === event.sender.id'
-        // JSON.stringify(payload)
-      );
-      return; // Пропускаем, если это отправляющее окно
+  } catch {
+    // raw payload might not be JSON
+  }
+
+  // 1. Send to mainWindow if sender is not mainWindow
+  const mainWindow = App.openedWindows[AppWindowTypes.MAIN];
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.id !== event.sender.id) {
+    mainWindow.webContents.send(ElectronCommonEvents.RECEIVE, rawPayload);
+  }
+
+  // 2. Send to casting windows
+  App.castingWindows.forEach((castingWin, channelId) => {
+    if (!castingWin || castingWin.isDestroyed()) return;
+    if (castingWin.webContents.id === event.sender.id) return;
+
+    if (targetChannelId) {
+      const targets = Array.isArray(targetChannelId) ? targetChannelId : [targetChannelId];
+      if (!targets.includes(channelId)) {
+        return;
+      }
     }
-    App.openedWindows[key].webContents.send(
-      ElectronCommonEvents.RECEIVE,
-      payload
-    );
+
+    castingWin.webContents.send(ElectronCommonEvents.RECEIVE, rawPayload);
   });
 });
 

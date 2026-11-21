@@ -104,6 +104,7 @@
                   (ngModelChange)="onUpdateChannelRole(channel, $event)"
                   optionLabel="label"
                   optionValue="value"
+                  appendTo="body"
                   class="w-full p-select-sm"
                 />
               </td>
@@ -123,6 +124,7 @@
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Выберите монитор"
+                    appendTo="body"
                     class="w-full p-select-sm"
                   />
                 }
@@ -254,6 +256,7 @@
               [options]="ambientBackgroundPresetOptions"
               [ngModel]="ambientBackgroundPreset"
               [disabled]="!ambientBackgroundEnabled"
+              appendTo="body"
               (ngModelChange)="onAmbientBackgroundPresetChange($event)"
             >
               <ng-template pTemplate="selectedItem" let-value>
@@ -286,6 +289,7 @@
               inputId="fontSelect"
               [options]="fontOptions"
               [ngModel]="selectedFont"
+              appendTo="body"
               (ngModelChange)="onFontChange($event)"
             >
               <ng-template pTemplate="selectedItem" let-value>

@@ -114,7 +114,7 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
   });
   hasSecondaryContent = computed(() => {
     const s = this.secondarySettings();
-    if (!s?.enabled) {
+    if (!s?.enabled || s?.destination === 'dedicated') {
       return false;
     }
 

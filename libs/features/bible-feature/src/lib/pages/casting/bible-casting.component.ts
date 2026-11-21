@@ -34,6 +34,7 @@ import {
   BibleActions,
   BiblePresentationNavigatePayload,
   BibleSecondaryCastingLayout,
+  BibleSecondaryDestination,
   BibleStartCastingPayload,
   selectCastingAppearance,
   selectCastingPaused,
@@ -64,6 +65,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
   secondaryEnabled = signal(false);
   secondaryLayout = signal<BibleSecondaryCastingLayout>('right');
   secondarySizePercent = signal(50);
+  secondaryDestination = signal<BibleSecondaryDestination>('split');
   private readonly route = inject(ActivatedRoute);
   private readonly settingsSrv = inject(SettingsService);
   readonly isSecondaryOnly = signal(false);
@@ -171,6 +173,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
         this.secondaryEnabled.set(settings.enabled);
         this.secondaryLayout.set(settings.layout);
         this.secondarySizePercent.set(settings.sizePercent);
+        this.secondaryDestination.set(settings.destination || 'split');
 
         if (!settings.enabled) {
           this.secondaryContents.set([]);
@@ -317,6 +320,9 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.isSecondaryOnly()) {
       return false;
     }
+    if (this.secondaryDestination() === 'dedicated') {
+      return false;
+    }
     const hasDedicatedScreen = this.settingsSrv
       .getActiveChannels()
       .some((c) => c.role === 'secondary_bible');
@@ -395,6 +401,9 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.secondaryEnabled.set(payload.secondarySettings.enabled);
     this.secondaryLayout.set(payload.secondarySettings.layout);
     this.secondarySizePercent.set(payload.secondarySettings.sizePercent);
+    if (payload.secondarySettings.destination) {
+      this.secondaryDestination.set(payload.secondarySettings.destination);
+    }
   }
 
   private prepareContentForDisplay(

@@ -77,6 +77,7 @@ export const bibleInitialState: BibleState = {
     translate: null,
     layout: 'right',
     sizePercent: 50,
+    destination: 'split',
   },
   secondaryTranslationCache: {},
 };

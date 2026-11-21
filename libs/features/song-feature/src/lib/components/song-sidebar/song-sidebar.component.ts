@@ -2,9 +2,11 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SongCastingPreviewComponent } from '../casting-preview/song-casting-preview.component';
@@ -76,6 +78,41 @@ export class SongSidebarComponent {
   private readonly bridge = inject(BridgeService);
   private readonly appearanceService = inject(CastingAppearanceService);
   readonly textLayout = inject(SongTextLayoutService);
+
+  activePreviewTab: 'main' | 'stage' = 'main';
+  readonly clockTime = signal<string>(new Date().toLocaleTimeString('ru-RU'));
+  private clockInterval: any;
+
+  readonly activeChannels$ = this.settingsSrv
+    .getChannelsObservable()
+    .pipe(map((channels) => channels.filter((c) => c.enabled)));
+
+  readonly currentLyricText = computed(() => {
+    const line = this.songPageSelectSrv.selectedLyricLine();
+    return line ? this.textLayout.formatHtmlForDisplay(line.text) : '';
+  });
+
+  readonly nextLyricText = computed(() => {
+    const line = this.songPageSelectSrv.selectedLyricLine();
+    if (!line) return '';
+    const lyrics = this.songPageSelectSrv.selectedLyricsForCasting();
+    const allLines = lyrics.flatMap((l) => l.lines);
+    const next = allLines.find(
+      (l) => l.globalSongIndex === line.globalSongIndex + 1
+    );
+    return next ? this.textLayout.formatHtmlForDisplay(next.text) : '';
+  });
+
+  constructor() {
+    this.clockInterval = setInterval(() => {
+      this.clockTime.set(new Date().toLocaleTimeString('ru-RU'));
+    }, 1000);
+    this.destroyRef.onDestroy(() => {
+      if (this.clockInterval) {
+        clearInterval(this.clockInterval);
+      }
+    });
+  }
 
   isOpeningWindow = new BehaviorSubject<boolean>(false);
 

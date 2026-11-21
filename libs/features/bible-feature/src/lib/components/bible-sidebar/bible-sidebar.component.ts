@@ -11,6 +11,7 @@ import {
   BibleActions,
   BibleSecondaryCastingContent,
   BibleSecondaryCastingLayout,
+  BibleSecondaryDestination,
   BibleState,
   createBibleSecondaryTranslationCacheKey,
   selectCastingFrozen,
@@ -18,10 +19,13 @@ import {
   selectSecondaryTranslationCache,
   selectSecondaryTranslationSettings,
   selectSelectedBibleVerse,
+  selectSelectedBook,
   selectSelectedChapterSections,
+  selectSelectedSecondaryTranslationSections,
   selectSelectedTranslate,
   selectSelectedVersesRange,
 } from '@lyri-cast/bible-store';
+import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import {
   BehaviorSubject,
@@ -134,8 +138,74 @@ export class BibleSidebarComponent {
   private readonly settingsSrv = inject(SettingsService);
   private readonly bridge = inject(BridgeService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly appearanceService = inject(CastingAppearanceService);
+  readonly appearanceService = inject(CastingAppearanceService);
+  readonly appearance = this.appearanceService.appearanceFor('bible');
+  readonly sanitizer = inject(DomSanitizer);
   private readonly apiSrv = inject(BibleApiService);
+
+  activePreviewTab: 'main' | 'secondary' = 'main';
+
+  readonly activeChannels$ = this.settingsSrv
+    .getChannelsObservable()
+    .pipe(map((channels) => channels.filter((c) => c.enabled)));
+
+  isBlackoutAll = false;
+
+  onBlackoutAllToggle(enabled: boolean): void {
+    this.isBlackoutAll = enabled;
+    this.bridge.send('BLACKOUT_ALL' as any, { active: enabled });
+  }
+
+  onSecondaryDestinationChange(destination: BibleSecondaryDestination): void {
+    this.store.dispatch(
+      BibleActions.updateSecondaryTranslationSettings({ destination })
+    );
+  }
+
+  readonly secondaryTranslateTitle$ = this.secondarySettings$.pipe(
+    map(
+      (s) => s.translate?.title || s.translate?.sourceTitle || 'Второй перевод'
+    )
+  );
+
+  readonly selectedVerseRef$ = combineLatest([
+    this.store.select(selectSelectedBook),
+    this.store.select(selectSelectedBibleVerse),
+    this.selectedRange$,
+  ]).pipe(
+    map(([book, verse, range]) => {
+      if (!verse) return '';
+      const num = range
+        ? range.from === range.to
+          ? `${range.from}`
+          : `${range.from}-${range.to}`
+        : `${verse.number}`;
+      return `${book?.title?.full || ''} ${verse.chapterId}:${num}`;
+    })
+  );
+
+  readonly secondaryPreviewText$ = combineLatest([
+    this.store.select(selectSelectedSecondaryTranslationSections),
+    this.store.select(selectSelectedBibleVerse),
+    this.selectedRange$,
+  ]).pipe(
+    map(([sections, selectedVerse, range]) => {
+      if (!sections || sections.length === 0 || !selectedVerse) return '';
+      const verses = sections.flatMap((s) => s.content);
+      if (range) {
+        const filtered = verses.filter(
+          (v) => v.number >= range.from && v.number <= range.to
+        );
+        return filtered
+          .map((v) => `<span class="verse-num">${v.number}</span> ${v.text}`)
+          .join(' ');
+      }
+      const single = verses.find((v) => v.number === selectedVerse.number);
+      return single
+        ? `<span class="verse-num">${single.number}</span> ${single.text}`
+        : '';
+    })
+  );
   secondaryTranslateOptions$ = combineLatest([
     this.apiSrv.getTranslates(),
     this.primaryTranslate$,

@@ -29,11 +29,14 @@ export type BibleSecondaryCastingContent = {
   content: BibleVerseForCasting[];
 };
 
+export type BibleSecondaryDestination = 'split' | 'dedicated';
+
 export type BibleSecondaryTranslationSettings = {
   enabled: boolean;
   translate: BibleTranslateShort | null;
   layout: BibleSecondaryCastingLayout;
   sizePercent: number;
+  destination?: BibleSecondaryDestination;
 };
 
 export function createBibleSecondaryTranslationCacheKey(

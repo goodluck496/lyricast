@@ -1,5 +1,66 @@
 <div class="control-sidebar__wrapper">
-  <lyri-song-casting-preview class="control-sidebar__preview" />
+  <!-- Preview switcher tabs -->
+  <div class="sidebar-preview-tabs">
+    <button
+      type="button"
+      class="sidebar-preview-tab"
+      [class.sidebar-preview-tab--active]="activePreviewTab === 'main'"
+      (click)="activePreviewTab = 'main'"
+    >
+      <i class="pi pi-desktop"></i>
+      <span>Зал</span>
+    </button>
+    <button
+      type="button"
+      class="sidebar-preview-tab"
+      [class.sidebar-preview-tab--active]="activePreviewTab === 'stage'"
+      (click)="activePreviewTab = 'stage'"
+    >
+      <i class="pi pi-eye"></i>
+      <span>Сцена (Суфлер)</span>
+    </button>
+  </div>
+
+  @if (activePreviewTab === 'main') {
+    <lyri-song-casting-preview class="control-sidebar__preview" />
+  } @else {
+    <div class="sidebar-stage-preview control-sidebar__preview">
+      <div class="sidebar-stage-preview__header">
+        <span class="stage-tag"><i class="pi pi-desktop"></i> СЦЕНА</span>
+        <span class="stage-clock">{{ clockTime() }}</span>
+      </div>
+      <div class="sidebar-stage-preview__body">
+        <div
+          class="stage-current-line"
+          [innerHTML]="currentLyricText() || '— Нет текста —'"
+        ></div>
+      </div>
+      <div class="sidebar-stage-preview__footer">
+        <span class="next-label">СЛЕДУЮЩИЙ:</span>
+        <span class="next-text" [innerHTML]="nextLyricText() || '—'"></span>
+      </div>
+    </div>
+  }
+
+  <!-- Active Screen Indicators -->
+  <div class="sidebar-channels-bar">
+    <div class="sidebar-channels-bar__label">
+      <span>Экраны трансляции:</span>
+      <span class="sidebar-channels-bar__count">{{ (activeChannels$ | async)?.length || 0 }}</span>
+    </div>
+    <div class="sidebar-channels-bar__chips">
+      @for (ch of activeChannels$ | async; track ch.id) {
+        <div
+          class="sidebar-channel-chip"
+          [class.sidebar-channel-chip--live]="!(castingIsPaused$ | async) && (openedCastingWindow$ | async)"
+          [title]="ch.name + ' (' + ch.role + ')'"
+        >
+          <span class="status-dot"></span>
+          <span class="chip-name">{{ ch.name }}</span>
+        </div>
+      }
+    </div>
+  </div>
 
   <div class="control-sidebar__actions relative">
     @if (castingIsPaused$ | async) {

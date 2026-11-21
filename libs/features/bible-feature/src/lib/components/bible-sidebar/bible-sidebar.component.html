@@ -1,5 +1,71 @@
 <div class="control-sidebar__wrapper">
-  <lyri-bible-casting-preview class="control-sidebar__preview"></lyri-bible-casting-preview>
+  <!-- Preview switcher tabs -->
+  <div class="sidebar-preview-tabs">
+    <button
+      type="button"
+      class="sidebar-preview-tab"
+      [class.sidebar-preview-tab--active]="activePreviewTab === 'main'"
+      (click)="activePreviewTab = 'main'"
+    >
+      <i class="pi pi-desktop"></i>
+      <span>Зал (Основной)</span>
+    </button>
+    <button
+      type="button"
+      class="sidebar-preview-tab"
+      [class.sidebar-preview-tab--active]="activePreviewTab === 'secondary'"
+      (click)="activePreviewTab = 'secondary'"
+    >
+      <i class="pi pi-book"></i>
+      <span>2-й перевод</span>
+    </button>
+  </div>
+
+  @if (activePreviewTab === 'main') {
+    <lyri-bible-casting-preview class="control-sidebar__preview"></lyri-bible-casting-preview>
+  } @else {
+    <div
+      class="sidebar-secondary-preview control-sidebar__preview"
+      [ngStyle]="appearanceService.getBackgroundStyles(appearance())"
+    >
+      <div class="preview-header">
+        <div [ngStyle]="appearanceService.getReferenceStyles(appearance())">
+          {{ selectedVerseRef$ | async }}
+          <span class="translate-badge">{{ secondaryTranslateTitle$ | async }}</span>
+        </div>
+      </div>
+      <div class="sidebar-secondary-preview__body">
+        <div
+          class="slide-content"
+          [innerHTML]="sanitizer.bypassSecurityTrustHtml((secondaryPreviewText$ | async) || '— Нет текста —')"
+          [ngStyle]="appearanceService.getTextStyles(appearance())"
+        ></div>
+      </div>
+      <div class="sidebar-secondary-preview__tag">
+        <span>Отдельный монитор • 100% размер</span>
+      </div>
+    </div>
+  }
+
+  <!-- Active Screen Indicators -->
+  <div class="sidebar-channels-bar">
+    <div class="sidebar-channels-bar__label">
+      <span>Экраны трансляции:</span>
+      <span class="sidebar-channels-bar__count">{{ (activeChannels$ | async)?.length || 0 }}</span>
+    </div>
+    <div class="sidebar-channels-bar__chips">
+      @for (ch of activeChannels$ | async; track ch.id) {
+        <div
+          class="sidebar-channel-chip"
+          [class.sidebar-channel-chip--live]="!(castingIsPaused$ | async) && (openedCastingWindow$ | async)"
+          [title]="ch.name + ' (' + ch.role + ')'"
+        >
+          <span class="status-dot"></span>
+          <span class="chip-name">{{ ch.name }}</span>
+        </div>
+      }
+    </div>
+  </div>
 
   <div class="control-sidebar__actions">
     @if (castingIsPaused$ | async) {
@@ -37,6 +103,18 @@
         (ngModelChange)="onFreezeToggle($event)"
       ></p-toggleswitch>
     </div>
+    <div class="bible-sidebar__switch-row">
+      <label class="bible-sidebar__switch-label" for="bible-blackout">
+        <i class="pi pi-eye-slash"></i>
+        <span>Blackout All</span>
+      </label>
+      <p-toggleswitch
+        inputId="bible-blackout"
+        [disabled]="(openedCastingWindow$ | async) === false"
+        [ngModel]="isBlackoutAll"
+        (ngModelChange)="onBlackoutAllToggle($event)"
+      ></p-toggleswitch>
+    </div>
   </div>
 
   @if (secondarySettings$ | async; as secondarySettings) {
@@ -51,6 +129,30 @@
 
       @if (secondarySettings.enabled) {
         <div class="control-sidebar__secondary-field">
+          <label class="sidebar-field-label">Режим вывода:</label>
+          <div class="sidebar-destination-switch">
+            <button
+              type="button"
+              class="destination-option"
+              [class.destination-option--active]="(secondarySettings.destination || 'split') === 'split'"
+              (click)="onSecondaryDestinationChange('split')"
+            >
+              <i class="pi pi-table"></i>
+              <span>Сплит (50/50)</span>
+            </button>
+            <button
+              type="button"
+              class="destination-option"
+              [class.destination-option--active]="secondarySettings.destination === 'dedicated'"
+              (click)="onSecondaryDestinationChange('dedicated')"
+            >
+              <i class="pi pi-desktop"></i>
+              <span>Отдельный монитор</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="control-sidebar__secondary-field">
           <p-select
             [ngModel]="secondarySettings.translate"
             (ngModelChange)="onSecondaryTranslateChange($event)"
@@ -63,34 +165,41 @@
           ></p-select>
         </div>
 
-        <div class="control-sidebar__secondary-field">
-          <p-select
-            [ngModel]="secondarySettings.layout"
-            (ngModelChange)="onSecondaryLayoutChange($event)"
-            [options]="layoutOptions"
-            optionLabel="label"
-            optionValue="value"
-            appendTo="body"
-            styleClass="w-full"
-          ></p-select>
-        </div>
+        @if (secondarySettings.destination === 'dedicated') {
+          <div class="sidebar-dedicated-hint">
+            <i class="pi pi-check-circle"></i>
+            <span>Транслируется во весь экран на отдельный монитор без деления и сжатия.</span>
+          </div>
+        } @else {
+          <div class="control-sidebar__secondary-field">
+            <p-select
+              [ngModel]="secondarySettings.layout"
+              (ngModelChange)="onSecondaryLayoutChange($event)"
+              [options]="layoutOptions"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              styleClass="w-full"
+            ></p-select>
+          </div>
 
-        <div class="control-sidebar__secondary-size">
-          <span>Размер</span>
-          <span>{{ secondarySettings.sizePercent }}%</span>
-        </div>
-        <mat-slider
-          class="control-sidebar__secondary-slider"
-          [min]="25"
-          [max]="70"
-          [step]="5"
-        >
-          <input
-            matSliderThumb
-            [value]="secondarySettings.sizePercent"
-            (valueChange)="onSecondarySizeChange($event)"
-          />
-        </mat-slider>
+          <div class="control-sidebar__secondary-size">
+            <span>Размер</span>
+            <span>{{ secondarySettings.sizePercent }}%</span>
+          </div>
+          <mat-slider
+            class="control-sidebar__secondary-slider"
+            [min]="25"
+            [max]="70"
+            [step]="5"
+          >
+            <input
+              matSliderThumb
+              [value]="secondarySettings.sizePercent"
+              (valueChange)="onSecondarySizeChange($event)"
+            />
+          </mat-slider>
+        }
       }
     </div>
   }

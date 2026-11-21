@@ -77,10 +77,23 @@
         </div>
         <div class="sidebar-secondary-preview__body">
           <div
-            class="slide-content"
-            [innerHTML]="sanitizer.bypassSecurityTrustHtml((secondaryPreviewText$ | async) || '— Нет текста —')"
-            [ngStyle]="appearanceService.getTextStyles(appearance())"
-          ></div>
+            [maxFontSize]="appearance().maxFontSize"
+            [minFontSize]="appearance().minFontSize"
+            [fontFamily]="appearance().fontFamily"
+            [virtualWidth]="1920"
+            [virtualHeight]="1080"
+            [textToWatch]="(secondaryPreviewText$ | async) || ''"
+            class="preview-fit"
+            lyriFitText
+          >
+            <div class="slide-content-wrapper">
+              <div
+                class="slide-content"
+                [innerHTML]="sanitizer.bypassSecurityTrustHtml((secondaryPreviewText$ | async) || '— Нет текста —')"
+                [ngStyle]="appearanceService.getTextStyles(appearance())"
+              ></div>
+            </div>
+          </div>
         </div>
         <div class="sidebar-secondary-preview__tag">
           <span>Отдельный монитор • 100% размер</span>
@@ -136,96 +149,94 @@
 
     <div navigator-secondary class="bible-sidebar__secondary-tab-panel">
       @if (secondarySettings$ | async; as secondarySettings) {
-        <div class="secondary-panel-card">
-          <div class="secondary-panel-header">
-            <span class="text-sm font-semibold text-gray-200">Включить 2-й перевод</span>
-            <p-toggleswitch
-              [ngModel]="secondarySettings.enabled"
-              (ngModelChange)="onSecondaryEnabledChange($event)"
-            ></p-toggleswitch>
-          </div>
+        <div class="secondary-toggle-row">
+          <span class="secondary-toggle-label">Включить 2-й перевод</span>
+          <p-toggleswitch
+            [ngModel]="secondarySettings.enabled"
+            (ngModelChange)="onSecondaryEnabledChange($event)"
+          ></p-toggleswitch>
+        </div>
 
-          @if (secondarySettings.enabled) {
-            <div class="secondary-panel-body">
-              <div class="secondary-panel-field">
-                <label class="field-label">Куда выводить:</label>
-                <div class="sidebar-destination-switch">
-                  <button
-                    type="button"
-                    class="destination-option"
-                    [class.destination-option--active]="(secondarySettings.destination || 'split') === 'split'"
-                    (click)="onSecondaryDestinationChange('split')"
-                  >
-                    <i class="pi pi-table"></i>
-                    <span>Сплит на этом экране</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="destination-option"
-                    [class.destination-option--active]="secondarySettings.destination === 'dedicated'"
-                    (click)="onSecondaryDestinationChange('dedicated')"
-                  >
-                    <i class="pi pi-desktop"></i>
-                    <span>Отдельный монитор</span>
-                  </button>
-                </div>
+        @if (secondarySettings.enabled) {
+          <div class="secondary-controls-group">
+            <div class="secondary-panel-field">
+              <label class="field-label">Куда выводить:</label>
+              <div class="sidebar-destination-switch">
+                <button
+                  type="button"
+                  class="destination-option"
+                  [class.destination-option--active]="(secondarySettings.destination || 'split') === 'split'"
+                  (click)="onSecondaryDestinationChange('split')"
+                >
+                  <i class="pi pi-table"></i>
+                  <span>Сплит на этом экране</span>
+                </button>
+                <button
+                  type="button"
+                  class="destination-option"
+                  [class.destination-option--active]="secondarySettings.destination === 'dedicated'"
+                  (click)="onSecondaryDestinationChange('dedicated')"
+                >
+                  <i class="pi pi-desktop"></i>
+                  <span>Отдельный монитор</span>
+                </button>
               </div>
+            </div>
 
+            <div class="secondary-panel-field">
+              <label class="field-label">Перевод Библии:</label>
+              <p-select
+                [ngModel]="secondarySettings.translate"
+                (ngModelChange)="onSecondaryTranslateChange($event)"
+                [options]="(secondaryTranslateOptions$ | async) || []"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Выберите перевод"
+                appendTo="body"
+                styleClass="w-full p-select-sm"
+              ></p-select>
+            </div>
+
+            @if (secondarySettings.destination === 'dedicated') {
+              <div class="sidebar-dedicated-hint">
+                <i class="pi pi-check-circle"></i>
+                <span>Транслируется во весь экран на отдельный монитор без деления и сжатия основного стиха.</span>
+              </div>
+            } @else {
               <div class="secondary-panel-field">
-                <label class="field-label">Перевод Библии:</label>
+                <label class="field-label">Расположение сплита:</label>
                 <p-select
-                  [ngModel]="secondarySettings.translate"
-                  (ngModelChange)="onSecondaryTranslateChange($event)"
-                  [options]="(secondaryTranslateOptions$ | async) || []"
+                  [ngModel]="secondarySettings.layout"
+                  (ngModelChange)="onSecondaryLayoutChange($event)"
+                  [options]="layoutOptions"
                   optionLabel="label"
                   optionValue="value"
-                  placeholder="Выберите перевод"
                   appendTo="body"
                   styleClass="w-full p-select-sm"
                 ></p-select>
               </div>
 
-              @if (secondarySettings.destination === 'dedicated') {
-                <div class="sidebar-dedicated-hint">
-                  <i class="pi pi-check-circle"></i>
-                  <span>Транслируется во весь экран на отдельный монитор без деления и сжатия основного стиха.</span>
+              <div class="secondary-panel-field">
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="field-label">Размер сплита:</span>
+                  <span class="font-bold text-emerald-400">{{ secondarySettings.sizePercent }}%</span>
                 </div>
-              } @else {
-                <div class="secondary-panel-field">
-                  <label class="field-label">Расположение сплита:</label>
-                  <p-select
-                    [ngModel]="secondarySettings.layout"
-                    (ngModelChange)="onSecondaryLayoutChange($event)"
-                    [options]="layoutOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    appendTo="body"
-                    styleClass="w-full p-select-sm"
-                  ></p-select>
-                </div>
-
-                <div class="secondary-panel-field">
-                  <div class="flex justify-between text-xs mb-1">
-                    <span class="field-label">Размер сплита:</span>
-                    <span class="font-bold text-emerald-400">{{ secondarySettings.sizePercent }}%</span>
-                  </div>
-                  <mat-slider
-                    class="control-sidebar__secondary-slider"
-                    [min]="25"
-                    [max]="70"
-                    [step]="5"
-                  >
-                    <input
-                      matSliderThumb
-                      [value]="secondarySettings.sizePercent"
-                      (valueChange)="onSecondarySizeChange($event)"
-                    />
-                  </mat-slider>
-                </div>
-              }
-            </div>
-          }
-        </div>
+                <mat-slider
+                  class="control-sidebar__secondary-slider"
+                  [min]="25"
+                  [max]="70"
+                  [step]="5"
+                >
+                  <input
+                    matSliderThumb
+                    [value]="secondarySettings.sizePercent"
+                    (valueChange)="onSecondarySizeChange($event)"
+                  />
+                </mat-slider>
+              </div>
+            }
+          </div>
+        }
       }
     </div>
   </lyri-navigator-feature>

@@ -16,6 +16,8 @@ import {
   createBibleSecondaryTranslationCacheKey,
   selectCastingFrozen,
   selectCastingPaused,
+  selectCastingProcess,
+  selectCastingProcessNavigate,
   selectSecondaryTranslationCache,
   selectSecondaryTranslationSettings,
   selectSelectedBibleVerse,
@@ -51,6 +53,7 @@ import {
   BridgeService,
   CastingAppearanceService,
   DEFAULT_CASTING_PAGE_CONFIG,
+  LyriFitTextDirective,
   Pages,
   selectOpenedWindow,
   SettingsService,
@@ -88,6 +91,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     TooltipModule,
     FormsModule,
     MatSliderModule,
+    LyriFitTextDirective,
   ],
   templateUrl: './bible-sidebar.component.html',
   styleUrl: './bible-sidebar.component.scss',
@@ -188,11 +192,30 @@ export class BibleSidebarComponent {
   );
 
   readonly selectedVerseRef$ = combineLatest([
+    this.store.select(selectCastingProcess),
+    this.store.select(selectCastingProcessNavigate),
+    this.store.select(selectCastingPaused),
     this.store.select(selectSelectedBook),
     this.store.select(selectSelectedBibleVerse),
     this.selectedRange$,
   ]).pipe(
-    map(([book, verse, range]) => {
+    map(([process, navigate, paused, book, verse, range]) => {
+      if (process && !paused) {
+        const activeContent =
+          navigate?.currentContent ||
+          process.content?.[process.fromIndex || 0];
+        if (activeContent) {
+          const rangeObj = navigate?.range ?? process.range ?? range ?? null;
+          const num = rangeObj
+            ? rangeObj.from === rangeObj.to
+              ? `${rangeObj.from}`
+              : `${rangeObj.from}-${rangeObj.to}`
+            : `${activeContent.number}`;
+          return `${
+            activeContent.bookTitle?.full || book?.title?.full || ''
+          } ${activeContent.chapterId}:${num}`;
+        }
+      }
       if (!verse) return '';
       const num = range
         ? range.from === range.to
@@ -204,11 +227,45 @@ export class BibleSidebarComponent {
   );
 
   readonly secondaryPreviewText$ = combineLatest([
+    this.store.select(selectCastingProcess),
+    this.store.select(selectCastingProcessNavigate),
+    this.store.select(selectCastingPaused),
     this.store.select(selectSelectedSecondaryTranslationSections),
     this.store.select(selectSelectedBibleVerse),
     this.selectedRange$,
   ]).pipe(
-    map(([sections, selectedVerse, range]) => {
+    map(([process, navigate, paused, sections, selectedVerse, range]) => {
+      if (process && !paused) {
+        const secondary =
+          navigate?.secondaryContent ?? process.secondaryContent;
+        if (secondary?.content?.length) {
+          const fromIndex = navigate?.nextIndex ?? process.fromIndex;
+          const activeRange =
+            navigate?.range ?? process.range ?? range ?? null;
+          if (activeRange) {
+            const filtered = secondary.content.filter(
+              (v) => v.number >= activeRange.from && v.number <= activeRange.to
+            );
+            if (filtered.length) {
+              return filtered
+                .map(
+                  (v) =>
+                    `<span class="verse-num">${v.number}</span> ${
+                      Array.isArray(v.text) ? v.text.join(' ') : v.text
+                    }`
+                )
+                .join(' ');
+            }
+          }
+          const verse = secondary.content[fromIndex] || secondary.content[0];
+          if (verse) {
+            return `<span class="verse-num">${verse.number}</span> ${
+              Array.isArray(verse.text) ? verse.text.join(' ') : verse.text
+            }`;
+          }
+        }
+      }
+
       if (!sections || sections.length === 0 || !selectedVerse) return '';
       const verses = sections.flatMap((s) => s.content);
       if (range) {

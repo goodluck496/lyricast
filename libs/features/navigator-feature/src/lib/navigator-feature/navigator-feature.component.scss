@@ -42,6 +42,8 @@
       flex: 1 1 auto;
       min-height: 0;
       overflow: hidden;
+      padding: 0 !important;
+      background: transparent !important;
     }
 
     .p-tabpanel {
@@ -49,6 +51,7 @@
       height: 100%;
       min-height: 0;
       overflow: hidden;
+      padding: 0 !important;
     }
 
     .p-tabpanel[hidden] {
@@ -67,11 +70,15 @@
     width: 100%;
     height: 100%;
     min-height: 0;
-    padding: 12px 16px 16px;
+    padding: 10px 12px 14px;
     overflow: hidden;
 
     &--history {
       padding: 0;
+    }
+
+    &--compact {
+      padding: 6px 8px 10px;
     }
   }
 

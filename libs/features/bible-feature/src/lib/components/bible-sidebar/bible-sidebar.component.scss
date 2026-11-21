@@ -209,24 +209,44 @@
 
   &__body {
     flex: 1 1 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
+    position: relative;
+    min-height: 0;
+    width: 100%;
     overflow: hidden;
-    padding: 6px;
+
+    .preview-fit {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+
+      &::before,
+      &::after {
+        content: '';
+        flex: 1 1 auto;
+      }
+    }
+
+    .slide-content-wrapper {
+      width: 100%;
+      flex: 0 0 auto;
+    }
 
     .slide-content {
-      font-size: 15px;
-      line-height: 1.35;
+      width: 100%;
+      text-align: center;
+      line-height: 1.35 !important;
       font-weight: bold;
-      max-height: 100%;
       overflow: hidden;
 
       ::ng-deep .verse-num {
         color: #fbbf24;
         font-weight: bold;
-        font-size: 12px;
+        font-size: 0.8em;
         vertical-align: super;
       }
     }
@@ -307,23 +327,26 @@
 
 /* Secondary Translation dedicated Tab Panel styling */
 .bible-sidebar__secondary-tab-panel {
-  padding: 8px 6px;
-}
-
-.secondary-panel-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  width: 100%;
 }
 
-.secondary-panel-header {
+.secondary-toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: 8px 10px;
   background: var(--surface-card);
   border: 1px solid var(--surface-border);
   border-radius: 6px;
+
+  .secondary-toggle-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+  }
 
   ::ng-deep .p-toggleswitch {
     transform: scale(0.85);
@@ -331,10 +354,10 @@
   }
 }
 
-.secondary-panel-body {
+.secondary-controls-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   padding: 8px 10px;
   background: var(--surface-card);
   border: 1px solid var(--surface-border);

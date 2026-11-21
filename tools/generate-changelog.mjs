@@ -4,54 +4,154 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
+ * Получает историю изменений версий в package.json из git log.
+ */
+function getVersionHistory() {
+  try {
+    const diffs = execSync('git log -p package.json', { encoding: 'utf8' });
+    const lines = diffs.split('\n');
+    let currentCommit = '';
+    const history = [];
+
+    for (const line of lines) {
+      if (line.startsWith('commit ')) {
+        currentCommit = line.split(' ')[1].trim();
+      }
+      const match = line.match(/^\+\s*"version":\s*"([^"]+)"/);
+      if (match) {
+        history.push({ commit: currentCommit, version: match[1] });
+      }
+    }
+    return history;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Преобразует входной аргумент (хэш, тег или версию вроде "2.9.0" / "v2.9.0") в валидный git-реф.
+ */
+function resolveRef(ref) {
+  if (!ref) return null;
+  const trimmed = ref.trim();
+
+  // 1. Проверяем, понимает ли git этот ref напрямую (хэш, тег, ветка, HEAD~N)
+  try {
+    const resolved = execSync(`git rev-parse --verify "${trimmed}^{commit}"`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    if (resolved) return resolved;
+  } catch {
+    // Не является прямым git-рефом, возможно это версия вида "2.9.0" или "v2.9.0"
+  }
+
+  // 2. Ищем по версии в package.json истории
+  const normVersion = trimmed.replace(/^v/i, '');
+  const history = getVersionHistory();
+
+  // Точное совпадение версии (например "2.9.0")
+  const exactMatch = history.find((h) => h.version === normVersion);
+  if (exactMatch) {
+    return exactMatch.commit;
+  }
+
+  // Совпадение по префиксу (например "2.9" -> "2.9.0")
+  const prefixMatch = history.find((h) => h.version.startsWith(normVersion));
+  if (prefixMatch) {
+    return prefixMatch.commit;
+  }
+
+  // 3. Поиск по коммитам изменения версий в git log
+  try {
+    const raw = execSync('git log --format="%H %s" -n 50 package.json', { encoding: 'utf8' });
+    const match = raw
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .find((l) => l.toLowerCase().includes(normVersion));
+    if (match) {
+      return match.split(' ')[0];
+    }
+  } catch {
+    //
+  }
+
+  return trimmed;
+}
+
+/**
  * Определяет диапазон коммитов для текущего релиза.
  */
 function resolveCommitRange(customFrom, customTo = 'HEAD') {
   if (customFrom) {
-    return { from: customFrom, to: customTo };
+    const resolvedFrom = resolveRef(customFrom);
+    const resolvedTo = resolveRef(customTo) || customTo;
+    return { from: resolvedFrom, to: resolvedTo, label: `${customFrom}..${customTo}` };
   }
 
-  // 1. Пытаемся найти коммиты изменения версии в package.json
+  // 1. Ищем явные коммиты обновления версий в package.json (например "upd version" или "update version")
   try {
-    const raw = execSync('git log --format="%H %s" -n 20 package.json', { encoding: 'utf8' });
-    const versionCommits = raw
+    const rawCommits = execSync('git log --format="%H %s" package.json', { encoding: 'utf8' })
       .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .filter((line) => /version/i.test(line));
+      .map((l) => l.trim())
+      .filter(Boolean);
 
-    if (versionCommits.length > 0) {
+    const releaseCommits = rawCommits.filter((line) =>
+      /^(upd(ate)?\s+version|bump\s+version|release)/i.test(line.split(' ').slice(1).join(' '))
+    );
+
+    if (releaseCommits.length > 0) {
       const headCommit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
-      const firstLine = versionCommits[0];
-      const firstHash = firstLine.split(' ')[0];
+      const firstReleaseHash = releaseCommits[0].split(' ')[0];
 
-      // Если HEAD сам является коммитом смены версии
-      if (headCommit.startsWith(firstHash) || firstHash.startsWith(headCommit)) {
-        if (versionCommits.length > 1) {
-          const prevHash = versionCommits[1].split(' ')[0];
-          return { from: prevHash, to: 'HEAD' };
-        }
-      } else {
-        // Мы сейчас перед коммитом смены версии
-        return { from: firstHash, to: 'HEAD' };
+      // Проверяем, сколько коммитов между первым релизным коммитом и HEAD
+      const commitsSinceFirst = execSync(`git rev-list --count ${firstReleaseHash}..HEAD`, { encoding: 'utf8' }).trim();
+
+      // Если первый релизный коммит — это текущая версия 2.10.0 (буквально пару коммитов назад)
+      if (Number(commitsSinceFirst) <= 3 && releaseCommits.length > 1) {
+        const prevReleaseHash = releaseCommits[1].split(' ')[0];
+        return {
+          from: prevReleaseHash,
+          to: 'HEAD',
+          label: `${releaseCommits[1].split(' ').slice(1).join(' ')}..HEAD`,
+        };
       }
+
+      return {
+        from: firstReleaseHash,
+        to: 'HEAD',
+        label: `${releaseCommits[0].split(' ').slice(1).join(' ')}..HEAD`,
+      };
     }
   } catch {
-    // игнорируем ошибку и пробуем теги
+    // игнорируем ошибку
   }
 
-  // 2. Пытаемся найти последний git-тег
+  // 2. Ищем по истории версий в diff package.json
+  const history = getVersionHistory();
+  if (history.length > 1) {
+    // Берем коммит предыдущей версии
+    const prev = history[history.length > 2 ? 2 : 1];
+    return {
+      from: prev.commit,
+      to: 'HEAD',
+      label: `v${prev.version}..HEAD`,
+    };
+  }
+
+  // 3. Пытаемся найти последний git-тег
   try {
     const lastTag = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
     if (lastTag) {
-      return { from: lastTag, to: 'HEAD' };
+      return { from: lastTag, to: 'HEAD', label: `${lastTag}..HEAD` };
     }
   } catch {
     // теги не найдены
   }
 
-  // 3. Fallback: последние 15 коммитов
-  return { from: 'HEAD~15', to: 'HEAD' };
+  // 4. Fallback: последние 25 коммитов
+  return { from: 'HEAD~25', to: 'HEAD', label: 'HEAD~25..HEAD' };
 }
 
 /**
@@ -196,7 +296,7 @@ export async function generateChangelog(options = {}) {
   const commits = getCommits(range.from, range.to);
 
   if (commits.length === 0) {
-    return `# LyriCast v${version} — Release Notes\n\n* Нет новых коммитов в диапазоне ${range.from}..${range.to}.`;
+    return `# LyriCast v${version} — Release Notes\n\n* Нет новых коммитов в диапазоне ${range.label || `${range.from}..${range.to}`}.`;
   }
 
   const categorized = categorizeCommits(commits);

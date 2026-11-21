@@ -32,5 +32,6 @@ export class NavigatorFeatureComponent {
   historyService = inject(HistoryService);
 
   feature = input.required();
+  hasSecondaryTranslation = input(false);
   activeTab = signal<string | number>('history');
 }

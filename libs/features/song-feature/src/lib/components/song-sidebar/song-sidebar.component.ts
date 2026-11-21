@@ -180,6 +180,11 @@ export class SongSidebarComponent {
     this.store.dispatch(SongActions[SongActionsEnum.setFreezeCasting]({ frozen }));
   }
 
+  onToggleFreeze(): void {
+    const isFrozen = !!snapshot(this.castingIsFrozen$);
+    this.onFreezeToggle(!isFrozen);
+  }
+
   onCloseCasting(): void {
     this.castingSrv.closeCasting();
   }

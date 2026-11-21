@@ -37,6 +37,30 @@
 
   <!-- Unified, fixed-size preview container -->
   <div class="sidebar-preview-frame">
+    <!-- Snowflake Freeze overlay in top-left -->
+    <button
+      type="button"
+      class="sidebar-freeze-btn"
+      [class.sidebar-freeze-btn--active]="castingIsFrozen$ | async"
+      [disabled]="(openedCastingWindow$ | async) === false"
+      (click)="onToggleFreeze()"
+      [title]="(castingIsFrozen$ | async) ? 'Кадр заморожен (нажмите для разморозки)' : 'Заморозить кадр (Freeze)'"
+    >
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="2" x2="12" y2="22"></line>
+        <line x1="2" y1="12" x2="22" y2="12"></line>
+        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+        <line x1="19.07" y1="4.93" x2="4.93" y2="19.07"></line>
+        <polyline points="9 3 12 6 15 3"></polyline>
+        <polyline points="9 21 12 18 15 21"></polyline>
+        <polyline points="3 9 6 12 3 15"></polyline>
+        <polyline points="21 9 18 12 21 15"></polyline>
+      </svg>
+      @if (castingIsFrozen$ | async) {
+        <span class="freeze-label">FREEZE</span>
+      }
+    </button>
+
     @if (activePreviewTab === 'main') {
       <lyri-song-casting-preview class="preview-content-fill" />
     } @else {
@@ -59,58 +83,44 @@
     }
   </div>
 
-  <!-- Compact controls section -->
-  <div class="control-sidebar__actions relative">
-    @if (castingIsPaused$ | async) {
-      <p-splitButton
-        label="Транслировать"
-        icon="pi pi-play"
-        (onClick)="onStartCasting(true)"
-        [disabled]="isOpeningWindow | async"
-        [model]="(closeMenuItems$ | async) || []"
-        severity="success"
-        tourAnchor="songs:cast-start"
-        styleClass="w-full p-button-sm"
-      ></p-splitButton>
-    } @else {
-      <p-splitButton
-        label="Остановить"
-        icon="pi pi-stop"
-        (onClick)="onPauseCasting()"
-        [disabled]="isOpeningWindow | async"
-        [model]="(closeMenuItems$ | async) || []"
-        severity="danger"
-        tourAnchor="songs:cast-stop"
-        styleClass="w-full p-button-sm"
-      ></p-splitButton>
-    }
+  <!-- Compact single action row: play button + blackout eye icon button -->
+  <div class="control-sidebar__actions">
+    <div class="sidebar-action-row">
+      @if (castingIsPaused$ | async) {
+        <p-splitButton
+          label="Транслировать"
+          icon="pi pi-play"
+          (onClick)="onStartCasting(true)"
+          [disabled]="isOpeningWindow | async"
+          [model]="(closeMenuItems$ | async) || []"
+          severity="success"
+          tourAnchor="songs:cast-start"
+          styleClass="flex-1 p-button-sm"
+        ></p-splitButton>
+      } @else {
+        <p-splitButton
+          label="Остановить"
+          icon="pi pi-stop"
+          (onClick)="onPauseCasting()"
+          [disabled]="isOpeningWindow | async"
+          [model]="(closeMenuItems$ | async) || []"
+          severity="danger"
+          tourAnchor="songs:cast-stop"
+          styleClass="flex-1 p-button-sm"
+        ></p-splitButton>
+      }
 
-    <!-- Single compact horizontal row for Freeze and Blackout All -->
-    <div class="sidebar-quick-switches">
-      <div class="quick-switch">
-        <label class="quick-switch__label" for="song-freeze">
-          <i class="pi pi-pause-circle"></i>
-          <span>Freeze</span>
-        </label>
-        <p-toggleswitch
-          inputId="song-freeze"
-          [disabled]="(openedCastingWindow$ | async) === false"
-          [ngModel]="castingIsFrozen$ | async"
-          (ngModelChange)="onFreezeToggle($event)"
-        />
-      </div>
-      <div class="quick-switch">
-        <label class="quick-switch__label" for="song-blackout">
-          <i class="pi pi-eye-slash"></i>
-          <span>Blackout All</span>
-        </label>
-        <p-toggleswitch
-          inputId="song-blackout"
-          [disabled]="(openedCastingWindow$ | async) === false"
-          [ngModel]="isBlackoutAll"
-          (ngModelChange)="onBlackoutAllToggle($event)"
-        />
-      </div>
+      <!-- Blackout All icon button -->
+      <button
+        type="button"
+        class="sidebar-blackout-btn"
+        [class.sidebar-blackout-btn--active]="isBlackoutAll"
+        [disabled]="(openedCastingWindow$ | async) === false"
+        (click)="onBlackoutAllToggle(!isBlackoutAll)"
+        [title]="isBlackoutAll ? 'Все экраны затемнены (клик для включения)' : 'Затемнить все экраны (Blackout All)'"
+      >
+        <i [class]="isBlackoutAll ? 'pi pi-eye' : 'pi pi-eye-slash'"></i>
+      </button>
     </div>
   </div>
 

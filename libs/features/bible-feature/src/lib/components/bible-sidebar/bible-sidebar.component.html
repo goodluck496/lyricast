@@ -37,6 +37,30 @@
 
   <!-- Unified, fixed-size preview container -->
   <div class="sidebar-preview-frame">
+    <!-- Snowflake Freeze overlay in top-left -->
+    <button
+      type="button"
+      class="sidebar-freeze-btn"
+      [class.sidebar-freeze-btn--active]="castingIsFrozen$ | async"
+      [disabled]="(openedCastingWindow$ | async) === false"
+      (click)="onToggleFreeze()"
+      [title]="(castingIsFrozen$ | async) ? 'Кадр заморожен (нажмите для разморозки)' : 'Заморозить кадр (Freeze)'"
+    >
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="2" x2="12" y2="22"></line>
+        <line x1="2" y1="12" x2="22" y2="12"></line>
+        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+        <line x1="19.07" y1="4.93" x2="4.93" y2="19.07"></line>
+        <polyline points="9 3 12 6 15 3"></polyline>
+        <polyline points="9 21 12 18 15 21"></polyline>
+        <polyline points="3 9 6 12 3 15"></polyline>
+        <polyline points="21 9 18 12 21 15"></polyline>
+      </svg>
+      @if (castingIsFrozen$ | async) {
+        <span class="freeze-label">FREEZE</span>
+      }
+    </button>
+
     @if (activePreviewTab === 'main') {
       <lyri-bible-casting-preview class="preview-content-fill"></lyri-bible-casting-preview>
     } @else {
@@ -64,143 +88,144 @@
     }
   </div>
 
-  <!-- Compact controls section -->
+  <!-- Compact single action row: play button + blackout eye icon button -->
   <div class="control-sidebar__actions">
-    @if (castingIsPaused$ | async) {
-      <p-splitbutton
-        label="Транслировать"
-        icon="pi pi-play"
-        (onClick)="onStartCasting()"
-        [disabled]="isOpeningWindow | async"
-        [model]="(closeMenuItems$ | async) || []"
-        severity="success"
-        tourAnchor="bible:cast-start"
-        styleClass="w-full p-button-sm"
-      ></p-splitbutton>
-    } @else {
-      <p-splitbutton
-        label="Остановить"
-        icon="pi pi-stop"
-        (onClick)="onPauseCasting()"
-        [disabled]="isOpeningWindow | async"
-        [model]="(closeMenuItems$ | async) || []"
-        severity="danger"
-        tourAnchor="bible:cast-stop"
-        styleClass="w-full p-button-sm"
-      ></p-splitbutton>
-    }
+    <div class="sidebar-action-row">
+      @if (castingIsPaused$ | async) {
+        <p-splitbutton
+          label="Транслировать"
+          icon="pi pi-play"
+          (onClick)="onStartCasting()"
+          [disabled]="isOpeningWindow | async"
+          [model]="(closeMenuItems$ | async) || []"
+          severity="success"
+          tourAnchor="bible:cast-start"
+          styleClass="flex-1 p-button-sm"
+        ></p-splitbutton>
+      } @else {
+        <p-splitbutton
+          label="Остановить"
+          icon="pi pi-stop"
+          (onClick)="onPauseCasting()"
+          [disabled]="isOpeningWindow | async"
+          [model]="(closeMenuItems$ | async) || []"
+          severity="danger"
+          tourAnchor="bible:cast-stop"
+          styleClass="flex-1 p-button-sm"
+        ></p-splitbutton>
+      }
 
-    <!-- Single compact horizontal row for Freeze and Blackout All -->
-    <div class="sidebar-quick-switches">
-      <div class="quick-switch">
-        <label class="quick-switch__label" for="bible-freeze">
-          <i class="pi pi-pause-circle"></i>
-          <span>Freeze</span>
-        </label>
-        <p-toggleswitch
-          inputId="bible-freeze"
-          [disabled]="(openedCastingWindow$ | async) === false"
-          [ngModel]="castingIsFrozen$ | async"
-          (ngModelChange)="onFreezeToggle($event)"
-        ></p-toggleswitch>
-      </div>
-      <div class="quick-switch">
-        <label class="quick-switch__label" for="bible-blackout">
-          <i class="pi pi-eye-slash"></i>
-          <span>Blackout All</span>
-        </label>
-        <p-toggleswitch
-          inputId="bible-blackout"
-          [disabled]="(openedCastingWindow$ | async) === false"
-          [ngModel]="isBlackoutAll"
-          (ngModelChange)="onBlackoutAllToggle($event)"
-        ></p-toggleswitch>
-      </div>
+      <!-- Blackout All icon button -->
+      <button
+        type="button"
+        class="sidebar-blackout-btn"
+        [class.sidebar-blackout-btn--active]="isBlackoutAll"
+        [disabled]="(openedCastingWindow$ | async) === false"
+        (click)="onBlackoutAllToggle(!isBlackoutAll)"
+        [title]="isBlackoutAll ? 'Все экраны затемнены (клик для включения)' : 'Затемнить все экраны (Blackout All)'"
+      >
+        <i [class]="isBlackoutAll ? 'pi pi-eye' : 'pi pi-eye-slash'"></i>
+      </button>
     </div>
   </div>
 
-  <!-- Compact Secondary Translation section -->
-  @if (secondarySettings$ | async; as secondarySettings) {
-    <div class="control-sidebar__secondary-translation">
-      <div class="control-sidebar__secondary-header">
-        <span class="text-xs font-semibold">Доп. перевод</span>
-        <p-toggleswitch
-          [ngModel]="secondarySettings.enabled"
-          (ngModelChange)="onSecondaryEnabledChange($event)"
-        ></p-toggleswitch>
-      </div>
+  <!-- Navigator with extra tab [2-й перевод] directly beside История -->
+  <lyri-navigator-feature class="control-sidebar__navigator" feature="bible" [hasSecondaryTranslation]="true">
+    <lyri-casting-appearance-controls navigator-appearance scope="bible" />
 
-      @if (secondarySettings.enabled) {
-        <div class="control-sidebar__secondary-controls">
-          <div class="sidebar-destination-switch">
-            <button
-              type="button"
-              class="destination-option"
-              [class.destination-option--active]="(secondarySettings.destination || 'split') === 'split'"
-              (click)="onSecondaryDestinationChange('split')"
-            >
-              <i class="pi pi-table"></i>
-              <span>Сплит</span>
-            </button>
-            <button
-              type="button"
-              class="destination-option"
-              [class.destination-option--active]="secondarySettings.destination === 'dedicated'"
-              (click)="onSecondaryDestinationChange('dedicated')"
-            >
-              <i class="pi pi-desktop"></i>
-              <span>Отд. монитор</span>
-            </button>
+    <div navigator-secondary class="bible-sidebar__secondary-tab-panel">
+      @if (secondarySettings$ | async; as secondarySettings) {
+        <div class="secondary-panel-card">
+          <div class="secondary-panel-header">
+            <span class="text-sm font-semibold text-gray-200">Включить 2-й перевод</span>
+            <p-toggleswitch
+              [ngModel]="secondarySettings.enabled"
+              (ngModelChange)="onSecondaryEnabledChange($event)"
+            ></p-toggleswitch>
           </div>
 
-          <p-select
-            [ngModel]="secondarySettings.translate"
-            (ngModelChange)="onSecondaryTranslateChange($event)"
-            [options]="(secondaryTranslateOptions$ | async) || []"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Выберите перевод"
-            appendTo="body"
-            styleClass="w-full p-select-sm"
-          ></p-select>
+          @if (secondarySettings.enabled) {
+            <div class="secondary-panel-body">
+              <div class="secondary-panel-field">
+                <label class="field-label">Куда выводить:</label>
+                <div class="sidebar-destination-switch">
+                  <button
+                    type="button"
+                    class="destination-option"
+                    [class.destination-option--active]="(secondarySettings.destination || 'split') === 'split'"
+                    (click)="onSecondaryDestinationChange('split')"
+                  >
+                    <i class="pi pi-table"></i>
+                    <span>Сплит на этом экране</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="destination-option"
+                    [class.destination-option--active]="secondarySettings.destination === 'dedicated'"
+                    (click)="onSecondaryDestinationChange('dedicated')"
+                  >
+                    <i class="pi pi-desktop"></i>
+                    <span>Отдельный монитор</span>
+                  </button>
+                </div>
+              </div>
 
-          @if (secondarySettings.destination === 'dedicated') {
-            <div class="sidebar-dedicated-hint">
-              <i class="pi pi-check-circle"></i>
-              <span>Во весь отдельный экран без сжатия</span>
+              <div class="secondary-panel-field">
+                <label class="field-label">Перевод Библии:</label>
+                <p-select
+                  [ngModel]="secondarySettings.translate"
+                  (ngModelChange)="onSecondaryTranslateChange($event)"
+                  [options]="(secondaryTranslateOptions$ | async) || []"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Выберите перевод"
+                  appendTo="body"
+                  styleClass="w-full p-select-sm"
+                ></p-select>
+              </div>
+
+              @if (secondarySettings.destination === 'dedicated') {
+                <div class="sidebar-dedicated-hint">
+                  <i class="pi pi-check-circle"></i>
+                  <span>Транслируется во весь экран на отдельный монитор без деления и сжатия основного стиха.</span>
+                </div>
+              } @else {
+                <div class="secondary-panel-field">
+                  <label class="field-label">Расположение сплита:</label>
+                  <p-select
+                    [ngModel]="secondarySettings.layout"
+                    (ngModelChange)="onSecondaryLayoutChange($event)"
+                    [options]="layoutOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    appendTo="body"
+                    styleClass="w-full p-select-sm"
+                  ></p-select>
+                </div>
+
+                <div class="secondary-panel-field">
+                  <div class="flex justify-between text-xs mb-1">
+                    <span class="field-label">Размер сплита:</span>
+                    <span class="font-bold text-emerald-400">{{ secondarySettings.sizePercent }}%</span>
+                  </div>
+                  <mat-slider
+                    class="control-sidebar__secondary-slider"
+                    [min]="25"
+                    [max]="70"
+                    [step]="5"
+                  >
+                    <input
+                      matSliderThumb
+                      [value]="secondarySettings.sizePercent"
+                      (valueChange)="onSecondarySizeChange($event)"
+                    />
+                  </mat-slider>
+                </div>
+              }
             </div>
-          } @else {
-            <div class="sidebar-split-row">
-              <p-select
-                [ngModel]="secondarySettings.layout"
-                (ngModelChange)="onSecondaryLayoutChange($event)"
-                [options]="layoutOptions"
-                optionLabel="label"
-                optionValue="value"
-                appendTo="body"
-                styleClass="p-select-sm flex-1"
-              ></p-select>
-              <div class="sidebar-size-badge">{{ secondarySettings.sizePercent }}%</div>
-            </div>
-            <mat-slider
-              class="control-sidebar__secondary-slider"
-              [min]="25"
-              [max]="70"
-              [step]="5"
-            >
-              <input
-                matSliderThumb
-                [value]="secondarySettings.sizePercent"
-                (valueChange)="onSecondarySizeChange($event)"
-              />
-            </mat-slider>
           }
         </div>
       }
     </div>
-  }
-
-  <lyri-navigator-feature class="control-sidebar__navigator" feature="bible">
-    <lyri-casting-appearance-controls navigator-appearance scope="bible" />
   </lyri-navigator-feature>
 </div>

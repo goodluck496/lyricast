@@ -38,7 +38,7 @@ import {
   take,
   withLatestFrom,
 } from 'rxjs';
-import { filterEmpty } from '@lyri-cast/common';
+import { filterEmpty, snapshot } from '@lyri-cast/common';
 import {
   BibleBookShort,
   BibleChapterSection,
@@ -371,6 +371,11 @@ export class BibleSidebarComponent {
 
   onFreezeToggle(frozen: boolean): void {
     this.store.dispatch(BibleActions.setFreezeCasting({ frozen }));
+  }
+
+  onToggleFreeze(): void {
+    const isFrozen = !!snapshot(this.castingIsFrozen$);
+    this.onFreezeToggle(!isFrozen);
   }
 
   onCloseCasting() {

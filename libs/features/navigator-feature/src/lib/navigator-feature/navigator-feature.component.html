@@ -7,6 +7,9 @@
   <p-tablist>
     <p-tab value="appearance">Оформление</p-tab>
     <p-tab value="history">История</p-tab>
+    @if (hasSecondaryTranslation()) {
+      <p-tab value="secondary">2-й перевод</p-tab>
+    }
     <p-tab value="queue" [disabled]="true">Очередь</p-tab>
   </p-tablist>
   <p-tabpanels>
@@ -22,6 +25,15 @@
       <lyri-navigator-history [feature]="feature()" tourAnchor="history"></lyri-navigator-history>
     </div>
   </p-tabpanel>
+  @if (hasSecondaryTranslation()) {
+    <p-tabpanel value="secondary" class="navigator-tab">
+      <ng-scrollbar class="navigator-tabs__scroll" visibility="hover">
+        <div class="navigator-tabs__content">
+          <ng-content select="[navigator-secondary]"></ng-content>
+        </div>
+      </ng-scrollbar>
+    </p-tabpanel>
+  }
   <p-tabpanel value="queue">
   </p-tabpanel>
   </p-tabpanels>

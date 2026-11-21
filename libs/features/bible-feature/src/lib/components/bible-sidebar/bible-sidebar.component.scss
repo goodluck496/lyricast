@@ -307,43 +307,48 @@
 
 /* Secondary Translation dedicated Tab Panel styling */
 .bible-sidebar__secondary-tab-panel {
-  padding: 10px 4px;
+  padding: 8px 6px;
 }
 
 .secondary-panel-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .secondary-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 6px 10px;
   background: var(--surface-card);
   border: 1px solid var(--surface-border);
-  border-radius: 8px;
+  border-radius: 6px;
+
+  ::ng-deep .p-toggleswitch {
+    transform: scale(0.85);
+    transform-origin: right center;
+  }
 }
 
 .secondary-panel-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  gap: 8px;
+  padding: 8px 10px;
   background: var(--surface-card);
   border: 1px solid var(--surface-border);
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .secondary-panel-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 
   .field-label {
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 11px;
+    font-weight: 600;
     color: var(--text-color-secondary);
   }
 }
@@ -358,14 +363,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 10px;
+  gap: 5px;
+  padding: 5px 8px;
   font-size: 11px;
   font-weight: 500;
   color: var(--text-color-secondary);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--surface-border);
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
 
@@ -385,17 +390,17 @@
 .sidebar-dedicated-hint {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 6px;
+  padding: 6px 8px;
   background: rgba(16, 185, 129, 0.08);
   border: 1px solid rgba(16, 185, 129, 0.25);
-  border-radius: 6px;
+  border-radius: 5px;
   color: #10b981;
   font-size: 11px;
-  line-height: 1.4;
+  line-height: 1.35;
 
   i {
-    font-size: 13px;
+    font-size: 12px;
     flex-shrink: 0;
   }
 }

@@ -136,7 +136,18 @@
     <router-outlet></router-outlet>
   </div>
   @if (!mainCompService.$disableSidebar()) {
-    <div class="page__sidebar">
+    <div
+      class="page__resizer"
+      [class.page__resizer--active]="isResizingSidebar()"
+      (mousedown)="startSidebarResize($event)"
+      title="Потяните для изменения ширины сайдбара"
+    ></div>
+    <div
+      class="page__sidebar"
+      [style.width.px]="sidebarWidth()"
+      [style.min-width.px]="sidebarWidth()"
+      [style.max-width.px]="sidebarWidth()"
+    >
       @if (mainCompService.templatesMap$ | async; as templateMap) {
         @if (templateMap.get(PAGE_CONTAINER_TEMPLATES.PAGE_SIDEBAR); as sidebarTemplate) {
           <ng-container

@@ -4,6 +4,7 @@ import {
   ElementRef,
   inject,
   input,
+  OnInit,
   signal,
 } from '@angular/core';
 
@@ -26,7 +27,7 @@ import { TourAnchorPrimeNgDirective } from 'ngx-ui-tour-primeng';
   styleUrl: './navigator-feature.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class NavigatorFeatureComponent {
+export class NavigatorFeatureComponent implements OnInit {
   elRef = inject(ElementRef);
 
   historyService = inject(HistoryService);
@@ -34,4 +35,10 @@ export class NavigatorFeatureComponent {
   feature = input.required();
   hasSecondaryTranslation = input(false);
   activeTab = signal<string | number>('history');
+
+  ngOnInit() {
+    if (this.hasSecondaryTranslation()) {
+      this.activeTab.set('secondary');
+    }
+  }
 }

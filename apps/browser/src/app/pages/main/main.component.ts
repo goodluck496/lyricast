@@ -5,6 +5,7 @@ import {
   DestroyRef,
   inject,
   OnInit,
+  signal,
 } from '@angular/core';
 import {
   ActivatedRoute,
@@ -99,6 +100,46 @@ export class MainComponent implements OnInit {
 
   mainCompService = inject(MainComponentService);
   readonly appUpdateService = inject(AppUpdateService);
+
+  sidebarWidth = signal<number>(
+    typeof localStorage !== 'undefined'
+      ? parseInt(localStorage.getItem('lyricast.sidebarWidth') || '460', 10) || 460
+      : 460
+  );
+  isResizingSidebar = signal<boolean>(false);
+
+  startSidebarResize(event: MouseEvent): void {
+    event.preventDefault();
+    this.isResizingSidebar.set(true);
+    const startX = event.clientX;
+    const startWidth = this.sidebarWidth();
+
+    const onMouseMove = (e: MouseEvent) => {
+      const deltaX = startX - e.clientX;
+      const minWidth = 360;
+      const maxWidth =
+        typeof window !== 'undefined'
+          ? Math.max(minWidth, window.innerWidth - 420)
+          : 750;
+      const newWidth = Math.min(Math.max(startWidth + deltaX, minWidth), maxWidth);
+      this.sidebarWidth.set(newWidth);
+      this.cdr.markForCheck();
+    };
+
+    const onMouseUp = () => {
+      this.isResizingSidebar.set(false);
+      this.cdr.markForCheck();
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('lyricast.sidebarWidth', String(this.sidebarWidth()));
+      }
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      window.dispatchEvent(new Event('resize'));
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }
 
   isUpdateOverlayVisible = false;
   private overlayHideTimer: ReturnType<typeof setTimeout> | null = null;

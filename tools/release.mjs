@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { stdin, stdout, exit, argv } from 'node:process';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { generateChangelog, copyToClipboard } from './generate-changelog.mjs';
 
 const versionTypes = ['major', 'minor', 'patch'];
 
@@ -83,6 +84,24 @@ async function updatePackageVersion(releaseType) {
   await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
   stdout.write(`Версия обновлена: ${currentVersion} -> ${nextVersion}\n`);
+
+  stdout.write('\nГенерация ченжлога для релиза...\n');
+  try {
+    const changelog = await generateChangelog({ version: nextVersion });
+    const copied = copyToClipboard(changelog);
+    stdout.write('\n======================================================\n');
+    stdout.write(`📋 ЧЕНЖЛОГ РЕЛИЗА v${nextVersion} ${copied ? '(СКОПИРОВАН В БУФЕР ОБМЕНА)' : ''}\n`);
+    stdout.write('======================================================\n\n');
+    stdout.write(changelog + '\n\n');
+    stdout.write('======================================================\n');
+    stdout.write('✅ Сохранено в RELEASE_NOTES.md\n');
+    if (copied) {
+      stdout.write('📋 Текст скопирован в буфер обмена!\n');
+    }
+    stdout.write('======================================================\n\n');
+  } catch (err) {
+    stdout.write(`[changelog] Не удалось сгенерировать ченжлог: ${err.message}\n`);
+  }
 }
 
 function runPublishScript() {

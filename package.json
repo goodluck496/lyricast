@@ -7,6 +7,7 @@
   "license": "MIT",
   "scripts": {
     "release": "node tools/release.mjs",
+    "changelog": "node tools/generate-changelog.mjs",
     "start": "concurrently \"npm run _start:browser\" \"npm run _start-all-workers\" \"npm run _start:electron\" --kill-others --force-kill-after 5000",
     "prepare:bundled-assets": "node tools/prepare-bundled-assets.mjs",
     "build-win:prepare-npm-node-modules": "node tools/prepare-npm-node-modules.mjs",

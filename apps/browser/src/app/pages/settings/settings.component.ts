@@ -13,6 +13,7 @@ import { NavigationStart, RouteReuseStrategy, Router } from '@angular/router';
 import {
   AmbientBackgroundManager,
   AmbientBackgroundPresetId,
+  AppUpdateService,
   AuthStorageService,
   SettingsService,
   UserSettingsService,
@@ -69,6 +70,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   router = inject(Router);
   confirmSrv = inject(ConfirmationService);
   readonly authStorage = inject(AuthStorageService);
+  readonly appUpdateService = inject(AppUpdateService);
 
   activeTab = 0;
   isLoggingInGoogle = false;
@@ -279,11 +281,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   onCheckUpdates() {
-    this.updateInProgress = true;
-    this.updatePercent = 0;
-    this.updateLabel = 'Проверка обновлений...';
-    this.windowSrv.electronContext.checkForAppUpdates();
-    this.cdr.detectChanges();
+    this.appUpdateService.checkForUpdates();
+  }
+
+  onApplyUpdate() {
+    this.appUpdateService.quitAndInstall();
   }
 
   onThemeToggle(isDark: boolean) {

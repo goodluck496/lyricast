@@ -17,6 +17,7 @@ import {
 } from '@angular/router';
 
 import {
+  AppUpdateService,
   FreeSlidePages,
   MainComponentService,
   OnboardingHelpService,
@@ -27,6 +28,9 @@ import {
 import { HttpClient } from '@angular/common/http';
 import { BASE_API_TOKEN } from '@lyri-cast/common';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { Overlay } from 'primeng/overlay';
+import { Badge } from 'primeng/badge';
+import { ButtonDirective } from 'primeng/button';
 import {
   catchError,
   filter,
@@ -69,6 +73,9 @@ import { IStepOption, TourPrimeNgModule, TourService } from 'ngx-ui-tour-primeng
     SvgIconComponent,
     AmbientBackgroundComponent,
     TourPrimeNgModule,
+    Overlay,
+    Badge,
+    ButtonDirective,
   ],
   templateUrl: './main.component.html',
   styleUrl: './main.component.scss',
@@ -91,6 +98,10 @@ export class MainComponent implements OnInit {
   }
 
   mainCompService = inject(MainComponentService);
+  readonly appUpdateService = inject(AppUpdateService);
+
+  isUpdateOverlayVisible = false;
+  private overlayHideTimer: ReturnType<typeof setTimeout> | null = null;
 
   activePage?: MenuItem;
 
@@ -221,6 +232,64 @@ export class MainComponent implements OnInit {
       lyriGrid,
       lyriBulletList,
     ]);
+    this.destroyRef.onDestroy(() => this.clearOverlayHideTimer());
+  }
+
+  isSettingsPage(page: MenuItem): boolean {
+    const leaf = page.routerLink?.[2] ?? page.routerLink?.[1];
+    return leaf === Pages.SETTINGS;
+  }
+
+  onMenuItemMouseEnter(page: MenuItem) {
+    if (this.isSettingsPage(page) && this.appUpdateService.isUpdateDownloaded()) {
+      this.clearOverlayHideTimer();
+      this.isUpdateOverlayVisible = true;
+      this.cdr.markForCheck();
+    }
+  }
+
+  onMenuItemMouseLeave(page: MenuItem) {
+    if (this.isSettingsPage(page)) {
+      this.scheduleOverlayHide();
+    }
+  }
+
+  onOverlayMouseEnter() {
+    this.clearOverlayHideTimer();
+  }
+
+  onOverlayMouseLeave() {
+    this.scheduleOverlayHide();
+  }
+
+  private scheduleOverlayHide() {
+    this.clearOverlayHideTimer();
+    this.overlayHideTimer = setTimeout(() => {
+      this.isUpdateOverlayVisible = false;
+      this.cdr.markForCheck();
+    }, 250);
+  }
+
+  private clearOverlayHideTimer() {
+    if (this.overlayHideTimer) {
+      clearTimeout(this.overlayHideTimer);
+      this.overlayHideTimer = null;
+    }
+  }
+
+  onOverlayShow(event: any) {
+    const overlay = event?.overlay ?? (event?.target ? null : event);
+    const target = event?.target ?? document.querySelector('#menu-settings-item');
+    if (overlay && target) {
+      const rect = target.getBoundingClientRect();
+      overlay.style.left = `${rect.right + 10}px`;
+      overlay.style.top = `${rect.top}px`;
+    }
+  }
+
+  onApplyUpdate() {
+    this.isUpdateOverlayVisible = false;
+    this.appUpdateService.quitAndInstall();
   }
 
   ngOnInit() {

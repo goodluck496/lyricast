@@ -46,16 +46,27 @@
     <p-tabpanel [value]="1">
       <div class="settings__updates">
         <p>Текущая версия: v{{ appVersion }}</p>
-        <button
-          pButton
-          (click)="onCheckUpdates()"
-          [disabled]="updateInProgress"
-          [label]="
-            updateInProgress
-              ? updateLabel || 'Загрузка: ' + updatePercent + '%'
-              : 'Проверить обновления'
-          "
-        ></button>
+        <div class="settings__updates-actions">
+          <button
+            pButton
+            (click)="onCheckUpdates()"
+            [disabled]="appUpdateService.isDownloading()"
+            [label]="
+              appUpdateService.isDownloading()
+                ? appUpdateService.statusLabel()
+                : 'Проверить обновления'
+            "
+          ></button>
+          @if (appUpdateService.isUpdateDownloaded()) {
+            <button
+              pButton
+              severity="success"
+              icon="pi pi-refresh"
+              (click)="onApplyUpdate()"
+              label="Обновить и перезапустить"
+            ></button>
+          }
+        </div>
       </div>
     </p-tabpanel>
 

@@ -1,4 +1,4 @@
-import { app, dialog, MessageBoxOptions, ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import App from '../app';
 import * as fs from 'fs';
@@ -7,6 +7,7 @@ import * as path from 'path';
 export default class UpdateEvents {
   static retryTimer: NodeJS.Timeout | null = null;
   static isDownloading = false;
+  static lastStatus: any = null;
 
   // Initialize auto update service - must be invoked only in production
   static initAutoUpdateService() {
@@ -18,8 +19,8 @@ export default class UpdateEvents {
     try {
       console.log('Initializing auto update service (electron-updater)...');
 
-      // Configure behavior
-      autoUpdater.autoDownload = false; // start download only after user confirms
+      // Configure behavior - silent auto-download without user prompt
+      autoUpdater.autoDownload = true;
       autoUpdater.autoInstallOnAppQuit = true;
       (autoUpdater as any).disableWebInstaller = true; // remove warning, we don't use web installer
       (autoUpdater as any).disableDifferentialDownload = true; // temporary: avoid broken/handmade blockmaps
@@ -28,9 +29,10 @@ export default class UpdateEvents {
       app.whenReady().then(() => {
         UpdateEvents.checkForUpdates();
         setInterval(UpdateEvents.checkForUpdates, 60 * 60 * 1000);
+        UpdateEvents.lastStatus = { type: 'initialized' };
         Object.keys(App.openedWindows).forEach((key) => {
           const win = App.openedWindows[key];
-          if (win) win.webContents.send('APP_UPDATE_STATUS', { type: 'initialized' });
+          if (win) win.webContents.send('APP_UPDATE_STATUS', UpdateEvents.lastStatus);
         });
       });
     } catch (error) {
@@ -53,84 +55,67 @@ export default class UpdateEvents {
 
 autoUpdater.on('checking-for-update', () => {
   console.log('[Updater] Checking for updates...');
+  UpdateEvents.lastStatus = { type: 'checking-for-update' };
   Object.keys(App.openedWindows).forEach((key) => {
     const win = App.openedWindows[key];
-    if (win) win.webContents.send('APP_UPDATE_STATUS', { type: 'checking-for-update' });
+    if (win) win.webContents.send('APP_UPDATE_STATUS', UpdateEvents.lastStatus);
   });
 });
 
 autoUpdater.on('update-available', (info) => {
   console.log('[Updater] Update available:', info?.version);
+  UpdateEvents.isDownloading = true;
+  UpdateEvents.lastStatus = {
+    type: 'update-available',
+    version: info?.version,
+  };
   Object.keys(App.openedWindows).forEach((key) => {
     const win = App.openedWindows[key];
     if (win)
-      win.webContents.send('APP_UPDATE_STATUS', {
-        type: 'update-available',
-        version: info?.version,
-      });
+      win.webContents.send('APP_UPDATE_STATUS', UpdateEvents.lastStatus);
   });
-  const dialogOpts: MessageBoxOptions = {
-    type: 'info',
-    buttons: ['Download now', 'Later'],
-    title: 'Update available',
-    message: 'A new version is available.',
-    detail: `Version ${info?.version} is available. Do you want to download it now?`,
-  };
-  dialog.showMessageBox(dialogOpts).then((returnValue) => {
-    if (returnValue.response === 0) {
-      if (UpdateEvents.isDownloading) {
-        console.log('[Updater] Download already in progress, skipping duplicate start');
-        return;
-      }
-      UpdateEvents.isDownloading = true;
-      autoUpdater.downloadUpdate();
-    }
-  });
+  // Auto-download is enabled (autoUpdater.autoDownload = true), so download starts silently without modal prompt.
 });
 
 autoUpdater.on('download-progress', (progress) => {
   const pct = Math.round(progress.percent ?? 0);
   console.log(`[Updater] Download progress: ${pct}% (${progress.transferred}/${progress.total})`);
+  UpdateEvents.isDownloading = true;
+  UpdateEvents.lastStatus = {
+    type: 'download-progress',
+    percent: pct,
+    transferred: progress.transferred,
+    total: progress.total,
+  };
   Object.keys(App.openedWindows).forEach((key) => {
     const win = App.openedWindows[key];
     if (win)
-      win.webContents.send('APP_UPDATE_STATUS', {
-        type: 'download-progress',
-        percent: pct,
-        transferred: progress.transferred,
-        total: progress.total,
-      });
+      win.webContents.send('APP_UPDATE_STATUS', UpdateEvents.lastStatus);
   });
 });
 
 autoUpdater.on('update-downloaded', (info) => {
   console.log('[Updater] Update downloaded:', info?.version);
   UpdateEvents.isDownloading = false;
+  UpdateEvents.lastStatus = {
+    type: 'update-downloaded',
+    version: info?.version,
+  };
   Object.keys(App.openedWindows).forEach((key) => {
     const win = App.openedWindows[key];
     if (win)
-      win.webContents.send('APP_UPDATE_STATUS', {
-        type: 'update-downloaded',
-        version: info?.version,
-      });
+      win.webContents.send('APP_UPDATE_STATUS', UpdateEvents.lastStatus);
   });
-  const dialogOpts: MessageBoxOptions = {
-    type: 'info',
-    buttons: ['Restart', 'Later'],
-    title: 'Update ready',
-    message: 'The update has been downloaded.',
-    detail: 'Restart the application to apply the update now?',
-  };
-  dialog.showMessageBox(dialogOpts).then((returnValue) => {
-    if (returnValue.response === 0) autoUpdater.quitAndInstall();
-  });
+  // Download finished silently. The UI badge & hover overlay will allow the user to install on click.
 });
 
 autoUpdater.on('update-not-available', () => {
   console.log('[Updater] Application is up to date');
+  UpdateEvents.isDownloading = false;
+  UpdateEvents.lastStatus = { type: 'update-not-available' };
   Object.keys(App.openedWindows).forEach((key) => {
     const win = App.openedWindows[key];
-    if (win) win.webContents.send('APP_UPDATE_STATUS', { type: 'update-not-available' });
+    if (win) win.webContents.send('APP_UPDATE_STATUS', UpdateEvents.lastStatus);
   });
 });
 
@@ -138,14 +123,15 @@ autoUpdater.on('error', (err) => {
   console.error('[Updater] Error while updating the application');
   console.error(err);
   UpdateEvents.isDownloading = false;
+  UpdateEvents.lastStatus = {
+    type: 'error',
+    message: String(err?.message || err),
+  };
 
   Object.keys(App.openedWindows).forEach((key) => {
     const win = App.openedWindows[key];
     if (win)
-      win.webContents.send('APP_UPDATE_STATUS', {
-        type: 'error',
-        message: String(err?.message || err),
-      });
+      win.webContents.send('APP_UPDATE_STATUS', UpdateEvents.lastStatus);
   });
 
   // Retry once in 5 minutes to handle cases when app started offline
@@ -161,7 +147,18 @@ autoUpdater.on('error', (err) => {
   }
 });
 
+// Allow renderer to query current status
+ipcMain.handle('APP_GET_UPDATE_STATUS', () => {
+  return UpdateEvents.lastStatus;
+});
+
 // Allow renderer to trigger manual update check
 ipcMain.on('APP_FORCE_CHECK_UPDATE', () => {
   UpdateEvents.checkForUpdates();
+});
+
+// Allow renderer to trigger silent quit and install update without extra dialogs
+ipcMain.on('APP_QUIT_AND_INSTALL_UPDATE', () => {
+  console.log('[Updater] Quitting and installing update...');
+  autoUpdater.quitAndInstall(true, true);
 });

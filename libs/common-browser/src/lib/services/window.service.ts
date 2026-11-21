@@ -36,6 +36,8 @@ export class WindowService {
           getDisplays: () => Promise.resolve([]),
           checkForAppUpdates: () => Promise.resolve(void 0),
           onAppUpdateStatus: (cb: (status: any) => void) => void 0,
+          quitAndInstallUpdate: () => void 0,
+          getAppUpdateStatus: () => Promise.resolve(null),
           loadUserSettings: () => Promise.resolve(null),
           saveUserSettings: () => Promise.resolve(void 0),
           loadQuizState: () => Promise.resolve(null),

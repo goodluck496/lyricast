@@ -101,6 +101,13 @@
         background-color: inherit;
         color: #4a4a4a;
       }
+
+      &-icon-wrapper {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
     }
   }
 
@@ -158,5 +165,78 @@
     display: flex;
     align-items: center;
     justify-content: right;
+  }
+}
+
+:host ::ng-deep .page__menu-badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  z-index: 2;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 4px;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+  animation: badge-pulse 2s infinite ease-in-out;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.update-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--p-content-background, #1f2937);
+  color: var(--p-text-color, #f9fafb);
+  border: 1px solid var(--p-content-border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  min-width: 220px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__title {
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  &__version {
+    font-size: 11px;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    font-weight: 500;
+    opacity: 0.9;
+  }
+
+  &__description {
+    font-size: 12px;
+    opacity: 0.8;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: stretch;
+    margin-top: 4px;
+
+    button {
+      width: 100%;
+    }
   }
 }

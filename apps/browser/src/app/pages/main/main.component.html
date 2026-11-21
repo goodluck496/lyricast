@@ -9,26 +9,42 @@
             @if (getMenuAnchorId(page); as anchorId) {
               <div
                 class="page__menu-item"
+                [id]="isSettingsPage(page) ? 'menu-settings-item' : null"
                 [routerLink]="page.routerLink"
                 routerLinkActive="page__menu-item--active"
                 [routerLinkActiveOptions]="{ exact: true }"
                 [tourAnchor]="anchorId"
+                (mouseenter)="onMenuItemMouseEnter(page)"
+                (mouseleave)="onMenuItemMouseLeave(page)"
               >
-                @if (page.icon) {
-                  <lyri-icon [name]="page.icon"></lyri-icon>
-                }
+                <div class="page__menu-item-icon-wrapper">
+                  @if (page.icon) {
+                    <lyri-icon [name]="page.icon"></lyri-icon>
+                  }
+                  @if (isSettingsPage(page) && appUpdateService.isUpdateDownloaded()) {
+                    <p-badge severity="warn" styleClass="page__menu-badge" value="!"></p-badge>
+                  }
+                </div>
                 {{ page.label }}
               </div>
             } @else {
               <div
                 class="page__menu-item"
+                [id]="isSettingsPage(page) ? 'menu-settings-item' : null"
                 [routerLink]="page.routerLink"
                 [routerLinkActiveOptions]="{ exact: true }"
                 routerLinkActive="page__menu-item--active"
+                (mouseenter)="onMenuItemMouseEnter(page)"
+                (mouseleave)="onMenuItemMouseLeave(page)"
               >
-                @if (page.icon) {
-                  <lyri-icon [name]="page.icon"></lyri-icon>
-                }
+                <div class="page__menu-item-icon-wrapper">
+                  @if (page.icon) {
+                    <lyri-icon [name]="page.icon"></lyri-icon>
+                  }
+                  @if (isSettingsPage(page) && appUpdateService.isUpdateDownloaded()) {
+                    <p-badge severity="warn" styleClass="page__menu-badge" value="!"></p-badge>
+                  }
+                </div>
                 {{ page.label }}
               </div>
             }
@@ -64,6 +80,42 @@
         ?
       </button>
     </div>
+
+    <p-overlay
+      [(visible)]="isUpdateOverlayVisible"
+      target="#menu-settings-item"
+      (onShow)="onOverlayShow($event)"
+      styleClass="page__update-overlay"
+    >
+      <ng-template #content>
+        <div
+          class="update-popup"
+          (mouseenter)="onOverlayMouseEnter()"
+          (mouseleave)="onOverlayMouseLeave()"
+        >
+          <div class="update-popup__header">
+            <span class="update-popup__title">Доступно обновление</span>
+            @if (appUpdateService.updateVersion(); as version) {
+              <span class="update-popup__version">v{{ version }}</span>
+            }
+          </div>
+          <div class="update-popup__description">
+            Новая версия скачана и готова к установке
+          </div>
+          <div class="update-popup__actions">
+            <button
+              pButton
+              type="button"
+              label="Обновить"
+              icon="pi pi-refresh"
+              severity="success"
+              size="small"
+              (click)="onApplyUpdate()"
+            ></button>
+          </div>
+        </div>
+      </ng-template>
+    </p-overlay>
   </div>
   <div class="page__content" [class.page__content--without-sidebar]="mainCompService.$disableSidebar()">
     <div class="page__header">

@@ -47,6 +47,20 @@
     }
   }
 
+  &__updates {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 16px;
+
+    &-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+  }
+
   &__displays {
     display: flex;
 

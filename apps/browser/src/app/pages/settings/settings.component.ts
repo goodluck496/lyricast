@@ -19,7 +19,13 @@ import {
   UserSettingsService,
   WindowService,
 } from '@lyri-cast/common-browser';
-import { AppDisplay } from '@lyri-cast/common-electron';
+import {
+  AppDisplay,
+  AppWindowTypes,
+  OutputChannelConfig,
+  OutputRole,
+  OutputTargetType,
+} from '@lyri-cast/common-electron';
 import { ButtonDirective } from 'primeng/button';
 import { ConfirmationService } from 'primeng/api';
 import { Observable, filter } from 'rxjs';
@@ -33,6 +39,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SnowfallManager } from '../../../services/common/snowfall.service';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { Card } from 'primeng/card';
+import { TableModule } from 'primeng/table';
+import { InputTextModule } from 'primeng/inputtext';
+import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 import { SongDictionariesManagerComponent } from '../../components/song-dictionaries-manager/song-dictionaries-manager.component';
 import { BibleDictionariesManagerComponent } from '../../components/bible-dictionaries-manager/bible-dictionaries-manager.component';
 
@@ -51,6 +61,10 @@ import { BibleDictionariesManagerComponent } from '../../components/bible-dictio
     FloatLabelModule,
     ToggleSwitch,
     Card,
+    TableModule,
+    InputTextModule,
+    TagModule,
+    TooltipModule,
     SongDictionariesManagerComponent,
     BibleDictionariesManagerComponent,
   ],
@@ -77,6 +91,29 @@ export class SettingsComponent implements OnInit, OnDestroy {
   googleAuthError = '';
 
   displays: AppDisplay[] = [];
+  channels: OutputChannelConfig[] = [];
+  emulationMode = false;
+
+  readonly roleOptions = [
+    { label: 'Основной зал', value: 'main' as OutputRole },
+    { label: 'Суфлер (Сцена)', value: 'stage' as OutputRole },
+    { label: '2-й перевод Библии', value: 'secondary_bible' as OutputRole },
+    { label: 'OBS Титры / Lower-Third', value: 'lower_third' as OutputRole },
+  ];
+
+  readonly targetTypeOptions = [
+    { label: 'Физический экран', value: 'display' as OutputTargetType },
+    { label: 'Эмуляция (окно)', value: 'emulated' as OutputTargetType },
+    { label: 'OBS Web Browser Source', value: 'obs_web' as OutputTargetType },
+    { label: 'NDI Network Stream', value: 'ndi' as OutputTargetType },
+  ];
+
+  get displaySelectOptions() {
+    return this.displays.map((d, index) => ({
+      label: `${d.label || 'Экран ' + (index + 1)} (${d.bounds.width}x${d.bounds.height}${d.primary ? ' - Основной' : ''})`,
+      value: d.id,
+    }));
+  }
 
   selectedDisplay$: Observable<AppDisplay | null> =
     this.settingsSrv.getDisplayForCasting();
@@ -126,6 +163,24 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     const srv = await this.settingsSrv.init();
     this.displays = [...srv.displays];
+    this.channels = [...srv.getChannels()];
+    this.emulationMode = srv.getEmulationMode();
+
+    this.settingsSrv
+      .getChannelsObservable()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((channels) => {
+        this.channels = [...channels];
+        this.cdr.markForCheck();
+      });
+
+    this.settingsSrv
+      .getEmulationModeObservable()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((mode) => {
+        this.emulationMode = mode;
+        this.cdr.markForCheck();
+      });
 
     // Текущая версия приложения
     try {
@@ -278,6 +333,76 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   onSelectDisplay(display: AppDisplay) {
     this.settingsSrv.setDisplayForCasting(display);
+  }
+
+  async onToggleEmulationMode(enabled: boolean) {
+    this.emulationMode = enabled;
+    await this.settingsSrv.setEmulationMode(enabled);
+  }
+
+  async onToggleChannel(channel: OutputChannelConfig, enabled: boolean) {
+    await this.settingsSrv.updateChannel(channel.id, { enabled });
+  }
+
+  async onToggleChannelAutoStart(channel: OutputChannelConfig, autoStart: boolean) {
+    await this.settingsSrv.updateChannel(channel.id, { autoStart });
+  }
+
+  async onUpdateChannelRole(channel: OutputChannelConfig, role: OutputRole) {
+    await this.settingsSrv.updateChannel(channel.id, { role });
+  }
+
+  async onUpdateChannelTarget(channel: OutputChannelConfig, targetType: OutputTargetType) {
+    await this.settingsSrv.updateChannel(channel.id, { targetType });
+  }
+
+  async onUpdateChannelDisplay(channel: OutputChannelConfig, displayId: number) {
+    await this.settingsSrv.updateChannel(channel.id, { displayId });
+  }
+
+  async onUpdateChannelName(channel: OutputChannelConfig, name: string) {
+    await this.settingsSrv.updateChannel(channel.id, { name });
+  }
+
+  async onAddChannel() {
+    const nextIdx = this.channels.length + 1;
+    const newId = `channel-${Date.now().toString(36)}`;
+    await this.settingsSrv.addChannel({
+      id: newId,
+      name: `Экран ${nextIdx}`,
+      role: 'stage',
+      targetType: 'display',
+      displayId: this.displays[0]?.id,
+      enabled: true,
+      autoStart: false,
+    });
+  }
+
+  async onDeleteChannel(channel: OutputChannelConfig) {
+    await this.settingsSrv.removeChannel(channel.id);
+  }
+
+  async onTestChannelWindow(channel: OutputChannelConfig) {
+    const display = this.settingsSrv.getDisplayById(channel.displayId) || this.displays[0];
+    const emulated = this.emulationMode || channel.targetType === 'emulated';
+    await this.windowSrv.electronContext.openWindow({
+      type: AppWindowTypes.CASTING,
+      title: channel.name,
+      channelId: channel.id,
+      display,
+      emulated,
+    });
+  }
+
+  async onCloseChannelWindow(channel: OutputChannelConfig) {
+    if (this.windowSrv.electronContext.closeCastingWindow) {
+      await this.windowSrv.electronContext.closeCastingWindow(channel.id);
+    } else {
+      await this.windowSrv.electronContext.closeWindow({
+        type: AppWindowTypes.CASTING,
+        channelId: channel.id,
+      });
+    }
   }
 
   onCheckUpdates() {

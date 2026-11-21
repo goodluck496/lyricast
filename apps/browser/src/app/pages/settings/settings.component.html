@@ -8,38 +8,169 @@
   </p-tablist>
   <p-tabpanels>
     <p-tabpanel [value]="0">
-      <h3>Выбор экрана для отображения презентаций</h3>
-      <div class="settings__displays">
-        @if (selectedDisplay$ | async; as selectedDisplay) {
-          @for (display of displays; track display.id) {
-            <p-card class="settings__display-item">
-              <ng-template pTemplate="title">{{
-                display.label || 'Display - ' + display.id
-              }}</ng-template>
+      <div class="settings__monitors-header flex justify-between items-center mb-4">
+        <div>
+          <h3 class="m-0 text-xl font-bold">Настройка мониторов и каналов вывода</h3>
+          <p class="text-sm text-gray-500 m-0 mt-1">Управление трансляцией на физические экраны, суфлер и стримы</p>
+        </div>
+        <div class="flex items-center gap-3 bg-gray-800/40 p-3 rounded-lg border border-gray-700">
+          <p-toggleSwitch [(ngModel)]="emulationMode" (ngModelChange)="onToggleEmulationMode($event)" />
+          <div class="flex flex-col">
+            <span class="font-medium text-sm">Оконный режим эмуляции (Dev Mode)</span>
+            <span class="text-xs text-gray-400">Открывать экраны в плавающих окнах на одном мониторе для тестирования</span>
+          </div>
+        </div>
+      </div>
 
-              <p>
-                {{ display.bounds.width }}x{{ display.bounds.height }}
-                {{ display.displayFrequency.toFixed(0) }} Гц
-              </p>
+      <div class="mb-6">
+        <h4 class="text-base font-semibold mb-3">Обнаруженные физические мониторы</h4>
+        <div class="settings__displays grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          @if (selectedDisplay$ | async; as selectedDisplay) {
+            @for (display of displays; track display.id) {
+              <p-card class="settings__display-item">
+                <ng-template pTemplate="title">
+                  <div class="flex justify-between items-center">
+                    <span>{{ display.label || 'Дисплей ' + display.id }}</span>
+                    @if (display.primary) {
+                      <p-tag value="Главный" severity="info" />
+                    }
+                  </div>
+                </ng-template>
 
-              <ng-template pTemplate="footer">
-                @if (selectedDisplay.id !== display.id) {
+                <p class="m-0 text-sm">
+                  Разрешение: {{ display.bounds.width }}x{{ display.bounds.height }} ({{ display.displayFrequency.toFixed(0) }} Гц)
+                </p>
+                <p class="text-xs text-gray-400 mt-1 m-0">
+                  Позиция: X: {{ display.bounds.x }}, Y: {{ display.bounds.y }}
+                </p>
+
+                <ng-template pTemplate="footer">
+                  @if (selectedDisplay.id !== display.id) {
+                    <button
+                      pButton
+                      size="small"
+                      severity="primary"
+                      (click)="onSelectDisplay(display)"
+                    >
+                      Назначить основным
+                    </button>
+                  } @else {
+                    <button pButton size="small" severity="secondary" [disabled]="true">
+                      Выбран для зала
+                    </button>
+                  }
+                </ng-template>
+              </p-card>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="settings__channels-section mt-6">
+        <div class="flex justify-between items-center mb-3">
+          <h4 class="text-base font-semibold m-0">Матрица каналов трансляции</h4>
+          <button pButton size="small" icon="pi pi-plus" label="Добавить канал" (click)="onAddChannel()"></button>
+        </div>
+
+        <p-table [value]="channels" styleClass="p-datatable-sm p-datatable-gridlines">
+          <ng-template pTemplate="header">
+            <tr>
+              <th style="width: 80px; text-align: center;">Вкл</th>
+              <th style="width: 220px;">Название канала</th>
+              <th style="width: 200px;">Роль контента</th>
+              <th style="width: 260px;">Выход / Монитор</th>
+              <th style="width: 100px; text-align: center;">Автостарт</th>
+              <th style="width: 140px; text-align: center;">Действия</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-channel>
+            <tr [class.opacity-60]="!channel.enabled">
+              <td style="text-align: center;">
+                <p-toggleSwitch [ngModel]="channel.enabled" (ngModelChange)="onToggleChannel(channel, $event)" />
+              </td>
+              <td>
+                <input
+                  pInputText
+                  type="text"
+                  [ngModel]="channel.name"
+                  (ngModelChange)="onUpdateChannelName(channel, $event)"
+                  class="w-full p-inputtext-sm"
+                />
+              </td>
+              <td>
+                <p-select
+                  [options]="roleOptions"
+                  [ngModel]="channel.role"
+                  (ngModelChange)="onUpdateChannelRole(channel, $event)"
+                  optionLabel="label"
+                  optionValue="value"
+                  class="w-full p-select-sm"
+                />
+              </td>
+              <td>
+                @if (channel.targetType === 'obs_web') {
+                  <div class="flex items-center gap-2">
+                    <p-tag value="OBS Browser Source" severity="warn" />
+                    <span class="text-xs text-gray-400">/obs/{{ channel.id }}</span>
+                  </div>
+                } @else if (channel.targetType === 'ndi') {
+                  <p-tag value="NDI Video Stream" severity="info" />
+                } @else {
+                  <p-select
+                    [options]="displaySelectOptions"
+                    [ngModel]="channel.displayId"
+                    (ngModelChange)="onUpdateChannelDisplay(channel, $event)"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Выберите монитор"
+                    class="w-full p-select-sm"
+                  />
+                }
+              </td>
+              <td style="text-align: center;">
+                <p-toggleSwitch [ngModel]="channel.autoStart" (ngModelChange)="onToggleChannelAutoStart(channel, $event)" />
+              </td>
+              <td style="text-align: center;">
+                <div class="flex items-center justify-center gap-1">
                   <button
                     pButton
-                    severity="primary"
-                    (click)="onSelectDisplay(display)"
-                  >
-                    Выбрать
-                  </button>
-                } @else {
-                  <button pButton severity="secondary" [disabled]="true">
-                    Выбрано
-                  </button>
-                }
-              </ng-template>
-            </p-card>
-          }
-        }
+                    type="button"
+                    icon="pi pi-external-link"
+                    [rounded]="true"
+                    [text]="true"
+                    size="small"
+                    pTooltip="Тест / Открыть окно"
+                    (click)="onTestChannelWindow(channel)"
+                  ></button>
+                  <button
+                    pButton
+                    type="button"
+                    icon="pi pi-times"
+                    [rounded]="true"
+                    [text]="true"
+                    severity="secondary"
+                    size="small"
+                    pTooltip="Закрыть окно"
+                    (click)="onCloseChannelWindow(channel)"
+                  ></button>
+                  @if (channel.id !== 'main') {
+                    <button
+                      pButton
+                      type="button"
+                      icon="pi pi-trash"
+                      [rounded]="true"
+                      [text]="true"
+                      severity="danger"
+                      size="small"
+                      pTooltip="Удалить канал"
+                      (click)="onDeleteChannel(channel)"
+                    ></button>
+                  }
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
       </div>
     </p-tabpanel>
 

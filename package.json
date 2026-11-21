@@ -1,6 +1,6 @@
 {
   "name": "LyriCast",
-  "version": "2.9.1",
+  "version": "2.10.0",
   "main": "./dist/apps/electron/main.js",
   "description": "Casting bible, songs and other to projector",
   "author": "goodluck496 <nikita.a.kalinin@gmail.com>",

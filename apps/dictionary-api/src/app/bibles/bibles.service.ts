@@ -375,7 +375,7 @@ export class BiblesService {
         title: bible.humanName,
         sourceTitle: bible.sourceTitle,
         lang: bible.lang,
-        version: bible.version,
+        version: String(bible.bibleVersion || 1),
         books: [],
         isDefault: bible.isDefault,
         isClassicBookOrder: bible.isClassicBookOrder,
@@ -529,7 +529,7 @@ export class BiblesService {
       title: bible.humanName,
       sourceTitle: bible.sourceTitle,
       lang: bible.lang,
-      version: bible.version,
+      version: String(bible.bibleVersion || 1),
       books: resultBooks,
       isDefault: bible.isDefault,
       isClassicBookOrder: bible.isClassicBookOrder,
@@ -589,10 +589,12 @@ export class BiblesService {
 
       this.logger.log(`[importBible] bible ${existing ? 'update' : 'create'} fileKey=${fileKey}`);
 
+      const rawOwner =
+        dto.ownerEmail !== undefined
+          ? dto.ownerEmail.trim().toLowerCase()
+          : (existing?.ownerEmail ? existing.ownerEmail : user?.email);
       const assignedOwnerEmail =
-        dto.ownerEmail?.trim().toLowerCase() ||
-        (existing?.ownerEmail ? existing.ownerEmail : user?.email) ||
-        null;
+        rawOwner && rawOwner !== 'public' && rawOwner !== '*' ? rawOwner : null;
 
       const now = new Date();
       const bibleBase = {
@@ -736,6 +738,19 @@ export class BiblesService {
           });
       }
 
+      await trx
+        .insert(schema.bibleMeta)
+        .values({
+          fileKey,
+          metaKey: 'ownerEmail',
+          metaValue: assignedOwnerEmail || '',
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [schema.bibleMeta.fileKey, schema.bibleMeta.metaKey],
+          set: { metaValue: assignedOwnerEmail || '', updatedAt: now },
+        });
+
       await this.bumpDatasetVersion(trx);
 
       const elapsedMs = Date.now() - startTime;
@@ -788,7 +803,8 @@ export class BiblesService {
       if (dto.isDefault !== undefined) updates.isDefault = dto.isDefault;
       if (dto.isClassicBookOrder !== undefined) updates.isClassicBookOrder = dto.isClassicBookOrder;
       if (dto.ownerEmail !== undefined && (isAdmin || isOwner)) {
-        updates.ownerEmail = dto.ownerEmail ? dto.ownerEmail.trim().toLowerCase() : null;
+        const trimmed = typeof dto.ownerEmail === 'string' ? dto.ownerEmail.trim().toLowerCase() : null;
+        updates.ownerEmail = trimmed && trimmed !== 'public' && trimmed !== '*' ? trimmed : null;
       }
       if (updatedBy) updates.updatedBy = updatedBy;
 
@@ -810,6 +826,13 @@ export class BiblesService {
         { metaKey: 'updated_at', metaValue: now.toISOString() },
         { metaKey: 'updated_by', metaValue: updatedBy },
       ];
+
+      if (dto.ownerEmail !== undefined && (isAdmin || isOwner)) {
+        metaEntries.push({
+          metaKey: 'ownerEmail',
+          metaValue: updates.ownerEmail || '',
+        });
+      }
 
       if (dto.coverImage !== undefined) {
         metaEntries.push({

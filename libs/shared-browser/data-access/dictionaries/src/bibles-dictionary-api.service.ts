@@ -19,14 +19,14 @@ export interface UpdateBibleMetaDto {
   isDefault?: boolean;
   isClassicBookOrder?: boolean;
   coverImage?: string;
-  ownerEmail?: string;
+  ownerEmail?: string | null;
 }
 
 export interface ImportBibleRequestDto {
   catalogId: number;
   data: BibleTranslate;
   coverImage?: string;
-  ownerEmail?: string;
+  ownerEmail?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

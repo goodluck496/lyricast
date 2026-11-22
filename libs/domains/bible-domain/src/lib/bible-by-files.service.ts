@@ -74,7 +74,7 @@ export class BibleByFilesService {
     const seenKeys = new Set<string>();
 
     try {
-      const dirs = [this.assetsPath, this.assetsPathNew]
+      const dirs = [this.assetsPathNew, this.assetsPath]
         .filter(Boolean)
         .filter((dir, idx, arr) => arr.indexOf(dir) === idx)
         .filter((dir) => fs.existsSync(dir));
@@ -96,7 +96,9 @@ export class BibleByFilesService {
             /"sourceTitle"\s*:\s*"([^"]+)"/
           );
           const langM = fileContent.match(/"lang"\s*:\s*"([^"]+)"/);
-          const versionM = fileContent.match(/"version"\s*:\s*"([^"]+)"/);
+          const versionM = fileContent.match(
+            /"version"\s*:\s*"?([^",}\s]+)"?/
+          );
           const isClassicBookOrderM = fileContent.match(
             /"isClassicBookOrder"\s*:\s*(true|false)/
           );
@@ -143,7 +145,7 @@ export class BibleByFilesService {
     }
 
     try {
-      const dirs = [this.assetsPath, this.assetsPathNew]
+      const dirs = [this.assetsPathNew, this.assetsPath]
         .filter(Boolean)
         .filter((dir, idx, arr) => arr.indexOf(dir) === idx)
         .filter((dir) => fs.existsSync(dir));
@@ -641,7 +643,7 @@ export class BibleByFilesService {
   }
 
   private findBibleFilePath(keyForSearch: string): string | null {
-    const dirs = [this.assetsPath, this.assetsPathNew]
+    const dirs = [this.assetsPathNew, this.assetsPath]
       .filter(Boolean)
       .filter((dir, idx, arr) => arr.indexOf(dir) === idx)
       .filter((dir) => fs.existsSync(dir));

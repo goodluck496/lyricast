@@ -269,6 +269,7 @@ export class BibleViewerPageComponent implements OnInit {
       if (meta.isDefault !== undefined) this.bible.isDefault = meta.isDefault;
       if (meta.isClassicBookOrder !== undefined) this.bible.isClassicBookOrder = meta.isClassicBookOrder;
       if (meta.coverImage !== undefined) this.bible.coverImage = meta.coverImage;
+      if (meta.ownerEmail !== undefined) this.bible.ownerEmail = meta.ownerEmail || undefined;
     }
     this.messageService.add({
       severity: 'success',

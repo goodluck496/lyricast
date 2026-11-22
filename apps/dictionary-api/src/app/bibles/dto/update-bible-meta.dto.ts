@@ -47,6 +47,5 @@ export class UpdateBibleMetaDto {
 
   @ApiPropertyOptional({ description: 'Email владельца перевода' })
   @IsOptional()
-  @IsString()
-  ownerEmail?: string;
+  ownerEmail?: string | null;
 }

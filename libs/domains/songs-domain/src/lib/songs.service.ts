@@ -67,7 +67,7 @@ export class SongsService {
   }
 
   private getExistingDirs(): string[] {
-    const dirs = [this.assetsPath, this.externalAssetsPath]
+    const dirs = [this.externalAssetsPath, this.assetsPath]
       .filter(Boolean)
       .filter((dir, idx, arr) => arr.indexOf(dir) === idx)
       .filter((dir) => fs.existsSync(dir));

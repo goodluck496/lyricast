@@ -297,7 +297,7 @@ export class BibleMetaDialogComponent implements OnInit, OnChanges {
       isDefault: this.isDefault,
       isClassicBookOrder: this.isClassicBookOrder,
       coverImage: this.coverImage,
-      ownerEmail: this.ownerEmail?.trim() || undefined,
+      ownerEmail: this.ownerEmail?.trim() || '',
     };
 
     this.api.updateMeta(this.bibleId, payload).subscribe({

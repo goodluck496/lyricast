@@ -14,6 +14,7 @@ import {
 
 contextBridge.exposeInMainWorld('electron', {
   getWindowType: () => ipcRenderer.invoke(ElectronActionEvents.GET_WINDOW_TYPE),
+  getWindowChannel: () => ipcRenderer.invoke('GET_WINDOW_CHANNEL'),
   getAppVersion: () => ipcRenderer.invoke(ElectronActionEvents.GET_APP_VERSION),
   platform: process.platform,
   openWindow: (arg: OpenWindowArgs) =>

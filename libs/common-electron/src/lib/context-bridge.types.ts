@@ -43,6 +43,7 @@ export type EventData = {
 
 export type Context = {
   getWindowType: () => Promise<AppWindowTypes>;
+  getWindowChannel?: () => Promise<string | null>;
   getAppVersion: () => Promise<string>;
   openWindow: (arg: OpenWindowArgs) => Promise<number>;
   closeWindow: (arg: CloseWindowArgs) => Promise<void>;

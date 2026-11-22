@@ -71,6 +71,7 @@ export class AppEffects {
         this.router
           .navigate([...data.path], {
             replaceUrl: true,
+            queryParamsHandling: 'preserve',
             ...(data.queryParams ? { queryParams: data.queryParams } : {}),
           })
           .then((r) => {

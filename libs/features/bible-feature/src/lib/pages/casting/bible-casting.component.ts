@@ -131,8 +131,29 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
-        this.isSecondaryOnly.set(params.get('role') === 'secondary_bible');
+        const role = params.get('role');
+        const channelId = params.get('channelId');
+        if (role === 'secondary_bible') {
+          this.isSecondaryOnly.set(true);
+        } else if (channelId) {
+          const ch = this.settingsSrv.getChannels().find((c) => c.id === channelId);
+          if (ch && ch.role === 'secondary_bible') {
+            this.isSecondaryOnly.set(true);
+          }
+        }
       });
+
+    if (this.bridge.windowSrv.hasElectron && this.bridge.windowSrv.electronContext.getWindowChannel) {
+      this.bridge.windowSrv.electronContext.getWindowChannel().then((channelId) => {
+        if (channelId) {
+          const ch = this.settingsSrv.getChannels().find((c) => c.id === channelId);
+          if (ch && ch.role === 'secondary_bible') {
+            this.isSecondaryOnly.set(true);
+            this.cdr.markForCheck();
+          }
+        }
+      });
+    }
 
     this.castingPaused$
       .pipe(takeUntilDestroyed(this.destroyRef))

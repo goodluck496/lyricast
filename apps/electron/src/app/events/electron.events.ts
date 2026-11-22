@@ -138,6 +138,10 @@ ipcMain.handle(ElectronActionEvents.GET_WINDOW_TYPE, (event) => {
   return App.openedWindowTypesByProcess[event.processId];
 });
 
+ipcMain.handle('GET_WINDOW_CHANNEL', (event) => {
+  return App.castingWindowProcessIds.get(event.processId) || null;
+});
+
 ipcMain.handle(ElectronCommonEvents.SEND, (event, rawPayload) => {
   let targetChannelId: string | string[] | undefined;
 

@@ -47,6 +47,7 @@ export class BibleForCastingEffects {
     store: this.store,
     bridge: this.bridge,
     window: this.window,
+    settingsSrv: this.settingsSrv,
     actions$: this.actions$,
   });
 

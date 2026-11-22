@@ -142,17 +142,20 @@ export class NdiBroadcasterService {
       });
 
       // Register offscreen window in App.castingWindows so it receives IPC sync events
+      const procId = offscreenWin.webContents.getProcessId();
       App.castingWindows.set(config.channelId, offscreenWin);
+      App.castingWindowProcessIds.set(procId, config.channelId);
+      App.openedWindowTypesByProcess[procId] = 'CASTING' as any;
 
       // Determine target route according to role
       const baseUrl = App.getBaseUrl();
-      let targetPath = '/casting';
+      let targetPath = `/bible/casting?channelId=${encodeURIComponent(config.channelId)}`;
       if (config.role === 'stage') {
-        targetPath = '/stage-display';
+        targetPath = `/stage-display?channelId=${encodeURIComponent(config.channelId)}`;
       } else if (config.role === 'secondary_bible') {
-        targetPath = '/casting?role=secondary_bible';
+        targetPath = `/bible/casting?role=secondary_bible&channelId=${encodeURIComponent(config.channelId)}`;
       } else if (config.role === 'lower_third') {
-        targetPath = '/obs/obs-stream';
+        targetPath = `/obs/${encodeURIComponent(config.channelId)}`;
       }
 
       await offscreenWin.loadURL(`${baseUrl}#${targetPath}`);
@@ -216,6 +219,9 @@ export class NdiBroadcasterService {
 
     try {
       if (session.offscreenWindow && !session.offscreenWindow.isDestroyed()) {
+        const procId = session.offscreenWindow.webContents.getProcessId();
+        App.castingWindowProcessIds.delete(procId);
+        delete App.openedWindowTypesByProcess[procId];
         session.offscreenWindow.destroy();
       }
       App.castingWindows.delete(channelId);
@@ -238,7 +244,7 @@ export class NdiBroadcasterService {
     if (!this.isNdiAvailable || !Array.isArray(channels)) return;
 
     for (const channel of channels) {
-      if (channel.targetType === 'ndi' && (channel.autoStart || channel.enabled)) {
+      if (channel.targetType === 'ndi' && channel.autoStart && channel.enabled) {
         const streamName =
           channel.ndiStreamName || `Lyricast-${channel.name.replace(/\s+/g, '-')}`;
         const fps = channel.ndiFps || 30;

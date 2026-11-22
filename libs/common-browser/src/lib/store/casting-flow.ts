@@ -19,7 +19,7 @@ import {
   AppWindowTypes,
 } from '@lyri-cast/common-electron';
 import { Action, ActionCreator, Store } from '@ngrx/store';
-import { BridgeService, WindowService } from '../services';
+import { BridgeService, WindowService, SettingsService } from '../services';
 import { AppActions } from './app.store';
 
 export interface CastingFlowOptions<State> {
@@ -80,6 +80,7 @@ export interface CastingFlowOptions<State> {
   store: Store<State>;
   bridge: BridgeService;
   window: WindowService;
+  settingsSrv?: SettingsService;
   actions$: Actions;
 
   actionSource: string;
@@ -127,6 +128,7 @@ function createOpenCastingEffect<State>({
   bridge,
   store,
   featureName,
+  settingsSrv,
 }: CastingFlowOptions<State>) {
   const castingPath = { path: [featureName, 'casting'] };
   const castingFrozen$ = selectCastingFrozen
@@ -146,6 +148,30 @@ function createOpenCastingEffect<State>({
             return EMPTY;
           }
 
+          return of(openPageAction(castingPath) as Action);
+        }
+
+        const activeChannels = settingsSrv?.getActiveChannels() || [];
+        const allChannels = settingsSrv?.getChannels() || [];
+        // Auto-start any enabled NDI channels
+        for (const ch of activeChannels) {
+          if (ch.enabled && ch.targetType === 'ndi') {
+            settingsSrv?.startNdiChannel(ch);
+          }
+        }
+
+        const mainChannel = allChannels.find((c) => c.id === 'main');
+        const shouldOpenMainPhysicalWindow = mainChannel
+          ? mainChannel.enabled && (mainChannel.targetType === 'display' || mainChannel.targetType === 'emulated')
+          : true;
+
+        if (!shouldOpenMainPhysicalWindow) {
+          store.dispatch(
+            AppActions.setProcId({
+              procId: -1,
+              pageType: AppWindowTypes.CASTING,
+            })
+          );
           return of(openPageAction(castingPath) as Action);
         }
 
@@ -223,37 +249,31 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
     )
   );
 
-  // Добавляем эффект для обработки openedPage, как в прямой реализации
+  // Обработка openedPage для всех окон кастинга (мульти-монитор, NDI, плавающие окна)
   const onOpenedPage$ = createEffect(() =>
-    actions$.pipe(
-      ofType(openPageAction),
-      switchMap(() =>
-        bridge.queueEvents.pipe(
-          skip(1),
-          filter((event) => {
-            if (!event || event.event !== APP_COMMON_ACTIONS.openedPage) {
-              return false;
-            }
+    bridge.queueEvents.pipe(
+      filter((event) => {
+        if (!event || event.event !== APP_COMMON_ACTIONS.openedPage) {
+          return false;
+        }
 
-            const payload =
-              typeof event.payload === 'object' && event.payload !== null
-                ? (event.payload as Record<string, unknown>)
-                : null;
+        const payload =
+          typeof event.payload === 'object' && event.payload !== null
+            ? (event.payload as Record<string, unknown>)
+            : null;
 
-            return (
-              payload?.['state'] === 'after-view-init' ||
-              (payload?.['state'] === 'navigation-ended' &&
-                payload?.['result'] === false)
-            );
-          }),
-          take(1)
-        )
-      ),
+        return (
+          payload?.['state'] === 'after-view-init' ||
+          (payload?.['state'] === 'navigation-ended' &&
+            payload?.['result'] === false)
+        );
+      }),
       withLatestFrom(
         store.select(selectCastingProcess),
         selectGlobalTransition ? store.select(selectGlobalTransition as any) : of(null),
         selectSlideTransitions ? store.select(selectSlideTransitions as any) : of(null)
       ),
+      filter(([_, data]) => !!data),
       tap(([_, __, globalTransition, slideTransitions]) => {
         if (setGlobalTransitionAction && globalTransition) {
           const eventName = extractEventName(setGlobalTransitionAction.type);
@@ -263,16 +283,13 @@ export function createCastingFlow<State>(options: CastingFlowOptions<State>) {
           const entries: [string, any][] = slideTransitions instanceof Map
             ? Array.from(slideTransitions.entries())
             : Object.entries(slideTransitions as Record<string, any>);
-        	for (const [slideId, transition] of entries) {
+          for (const [slideId, transition] of entries) {
             const eventName = extractEventName(setSlideTransitionAction.type);
             bridge.send(eventName, { slideId, transition } as any);
           }
         }
       }),
       map(([_, data]) => {
-        if (!data) {
-          return pauseCastingAction() as Action;
-        }
         return startCastingAction(data) as Action;
       })
     )

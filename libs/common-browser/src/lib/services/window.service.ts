@@ -48,6 +48,7 @@ export class WindowService {
           getNdiStatus: () => Promise.resolve({ available: false, activeStreams: [] }),
           startNdiBroadcast: () => Promise.resolve(false),
           stopNdiBroadcast: () => Promise.resolve(void 0),
+          getNdiClients: () => Promise.resolve(0),
           platform: '',
         };
   }

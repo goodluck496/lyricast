@@ -27,6 +27,8 @@ import { runDatabaseMigrations } from './migrations';
 import { configureAppPathsEnv } from './paths';
 import { ensureBiblesUnpacked } from './bibles-assets';
 import { migrateUserDataFromOldLocations } from './user-data-migration';
+import * as fs from 'fs';
+import { NdiBroadcasterService } from './ndi/ndi.service';
 
 export const DEFAULT_WEB_PREF = {
   contextIsolation: true,
@@ -175,15 +177,16 @@ export default class App {
     return win;
   }
 
+  public static getBaseUrl(): string {
+    if (!App.application.isPackaged) {
+      return `http://localhost:${rendererAppPort}`;
+    }
+    return `http://localhost:${App.fileServerPort}`;
+  }
+
   public static loadWindow(windowType: AppWindowTypes, channelId?: string) {
     // load the index.html of the app.
-    let urlObject: URL | null = null;
-
-    if (!App.application.isPackaged) {
-      urlObject = new URL(`http://localhost:${rendererAppPort}`);
-    } else {
-      urlObject = new URL(`http://localhost:${App.fileServerPort}`);
-    }
+    const urlObject = new URL(App.getBaseUrl());
 
     let openedWindow: Electron.BrowserWindow | null | undefined = null;
     if (windowType === AppWindowTypes.CASTING) {
@@ -260,6 +263,7 @@ export default class App {
       App.onWindowAllClosed
     ); // Quit when all windows are closed.
     App.application.on('before-quit', () => {
+      NdiBroadcasterService.getInstance().stopAll();
       if (App.workers) {
         App.workers.disposeAll();
       }
@@ -365,6 +369,24 @@ export default class App {
     if (rendererAppName) {
       App.initMainWindow();
       App.loadWindow(AppWindowTypes.MAIN);
+
+      // Autostart configured NDI streams
+      setTimeout(async () => {
+        try {
+          const settingsFile = join(app.getPath('userData'), 'settings.json');
+          if (fs.existsSync(settingsFile)) {
+            const raw = await fs.promises.readFile(settingsFile, 'utf-8');
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.channels)) {
+              await NdiBroadcasterService.getInstance().bootstrapAutostartStreams(
+                parsed.channels
+              );
+            }
+          }
+        } catch (e) {
+          console.warn('[NDI] Failed to bootstrap autostart streams', e);
+        }
+      }, 1500);
     }
 
     // (опционально) лог/метрики

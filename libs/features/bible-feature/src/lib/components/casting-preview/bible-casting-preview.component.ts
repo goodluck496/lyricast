@@ -8,6 +8,7 @@ import {
   effect,
   ElementRef,
   inject,
+  input,
   OnDestroy,
   viewChildren,
 } from '@angular/core';
@@ -51,6 +52,7 @@ import {
 })
 export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
   public elRef = inject(ElementRef<HTMLElement>);
+  readonly previewMode = input<'main' | 'secondary'>('main');
   deckRef?: Reveal.Api;
   deck?: Reveal.Api;
   fitTexts = viewChildren(LyriFitTextDirective);
@@ -280,6 +282,7 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
       this.secondarySizePercent();
       this.secondaryTranslateTitle();
       this.secondarySlideText();
+      this.previewMode();
 
       // Defer redraw using requestAnimationFrame instead of setTimeout to avoid macro task lag
       if (this.redrawFrameId !== null) {

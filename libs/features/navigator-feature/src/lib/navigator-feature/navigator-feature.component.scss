@@ -25,12 +25,6 @@
   flex-direction: column;
 
   ::ng-deep {
-    .navigator-tabs {
-      height: 100%;
-      min-height: 0;
-      overflow: hidden;
-    }
-
     // keep tab headers at natural size and prevent them from being squeezed
     .p-tablist {
       flex: 0 0 auto;
@@ -70,7 +64,7 @@
     width: 100%;
     height: 100%;
     min-height: 0;
-    padding: 10px 12px 14px;
+    padding: 8px 10px 12px;
     overflow: hidden;
 
     &--history {
@@ -78,7 +72,7 @@
     }
 
     &--compact {
-      padding: 6px 8px 10px;
+      padding: 6px 4px 8px;
     }
   }
 

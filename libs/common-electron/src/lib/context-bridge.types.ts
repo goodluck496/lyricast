@@ -67,6 +67,7 @@ export type Context = {
   getNdiStatus?: () => Promise<{ available: boolean; activeStreams: string[]; version?: string; error?: string }>;
   startNdiBroadcast?: (config: any) => Promise<boolean>;
   stopNdiBroadcast?: (channelId: string) => Promise<void>;
+  getNdiClients?: (channelId: string) => Promise<number>;
 
   // Legacy quiz entrypoints (Electron IPC).
   // После миграции квизов на HTTP API через svc://quiz эти методы могут отсутствовать.

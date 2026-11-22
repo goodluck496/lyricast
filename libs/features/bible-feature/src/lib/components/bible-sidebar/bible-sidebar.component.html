@@ -33,6 +33,16 @@
         <span>OBS</span>
       </div>
     }
+    @if (hasNdiChannel$ | async) {
+      <div
+        class="sidebar-obs-chip sidebar-ndi-chip"
+        [class.sidebar-ndi-chip--live]="isLive$ | async"
+        title="NDI Network Broadcast активен"
+      >
+        <span class="live-dot" [class.live-dot--active]="isLive$ | async"></span>
+        <span>NDI</span>
+      </div>
+    }
   </div>
 
   <!-- Unified, fixed-size preview container -->
@@ -62,44 +72,10 @@
       }
     </button>
 
-    @if (activePreviewTab === 'main') {
-      <lyri-bible-casting-preview class="preview-content-fill"></lyri-bible-casting-preview>
-    } @else {
-      <div
-        class="sidebar-secondary-preview preview-content-fill"
-        [ngStyle]="appearanceService.getBackgroundStyles(appearance())"
-      >
-        <div class="preview-header">
-          <div [ngStyle]="appearanceService.getReferenceStyles(appearance())">
-            {{ selectedVerseRef$ | async }}
-            <span class="translate-badge">{{ secondaryTranslateTitle$ | async }}</span>
-          </div>
-        </div>
-        <div class="sidebar-secondary-preview__body">
-          <div
-            [maxFontSize]="appearance().maxFontSize"
-            [minFontSize]="appearance().minFontSize"
-            [fontFamily]="appearance().fontFamily"
-            [virtualWidth]="1920"
-            [virtualHeight]="1080"
-            [textToWatch]="(secondaryPreviewText$ | async) || ''"
-            class="preview-fit"
-            lyriFitText
-          >
-            <div class="slide-content-wrapper">
-              <div
-                class="slide-content"
-                [innerHTML]="sanitizer.bypassSecurityTrustHtml((secondaryPreviewText$ | async) || '— Нет текста —')"
-                [ngStyle]="appearanceService.getTextStyles(appearance())"
-              ></div>
-            </div>
-          </div>
-        </div>
-        <div class="sidebar-secondary-preview__tag">
-          <span>Отдельный монитор • 100% размер</span>
-        </div>
-      </div>
-    }
+    <lyri-bible-casting-preview
+      class="preview-content-fill"
+      [previewMode]="activePreviewTab"
+    ></lyri-bible-casting-preview>
   </div>
 
   <!-- Compact single action row: play button + blackout eye icon button -->

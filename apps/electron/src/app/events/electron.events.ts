@@ -320,3 +320,7 @@ ipcMain.handle('START_NDI_BROADCAST', (_event, config: NdiStreamConfig) => {
 ipcMain.handle('STOP_NDI_BROADCAST', (_event, channelId: string) => {
   return NdiBroadcasterService.getInstance().stopBroadcast(channelId);
 });
+
+ipcMain.handle('GET_NDI_CLIENTS', (_event, channelId: string) => {
+  return NdiBroadcasterService.getInstance().getConnectedClients(channelId);
+});

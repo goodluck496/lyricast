@@ -59,4 +59,6 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke('START_NDI_BROADCAST', config),
   stopNdiBroadcast: (channelId: string) =>
     ipcRenderer.invoke('STOP_NDI_BROADCAST', channelId),
+  getNdiClients: (channelId: string) =>
+    ipcRenderer.invoke('GET_NDI_CLIENTS', channelId),
 } satisfies Context);

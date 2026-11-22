@@ -99,6 +99,14 @@
   }
 }
 
+.sidebar-ndi-chip {
+  &--live {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+  }
+}
+
 /* Static viewport frame: dimensions are fixed so switching tabs never shifts a pixel */
 .sidebar-preview-frame {
   width: 100%;

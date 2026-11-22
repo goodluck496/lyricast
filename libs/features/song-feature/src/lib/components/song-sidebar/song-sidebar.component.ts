@@ -106,6 +106,14 @@ export class SongSidebarComponent {
       )
     );
 
+  readonly hasNdiChannel$ = this.settingsSrv
+    .getChannelsObservable()
+    .pipe(
+      map((channels) =>
+        channels.some((c) => c.enabled && c.targetType === 'ndi')
+      )
+    );
+
   readonly currentLyricText = computed(() => {
     const line = this.songPageSelectSrv.selectedLyricLine();
     return line ? this.textLayout.formatHtmlForDisplay(line.text) : '';

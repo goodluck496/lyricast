@@ -43,6 +43,7 @@ import { TableModule } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { DialogModule } from 'primeng/dialog';
 import { SongDictionariesManagerComponent } from '../../components/song-dictionaries-manager/song-dictionaries-manager.component';
 import { BibleDictionariesManagerComponent } from '../../components/bible-dictionaries-manager/bible-dictionaries-manager.component';
 
@@ -65,6 +66,7 @@ import { BibleDictionariesManagerComponent } from '../../components/bible-dictio
     InputTextModule,
     TagModule,
     TooltipModule,
+    DialogModule,
     SongDictionariesManagerComponent,
     BibleDictionariesManagerComponent,
   ],
@@ -93,6 +95,43 @@ export class SettingsComponent implements OnInit, OnDestroy {
   displays: AppDisplay[] = [];
   channels: OutputChannelConfig[] = [];
   emulationMode = false;
+
+  isNdiDialogVisible = false;
+  selectedNdiChannel: OutputChannelConfig | null = null;
+  ndiStreamName = '';
+  ndiFps: 30 | 60 = 30;
+  ndiResolution: '1080p' | '720p' = '1080p';
+
+  readonly ndiFpsOptions = [
+    { label: '30 FPS (Стандартно, низкая нагрузка)', value: 30 as const },
+    { label: '60 FPS (Максимальная плавность)', value: 60 as const },
+  ];
+
+  readonly ndiResolutionOptions = [
+    { label: '1080p Full HD (1920x1080)', value: '1080p' as const },
+    { label: '720p HD (1280x720)', value: '720p' as const },
+  ];
+
+  onOpenNdiSettings(channel: OutputChannelConfig) {
+    this.selectedNdiChannel = channel;
+    this.ndiStreamName = channel.ndiStreamName || `Lyricast-${channel.name}`;
+    this.ndiFps = channel.ndiFps || 30;
+    this.ndiResolution = channel.ndiResolution || '1080p';
+    this.isNdiDialogVisible = true;
+    this.cdr.markForCheck();
+  }
+
+  async onSaveNdiSettings() {
+    if (!this.selectedNdiChannel) return;
+    await this.settingsSrv.updateChannel(this.selectedNdiChannel.id, {
+      ndiStreamName: this.ndiStreamName.trim(),
+      ndiFps: this.ndiFps,
+      ndiResolution: this.ndiResolution,
+    });
+    this.isNdiDialogVisible = false;
+    this.selectedNdiChannel = null;
+    this.cdr.markForCheck();
+  }
 
   readonly roleOptions = [
     { label: 'Основной зал', value: 'main' as OutputRole },
@@ -383,6 +422,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   async onTestChannelWindow(channel: OutputChannelConfig) {
+    if (channel.targetType === 'ndi') {
+      await this.settingsSrv.startNdiChannel(channel);
+      return;
+    }
     const display = this.settingsSrv.getDisplayById(channel.displayId) || this.displays[0];
     const emulated = this.emulationMode || channel.targetType === 'emulated';
     await this.windowSrv.electronContext.openWindow({
@@ -395,6 +438,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   async onCloseChannelWindow(channel: OutputChannelConfig) {
+    if (channel.targetType === 'ndi') {
+      await this.settingsSrv.stopNdiChannel(channel);
+      return;
+    }
     if (this.windowSrv.electronContext.closeCastingWindow) {
       await this.windowSrv.electronContext.closeCastingWindow(channel.id);
     } else {

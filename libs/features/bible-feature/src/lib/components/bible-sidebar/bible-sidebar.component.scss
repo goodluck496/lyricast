@@ -99,6 +99,14 @@
   }
 }
 
+.sidebar-ndi-chip {
+  &--live {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+  }
+}
+
 /* Static viewport frame: dimensions are fixed so switching tabs never shifts a pixel */
 .sidebar-preview-frame {
   width: 100%;
@@ -175,91 +183,6 @@
   }
 }
 
-.sidebar-secondary-preview {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  padding: 8px 10px;
-  box-sizing: border-box;
-  overflow: hidden;
-  position: relative;
-
-  .preview-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 4px;
-    margin-bottom: 4px;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    flex: 0 0 auto;
-    font-size: 11px;
-
-    .translate-badge {
-      display: inline-block;
-      margin-left: 8px;
-      padding: 1px 6px;
-      font-size: 10px;
-      border-radius: 3px;
-      background: rgba(59, 130, 246, 0.2);
-      color: #93c5fd;
-      border: 1px solid rgba(59, 130, 246, 0.3);
-    }
-  }
-
-  &__body {
-    flex: 1 1 auto;
-    position: relative;
-    min-height: 0;
-    width: 100%;
-    overflow: hidden;
-
-    .preview-fit {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-
-      &::before,
-      &::after {
-        content: '';
-        flex: 1 1 auto;
-      }
-    }
-
-    .slide-content-wrapper {
-      width: 100%;
-      flex: 0 0 auto;
-    }
-
-    .slide-content {
-      width: 100%;
-      text-align: center;
-      line-height: 1.35 !important;
-      font-weight: bold;
-      overflow: hidden;
-
-      ::ng-deep .verse-num {
-        color: #fbbf24;
-        font-weight: bold;
-        font-size: 0.8em;
-        vertical-align: super;
-      }
-    }
-  }
-
-  &__tag {
-    flex: 0 0 auto;
-    font-size: 9px;
-    color: var(--text-color-secondary);
-    text-align: right;
-  }
-}
-
 .control-sidebar__actions {
   flex: 0 0 auto;
   margin-top: 6px;
@@ -329,7 +252,7 @@
 .bible-sidebar__secondary-tab-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
 }
 
@@ -337,13 +260,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: 6px 10px;
   background: var(--surface-card);
   border: 1px solid var(--surface-border);
   border-radius: 6px;
 
   .secondary-toggle-label {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--text-color);
   }
@@ -357,7 +280,7 @@
 .secondary-controls-group {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 10px;
   background: var(--surface-card);
   border: 1px solid var(--surface-border);
@@ -367,7 +290,7 @@
 .secondary-panel-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 
   .field-label {
     font-size: 11px;
@@ -387,7 +310,7 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 5px 8px;
+  padding: 5px 6px;
   font-size: 11px;
   font-weight: 500;
   color: var(--text-color-secondary);
@@ -414,16 +337,16 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px;
+  padding: 5px 8px;
   background: rgba(16, 185, 129, 0.08);
   border: 1px solid rgba(16, 185, 129, 0.25);
   border-radius: 5px;
   color: #10b981;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.35;
 
   i {
-    font-size: 12px;
+    font-size: 11px;
     flex-shrink: 0;
   }
 }

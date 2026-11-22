@@ -195,8 +195,49 @@ export class SettingsService {
           payload: { path, queryParams },
           targetChannelId: channel.id,
         });
+      } else if (channel.targetType === 'ndi') {
+        await this.startNdiChannel(channel);
       }
     }
+  }
+
+  async startNdiChannel(channel: OutputChannelConfig): Promise<boolean> {
+    if (!this.winSrv.electronContext.startNdiBroadcast) return false;
+
+    const streamName =
+      channel.ndiStreamName || `Lyricast-${channel.name.replace(/\s+/g, '-')}`;
+    const fps = channel.ndiFps || 30;
+    const is720 = channel.ndiResolution === '720p';
+
+    return await this.winSrv.electronContext.startNdiBroadcast({
+      channelId: channel.id,
+      streamName,
+      role: channel.role,
+      fps,
+      width: is720 ? 1280 : 1920,
+      height: is720 ? 720 : 1080,
+      hasAlpha: channel.role === 'lower_third',
+    });
+  }
+
+  async stopNdiChannel(channelId: string): Promise<void> {
+    if (this.winSrv.electronContext.stopNdiBroadcast) {
+      await this.winSrv.electronContext.stopNdiBroadcast(channelId);
+    }
+  }
+
+  async getNdiStatus(): Promise<{ available: boolean; activeStreams: string[]; version?: string; error?: string }> {
+    if (this.winSrv.electronContext.getNdiStatus) {
+      return await this.winSrv.electronContext.getNdiStatus();
+    }
+    return { available: false, activeStreams: [] };
+  }
+
+  async getNdiClients(channelId: string): Promise<number> {
+    if (this.winSrv.electronContext.getNdiClients) {
+      return await this.winSrv.electronContext.getNdiClients(channelId);
+    }
+    return 0;
   }
 
   async closeAllCastingWindows(): Promise<void> {
@@ -206,6 +247,15 @@ export class SettingsService {
       await this.winSrv.electronContext.closeWindow({
         type: AppWindowTypes.CASTING,
       });
+    }
+
+    if (this.winSrv.electronContext.stopNdiBroadcast) {
+      const activeChannels = this.getActiveChannels();
+      for (const channel of activeChannels) {
+        if (channel.targetType === 'ndi') {
+          await this.winSrv.electronContext.stopNdiBroadcast(channel.id);
+        }
+      }
     }
   }
 

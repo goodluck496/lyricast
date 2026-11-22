@@ -33,6 +33,16 @@
         <span>OBS</span>
       </div>
     }
+    @if (hasNdiChannel$ | async) {
+      <div
+        class="sidebar-obs-chip sidebar-ndi-chip"
+        [class.sidebar-ndi-chip--live]="isLive$ | async"
+        title="NDI Network Broadcast активен"
+      >
+        <span class="live-dot" [class.live-dot--active]="isLive$ | async"></span>
+        <span>NDI</span>
+      </div>
+    }
   </div>
 
   <!-- Unified, fixed-size preview container -->

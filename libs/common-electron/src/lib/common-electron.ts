@@ -20,4 +20,7 @@ export interface OutputChannelConfig {
   role: OutputRole;
   enabled: boolean;
   autoStart: boolean;
+  ndiStreamName?: string;
+  ndiFps?: 30 | 60;
+  ndiResolution?: '1080p' | '720p';
 }

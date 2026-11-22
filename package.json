@@ -151,6 +151,7 @@
     "electron-updater": "^6.1.8",
     "express": "5.2.1",
     "fontfaceobserver": "^2.3.0",
+    "grandi": "^2.0.2",
     "imask": "^7.6.1",
     "jszip": "^3.10.1",
     "lodash-es": "^4.17.21",

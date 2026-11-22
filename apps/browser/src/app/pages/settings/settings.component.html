@@ -115,7 +115,19 @@
                     <span class="text-xs text-gray-400">/obs/{{ channel.id }}</span>
                   </div>
                 } @else if (channel.targetType === 'ndi') {
-                  <p-tag value="NDI Video Stream" severity="info" />
+                  <div class="flex items-center gap-2">
+                    <p-tag [value]="channel.ndiStreamName || ('Lyricast-' + channel.name)" severity="info" icon="pi pi-wifi" />
+                    <button
+                      pButton
+                      type="button"
+                      icon="pi pi-cog"
+                      [rounded]="true"
+                      [text]="true"
+                      size="small"
+                      pTooltip="Параметры NDI-потока"
+                      (click)="onOpenNdiSettings(channel)"
+                    ></button>
+                  </div>
                 } @else {
                   <p-select
                     [options]="displaySelectOptions"
@@ -376,3 +388,62 @@
     </p-tabpanel>
   </p-tabpanels>
 </p-tabs>
+
+<p-dialog
+  [(visible)]="isNdiDialogVisible"
+  [header]="'Настройки NDI-потока: ' + (selectedNdiChannel?.name || '')"
+  [modal]="true"
+  [style]="{ width: '440px' }"
+  [closable]="true"
+  appendTo="body"
+>
+  @if (selectedNdiChannel) {
+    <div class="flex flex-col gap-4 py-2" style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="flex flex-col gap-1" style="display: flex; flex-direction: column; gap: 0.25rem;">
+        <label class="text-xs font-semibold text-gray-300">Имя NDI-источника в сети:</label>
+        <input
+          type="text"
+          pInputText
+          [(ngModel)]="ndiStreamName"
+          placeholder="Например: Lyricast-Main"
+          class="w-full p-inputtext-sm"
+        />
+        <span class="text-xs text-gray-500">Это имя отобразится на телефонах и NDI-мониторах в сети.</span>
+      </div>
+
+      <div class="flex flex-col gap-1" style="display: flex; flex-direction: column; gap: 0.25rem;">
+        <label class="text-xs font-semibold text-gray-300">Разрешение потока:</label>
+        <p-select
+          [options]="ndiResolutionOptions"
+          [(ngModel)]="ndiResolution"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          class="w-full p-select-sm"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1" style="display: flex; flex-direction: column; gap: 0.25rem;">
+        <label class="text-xs font-semibold text-gray-300">Частота кадров (FPS):</label>
+        <p-select
+          [options]="ndiFpsOptions"
+          [(ngModel)]="ndiFps"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          class="w-full p-select-sm"
+        />
+      </div>
+
+      <div style="padding: 0.5rem 0.75rem; border-radius: 6px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; font-size: 11px; line-height: 1.4;">
+        <i class="pi pi-check-circle" style="margin-right: 4px;"></i>
+        Поток генерируется закадрово в памяти Electron. Физический второй монитор не требуется!
+      </div>
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    <button pButton label="Отмена" [text]="true" severity="secondary" size="small" (click)="isNdiDialogVisible = false"></button>
+    <button pButton label="Сохранить" icon="pi pi-check" size="small" severity="success" (click)="onSaveNdiSettings()"></button>
+  </ng-template>
+</p-dialog>

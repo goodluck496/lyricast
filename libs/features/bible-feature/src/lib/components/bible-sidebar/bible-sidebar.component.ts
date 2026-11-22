@@ -27,7 +27,6 @@ import {
   selectSelectedTranslate,
   selectSelectedVersesRange,
 } from '@lyri-cast/bible-store';
-import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import {
   BehaviorSubject,
@@ -53,7 +52,6 @@ import {
   BridgeService,
   CastingAppearanceService,
   DEFAULT_CASTING_PAGE_CONFIG,
-  LyriFitTextDirective,
   Pages,
   selectOpenedWindow,
   SettingsService,
@@ -91,7 +89,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     TooltipModule,
     FormsModule,
     MatSliderModule,
-    LyriFitTextDirective,
   ],
   templateUrl: './bible-sidebar.component.html',
   styleUrl: './bible-sidebar.component.scss',
@@ -146,7 +143,6 @@ export class BibleSidebarComponent {
   private readonly destroyRef = inject(DestroyRef);
   readonly appearanceService = inject(CastingAppearanceService);
   readonly appearance = this.appearanceService.appearanceFor('bible');
-  readonly sanitizer = inject(DomSanitizer);
   private readonly apiSrv = inject(BibleApiService);
 
   activePreviewTab: 'main' | 'secondary' = 'main';
@@ -172,6 +168,14 @@ export class BibleSidebarComponent {
       )
     );
 
+  readonly hasNdiChannel$ = this.settingsSrv
+    .getChannelsObservable()
+    .pipe(
+      map((channels) =>
+        channels.some((c) => c.enabled && c.targetType === 'ndi')
+      )
+    );
+
   isBlackoutAll = false;
 
   onBlackoutAllToggle(enabled: boolean): void {
@@ -185,103 +189,6 @@ export class BibleSidebarComponent {
     );
   }
 
-  readonly secondaryTranslateTitle$ = this.secondarySettings$.pipe(
-    map(
-      (s) => s.translate?.title || s.translate?.sourceTitle || 'Второй перевод'
-    )
-  );
-
-  readonly selectedVerseRef$ = combineLatest([
-    this.store.select(selectCastingProcess),
-    this.store.select(selectCastingProcessNavigate),
-    this.store.select(selectCastingPaused),
-    this.store.select(selectSelectedBook),
-    this.store.select(selectSelectedBibleVerse),
-    this.selectedRange$,
-  ]).pipe(
-    map(([process, navigate, paused, book, verse, range]) => {
-      if (process && !paused) {
-        const activeContent =
-          navigate?.currentContent ||
-          process.content?.[process.fromIndex || 0];
-        if (activeContent) {
-          const rangeObj = navigate?.range ?? process.range ?? range ?? null;
-          const num = rangeObj
-            ? rangeObj.from === rangeObj.to
-              ? `${rangeObj.from}`
-              : `${rangeObj.from}-${rangeObj.to}`
-            : `${activeContent.number}`;
-          return `${
-            activeContent.bookTitle?.full || book?.title?.full || ''
-          } ${activeContent.chapterId}:${num}`;
-        }
-      }
-      if (!verse) return '';
-      const num = range
-        ? range.from === range.to
-          ? `${range.from}`
-          : `${range.from}-${range.to}`
-        : `${verse.number}`;
-      return `${book?.title?.full || ''} ${verse.chapterId}:${num}`;
-    })
-  );
-
-  readonly secondaryPreviewText$ = combineLatest([
-    this.store.select(selectCastingProcess),
-    this.store.select(selectCastingProcessNavigate),
-    this.store.select(selectCastingPaused),
-    this.store.select(selectSelectedSecondaryTranslationSections),
-    this.store.select(selectSelectedBibleVerse),
-    this.selectedRange$,
-  ]).pipe(
-    map(([process, navigate, paused, sections, selectedVerse, range]) => {
-      if (process && !paused) {
-        const secondary =
-          navigate?.secondaryContent ?? process.secondaryContent;
-        if (secondary?.content?.length) {
-          const fromIndex = navigate?.nextIndex ?? process.fromIndex;
-          const activeRange =
-            navigate?.range ?? process.range ?? range ?? null;
-          if (activeRange) {
-            const filtered = secondary.content.filter(
-              (v) => v.number >= activeRange.from && v.number <= activeRange.to
-            );
-            if (filtered.length) {
-              return filtered
-                .map(
-                  (v) =>
-                    `<span class="verse-num">${v.number}</span> ${
-                      Array.isArray(v.text) ? v.text.join(' ') : v.text
-                    }`
-                )
-                .join(' ');
-            }
-          }
-          const verse = secondary.content[fromIndex] || secondary.content[0];
-          if (verse) {
-            return `<span class="verse-num">${verse.number}</span> ${
-              Array.isArray(verse.text) ? verse.text.join(' ') : verse.text
-            }`;
-          }
-        }
-      }
-
-      if (!sections || sections.length === 0 || !selectedVerse) return '';
-      const verses = sections.flatMap((s) => s.content);
-      if (range) {
-        const filtered = verses.filter(
-          (v) => v.number >= range.from && v.number <= range.to
-        );
-        return filtered
-          .map((v) => `<span class="verse-num">${v.number}</span> ${v.text}`)
-          .join(' ');
-      }
-      const single = verses.find((v) => v.number === selectedVerse.number);
-      return single
-        ? `<span class="verse-num">${single.number}</span> ${single.text}`
-        : '';
-    })
-  );
   secondaryTranslateOptions$ = combineLatest([
     this.apiSrv.getTranslates(),
     this.primaryTranslate$,

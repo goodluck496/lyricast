@@ -3,6 +3,7 @@ import {
   ChangeDetectorRef,
   Component,
   DestroyRef,
+  HostListener,
   inject,
   OnInit,
   signal,
@@ -29,7 +30,6 @@ import {
 import { HttpClient } from '@angular/common/http';
 import { BASE_API_TOKEN } from '@lyri-cast/common';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { Overlay } from 'primeng/overlay';
 import { Badge } from 'primeng/badge';
 import { ButtonDirective } from 'primeng/button';
 import {
@@ -74,7 +74,6 @@ import { IStepOption, TourPrimeNgModule, TourService } from 'ngx-ui-tour-primeng
     SvgIconComponent,
     AmbientBackgroundComponent,
     TourPrimeNgModule,
-    Overlay,
     Badge,
     ButtonDirective,
   ],
@@ -142,6 +141,8 @@ export class MainComponent implements OnInit {
   }
 
   isUpdateOverlayVisible = false;
+  isOverlayPinned = false;
+  overlayTop = 0;
   private overlayHideTimer: ReturnType<typeof setTimeout> | null = null;
 
   activePage?: MenuItem;
@@ -281,18 +282,42 @@ export class MainComponent implements OnInit {
     return leaf === Pages.SETTINGS;
   }
 
-  onMenuItemMouseEnter(page: MenuItem) {
+  onMenuItemMouseEnter(page: MenuItem, event?: MouseEvent) {
     if (this.isSettingsPage(page) && this.appUpdateService.isUpdateDownloaded()) {
       this.clearOverlayHideTimer();
+      const target = (event?.currentTarget as HTMLElement) ?? document.querySelector('#menu-settings-item');
+      if (target) {
+        const rect = target.getBoundingClientRect();
+        const popupHeight = 130;
+        const maxTop = Math.max(10, window.innerHeight - popupHeight - 16);
+        this.overlayTop = Math.min(rect.top, maxTop);
+      }
       this.isUpdateOverlayVisible = true;
       this.cdr.markForCheck();
     }
   }
 
   onMenuItemMouseLeave(page: MenuItem) {
-    if (this.isSettingsPage(page)) {
+    if (this.isSettingsPage(page) && !this.isOverlayPinned) {
       this.scheduleOverlayHide();
     }
+  }
+
+  onBadgeClick(event: MouseEvent) {
+    event.stopPropagation();
+    event.preventDefault();
+    this.clearOverlayHideTimer();
+    const target = (event.currentTarget as HTMLElement).closest('.page__menu-item') as HTMLElement
+      ?? document.querySelector('#menu-settings-item');
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const popupHeight = 130;
+      const maxTop = Math.max(10, window.innerHeight - popupHeight - 16);
+      this.overlayTop = Math.min(rect.top, maxTop);
+    }
+    this.isOverlayPinned = !this.isOverlayPinned;
+    this.isUpdateOverlayVisible = this.isOverlayPinned;
+    this.cdr.markForCheck();
   }
 
   onOverlayMouseEnter() {
@@ -300,15 +325,19 @@ export class MainComponent implements OnInit {
   }
 
   onOverlayMouseLeave() {
-    this.scheduleOverlayHide();
+    if (!this.isOverlayPinned) {
+      this.scheduleOverlayHide();
+    }
   }
 
   private scheduleOverlayHide() {
     this.clearOverlayHideTimer();
     this.overlayHideTimer = setTimeout(() => {
-      this.isUpdateOverlayVisible = false;
-      this.cdr.markForCheck();
-    }, 250);
+      if (!this.isOverlayPinned) {
+        this.isUpdateOverlayVisible = false;
+        this.cdr.markForCheck();
+      }
+    }, 400);
   }
 
   private clearOverlayHideTimer() {
@@ -318,19 +347,21 @@ export class MainComponent implements OnInit {
     }
   }
 
-  onOverlayShow(event: any) {
-    const overlay = event?.overlay ?? (event?.target ? null : event);
-    const target = event?.target ?? document.querySelector('#menu-settings-item');
-    if (overlay && target) {
-      const rect = target.getBoundingClientRect();
-      overlay.style.left = `${rect.right + 10}px`;
-      overlay.style.top = `${rect.top}px`;
-    }
-  }
-
   onApplyUpdate() {
     this.isUpdateOverlayVisible = false;
+    this.isOverlayPinned = false;
     this.appUpdateService.quitAndInstall();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (!this.isUpdateOverlayVisible) return;
+    const target = event.target as HTMLElement;
+    if (!target.closest('.page__update-flyout') && !target.closest('#menu-settings-item')) {
+      this.isUpdateOverlayVisible = false;
+      this.isOverlayPinned = false;
+      this.cdr.markForCheck();
+    }
   }
 
   ngOnInit() {
@@ -352,6 +383,10 @@ export class MainComponent implements OnInit {
             PAGE_CONTAINER_TEMPLATES.PAGE_HEADER,
           ]);
         }
+
+        this.isUpdateOverlayVisible = false;
+        this.isOverlayPinned = false;
+        this.cdr.markForCheck();
 
         if (this.canTourEnd(this.tourService)) {
           this.tourService.end();

@@ -220,9 +220,10 @@ export class SettingsService {
     });
   }
 
-  async stopNdiChannel(channelId: string): Promise<void> {
+  async stopNdiChannel(channelOrId: string | OutputChannelConfig): Promise<void> {
+    const id = typeof channelOrId === 'string' ? channelOrId : channelOrId.id;
     if (this.winSrv.electronContext.stopNdiBroadcast) {
-      await this.winSrv.electronContext.stopNdiBroadcast(channelId);
+      await this.winSrv.electronContext.stopNdiBroadcast(id);
     }
   }
 

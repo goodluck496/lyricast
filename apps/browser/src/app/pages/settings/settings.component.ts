@@ -439,7 +439,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   async onCloseChannelWindow(channel: OutputChannelConfig) {
     if (channel.targetType === 'ndi') {
-      await this.settingsSrv.stopNdiChannel(channel);
+      await this.settingsSrv.stopNdiChannel(channel.id);
       return;
     }
     if (this.windowSrv.electronContext.closeCastingWindow) {

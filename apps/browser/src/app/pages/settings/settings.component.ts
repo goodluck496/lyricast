@@ -142,10 +142,20 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   readonly targetTypeOptions = [
     { label: 'Физический экран', value: 'display' as OutputTargetType },
-    { label: 'Эмуляция (окно)', value: 'emulated' as OutputTargetType },
-    { label: 'OBS Web Browser Source', value: 'obs_web' as OutputTargetType },
-    { label: 'NDI Network Stream', value: 'ndi' as OutputTargetType },
+    { label: 'NDI-вещание (по сети)', value: 'ndi' as OutputTargetType },
+    { label: 'OBS Browser Source', value: 'obs_web' as OutputTargetType },
   ];
+
+  get availableTargetTypeOptions() {
+    return [
+      { label: 'Физический экран', value: 'display' as OutputTargetType },
+      { label: 'NDI-вещание (по сети)', value: 'ndi' as OutputTargetType },
+      { label: 'OBS Browser Source', value: 'obs_web' as OutputTargetType },
+      ...(this.emulationMode
+        ? [{ label: 'Окно эмуляции', value: 'emulated' as OutputTargetType }]
+        : []),
+    ];
+  }
 
   get displaySelectOptions() {
     return this.displays.map((d, index) => ({
@@ -392,7 +402,20 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   async onUpdateChannelTarget(channel: OutputChannelConfig, targetType: OutputTargetType) {
-    await this.settingsSrv.updateChannel(channel.id, { targetType });
+    const patch: Partial<OutputChannelConfig> = { targetType };
+    if (targetType === 'ndi') {
+      if (!channel.ndiStreamName) {
+        patch.ndiStreamName = `Lyricast-${channel.name || 'Screen'}`;
+      }
+      if (!channel.ndiFps) {
+        patch.ndiFps = 30;
+      }
+      if (!channel.ndiResolution) {
+        patch.ndiResolution = '1080p';
+      }
+    }
+    await this.settingsSrv.updateChannel(channel.id, patch);
+    this.cdr.markForCheck();
   }
 
   async onUpdateChannelDisplay(channel: OutputChannelConfig, displayId: number) {

@@ -136,11 +136,12 @@
                       pButton
                       type="button"
                       icon="pi pi-cog"
-                      label="Настроить"
                       [rounded]="true"
-                      [outlined]="true"
+                      [text]="true"
                       size="small"
                       pTooltip="Параметры NDI-потока"
+                      tooltipPosition="top"
+                      style="flex-shrink: 0;"
                       (click)="onOpenNdiSettings(channel)"
                     ></button>
                   </div>

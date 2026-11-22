@@ -2,7 +2,7 @@
   <div class="preview-header">
     @if (selectedBibleVerseForCast(); as data) {
       <div [ngStyle]="appearanceService.getReferenceStyles(appearance())" class="preview-ref-line">
-        {{ data.bookTitle.full }}
+        {{ previewBookTitle() }}
         {{ data.chapterId }}:
         @if (selectedRange(); as range) {
           @if (range.from === range.to) {

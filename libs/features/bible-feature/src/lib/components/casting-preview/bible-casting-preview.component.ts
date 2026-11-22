@@ -89,6 +89,22 @@ export class BibleCastingPreviewComponent implements OnDestroy, AfterViewInit {
       bookTitle: book.title,
     } as BibleVerseForCasting;
   });
+  previewBookTitle = computed(() => {
+    const data = this.selectedBibleVerseForCast();
+    if (!data) return '';
+    if (this.previewMode() === 'secondary') {
+      const process = this.castingProcess();
+      const secondaryBook = process?.secondaryContent?.book;
+      if (secondaryBook?.title?.full) {
+        return secondaryBook.title.full;
+      }
+      const secondaryContent = process?.secondaryContent?.content;
+      if (secondaryContent?.[0]?.bookTitle?.full) {
+        return secondaryContent[0].bookTitle.full;
+      }
+    }
+    return data.bookTitle.full;
+  });
   secondaryLayout = computed<BibleSecondaryCastingLayout>(
     () => this.secondarySettings()?.layout ?? 'right'
   );

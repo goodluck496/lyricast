@@ -35,8 +35,10 @@ import {
   map,
   Observable,
   of,
+  shareReplay,
   switchMap,
   take,
+  tap,
   withLatestFrom,
 } from 'rxjs';
 import { filterEmpty, snapshot } from '@lyri-cast/common';
@@ -392,6 +394,22 @@ export class BibleSidebarComponent {
     );
   }
 
+  private secondaryBooksCache = new Map<string, Observable<BibleBookShort[]>>();
+
+  private getSecondaryBooks(translate: BibleTranslateShort): Observable<BibleBookShort[]> {
+    const key = translate.keyForSearch;
+    if (!this.secondaryBooksCache.has(key)) {
+      this.secondaryBooksCache.set(
+        key,
+        this.apiSrv.getBooks(translate).pipe(
+          map((books) => books as BibleBookShort[]),
+          shareReplay(1)
+        )
+      );
+    }
+    return this.secondaryBooksCache.get(key)!;
+  }
+
   private resolveSecondaryContent(
     enabled: boolean,
     translate: BibleTranslateShort | null,
@@ -409,26 +427,26 @@ export class BibleSidebarComponent {
       chapter
     );
     const cachedSections = cache[cacheKey];
-
-    if (cachedSections) {
-      return of({
-        translate,
-        content: this.createCastingContent(cachedSections, book),
-      });
-    }
-
-    return this.apiSrv.getSections(translate, book, chapter).pipe(
-      map((sections) => {
-        this.store.dispatch(
-          BibleActions.setSecondaryTranslationChapter({
-            cacheKey,
-            sections,
+    const sections$ = cachedSections
+      ? of(cachedSections)
+      : this.apiSrv.getSections(translate, book, chapter).pipe(
+          tap((sections) => {
+            this.store.dispatch(
+              BibleActions.setSecondaryTranslationChapter({
+                cacheKey,
+                sections,
+              })
+            );
           })
         );
 
+    return combineLatest([sections$, this.getSecondaryBooks(translate)]).pipe(
+      map(([sections, books]) => {
+        const secondaryBook = books.find((b) => b.number === book.number) || book;
         return {
           translate,
-          content: this.createCastingContent(sections, book),
+          book: secondaryBook,
+          content: this.createCastingContent(sections, secondaryBook),
         };
       })
     );

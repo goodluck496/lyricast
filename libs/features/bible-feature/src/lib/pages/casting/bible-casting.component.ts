@@ -62,6 +62,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedRange = signal<{ from: number; to: number } | null>(null);
   secondaryContents = signal<BibleVerseForCasting[]>([]);
   secondaryTranslateTitle = signal('');
+  secondaryBookTitle = signal('');
   secondaryEnabled = signal(false);
   secondaryLayout = signal<BibleSecondaryCastingLayout>('right');
   secondarySizePercent = signal(50);
@@ -79,6 +80,12 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
       return this.secondaryLine() || this.primaryLine();
     }
     return this.primaryLine();
+  });
+  displayedBookTitle = computed(() => {
+    if (this.isSecondaryOnly() && this.secondaryBookTitle()) {
+      return this.secondaryBookTitle();
+    }
+    return this.selectedBookTitle();
   });
   showingContent = signal(false);
   fitTexts = viewChildren(LyriFitTextDirective);
@@ -361,6 +368,7 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.secondaryEnabled() || !secondary) {
       this.secondaryContents.set([]);
       this.secondaryTranslateTitle.set('');
+      this.secondaryBookTitle.set('');
       return;
     }
 
@@ -370,6 +378,11 @@ export class BibleCastingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.secondaryTranslateTitle.set(
       secondary.translate.title || secondary.translate.sourceTitle
     );
+    if (secondary.book?.title?.full) {
+      this.secondaryBookTitle.set(secondary.book.title.full);
+    } else if (secondary.content[0]?.bookTitle?.full) {
+      this.secondaryBookTitle.set(secondary.content[0].bookTitle.full);
+    }
     this.secondaryContents.set(
       this.prepareContentForDisplay(
         secondary.content,

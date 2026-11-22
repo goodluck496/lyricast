@@ -26,6 +26,7 @@ export type BibleSecondaryCastingLayout = 'right' | 'bottom';
 
 export type BibleSecondaryCastingContent = {
   translate: BibleTranslateShort;
+  book?: BibleBookShort;
   content: BibleVerseForCasting[];
 };
 

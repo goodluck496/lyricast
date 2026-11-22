@@ -483,10 +483,13 @@ export class SongsService {
         title: book.headerTitle,
         author: book.headerAuthor,
         updatedAt: book.headerUpdatedAt?.toISOString?.() ?? new Date().toISOString(),
-        bookKey: book.headerBookKey,
+        bookKey: book.fileKey || book.headerBookKey,
         disabled: book.headerDisabled,
       },
-      meta: bookMeta,
+      meta: {
+        ...bookMeta,
+        version: String(book.version ?? 1),
+      },
       songs: resultSongs,
     };
   }

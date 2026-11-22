@@ -19,15 +19,10 @@ import fs from 'fs';
 
 @Injectable()
 export class BibleByFilesService {
-  // Встроенные ассеты в пакете приложения
-  assetsPath = path.resolve(
-    process.cwd(),
-    'assets',
-    'complete-jsons',
-    'bibles'
-  );
-  // Внешние ассеты (user-assets / assetsPath), инициализируются в конструкторе
-  assetsPathNew = '';
+  // Встроенные ассеты в пакете приложения (source)
+  assetsPath: string;
+  // Внешние ассеты пользователя (USER_ASSETS_PATH в AppData)
+  assetsPathNew: string;
 
   biblesCache: Record<string, BibleTranslate> = {};
   shortTranslatesCache: BibleTranslateShort[] = [];
@@ -35,21 +30,30 @@ export class BibleByFilesService {
 
   readedTranslates = false;
   constructor() {
-    const externalRoot = process.env?.['assetsPath'];
+    const sourceAssets =
+      process.env?.['assetsPath'] || path.resolve(process.cwd(), 'assets');
+    this.assetsPath = path.resolve(sourceAssets, 'complete-jsons', 'bibles');
 
-    if (externalRoot) {
-      // Внешний путь, который прокидывается воркерам (user-assets или аналогичная директория)
+    const userAssetsRoot = process.env?.['USER_ASSETS_PATH'] || '';
+    if (userAssetsRoot) {
       this.assetsPathNew = path.resolve(
-        externalRoot,
+        userAssetsRoot,
         'complete-jsons',
         'bibles'
       );
     } else {
-      // Если assetsPath не задан, используем встроенные ассеты как основной путь
       this.assetsPathNew = this.assetsPath;
     }
 
     // private readonly bibleTranslateRepo: Repository<BibleTranslateEntity> // @InjectRepository(BibleTranslateEntity)
+  }
+
+  private getExistingDirs(): string[] {
+    const dirs = [this.assetsPathNew, this.assetsPath]
+      .filter(Boolean)
+      .filter((dir, idx, arr) => arr.indexOf(dir) === idx)
+      .filter((dir) => fs.existsSync(dir));
+    return dirs;
   }
 
   // Сброс кэша после изменений (установка/удаление словарей)
@@ -74,10 +78,7 @@ export class BibleByFilesService {
     const seenKeys = new Set<string>();
 
     try {
-      const dirs = [this.assetsPathNew, this.assetsPath]
-        .filter(Boolean)
-        .filter((dir, idx, arr) => arr.indexOf(dir) === idx)
-        .filter((dir) => fs.existsSync(dir));
+      const dirs = this.getExistingDirs();
 
       for (const dir of dirs) {
         const translatesFiles = fs
@@ -145,10 +146,7 @@ export class BibleByFilesService {
     }
 
     try {
-      const dirs = [this.assetsPathNew, this.assetsPath]
-        .filter(Boolean)
-        .filter((dir, idx, arr) => arr.indexOf(dir) === idx)
-        .filter((dir) => fs.existsSync(dir));
+      const dirs = this.getExistingDirs();
 
       for (const dir of dirs) {
         const translatesFiles = fs
@@ -629,7 +627,14 @@ export class BibleByFilesService {
     for (const short of shortBibles) {
       if (!short.isDefault && !short.keyForSearch.toLowerCase().includes('rus_synodal')) {
         const filePath = this.findBibleFilePath(short.keyForSearch);
-        if (filePath && fs.existsSync(filePath)) {
+        // Не удаляем встроенные в дистрибутив файлы
+        if (
+          filePath &&
+          this.assetsPathNew &&
+          this.assetsPathNew !== this.assetsPath &&
+          filePath.startsWith(this.assetsPathNew) &&
+          fs.existsSync(filePath)
+        ) {
           try {
             fs.unlinkSync(filePath);
           } catch (e) {
@@ -643,10 +648,7 @@ export class BibleByFilesService {
   }
 
   private findBibleFilePath(keyForSearch: string): string | null {
-    const dirs = [this.assetsPathNew, this.assetsPath]
-      .filter(Boolean)
-      .filter((dir, idx, arr) => arr.indexOf(dir) === idx)
-      .filter((dir) => fs.existsSync(dir));
+    const dirs = this.getExistingDirs();
 
     for (const dir of dirs) {
       const files = fs.readdirSync(dir).filter((f) => f.toLowerCase().endsWith('.bible.json'));

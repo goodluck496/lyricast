@@ -390,9 +390,16 @@ export class SongsService {
         const book = this.readBook(prepared);
         if (!book) continue;
         const key = book.header.bookKey;
-        if (!key) continue;
-        localFileKeys.add(key);
-        if (!localBooksByKey.has(key)) {
+
+        localFileKeys.add(prepared);
+        if (key) {
+          localFileKeys.add(key);
+        }
+
+        if (!localBooksByKey.has(prepared)) {
+          localBooksByKey.set(prepared, book);
+        }
+        if (key && !localBooksByKey.has(key)) {
           localBooksByKey.set(key, book);
         }
       }
@@ -405,7 +412,12 @@ export class SongsService {
     fileKey: string,
     localBooksByKey: Map<string, ISongBook>
   ): BookVersionItemDto {
-    const local = localBooksByKey.get(fileKey);
+    let local = localBooksByKey.get(fileKey);
+    if (!local && fileKey.includes('pesn')) {
+      local =
+        localBooksByKey.get('pesn_vozrojdeniya') ||
+        localBooksByKey.get('pesn_vozrojdeniya_3000');
+    }
     const raw = local?.meta?.version;
     const version = raw != null ? Number(raw) : 0;
     return {
@@ -442,7 +454,12 @@ export class SongsService {
 
     const cards: SongDictionaryCardDto[] = [];
     for (const fileKey of allKeys) {
-      const local = localBooksByKey.get(fileKey);
+      let local = localBooksByKey.get(fileKey);
+      if (!local && fileKey.includes('pesn')) {
+        local =
+          localBooksByKey.get('pesn_vozrojdeniya') ||
+          localBooksByKey.get('pesn_vozrojdeniya_3000');
+      }
       const localVersionRaw = local?.meta?.version;
       const localVersion = localVersionRaw != null ? Number(localVersionRaw) : undefined;
       const remoteVersion = remoteVersionByKey.get(fileKey);
@@ -513,6 +530,7 @@ export class SongsService {
         .map(({ f }) => f);
 
       const names: ISongBookName[] = [];
+      const seenKeys = new Set<string>();
 
       for (const bookName of bookFiles) {
         const preparedBookName = bookName.replace(this.fileNameSuffix, '');
@@ -520,8 +538,16 @@ export class SongsService {
         if (!book || book.header.disabled) {
           continue;
         }
+        const key = book.header.bookKey || preparedBookName;
+        const normKey = key.replace(/_\d+$/, '').toLowerCase();
+        if (seenKeys.has(normKey) || seenKeys.has(preparedBookName)) {
+          continue;
+        }
+        seenKeys.add(normKey);
+        seenKeys.add(preparedBookName);
+
         names.push({
-          fileKey: book.header.bookKey,
+          fileKey: preparedBookName,
           humanName: book.header.title,
         });
       }

@@ -27,8 +27,25 @@
             styleClass="list-search-dropdown song-list-toolbar__book"
             tourAnchor="songs:dict"
           >
-            <ng-template pTemplate="selectedItem" let-data>{{ data.title }}</ng-template>
+            <ng-template pTemplate="selectedItem" let-data>
+              <ng-container *ngTemplateOutlet="bookItemTmpl; context: { $implicit: data }"></ng-container>
+            </ng-template>
+
+            <ng-template pTemplate="item" let-item>
+              <ng-container *ngTemplateOutlet="bookItemTmpl; context: { $implicit: item }"></ng-container>
+            </ng-template>
           </p-select>
+
+          <ng-template #bookItemTmpl let-item>
+            <div class="book-select-item">
+              @if (item?.baseEntity?.coverImage) {
+                <img [src]="item.baseEntity.coverImage" class="book-select-item__cover" width="32" height="32" alt="" />
+              } @else {
+                <span class="book-select-item__icon"><i class="pi pi-book"></i></span>
+              }
+              <span class="book-select-item__title">{{ item?.title }}</span>
+            </div>
+          </ng-template>
 
           <p-select
             [formControl]="songListMode"

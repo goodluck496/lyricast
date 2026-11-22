@@ -106,6 +106,9 @@ export class BibleByFilesService {
           const isDefaultM = fileContent.match(
             /"isDefault"\s*:\s*(true|false)/
           );
+          const coverImageM = fileContent.match(
+            /"coverImage"\s*:\s*"([^"]+)"/
+          );
 
           const key = keyForSearchM ? keyForSearchM[1] : '';
           if (!key) continue;
@@ -127,6 +130,7 @@ export class BibleByFilesService {
             isClassicBookOrder: isClassicBookOrderM
               ? isClassicBookOrderM[1] === 'true'
               : false,
+            coverImage: coverImageM ? coverImageM[1] : undefined,
           });
         }
       }

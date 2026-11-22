@@ -113,4 +113,6 @@ export interface ISongBook {
 export interface ISongBookName {
   fileKey: string;
   humanName: string;
+  coverImage?: string;
+  language?: string;
 }

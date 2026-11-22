@@ -71,7 +71,8 @@ import {
   OnboardingHelpService,
   PAGE_CONTAINER_TEMPLATES,
   Pages,
-  SidebarService
+  SidebarService,
+  getLanguageFlagUrl,
 } from '@lyri-cast/common-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BibleApiService } from '@lyri-cast/data-access-bible';
@@ -225,6 +226,10 @@ export class BiblePageComponent implements OnInit, AfterViewInit {
   private readonly bibleOnboarding = inject(BibleOnboardingService);
   private readonly appearanceService = inject(CastingAppearanceService);
   private pendingAutoStartPath: string[] | null = null;
+
+  getTranslateFlag(translate: BibleTranslateShort | null | undefined): string | undefined {
+    return getLanguageFlagUrl(translate?.lang);
+  }
 
   constructor() {
     this.bibleFormGroup.controls.translate.valueChanges

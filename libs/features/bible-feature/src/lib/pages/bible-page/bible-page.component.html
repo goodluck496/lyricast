@@ -11,8 +11,28 @@
             optionLabel="title"
             styleClass="list-search-dropdown bible-books-toolbar__translate"
           >
-            <ng-template let-data pTemplate="selectedItem">{{ data.title }}</ng-template>
+            <ng-template let-data pTemplate="selectedItem">
+              <ng-container *ngTemplateOutlet="translateItemTmpl; context: { $implicit: data }"></ng-container>
+            </ng-template>
+            <ng-template let-item pTemplate="item">
+              <ng-container *ngTemplateOutlet="translateItemTmpl; context: { $implicit: item }"></ng-container>
+            </ng-template>
           </p-select>
+
+          <ng-template #translateItemTmpl let-item>
+            <div class="translate-select-item">
+              @if (item?.baseEntity?.coverImage) {
+                <img [src]="item.baseEntity.coverImage" class="translate-select-item__cover" width="32" height="32" alt="" />
+              } @else if (getTranslateFlag(item?.baseEntity); as flagUrl) {
+                <img [src]="flagUrl" class="translate-select-item__flag" width="24" height="16" alt="" />
+              } @else if (item?.baseEntity?.lang) {
+                <span class="translate-select-item__badge">{{ item.baseEntity.lang | uppercase }}</span>
+              } @else {
+                <span class="translate-select-item__icon"><i class="pi pi-book"></i></span>
+              }
+              <span class="translate-select-item__title">{{ item?.title }}</span>
+            </div>
+          </ng-template>
           <button
             (click)="onChangeBookDisplayStyle()"
             [attr.aria-label]="booksLikeList ? 'Показать книги плиткой' : 'Показать книги списком'"

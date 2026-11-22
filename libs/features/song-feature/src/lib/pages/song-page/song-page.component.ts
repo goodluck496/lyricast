@@ -27,7 +27,7 @@ import {
   tap,
 } from 'rxjs';
 import { HighlighterPipe, PageContainerComponent } from '@lyri-cast/ui-lib';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, NgTemplateOutlet } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {
   IShortSong,
@@ -104,6 +104,7 @@ interface SongListItem extends IUiLyriItemInList<IShortSong> {
   imports: [
     PrimeTemplate,
     AsyncPipe,
+    NgTemplateOutlet,
     ReactiveFormsModule,
     SelectModule,
     TooltipModule,

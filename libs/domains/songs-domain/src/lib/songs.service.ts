@@ -549,6 +549,8 @@ export class SongsService {
         names.push({
           fileKey: preparedBookName,
           humanName: book.header.title,
+          coverImage: book.meta?.coverImage,
+          language: book.meta?.language,
         });
       }
 
